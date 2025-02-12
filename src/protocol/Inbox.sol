@@ -2,6 +2,8 @@
 pragma solidity ^0.8.28;
 
 import {IDataFeed} from "./IDataFeed.sol";
+
+import {IPreconfTaskManager} from "./IPreconfTaskManager.sol";
 import {IVerifier} from "./IVerifier.sol";
 
 contract Inbox {
@@ -17,15 +19,37 @@ contract Inbox {
     // just setting it on the constructor
     IVerifier immutable _verifier;
 
-    constructor(bytes32 genesis, address dataFeed, address verifier) {
+    IPreconfTaskManager immutable _preconfer;
+
+    constructor(bytes32 genesis, address dataFeed, address verifier, address preconfTaskManager) {
         // set the genesis state of the rollup - genesis is trusted to be correct
         checkpoints[0] = genesis;
         _dataFeed = IDataFeed(dataFeed);
         _verifier = IVerifier(verifier);
+        _preconfer = IPreconfTaskManager(preconfTaskManager);
+    }
+
+    /// @notice Proposes a checkpoint for a given publication, which needs to be proven at a later time
+    /// @dev This function is restricted to the current preconfer, who has monopoly rights over L2 block production
+    /// during certain slots
+    function proposeCheckpoint(uint256 publicationIdx, bytes32 checkpoint) external {
+        // check that the publication exists
+        require(_dataFeed.getPublicationHash(publicationIdx) != 0, "Publication does not exist");
+
+        // TODO: if there's any logic to deduct a liveness bond it would go here
+
+        // Validate that only the current preconfer can propose the next checkpoint
+        // Maybe we just send the current block number instead of the timestamp
+        address currentPreconfer = _preconfer.getPreconfer(block.timestamp);
+        require(msg.sender == currentPreconfer, "Not the current preconfer");
+
+        checkpoints[publicationIdx] = checkpoint;
     }
 
     ///  @notice Proves that the transition between the start and end publication hashes is valid
-    //          and updates the last proven index if checkpoint corresponds to a newer publication
+    ///          and updates the last proven index if checkpoint corresponds to a newer publication
+    // TODO: add logic for pausing the contract if there are conflicting proofs.
+    // TODO: add an incentive mechanism for the prover, which can be abstracted in a separate IBondManager contract
     function proveBetween(uint256 start, uint256 end, bytes32 checkpoint, bytes calldata proof) external {
         bytes32 base = checkpoints[start];
         // this also ensures start <= lastProvenIdx
