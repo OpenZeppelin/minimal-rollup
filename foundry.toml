@@ -2,5 +2,10 @@
 src = "src"
 out = "out"
 libs = ["lib"]
+evm_version = "cancun"
+
+[fmt]
+sort_imports = true
+wrap_comments = true
 
 # See more config options https://github.com/foundry-rs/foundry/blob/master/crates/config/README.md#all-options
