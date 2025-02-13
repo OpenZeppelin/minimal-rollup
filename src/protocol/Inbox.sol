@@ -6,19 +6,19 @@ import {IVerifier} from "./IVerifier.sol";
 
 contract Inbox {
     // TODO: Optimize using the ring buffer design if we don't need to store all checkpoints
-    // Checkpoints can be anything that describes the state of the rollup at a given publication(the most common case is
+    // Checkpoints can be anything that describes the state of the rollup at a given publication (the most common case is
     // the state root)
     mapping(uint256 pubIdx => bytes32 checkpoint) checkpoints;
 
     uint256 lastProvenIdx;
 
     IDataFeed immutable _dataFeed;
-    // This would usually be retrieved dinamically as in the current Taiko implementation, but for simplicity we are
-    // just setting it on the constructor
+    // This would usually be retrieved dynamically as in the current Taiko implementation, but for simplicity we are
+    // just setting it in the constructor
     IVerifier immutable _verifier;
 
     constructor(bytes32 genesis, address dataFeed, address verifier) {
-        // set the genesis state of the rollup - genesis is trusted to be correct
+        // set the genesis checkpoint of the rollup - genesis is trusted to be correct
         checkpoints[0] = genesis;
         _dataFeed = IDataFeed(dataFeed);
         _verifier = IVerifier(verifier);
