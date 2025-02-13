@@ -27,14 +27,15 @@ contract Inbox {
     ///  @notice Proves that the transition between the start and end publication hashes is valid
     //          and updates the last proven index if checkpoint corresponds to a newer publication
     function proveBetween(uint256 start, uint256 end, bytes32 checkpoint, bytes calldata proof) external {
+        require(end > lastProvenIdx, "Publication already proven");
         bytes32 base = checkpoints[start];
         // this also ensures start <= lastProvenIdx
         require(base != 0, "Unknown base checkpoint");
+
         IVerifier(_verifier).verifyProof(
             _dataFeed.getPublicationHash(start), _dataFeed.getPublicationHash(end), base, checkpoint, proof
         );
         checkpoints[end] = checkpoint;
-
-        lastProvenIdx = end > lastProvenIdx ? end : lastProvenIdx;
+        lastProvenIdx = end;
     }
 }
