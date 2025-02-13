@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
-contract DataFeed {
+import {IDataFeed} from "./IDataFeed.sol";
 
+contract DataFeed is IDataFeed {
     /// @dev a list of hashes identifying all data accompanying calls to the `publish` function.
     bytes32[] publicationHashes;
 
@@ -23,6 +24,8 @@ contract DataFeed {
         bytes32 prevHash = publicationHashes[publicationHashes.length - 1];
         bytes32 pubHash = keccak256(abi.encode(prevHash, msg.sender, block.timestamp, blobHashes));
         publicationHashes.push(pubHash);
+
+        emit Publication(pubHash);
     }
 
     /// @notice retrieve a hash representing a previous publication
