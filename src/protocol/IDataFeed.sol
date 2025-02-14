@@ -2,9 +2,16 @@
 pragma solidity ^0.8.28;
 
 interface IDataFeed {
+    struct Publication {
+        address publisher;
+        uint256 timestamp;
+        bytes32[] blobHashes;
+    }
+
     /// @notice Emitted when a new publication is created
     /// @param pubHash the hash of the new publication
-    event Publication(bytes32 indexed pubHash);
+    /// @param publication the publication
+    event Published(bytes32 indexed pubHash, Publication publication);
 
     /// @notice Publish data as blobs for data availability
     function publish(uint256 numBlobs) external;

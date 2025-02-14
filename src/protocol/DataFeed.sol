@@ -5,7 +5,7 @@ import {IDataFeed} from "./IDataFeed.sol";
 
 contract DataFeed is IDataFeed {
     /// @dev a list of hashes identifying all data accompanying calls to the `publish` function.
-    bytes32[] publicationHashes;
+    bytes32[] public publicationHashes;
 
     constructor() {
         // guarantee there is always a previous hash
@@ -17,15 +17,19 @@ contract DataFeed is IDataFeed {
     /// @dev append a hash representing all blobs and L1 contextual information to `publicationHashes`.
     /// The number of blobs is not validated. Additional blobs are ignored. Empty blobs have a hash of zero.
     function publish(uint256 numBlobs) external {
-        bytes32[] memory blobHashes = new bytes32[](numBlobs);
-        for (uint256 i = 0; i < numBlobs; ++i) {
-            blobHashes[i] = blobhash(i);
+        require(numBlobs > 0, "no data to publish");
+
+        Publication memory publication = Publication(msg.sender, block.timestamp, new bytes32[](numBlobs));
+
+        for (uint256 i; i < numBlobs; ++i) {
+            publication.blobHashes[i] = _getBlobhash(i);
         }
+
         bytes32 prevHash = publicationHashes[publicationHashes.length - 1];
-        bytes32 pubHash = keccak256(abi.encode(prevHash, msg.sender, block.timestamp, blobHashes));
+        bytes32 pubHash = keccak256(abi.encode(prevHash, publication));
         publicationHashes.push(pubHash);
 
-        emit Publication(pubHash);
+        emit Published(pubHash, publication);
     }
 
     /// @notice retrieve a hash representing a previous publication
@@ -33,5 +37,13 @@ contract DataFeed is IDataFeed {
     /// @return _ the corresponding publication hash
     function getPublicationHash(uint256 idx) external view returns (bytes32) {
         return publicationHashes[idx];
+    }
+
+    /// @notice retrieve a hash representing a previous publication
+    /// @dev This function can be overridden by tests for easier testing
+    /// @param idx the index of the publication hash
+    /// @return _ the corresponding publication hash
+    function _getBlobhash(uint256 idx) internal view virtual returns (bytes32) {
+        return blobhash(idx);
     }
 }
