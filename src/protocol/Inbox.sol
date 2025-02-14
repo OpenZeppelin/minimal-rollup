@@ -45,7 +45,7 @@ contract Inbox {
         require(end > lastProvenIdx, "Publication already proven");
         bytes32 base = checkpoints[start];
         // this also ensures start <= lastProvenIdx
-        require(start == 0 || base != 0, "Unknown base checkpoint");
+        require(base != 0 || start == 0, "Unknown base checkpoint");
 
         IVerifier(_verifier).verifyProof(
             _dataFeed.getPublicationHash(start), _dataFeed.getPublicationHash(end), base, checkpoint, proof
