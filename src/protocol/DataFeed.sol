@@ -4,7 +4,8 @@ pragma solidity ^0.8.28;
 import {IDataFeed} from "./IDataFeed.sol";
 
 contract DataFeed is IDataFeed {
-    // keccak256(abi.encode(uint256(keccak256("minimal-rollup.storage.TransactionGuard")) - 1)) & ~bytes32(uint256(0xff))
+    // keccak256(abi.encode(uint256(keccak256("minimal-rollup.storage.TransactionGuard")) - 1)) &
+    // ~bytes32(uint256(0xff))
     bytes32 private constant TRANSACTION_GUARD = 0x99b77697c9b37eb2c48d30bc6afcf1840fbb1ccae9217c44df166cd11b25cc00;
 
     /// @dev a list of hashes identifying all data accompanying calls to the `publish` function.
