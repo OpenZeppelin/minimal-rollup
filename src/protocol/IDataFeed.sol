@@ -10,7 +10,7 @@ interface IDataFeed {
 
     /// @notice Emitted when a new publication is created
     /// @param pubHash the hash of the new publication
-    /// @param publication the publication
+    /// @param publication the Publication struct
     event Published(bytes32 indexed pubHash, Publication publication);
 
     /// @notice Publish data as blobs for data availability
