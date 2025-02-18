@@ -28,7 +28,8 @@ contract Inbox {
     /// @param dataFeed the input data source that updates the state of this rollup
     /// @param verifier a contract that can verify the validity of a transition from one checkpoint to another
     constructor(bytes32 genesis, address dataFeed, address verifier) {
-        // set the genesis checkpoint of the rollup - genesis is trusted to be correct and can be 0.
+        require(genesis != 0, "genesis checkpoint cannot be 0");
+        // set the genesis checkpoint of the rollup - genesis is trusted to be correct.
         checkpoints[0] = genesis;
         _dataFeed = IDataFeed(dataFeed);
         _verifier = IVerifier(verifier);
@@ -45,7 +46,7 @@ contract Inbox {
         require(end > lastProvenIdx, "Publication already proven");
         bytes32 base = checkpoints[start];
         // this also ensures start <= lastProvenIdx
-        require(base != 0 || start == 0, "Unknown base checkpoint");
+        require(base != 0, "Unknown base checkpoint");
 
         IVerifier(_verifier).verifyProof(
             _dataFeed.getPublicationHash(start), _dataFeed.getPublicationHash(end), base, checkpoint, proof
