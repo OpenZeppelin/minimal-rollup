@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
-import {IDataFeed, MetadataQuery} from "./IDataFeed.sol";
+import {IDataFeed, MetadataQuery, Publication} from "./IDataFeed.sol";
 
 contract DataFeed is IDataFeed {
     /// @dev a list of hashes identifying all data accompanying calls to the `publish` function.
@@ -22,28 +22,29 @@ contract DataFeed is IDataFeed {
     function publish(uint256 numBlobs, MetadataQuery[] calldata queries) external payable {
         require(numBlobs > 0, "no data to publish");
 
-        bytes32[] memory blobHashes = new bytes32[](numBlobs);
+        uint256 nQueries = queries.length;
+        Publication memory publication =
+            Publication(msg.sender, block.timestamp, new bytes32[](numBlobs), queries, new bytes[](nQueries));
+
         for (uint256 i; i < numBlobs; ++i) {
-            blobHashes[i] = blobhash(i);
+            publication.blobHashes[i] = blobhash(i);
         }
 
-        uint256 nQueries = queries.length;
-        bytes[] memory metadata = new bytes[](nQueries);
         uint256 totalValue;
         for (uint256 i; i < nQueries; ++i) {
             (bool success, bytes memory returnData) =
                 queries[i].provider.call{value: queries[i].value}(queries[i].input);
             require(success, "Metadata query failed");
-            metadata[i] = returnData;
+            publication.metadata[i] = returnData;
             totalValue += queries[i].value;
         }
         require(msg.value >= totalValue, "Insufficient ETH passed with publication");
 
         bytes32 prevHash = publicationHashes[publicationHashes.length - 1];
-        bytes32 pubHash = keccak256(abi.encode(prevHash, msg.sender, block.timestamp, blobHashes, queries, metadata));
+        bytes32 pubHash = keccak256(abi.encode(prevHash, publication));
         publicationHashes.push(pubHash);
 
-        emit Publication(pubHash, queries, metadata);
+        emit Published(pubHash, publication);
     }
 
     /// @notice retrieve a hash representing a previous publication

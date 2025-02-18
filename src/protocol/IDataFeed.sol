@@ -8,11 +8,18 @@ interface IDataFeed {
         uint256 value;
     }
 
+    struct Publication {
+        address publisher;
+        uint256 timestamp;
+        bytes32[] blobHashes;
+        MetadataQuery[] queries;
+        bytes[] metadata;
+    }
+
     /// @notice Emitted when a new publication is created
     /// @param pubHash the hash of the new publication
-    /// @param queries the calls required to retrieve L1 metadata hashes associated with this publication.
-    /// @param metadata the L1 metadata associated with this publication.
-    event Publication(bytes32 indexed pubHash, MetadataQuery[] queries, bytes[] metadata);
+    /// @param publication the Publication struct describing the preimages to pubHash
+    event Published(bytes32 indexed pubHash, Publication publication);
 
     /// @notice Publish data as blobs for data availability
     /// @param numBlobs the number of blobs accompanying this function call.
