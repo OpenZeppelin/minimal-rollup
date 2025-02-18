@@ -28,7 +28,12 @@ contract Inbox {
     /// @param genesis the checkpoint describing the initial state of the rollup
     /// @param dataFeed the input data source that updates the state of this rollup
     /// @param verifier a contract that can verify the validity of a transition from one checkpoint to another
-    constructor(uint256 bufferSize, bytes32 genesis, address dataFeed, address verifier) {
+    constructor(
+        uint256 bufferSize,
+        bytes32 genesis,
+        address dataFeed,
+        address verifier
+    ) {
         // set the genesis checkpoint of the rollup - genesis is trusted to be correct
         _checkpoints.setup(bufferSize);
         _checkpoints.push(genesis);
@@ -42,7 +47,12 @@ contract Inbox {
     /// @param end the index of the last publication in this transition.
     /// @param checkpoint the claimed checkpoint at the end of this transition.
     /// @param proof arbitrary data passed to the `_verifier` contract to confirm the transition validity.
-    function proveBetween(uint256 start, uint256 end, bytes32 checkpoint, bytes calldata proof) external {
+    function proveBetween(
+        uint256 start,
+        uint256 end,
+        bytes32 checkpoint,
+        bytes calldata proof
+    ) external {
         // Checks
         require(_proven(start), UnprovenIndex(start));
         require(!_proven(end), ProvenIndex(end));
@@ -58,10 +68,10 @@ contract Inbox {
             proof
         );
 
-        // Add checkpoint after N positions and increase count accordingly
-        uint256 newCount = _checkpoints._count += (end - start);
-        _checkpoints._data[newCount % bufferLength] = checkpoint;
-        emit CheckpointProven(newCount, checkpoint);
+        // Add checkpoint at the wrapped "end" position and update count accordingly
+        _checkpoints._count = end;
+        _checkpoints._data[end % bufferLength] = checkpoint;
+        emit CheckpointProven(end, checkpoint);
     }
 
     function getCheckpoint(uint256 at) public view returns (bytes32) {
