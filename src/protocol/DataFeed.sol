@@ -37,8 +37,14 @@ contract DataFeed is IDataFeed {
         require(numBlobs > 0, "no data to publish");
 
         uint256 nQueries = queries.length;
-        Publication memory publication =
-            Publication(msg.sender, block.timestamp, new bytes32[](numBlobs), queries, new bytes[](nQueries));
+        Publication memory publication = Publication({
+            publisher: msg.sender,
+            timestamp: block.timestamp,
+            blockNumber: block.number,
+            blobHashes: new bytes32[](numBlobs),
+            queries: queries,
+            metadata: new bytes[](nQueries)
+        });
 
         for (uint256 i; i < numBlobs; ++i) {
             publication.blobHashes[i] = blobhash(i);

@@ -11,6 +11,7 @@ interface IDataFeed {
     struct Publication {
         address publisher;
         uint256 timestamp;
+        uint256 blockNumber;
         bytes32[] blobHashes;
         MetadataQuery[] queries;
         bytes[] metadata;
