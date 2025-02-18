@@ -2,7 +2,7 @@
 pragma solidity ^0.8.28;
 
 interface IMetadataProvider {
-    /// @notice Returns the block hash corresponding to the provided anchorBlockId
+    /// @notice Returns L1 metadata associated with a publication
     /// @param publisher The address of the publisher
     /// @param input The input to the metadata provider
     /// @return metadata The metadata
