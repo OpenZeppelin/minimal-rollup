@@ -38,7 +38,7 @@ contract DataFeed is IDataFeed {
         require(msg.value >= totalValue, "Insufficient ETH passed with publication");
 
         bytes32 prevHash = publicationHashes[publicationHashes.length - 1];
-        bytes32 pubHash = keccak256(abi.encode(prevHash, msg.sender, blobHashes, queries, metadata));
+        bytes32 pubHash = keccak256(abi.encode(prevHash, msg.sender, block.timestamp, blobHashes, queries, metadata));
         publicationHashes.push(pubHash);
 
         emit Publication(pubHash, queries, metadata);
