@@ -38,10 +38,10 @@ contract DataFeed is IDataFeed {
         require(numBlobs > 0, "no data to publish");
 
         uint256 nQueries = queries.length;
-        uint256 publicationId = publicationHashes.length;
+        uint256 id = publicationHashes.length;
         Publication memory publication = Publication({
-            id: publicationId,
-            prevHash: publicationHashes[publicationId - 1],
+            id: id,
+            prevHash: publicationHashes[id - 1],
             publisher: msg.sender,
             timestamp: block.timestamp,
             blockNumber: block.number,
