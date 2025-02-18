@@ -24,6 +24,7 @@ contract Inbox {
     error ProvenIndex(uint256 index);
     error UnprovenIndex(uint256 index);
 
+    /// @param bufferSize the maximum number of checkpoints simultaneously stored in this contract
     /// @param genesis the checkpoint describing the initial state of the rollup
     /// @param dataFeed the input data source that updates the state of this rollup
     /// @param verifier a contract that can verify the validity of a transition from one checkpoint to another
