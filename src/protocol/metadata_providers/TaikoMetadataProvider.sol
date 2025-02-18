@@ -15,6 +15,8 @@ contract TaikoMetadataProvider is IMetadataProvider {
 
     /// @inheritdoc IMetadataProvider
     function getMetadata(address publisher, bytes memory input) external payable override returns (bytes memory) {
+        require(msg.value == 0, "ETH not required");
+
         if (lookahead != address(0)) {
             require(ILookahead(lookahead).isCurrentPreconfer(publisher), "not current preconfer");
         }
