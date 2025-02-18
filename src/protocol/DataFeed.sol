@@ -5,7 +5,7 @@ import {IDataFeed, MetadataQuery} from "./IDataFeed.sol";
 
 contract DataFeed is IDataFeed {
     /// @dev a list of hashes identifying all data accompanying calls to the `publish` function.
-    bytes32[] publicationHashes;
+    bytes32[] public publicationHashes;
 
     constructor() {
         // guarantee there is always a previous hash

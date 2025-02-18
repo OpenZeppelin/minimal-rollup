@@ -9,15 +9,15 @@ contract Inbox {
     // Checkpoints can be anything that describes the state of the rollup at a given publication (the most common case
     // is the state root)
     /// @dev tracks proven checkpoints after applying the publication at `_dataFeed.getPublicationHash(pubIdx)`
-    mapping(uint256 pubIdx => bytes32 checkpoint) checkpoints;
+    mapping(uint256 pubIdx => bytes32 checkpoint) public checkpoints;
 
     /// @dev the highest `pubIdx` in `checkpoints`
-    uint256 lastProvenIdx;
+    uint256 public lastProvenIdx;
 
-    IDataFeed immutable _dataFeed;
+    IDataFeed public immutable _dataFeed;
     // This would usually be retrieved dynamically as in the current Taiko implementation, but for simplicity we are
     // just setting it in the constructor
-    IVerifier immutable _verifier;
+    IVerifier public immutable _verifier;
 
     /// @notice Emitted when a checkpoint is proven
     /// @param pubIdx the index of the publication at which the checkpoint was proven
@@ -29,6 +29,7 @@ contract Inbox {
     /// @param verifier a contract that can verify the validity of a transition from one checkpoint to another
     constructor(bytes32 genesis, address dataFeed, address verifier) {
         // set the genesis checkpoint of the rollup - genesis is trusted to be correct
+        require(genesis != 0, "genesis checkpoint cannot be 0");
         checkpoints[0] = genesis;
         _dataFeed = IDataFeed(dataFeed);
         _verifier = IVerifier(verifier);
@@ -41,6 +42,7 @@ contract Inbox {
     /// @param checkpoint the claimed checkpoint at the end of this transition.
     /// @param proof arbitrary data passed to the `_verifier` contract to confirm the transition validity.
     function proveBetween(uint256 start, uint256 end, bytes32 checkpoint, bytes calldata proof) external {
+        require(checkpoint != 0, "Checkpoint cannot be 0");
         require(end > lastProvenIdx, "Publication already proven");
         bytes32 base = checkpoints[start];
         // this also ensures start <= lastProvenIdx
