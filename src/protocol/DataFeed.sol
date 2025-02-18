@@ -22,7 +22,7 @@ contract DataFeed is IDataFeed {
         Publication memory publication = Publication(msg.sender, block.timestamp, new bytes32[](numBlobs));
 
         for (uint256 i; i < numBlobs; ++i) {
-            publication.blobHashes[i] = _getBlobhash(i);
+            publication.blobHashes[i] = blobhash(i);
         }
 
         bytes32 prevHash = publicationHashes[publicationHashes.length - 1];
@@ -37,13 +37,5 @@ contract DataFeed is IDataFeed {
     /// @return _ the corresponding publication hash
     function getPublicationHash(uint256 idx) external view returns (bytes32) {
         return publicationHashes[idx];
-    }
-
-    /// @dev returns the hash of a blob by calling the `blobhash` opcode
-    /// @dev This function can be overridden by tests for easier testing
-    /// @param idx the index of the publication hash
-    /// @return _ the corresponding publication hash
-    function _getBlobhash(uint256 idx) internal view virtual returns (bytes32) {
-        return blobhash(idx);
     }
 }
