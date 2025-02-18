@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
-import {console2} from "forge-std/Test.sol";
 import {IDataFeed} from "./IDataFeed.sol";
 import {IVerifier} from "./IVerifier.sol";
 import {CircularBuffer} from "@openzeppelin/contracts/utils/structs/CircularBuffer.sol";
