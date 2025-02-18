@@ -38,6 +38,7 @@ contract DataFeed is IDataFeed {
 
         uint256 nQueries = queries.length;
         Publication memory publication = Publication({
+            prevHash: publicationHashes[publicationHashes.length - 1],
             publisher: msg.sender,
             timestamp: block.timestamp,
             blockNumber: block.number,
@@ -59,8 +60,7 @@ contract DataFeed is IDataFeed {
         }
         require(msg.value == totalValue, "Incorrect ETH passed with publication");
 
-        bytes32 prevHash = publicationHashes[publicationHashes.length - 1];
-        bytes32 pubHash = keccak256(abi.encode(prevHash, publication));
+        bytes32 pubHash = keccak256(abi.encode(publication));
         publicationHashes.push(pubHash);
 
         emit Published(pubHash, publication);
