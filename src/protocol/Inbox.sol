@@ -8,7 +8,7 @@ import {CircularBuffer} from "@openzeppelin/contracts/utils/structs/CircularBuff
 contract Inbox {
     using CircularBuffer for CircularBuffer.Bytes32CircularBuffer;
 
-    /// @dev Tracks proven checkpoints after applying the publication at `_dataFeed.getPublicationHash(pubIdx)`
+    /// @dev Tracks proven checkpoints after applying the publications at `_dataFeed`
     CircularBuffer.Bytes32CircularBuffer private _checkpoints;
 
     IDataFeed immutable _dataFeed;
