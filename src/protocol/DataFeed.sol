@@ -37,7 +37,7 @@ contract DataFeed is IDataFeed {
             require(success, "Metadata query failed");
             totalValue += queries[i].value;
         }
-        require(msg.value == totalValue, "Insufficient ETH passed with publication");
+        require(msg.value == totalValue, "Incorrect ETH passed with publication");
 
         bytes32 prevHash = publicationHashes[publicationHashes.length - 1];
         bytes32 pubHash = keccak256(abi.encode(prevHash, publication));
