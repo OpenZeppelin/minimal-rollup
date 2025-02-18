@@ -39,7 +39,7 @@ contract DataFeed is IDataFeed {
         return publicationHashes[idx];
     }
 
-    /// @notice retrieve a hash representing a previous publication
+    /// @dev returns the hash of a blob by calling the `blobhash` opcode
     /// @dev This function can be overridden by tests for easier testing
     /// @param idx the index of the publication hash
     /// @return _ the corresponding publication hash
