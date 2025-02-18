@@ -12,7 +12,7 @@ contract DataFeed is IDataFeed {
     bytes32 private constant _TRANSACTION_GUARD = 0x99b77697c9b37eb2c48d30bc6afcf1840fbb1ccae9217c44df166cd11b25cc00;
 
     /// @dev a list of hashes identifying all data accompanying calls to the `publish` function.
-    bytes32[] publicationHashes;
+    bytes32[] public publicationHashes;
 
     modifier onlyStandaloneTx() {
         require(!_TRANSACTION_GUARD.asBoolean().tload());
@@ -28,18 +28,36 @@ contract DataFeed is IDataFeed {
 
     /// @notice Publish arbitrary data in blobs for data availability.
     /// @param numBlobs the number of blobs accompanying this function call.
-    /// @dev append a hash representing all blobs and L1 contextual information to `publicationHashes`.
+    /// @param queries the calls required to retrieve L1 metadata hashes associated with this publication.
+    /// @dev there can be multiple queries because a single publication might represent multiple rollups,
+    /// each with their own L1 metadata requirements
+    /// @dev append a hash representing all blobs and L1 metadata to `publicationHashes`.
     /// The number of blobs is not validated. Additional blobs are ignored. Empty blobs have a hash of zero.
-    function publish(uint256 numBlobs) external onlyStandaloneTx {
-        bytes32[] memory blobHashes = new bytes32[](numBlobs);
-        for (uint256 i = 0; i < numBlobs; ++i) {
-            blobHashes[i] = blobhash(i);
+    function publish(uint256 numBlobs, MetadataQuery[] calldata queries) external payable onlyStandaloneTx {
+        require(numBlobs > 0, "no data to publish");
+
+        uint256 nQueries = queries.length;
+        Publication memory publication =
+            Publication(msg.sender, block.timestamp, new bytes32[](numBlobs), queries, new bytes[](nQueries));
+
+        for (uint256 i; i < numBlobs; ++i) {
+            publication.blobHashes[i] = blobhash(i);
         }
+
+        uint256 totalValue;
+        bool success;
+        for (uint256 i; i < nQueries; ++i) {
+            (success, publication.metadata[i]) = queries[i].provider.call{value: queries[i].value}(queries[i].input);
+            require(success, "Metadata query failed");
+            totalValue += queries[i].value;
+        }
+        require(msg.value == totalValue, "Incorrect ETH passed with publication");
+
         bytes32 prevHash = publicationHashes[publicationHashes.length - 1];
-        bytes32 pubHash = keccak256(abi.encode(prevHash, msg.sender, block.timestamp, blobHashes));
+        bytes32 pubHash = keccak256(abi.encode(prevHash, publication));
         publicationHashes.push(pubHash);
 
-        emit Publication(pubHash);
+        emit Published(pubHash, publication);
     }
 
     /// @notice retrieve a hash representing a previous publication
