@@ -15,10 +15,9 @@ contract TaikoMetadataProvider is IMetadataProvider {
 
     /// @inheritdoc IMetadataProvider
     function getMetadata(address publisher, bytes memory input) external payable override returns (bytes memory) {
-        require(
-            lookahead == address(0) || ILookahead(lookahead).isCurrentPreconfer(publisher),
-            "publisher is not a current preconfer"
-        );
+        if (lookahead != address(0)) {
+            require(ILookahead(lookahead).isCurrentPreconfer(publisher), "publisher is not a current preconfer");
+        }
 
         uint64 anchorBlockId = abi.decode(input, (uint64));
         require(maxAnchorBlockIdOffset + anchorBlockId >= block.number, "anchorBlockId is too old");
