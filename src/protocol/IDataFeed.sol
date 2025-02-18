@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
-struct MetadataQuery {
-    address provider;
-    bytes input;
-    uint256 value;
-}
-
 interface IDataFeed {
+    struct MetadataQuery {
+        address provider;
+        bytes input;
+        uint256 value;
+    }
+
     /// @notice Emitted when a new publication is created
     /// @param pubHash the hash of the new publication
     /// @param queries the calls required to retrieve L1 metadata hashes associated with this publication.
