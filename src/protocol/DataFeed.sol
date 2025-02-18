@@ -53,7 +53,9 @@ contract DataFeed is IDataFeed {
 
         uint256 totalValue;
         for (uint256 i; i < nQueries; ++i) {
-            publication.metadata[i] = IMetadataProvider(queries[i].provider).getMetadata(msg.sender, queries[i].input);
+            publication.metadata[i] = IMetadataProvider(queries[i].provider).getMetadata{value: queries[i].value}(
+                msg.sender, queries[i].input
+            );
             totalValue += queries[i].value;
         }
         require(msg.value == totalValue, "Incorrect ETH passed with publication");
