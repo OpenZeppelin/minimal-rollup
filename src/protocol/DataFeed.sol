@@ -41,7 +41,7 @@ contract DataFeed is IDataFeed {
         uint256 publicationId = publicationHashes.length;
         Publication memory publication = Publication({
             id: publicationId,
-            prevHaosh: publicationHashes[publicationId - 1],
+            prevHash: publicationHashes[publicationId - 1],
             publisher: msg.sender,
             timestamp: block.timestamp,
             blockNumber: block.number,
