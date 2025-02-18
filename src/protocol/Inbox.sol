@@ -11,10 +11,10 @@ contract Inbox {
     /// @dev Tracks proven checkpoints after applying the publications at `_dataFeed`
     CircularBuffer.Bytes32CircularBuffer private _checkpoints;
 
-    IDataFeed immutable _dataFeed;
+    IDataFeed public immutable _dataFeed;
     // This would usually be retrieved dynamically as in the current Taiko implementation, but for simplicity we are
     // just setting it in the constructor
-    IVerifier immutable _verifier;
+    IVerifier public immutable _verifier;
 
     /// @notice Emitted when a checkpoint is proven
     /// @param pubIdx the index of the publication at which the checkpoint was proven
@@ -35,6 +35,7 @@ contract Inbox {
         address verifier
     ) {
         // set the genesis checkpoint of the rollup - genesis is trusted to be correct
+        require(genesis != 0, "genesis checkpoint cannot be 0");
         _checkpoints.setup(bufferSize);
         _checkpoints.push(genesis);
         _dataFeed = IDataFeed(dataFeed);
