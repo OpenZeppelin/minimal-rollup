@@ -9,6 +9,7 @@ interface IDataFeed {
     }
 
     struct Publication {
+        bytes32 prevHash;
         address publisher;
         uint256 timestamp;
         bytes32[] blobHashes;

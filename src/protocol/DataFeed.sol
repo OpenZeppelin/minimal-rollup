@@ -37,8 +37,14 @@ contract DataFeed is IDataFeed {
         require(numBlobs > 0, "no data to publish");
 
         uint256 nQueries = queries.length;
-        Publication memory publication =
-            Publication(msg.sender, block.timestamp, new bytes32[](numBlobs), queries, new bytes[](nQueries));
+        Publication memory publication = Publication({
+            prevHash: publicationHashes[publicationHashes.length - 1],
+            publisher: msg.sender,
+            timestamp: block.timestamp,
+            blobHashes: new bytes32[](numBlobs),
+            queries: queries,
+            metadata: new bytes[](nQueries)
+        });
 
         for (uint256 i; i < numBlobs; ++i) {
             publication.blobHashes[i] = blobhash(i);
@@ -53,8 +59,7 @@ contract DataFeed is IDataFeed {
         }
         require(msg.value == totalValue, "Incorrect ETH passed with publication");
 
-        bytes32 prevHash = publicationHashes[publicationHashes.length - 1];
-        bytes32 pubHash = keccak256(abi.encode(prevHash, publication));
+        bytes32 pubHash = keccak256(abi.encode(publication));
         publicationHashes.push(pubHash);
 
         emit Published(pubHash, publication);
