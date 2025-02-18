@@ -36,7 +36,7 @@ contract DataFeed is IDataFeed {
         bytes32 pubHash = keccak256(abi.encode(prevHash, blobHashes, queries, metadata));
         publicationHashes.push(pubHash);
 
-        emit Publication(pubHash);
+        emit Publication(pubHash, queries, metadata);
     }
 
     /// @notice retrieve a hash representing a previous publication

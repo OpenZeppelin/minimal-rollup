@@ -9,7 +9,9 @@ struct MetadataQuery {
 interface IDataFeed {
     /// @notice Emitted when a new publication is created
     /// @param pubHash the hash of the new publication
-    event Publication(bytes32 indexed pubHash);
+    /// @param queries the calls required to retrieve L1 metadata hashes associated with this publication.
+    /// @param metadata the L1 metadata associated with this publication.
+    event Publication(bytes32 indexed pubHash, MetadataQuery[] queries, bytes[] metadata);
 
     /// @notice Publish data as blobs for data availability
     /// @param numBlobs the number of blobs accompanying this function call.
