@@ -19,7 +19,7 @@ contract DataFeed is IDataFeed {
     /// each with their own L1 metadata requirements
     /// @dev append a hash representing all blobs and L1 metadata to `publicationHashes`.
     /// The number of blobs is not validated. Additional blobs are ignored. Empty blobs have a hash of zero.
-    function publish(uint256 numBlobs, MetadataQuery[] calldata queries) payable external {
+    function publish(uint256 numBlobs, MetadataQuery[] calldata queries) external payable {
         bytes32[] memory blobHashes = new bytes32[](numBlobs);
         for (uint256 i = 0; i < numBlobs; ++i) {
             blobHashes[i] = blobhash(i);
