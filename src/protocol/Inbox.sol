@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
+import {console2} from "forge-std/Test.sol";
 import {IDataFeed} from "./IDataFeed.sol";
 import {IVerifier} from "./IVerifier.sol";
 import {CircularBuffer} from "@openzeppelin/contracts/utils/structs/CircularBuffer.sol";
@@ -73,7 +74,11 @@ contract Inbox {
         emit CheckpointProven(newCount, checkpoint);
     }
 
+    function getCheckpoint(uint256 at) public view returns (bytes32) {
+        return _checkpoints._data[at % _checkpoints.length()];
+    }
+
     function _proven(uint256 index) private view returns (bool) {
-        return index <= _checkpoints.count();
+        return index <= _checkpoints.count() - 1;
     }
 }
