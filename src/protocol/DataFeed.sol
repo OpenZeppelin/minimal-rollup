@@ -2,6 +2,7 @@
 pragma solidity ^0.8.28;
 
 import {IDataFeed} from "./IDataFeed.sol";
+import {IMetadataProvider} from "./IMetadataProvider.sol";
 import {TransientSlot} from "@openzeppelin/contracts/utils/TransientSlot.sol";
 
 contract DataFeed is IDataFeed {
@@ -51,10 +52,8 @@ contract DataFeed is IDataFeed {
         }
 
         uint256 totalValue;
-        bool success;
         for (uint256 i; i < nQueries; ++i) {
-            (success, publication.metadata[i]) = queries[i].provider.call{value: queries[i].value}(queries[i].input);
-            require(success, "Metadata query failed");
+            publication.metadata[i] = IMetadataProvider(queries[i].provider).getMetadata(msg.sender, queries[i].input);
             totalValue += queries[i].value;
         }
         require(msg.value == totalValue, "Incorrect ETH passed with publication");

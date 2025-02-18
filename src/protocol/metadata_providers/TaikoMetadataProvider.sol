@@ -1,20 +1,22 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
-contract TaikoMetadataProvider {
+import {IMetadataProvider} from "../IMetadataProvider.sol";
+
+contract TaikoMetadataProvider is IMetadataProvider {
     uint256 public immutable maxAnchorBlockIdOffset;
 
     constructor(uint256 _maxAnchorBlockIdOffset) {
         maxAnchorBlockIdOffset = _maxAnchorBlockIdOffset;
     }
 
-    /// @notice Returns the block hash corresponding to the provided anchorBlockId
-    /// @param anchorBlockId The block ID whose hash is used for L1->L2 synchronization
-    /// @return anchorBlockhash The block hash of the anchor block
-    function getMetadata(uint64 anchorBlockId) external view returns (bytes32 anchorBlockhash) {
+    /// @inheritdoc IMetadataProvider
+    function getMetadata(address, /*publisher*/ bytes memory input) external payable override returns (bytes memory) {
+        uint64 anchorBlockId = abi.decode(input, (uint64));
         require(maxAnchorBlockIdOffset + anchorBlockId >= block.number, "anchorBlockId is too old");
 
-        anchorBlockhash = blockhash(anchorBlockId);
+        bytes32 anchorBlockhash = blockhash(anchorBlockId);
         require(anchorBlockhash != 0, "blockhash not found");
+        return abi.encode(anchorBlockhash);
     }
 }
