@@ -21,6 +21,9 @@ contract Inbox {
     /// @param checkpoint the checkpoint that was proven
     event CheckpointProven(uint256 indexed pubIdx, bytes32 indexed checkpoint);
 
+    error ProvenIndex(uint256 index);
+    error UnprovenIndex(uint256 index);
+
     /// @param genesis the checkpoint describing the initial state of the rollup
     /// @param dataFeed the input data source that updates the state of this rollup
     /// @param verifier a contract that can verify the validity of a transition from one checkpoint to another
@@ -38,7 +41,7 @@ contract Inbox {
     }
 
     /// @notice Proves the transition between two checkpoints
-    /// @dev Updates the `lastProvenIdx` to `end` on success
+    /// @dev Updates the count of elements in the buffer on success.
     /// @param start the index of the publication before this transition. Its checkpoint must already be proven.
     /// @param end the index of the last publication in this transition.
     /// @param checkpoint the claimed checkpoint at the end of this transition.
@@ -49,23 +52,28 @@ contract Inbox {
         bytes32 checkpoint,
         bytes calldata proof
     ) external {
-        require(end > _checkpoints.count(), "Publication already proven");
+        // Checks
+        require(_proven(start), UnprovenIndex(start));
+        require(!_proven(end), ProvenIndex(end));
 
-        uint256 at = start % _checkpoints.length();
-        bytes32 base = _checkpoints._data[at];
-
-        // this also ensures start <= lastProvenIdx
-        require(base != 0, "Unknown base checkpoint");
+        // Cache buffer length (remains constant)
+        uint256 bufferLength = _checkpoints.length();
 
         IVerifier(_verifier).verifyProof(
             _dataFeed.getPublicationHash(start),
             _dataFeed.getPublicationHash(end),
-            base,
+            _checkpoints._data[start % bufferLength],
             checkpoint,
             proof
         );
-        _checkpoints.push(checkpoint);
 
-        emit CheckpointProven(end, checkpoint);
+        // Add checkpoint after N positions and increase count accordingly
+        uint256 newCount = _checkpoints._count += (end - start);
+        _checkpoints._data[newCount % bufferLength] = checkpoint;
+        emit CheckpointProven(newCount, checkpoint);
+    }
+
+    function _proven(uint256 index) private view returns (bool) {
+        return index <= _checkpoints.count();
     }
 }
