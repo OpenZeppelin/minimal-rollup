@@ -7,9 +7,9 @@ import {TransientSlot} from "@openzeppelin/contracts/utils/TransientSlot.sol";
 contract DataFeed is IDataFeed {
     using TransientSlot for *;
 
-    // keccak256(abi.encode(uint256(keccak256("minimal-rollup.storage.TransactionGuard")) - 1)) & ~bytes32(uint256(0xff))
-    bytes32 private constant _TRANSACTION_GUARD =
-        0x99b77697c9b37eb2c48d30bc6afcf1840fbb1ccae9217c44df166cd11b25cc00;
+    // keccak256(abi.encode(uint256(keccak256("minimal-rollup.storage.TransactionGuard")) - 1)) &
+    // ~bytes32(uint256(0xff))
+    bytes32 private constant _TRANSACTION_GUARD = 0x99b77697c9b37eb2c48d30bc6afcf1840fbb1ccae9217c44df166cd11b25cc00;
 
     /// @dev a list of hashes identifying all data accompanying calls to the `publish` function.
     bytes32[] publicationHashes;
@@ -36,9 +36,7 @@ contract DataFeed is IDataFeed {
             blobHashes[i] = blobhash(i);
         }
         bytes32 prevHash = publicationHashes[publicationHashes.length - 1];
-        bytes32 pubHash = keccak256(
-            abi.encode(prevHash, msg.sender, block.timestamp, blobHashes)
-        );
+        bytes32 pubHash = keccak256(abi.encode(prevHash, msg.sender, block.timestamp, blobHashes));
         publicationHashes.push(pubHash);
 
         emit Publication(pubHash);
