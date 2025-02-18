@@ -21,14 +21,14 @@ contract DataFeed is IDataFeed {
     /// The number of blobs is not validated. Additional blobs are ignored. Empty blobs have a hash of zero.
     function publish(uint256 numBlobs, MetadataQuery[] calldata queries) external payable {
         bytes32[] memory blobHashes = new bytes32[](numBlobs);
-        for (uint256 i = 0; i < numBlobs; ++i) {
+        for (uint256 i; i < numBlobs; ++i) {
             blobHashes[i] = blobhash(i);
         }
 
         uint256 nQueries = queries.length;
         bytes[] memory metadata = new bytes[](nQueries);
         uint256 totalValue;
-        for (uint256 i = 0; i < nQueries; ++i) {
+        for (uint256 i; i < nQueries; ++i) {
             (bool success, bytes memory returnData) =
                 queries[i].provider.call{value: queries[i].value}(queries[i].input);
             require(success, "Metadata query failed");
