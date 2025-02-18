@@ -14,22 +14,15 @@ contract InboxTest is Test {
     function setUp() public virtual {
         dataFeed = new DataFeed();
         verifierMock = new VerifierMock();
-        inbox = new Inbox(
-            100,
-            keccak256("genesis"),
-            address(dataFeed),
-            address(verifierMock)
-        );
+        inbox = new Inbox(100, keccak256("genesis"), address(dataFeed), address(verifierMock));
     }
 
-    function test_proveBetween(
-        uint256 end,
-        bytes32 checkpoint,
-        bytes calldata proof
-    ) external {
+    function test_proveBetween(uint256 end, bytes32 checkpoint, bytes calldata proof) external {
         uint256 start = 0;
         end = bound(end, start + 1, 10_000); // Avoid out-of-gas
-        for (uint256 i; i < end; i++) dataFeed.publish(1);
+        for (uint256 i; i < end; i++) {
+            dataFeed.publish(1);
+        }
 
         vm.expectCall(
             address(verifierMock),
