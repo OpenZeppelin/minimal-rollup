@@ -41,6 +41,7 @@ contract DataFeed is IDataFeed {
             prevHash: publicationHashes[publicationHashes.length - 1],
             publisher: msg.sender,
             timestamp: block.timestamp,
+            blockNumber: block.number,
             blobHashes: new bytes32[](numBlobs),
             queries: queries,
             metadata: new bytes[](nQueries)

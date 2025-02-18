@@ -12,6 +12,7 @@ interface IDataFeed {
         bytes32 prevHash;
         address publisher;
         uint256 timestamp;
+        uint256 blockNumber;
         bytes32[] blobHashes;
         MetadataQuery[] queries;
         bytes[] metadata;
