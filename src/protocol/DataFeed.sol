@@ -2,6 +2,7 @@
 pragma solidity ^0.8.28;
 
 import {IDataFeed, MetadataQuery} from "./IDataFeed.sol";
+
 contract DataFeed is IDataFeed {
     /// @dev a list of hashes identifying all data accompanying calls to the `publish` function.
     bytes32[] publicationHashes;
@@ -18,7 +19,7 @@ contract DataFeed is IDataFeed {
     /// each with their own L1 metadata requirements
     /// @dev append a hash representing all blobs and L1 metadata to `publicationHashes`.
     /// The number of blobs is not validated. Additional blobs are ignored. Empty blobs have a hash of zero.
-    function publish(uint256 numBlobs, MetadataQuery[] calldata queries) external {
+    function publish(uint256 numBlobs, MetadataQuery[] calldata queries) payable external {
         bytes32[] memory blobHashes = new bytes32[](numBlobs);
         for (uint256 i = 0; i < numBlobs; ++i) {
             blobHashes[i] = blobhash(i);
@@ -26,11 +27,15 @@ contract DataFeed is IDataFeed {
 
         uint256 nQueries = queries.length;
         bytes[] memory metadata = new bytes[](nQueries);
+        uint256 totalValue;
         for (uint256 i = 0; i < nQueries; ++i) {
-            (bool success, bytes memory returnData) = queries[i].provider.call(queries[i].input);
+            (bool success, bytes memory returnData) =
+                queries[i].provider.call{value: queries[i].value}(queries[i].input);
             require(success, "Metadata query failed");
             metadata[i] = returnData;
+            totalValue += queries[i].value;
         }
+        require(msg.value >= totalValue, "Insufficient ETH passed with publication");
 
         bytes32 prevHash = publicationHashes[publicationHashes.length - 1];
         bytes32 pubHash = keccak256(abi.encode(prevHash, blobHashes, queries, metadata));
