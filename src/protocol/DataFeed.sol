@@ -31,11 +31,10 @@ contract DataFeed is IDataFeed {
         }
 
         uint256 totalValue;
+        bool success;
         for (uint256 i; i < nQueries; ++i) {
-            (bool success, bytes memory returnData) =
-                queries[i].provider.call{value: queries[i].value}(queries[i].input);
+            (success, publication.metadata[i]) = queries[i].provider.call{value: queries[i].value}(queries[i].input);
             require(success, "Metadata query failed");
-            publication.metadata[i] = returnData;
             totalValue += queries[i].value;
         }
         require(msg.value == totalValue, "Insufficient ETH passed with publication");
