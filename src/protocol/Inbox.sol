@@ -41,6 +41,14 @@ contract Inbox {
         _verifier = IVerifier(verifier);
     }
 
+    function getCheckpoint(uint256 at) public view returns (bytes32) {
+        return _checkpoints._data[at % _checkpoints.length()];
+    }
+
+    function checkpointsCount() public view returns (uint256) {
+        return _checkpoints._count;
+    }
+
     /// @notice Proves the transition between two checkpoints
     /// @dev Updates the count of elements in the buffer on success.
     /// @param start the index of the publication before this transition. Its checkpoint must already be proven.
@@ -72,10 +80,6 @@ contract Inbox {
         _checkpoints._count = end;
         _checkpoints._data[end % bufferLength] = checkpoint;
         emit CheckpointProven(end, checkpoint);
-    }
-
-    function getCheckpoint(uint256 at) public view returns (bytes32) {
-        return _checkpoints._data[at % _checkpoints.length()];
     }
 
     function _proven(uint256 index) private view returns (bool) {
