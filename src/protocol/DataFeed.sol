@@ -9,7 +9,7 @@ contract DataFeed is IDataFeed {
 
     constructor() {
         // guarantee there is always a previous hash
-        publicationHashes.push(bytes32(uint256(1)));
+        publicationHashes.push(0);
     }
 
     /// @notice Publish arbitrary data in blobs for data availability.
