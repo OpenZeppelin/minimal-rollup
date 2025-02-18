@@ -3,16 +3,13 @@ pragma solidity ^0.8.28;
 
 import {IDataFeed} from "./IDataFeed.sol";
 import {IVerifier} from "./IVerifier.sol";
+import {CircularBuffer} from "@openzeppelin/contracts/utils/structs/CircularBuffer.sol";
 
 contract Inbox {
-    // TODO: Optimize using the ring buffer design if we don't need to store all checkpoints
-    // Checkpoints can be anything that describes the state of the rollup at a given publication (the most common case
-    // is the state root)
-    /// @dev tracks proven checkpoints after applying the publication at `_dataFeed.getPublicationHash(pubIdx)`
-    mapping(uint256 pubIdx => bytes32 checkpoint) checkpoints;
+    using CircularBuffer for CircularBuffer.Bytes32CircularBuffer;
 
-    /// @dev the highest `pubIdx` in `checkpoints`
-    uint256 lastProvenIdx;
+    /// @dev Tracks proven checkpoints after applying the publication at `_dataFeed.getPublicationHash(pubIdx)`
+    CircularBuffer.Bytes32CircularBuffer private _checkpoints;
 
     IDataFeed immutable _dataFeed;
     // This would usually be retrieved dynamically as in the current Taiko implementation, but for simplicity we are
@@ -27,9 +24,15 @@ contract Inbox {
     /// @param genesis the checkpoint describing the initial state of the rollup
     /// @param dataFeed the input data source that updates the state of this rollup
     /// @param verifier a contract that can verify the validity of a transition from one checkpoint to another
-    constructor(bytes32 genesis, address dataFeed, address verifier) {
+    constructor(
+        uint256 bufferSize,
+        bytes32 genesis,
+        address dataFeed,
+        address verifier
+    ) {
         // set the genesis checkpoint of the rollup - genesis is trusted to be correct
-        checkpoints[0] = genesis;
+        _checkpoints.setup(bufferSize);
+        _checkpoints.push(genesis);
         _dataFeed = IDataFeed(dataFeed);
         _verifier = IVerifier(verifier);
     }
@@ -40,17 +43,28 @@ contract Inbox {
     /// @param end the index of the last publication in this transition.
     /// @param checkpoint the claimed checkpoint at the end of this transition.
     /// @param proof arbitrary data passed to the `_verifier` contract to confirm the transition validity.
-    function proveBetween(uint256 start, uint256 end, bytes32 checkpoint, bytes calldata proof) external {
-        require(end > lastProvenIdx, "Publication already proven");
-        bytes32 base = checkpoints[start];
+    function proveBetween(
+        uint256 start,
+        uint256 end,
+        bytes32 checkpoint,
+        bytes calldata proof
+    ) external {
+        require(end > _checkpoints.count(), "Publication already proven");
+
+        uint256 at = start % _checkpoints.length();
+        bytes32 base = _checkpoints._data[at];
+
         // this also ensures start <= lastProvenIdx
         require(base != 0, "Unknown base checkpoint");
 
         IVerifier(_verifier).verifyProof(
-            _dataFeed.getPublicationHash(start), _dataFeed.getPublicationHash(end), base, checkpoint, proof
+            _dataFeed.getPublicationHash(start),
+            _dataFeed.getPublicationHash(end),
+            base,
+            checkpoint,
+            proof
         );
-        checkpoints[end] = checkpoint;
-        lastProvenIdx = end;
+        _checkpoints.push(checkpoint);
 
         emit CheckpointProven(end, checkpoint);
     }
