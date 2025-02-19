@@ -35,7 +35,6 @@ contract DataFeed is IDataFeed {
     function publish(uint256 numBlobs, MetadataQuery[] calldata queries) external payable onlyStandaloneTx {
         require(numBlobs > 0, "no data to publish");
 
-        uint256 nQueries = queries.length;
         uint256 id = publicationHashes.length;
         uint256 directId = directPublicationHashes.length;
         Publication memory publication = Publication({
@@ -46,7 +45,7 @@ contract DataFeed is IDataFeed {
             blockNumber: block.number,
             blobHashes: new bytes32[](numBlobs),
             queries: queries,
-            metadata: new bytes[](nQueries),
+            metadata: new bytes[](queries.length),
             directPublicationId: directId,
             directPublicationHash: directPublicationHashes[directId - 1]
         });
@@ -55,14 +54,7 @@ contract DataFeed is IDataFeed {
             publication.blobHashes[i] = blobhash(i);
         }
 
-        uint256 totalValue;
-        for (uint256 i; i < nQueries; ++i) {
-            publication.metadata[i] = IMetadataProvider(queries[i].provider).getMetadata{value: queries[i].value}(
-                msg.sender, queries[i].input
-            );
-            totalValue += queries[i].value;
-        }
-        require(msg.value == totalValue, "Incorrect ETH passed with publication");
+        _setMetadata(publication.metadata, queries);
 
         bytes32 pubHash = keccak256(abi.encode(publication));
         publicationHashes.push(pubHash);
@@ -74,7 +66,6 @@ contract DataFeed is IDataFeed {
     function directPublish(bytes data, MetadataQuery[] calldata queries) external payable {
         require(data.length > 0, "no data to publish");
 
-        uint256 nQueries = queries.length;
         uint256 id = directPublicationHashes.length;
         DirectPublication memory publication = DirectPublication({
             id: id,
@@ -84,24 +75,28 @@ contract DataFeed is IDataFeed {
             blockNumber: block.number,
             dataHash: keccak256(data),
             queries: queries,
-            metadata: new bytes[](nQueries)
+            metadata: new bytes[](queries.length)
         });
 
+        _setMetadata(publication.metadata, queries);
+
+        bytes32 pubHash = keccak256(abi.encode(publication));
+        directPublicationHashes.push(pubHash);
+
+        emit DirectPublished(pubHash, publication);
+    }
+
+    function _setMetadata(bytes[] memory metadata, MetadataQuery[] calldata queries) internal {
+        uint256 nQueries = queries.length;
         uint256 totalValue;
         for (uint256 i; i < nQueries; ++i) {
-            publication.metadata[i] = IMetadataProvider(queries[i].provider).getMetadata{value: queries[i].value}(
+            metadata[i] = IMetadataProvider(queries[i].provider).getMetadata{value: queries[i].value}(
                 msg.sender, queries[i].input
             );
             totalValue += queries[i].value;
         }
         require(msg.value == totalValue, "Incorrect ETH passed with publication");
-
-        bytes32 pubHash = keccak256(abi.encode(publication));
-        directPublicationHashes.push(pubHash);
-
-        emit DirectPublished(pubHash, publication)
     }
-
 
     /// @inheritdoc IDataFeed
     function getPublicationHash(uint256 idx) external view returns (bytes32) {
