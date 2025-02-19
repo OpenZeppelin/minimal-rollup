@@ -37,6 +37,7 @@ contract DataFeed is IDataFeed {
 
         uint256 id = publicationHashes.length;
         uint256 directId = directPublicationHashes.length;
+
         Publication memory publication = Publication({
             id: id,
             prevHash: publicationHashes[id - 1],
