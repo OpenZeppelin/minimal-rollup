@@ -38,7 +38,9 @@ contract Inbox {
         // set the genesis checkpoint of the rollup - genesis is trusted to be correct
         require(genesis != 0, "genesis checkpoint cannot be 0");
         _checkpoints.setup(bufferSize);
+        _checkpointIdxs.setup(bufferSize);
         _checkpoints.push(genesis);
+        _checkpointIdxs.push(0);
         _dataFeed = IDataFeed(dataFeed);
         _verifier = IVerifier(verifier);
     }
