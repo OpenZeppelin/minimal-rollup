@@ -1,9 +1,10 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
-import {IDataFeed, DataFeed} from "../../src/protocol/DataFeed.sol";
-import {DataFeedMock} from "../mocks/DataFeedMock.sol";
+import {DataFeed, IDataFeed} from "../../src/protocol/DataFeed.sol";
+
 import {Inbox} from "../../src/protocol/Inbox.sol";
+import {DataFeedMock} from "../mocks/DataFeedMock.sol";
 import {VerifierMock} from "../mocks/VerifierMock.sol";
 import {Test} from "forge-std/Test.sol";
 
@@ -15,22 +16,12 @@ contract InboxTest is Test {
     function setUp() public virtual {
         dataFeed = new DataFeedMock();
         verifierMock = new VerifierMock();
-        inbox = new Inbox(
-            100,
-            keccak256("genesis"),
-            address(dataFeed),
-            address(verifierMock)
-        );
+        inbox = new Inbox(100, keccak256("genesis"), address(dataFeed), address(verifierMock));
     }
 
-    function test_proveBetween(
-        uint256 end,
-        bytes32 checkpoint,
-        bytes calldata proof
-    ) external {
+    function test_proveBetween(uint256 end, bytes32 checkpoint, bytes calldata proof) external {
         uint256 start = 0;
-        IDataFeed.MetadataQuery[]
-            memory queries = new IDataFeed.MetadataQuery[](0);
+        IDataFeed.MetadataQuery[] memory queries = new IDataFeed.MetadataQuery[](0);
         end = bound(end, start + 1, 10_000); // Avoid out-of-gas
         for (uint256 i; i < end; i++) {
             dataFeed.unsafeSetTransactionGuard(false); // Reset transient lock
