@@ -8,6 +8,7 @@ import {Arrays} from "@openzeppelin/contracts/utils/Arrays.sol";
 import {CircularBuffer} from "@openzeppelin/contracts/utils/structs/CircularBuffer.sol";
 
 contract Inbox {
+    using Arrays for uint256[];
     using CircularBuffer for CircularBuffer.Bytes32CircularBuffer;
 
     /// @dev Tracks proven checkpoints after applying the publications at `_dataFeed`.
@@ -67,15 +68,17 @@ contract Inbox {
         // Cache buffer length (remains constant)
         uint256 bufferLength = _checkpoints.length();
         uint256 atStart = start % bufferLength;
+        uint256 count = checkpointsCount();
 
         // Checks
-        require(_proven(start) && Arrays.unsafeAccess(_checkpointIdxs, atStart).value == start, NotProven(start));
-        require(!_proven(end), AlreadyProven(end));
+        require(start < count && _checkpointIdxs.unsafeAccess(atStart).value == start, NotProven(start));
+        require(end >= count, AlreadyProven(end));
 
+        // Do verify
         IVerifier(_verifier).verifyProof(
             _dataFeed.getPublicationHash(start),
             _dataFeed.getPublicationHash(end),
-            _checkpoints._data[atStart],
+            _checkpoints._data[atStart], // getCheckpoint
             checkpoint,
             proof
         );
@@ -84,14 +87,7 @@ contract Inbox {
         _checkpoints._count = end;
         uint256 atEnd = end % bufferLength;
         _checkpoints._data[atEnd] = checkpoint;
-        Arrays.unsafeAccess(_checkpointIdxs, atEnd).value = end; // Track of which index each publication belongs to
+        _checkpointIdxs.unsafeAccess(atEnd).value = end; // Track of which index each publication belongs to
         emit CheckpointProven(end, checkpoint);
-    }
-
-    /// @dev Returns true if the publication index has been proven
-    /// @param index the publication index to check
-    /// @return true if the publication index has been proven, false otherwise
-    function _proven(uint256 index) private view returns (bool) {
-        return index < checkpointsCount();
     }
 }
