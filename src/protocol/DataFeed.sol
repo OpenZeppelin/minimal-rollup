@@ -36,7 +36,6 @@ contract DataFeed is IDataFeed {
         require(numBlobs > 0, "no data to publish");
 
         uint256 id = publicationHashes.length;
-        uint256 directId = directPublicationHashes.length;
         Publication memory publication = Publication({
             id: id,
             prevHash: publicationHashes[id - 1],
@@ -46,8 +45,7 @@ contract DataFeed is IDataFeed {
             blobHashes: new bytes32[](numBlobs),
             queries: queries,
             metadata: new bytes[](queries.length),
-            directPublicationId: directId,
-            directPublicationHash: directPublicationHashes[directId - 1]
+            directPublicationHashes: new bytes32[](queries.length)
         });
 
         for (uint256 i; i < numBlobs; ++i) {
@@ -93,6 +91,7 @@ contract DataFeed is IDataFeed {
             metadata[i] = IMetadataProvider(queries[i].provider).getMetadata{value: queries[i].value}(
                 msg.sender, queries[i].input
             );
+            directPublicationHashes[i] = IMetadataProvider(queries[i].provider).getDirectPublicationHash();
             totalValue += queries[i].value;
         }
         require(msg.value == totalValue, "Incorrect ETH passed with publication");
