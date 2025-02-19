@@ -10,6 +10,7 @@ contract Inbox {
 
     /// @dev Tracks proven checkpoints after applying the publications at `_dataFeed`
     CircularBuffer.Bytes32CircularBuffer private _checkpoints;
+    CircularBuffer.Bytes32CircularBuffer private _checkpointIdxs;
 
     IDataFeed public immutable _dataFeed;
     // This would usually be retrieved dynamically as in the current Taiko implementation, but for simplicity we are
@@ -28,7 +29,12 @@ contract Inbox {
     /// @param genesis the checkpoint describing the initial state of the rollup
     /// @param dataFeed the input data source that updates the state of this rollup
     /// @param verifier a contract that can verify the validity of a transition from one checkpoint to another
-    constructor(uint256 bufferSize, bytes32 genesis, address dataFeed, address verifier) {
+    constructor(
+        uint256 bufferSize,
+        bytes32 genesis,
+        address dataFeed,
+        address verifier
+    ) {
         // set the genesis checkpoint of the rollup - genesis is trusted to be correct
         require(genesis != 0, "genesis checkpoint cannot be 0");
         _checkpoints.setup(bufferSize);
@@ -51,25 +57,36 @@ contract Inbox {
     /// @param end the index of the last publication in this transition.
     /// @param checkpoint the claimed checkpoint at the end of this transition.
     /// @param proof arbitrary data passed to the `_verifier` contract to confirm the transition validity.
-    function proveBetween(uint256 start, uint256 end, bytes32 checkpoint, bytes calldata proof) external {
-        // Checks
-        require(_proven(start), UnprovenIndex(start));
-        require(!_proven(end), ProvenIndex(end));
-
+    function proveBetween(
+        uint256 start,
+        uint256 end,
+        bytes32 checkpoint,
+        bytes calldata proof
+    ) external {
         // Cache buffer length (remains constant)
         uint256 bufferLength = _checkpoints.length();
+        uint256 atStart = start % bufferLength;
+
+        // Checks
+        require(
+            _proven(start) && _checkpointIdxs._data[atStart] == bytes32(start),
+            UnprovenIndex(start)
+        );
+        require(!_proven(end), ProvenIndex(end));
 
         IVerifier(_verifier).verifyProof(
             _dataFeed.getPublicationHash(start),
             _dataFeed.getPublicationHash(end),
-            _checkpoints._data[start % bufferLength],
+            _checkpoints._data[atStart],
             checkpoint,
             proof
         );
 
         // Add checkpoint at the wrapped "end" position and update count accordingly
         _checkpoints._count = end;
-        _checkpoints._data[end % bufferLength] = checkpoint;
+        uint256 atEnd = end % bufferLength;
+        _checkpoints._data[atEnd] = checkpoint;
+        _checkpointIdxs._data[atEnd] = bytes32(end); // Keep track of which index each publication belongs to
         emit CheckpointProven(end, checkpoint);
     }
 
