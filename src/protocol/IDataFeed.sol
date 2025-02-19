@@ -17,6 +17,8 @@ interface IDataFeed {
         bytes32[] blobHashes;
         MetadataQuery[] queries;
         bytes[] metadata;
+        uint256 directPublicationId;
+        uint256 directPublicationHash;
     }
 
     struct DirectPublication {

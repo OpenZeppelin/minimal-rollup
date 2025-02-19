@@ -43,6 +43,7 @@ contract DataFeed is IDataFeed {
 
         uint256 nQueries = queries.length;
         uint256 id = publicationHashes.length;
+        uint256 directId = directPublicationHashes.length;
         Publication memory publication = Publication({
             id: id,
             prevHash: publicationHashes[id - 1],
@@ -51,7 +52,9 @@ contract DataFeed is IDataFeed {
             blockNumber: block.number,
             blobHashes: new bytes32[](numBlobs),
             queries: queries,
-            metadata: new bytes[](nQueries)
+            metadata: new bytes[](nQueries),
+            directPublicationId: directId,
+            directPublicationHash: directPublicationHashes[directId - 1]
         });
 
         for (uint256 i; i < numBlobs; ++i) {
