@@ -10,13 +10,13 @@ import {Test} from "forge-std/Test.sol";
 
 contract InboxTest is Test {
     Inbox inbox;
-    DataFeedMock dataFeed;
+    DataFeedMock dataFeedMock;
     VerifierMock verifierMock;
 
     function setUp() public virtual {
-        dataFeed = new DataFeedMock();
+        dataFeedMock = new DataFeedMock();
         verifierMock = new VerifierMock();
-        inbox = new Inbox(100, keccak256("genesis"), address(dataFeed), address(verifierMock));
+        inbox = new Inbox(100, keccak256("genesis"), address(dataFeedMock), address(verifierMock));
     }
 
     function test_proveBetween(uint256 end, bytes32 checkpoint, bytes calldata proof) external {
@@ -24,8 +24,8 @@ contract InboxTest is Test {
         IDataFeed.MetadataQuery[] memory queries = new IDataFeed.MetadataQuery[](0);
         end = bound(end, start + 1, 10_000); // Avoid out-of-gas
         for (uint256 i; i < end; i++) {
-            dataFeed.unsafeSetTransactionGuard(false); // Reset transient lock
-            dataFeed.publish(1, queries);
+            dataFeedMock.unsafeSetTransactionGuard(false); // Reset transient lock
+            dataFeedMock.publish(1, queries);
         }
 
         vm.expectCall(
@@ -33,8 +33,8 @@ contract InboxTest is Test {
             abi.encodeCall(
                 VerifierMock.verifyProof,
                 (
-                    dataFeed.getPublicationHash(start),
-                    dataFeed.getPublicationHash(end),
+                    dataFeedMock.getPublicationHash(start),
+                    dataFeedMock.getPublicationHash(end),
                     inbox.getCheckpoint(start),
                     checkpoint,
                     proof

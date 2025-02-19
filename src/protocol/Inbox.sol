@@ -10,6 +10,8 @@ contract Inbox {
 
     /// @dev Tracks proven checkpoints after applying the publications at `_dataFeed`
     CircularBuffer.Bytes32CircularBuffer private _checkpoints;
+    /// @dev Maps checkpoints to an always increasing index to ensure a checkpoint belongs
+    /// to the current ring (e.g. proving between 3 and 5 will leave indexes 4 and 5 untouched)
     CircularBuffer.Bytes32CircularBuffer private _checkpointIdxs;
 
     IDataFeed public immutable _dataFeed;
@@ -22,8 +24,8 @@ contract Inbox {
     /// @param checkpoint the checkpoint that was proven
     event CheckpointProven(uint256 indexed pubIdx, bytes32 indexed checkpoint);
 
-    error ProvenIndex(uint256 index);
-    error UnprovenIndex(uint256 index);
+    error AlreadyProven(uint256 index);
+    error NotProven(uint256 index);
 
     /// @param bufferSize the maximum number of checkpoints simultaneously stored in this contract
     /// @param genesis the checkpoint describing the initial state of the rollup
@@ -60,8 +62,8 @@ contract Inbox {
         uint256 atStart = start % bufferLength;
 
         // Checks
-        require(_proven(start) && _checkpointIdxs._data[atStart] == bytes32(start), UnprovenIndex(start));
-        require(!_proven(end), ProvenIndex(end));
+        require(_proven(start) && _checkpointIdxs._data[atStart] == bytes32(start), NotProven(start));
+        require(!_proven(end), AlreadyProven(end));
 
         IVerifier(_verifier).verifyProof(
             _dataFeed.getPublicationHash(start),
