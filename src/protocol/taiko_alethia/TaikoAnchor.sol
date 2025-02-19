@@ -29,8 +29,8 @@ contract TaikoAnchor {
         (circularBlocksHash,) = _calcCircularBlocksHash(block.number);
     }
 
-    /// @dev The node software will guaranteeand prover will verify the following:
-    /// 1. This funciton is transacted as the first transaction in the first L2 block derived from the same publication;
+    /// @dev The node software will guarantee and the prover will verify the following:
+    /// 1. This function is transacted as the first transaction in the first L2 block derived from the same publication;
     /// 2. This function's gas limit is a fixed value;
     /// 3. This function will not revert.
     function anchor(uint256 _publicationId, uint256 _anchorBlockId, bytes32 _anchorBlockHash, bytes32 _parentGasUsed)
