@@ -42,10 +42,15 @@ contract Inbox {
         _verifier = IVerifier(verifier);
     }
 
+    /// @notice Returns the checkpoint at the given publication index
+    /// @param at The index to query
+    /// @return The checkpoint at the given index (wrapped around buffer length)
     function getCheckpoint(uint256 at) public view returns (bytes32) {
         return _checkpoints._data[at % _checkpoints.length()];
     }
 
+    /// @notice Returns the total number of checkpoints that have been proven
+    /// @return The count of proven checkpoints
     function checkpointsCount() public view returns (uint256) {
         return _checkpoints._count;
     }
@@ -81,7 +86,10 @@ contract Inbox {
         emit CheckpointProven(end, checkpoint);
     }
 
+    /// @dev Returns true if the publication index has been proven
+    /// @param index the publication index to check
+    /// @return true if the publication index has been proven, false otherwise
     function _proven(uint256 index) private view returns (bool) {
-        return index < _checkpoints._count;
+        return index < checkpointsCount();
     }
 }
