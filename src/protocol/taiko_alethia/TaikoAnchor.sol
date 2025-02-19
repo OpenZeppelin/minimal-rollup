@@ -77,7 +77,7 @@ contract TaikoAnchor {
 
         unchecked {
             // Put the previous 255 blockhashes (excluding the parent's) into a ring buffer
-            for (uint256 i; i < 255 && _blockId >= i + 1; ++i) {
+            for (uint256 i; i < 255 && _blockId > i; ++i) {
                 uint256 j = _blockId - i - 1;
                 inputs[j % 255] = blockhash(j);
             }
