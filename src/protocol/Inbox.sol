@@ -9,7 +9,9 @@ import {Arrays} from "@openzeppelin/contracts/utils/Arrays.sol";
 contract Inbox {
     using CircularBuffer for CircularBuffer.Bytes32CircularBuffer;
 
-    /// @dev Tracks proven checkpoints after applying the publications at `_dataFeed`
+    /// @dev Tracks proven checkpoints after applying the publications at `_dataFeed`.
+    /// A checkpoint is anything that describes the state of the rollup at a given data feed
+    /// publication (e.g. a state root).
     CircularBuffer.Bytes32CircularBuffer private _checkpoints;
     /// @dev Maps checkpoints to an always increasing index to ensure a checkpoint belongs
     /// to the current ring (e.g. proving between 3 and 5 will leave indexes 4 and 5 untouched)
