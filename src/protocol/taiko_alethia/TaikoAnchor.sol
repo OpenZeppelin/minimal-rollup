@@ -2,6 +2,8 @@
 pragma solidity ^0.8.28;
 
 contract TaikoAnchor {
+    event Anchor(uint256 publicationId, uint256 anchorBlockId, bytes32 anchorBlockHash, bytes32 parentGasUsed);
+
     uint256 public immutable fixedBaseFee;
     address public immutable permittedSender; // 0x0000777735367b36bC9B61C50022d9D0700dB4Ec
 
@@ -27,16 +29,23 @@ contract TaikoAnchor {
         (circularBlocksHash,) = _calcCircularBlocksHash(block.number);
     }
 
+    /// @dev The node software will guaranteeand prover will verify the following:
+    /// 1. This funciton is transacted as the first transaction in the first L2 block derived from the same publication;
+    /// 2. This function's gas limit is a fixed value;
+    /// 3. This function will not revert.
     function anchor(uint256 _publicationId, uint256 _anchorBlockId, bytes32 _anchorBlockHash, bytes32 _parentGasUsed)
         external
         onlyFromPermittedSender
     {
+        // Make sure this function can only succeed once per publication
         require(_publicationId > lastPublicationId, "publicationId too small");
         lastPublicationId = _publicationId;
 
+        // Make sure L1->L2 sync will use newer block hash
         require(_anchorBlockId >= lastAnchorBlockId, "anchorBlockId too small");
         require(_anchorBlockHash != 0, "anchorBlockHash is 0");
 
+        // Persist anchor block hashes
         if (_anchorBlockId > lastAnchorBlockId) {
             lastAnchorBlockId = _anchorBlockId;
             l1BlockHashes[_anchorBlockId] = _anchorBlockHash;
@@ -46,12 +55,14 @@ contract TaikoAnchor {
         uint256 parentId = block.number - 1;
         blockHashes[parentId] = blockhash(parentId);
 
-        // Calculate the current and new ancestor hashes based on the parent block ID
+        // Calculate the current and new circular hash for the last 255 blocksbased on the parent block ID
         (bytes32 currentHash, bytes32 newHash) = _calcCircularBlocksHash(parentId);
         require(circularBlocksHash == currentHash, "circular hash mismatch");
         circularBlocksHash = newHash;
 
         _verifyBaseFee(_parentGasUsed);
+
+        emit Anchor(_publicationId, _anchorBlockId, _anchorBlockHash, _parentGasUsed);
     }
 
     /// @dev Calculates the aggregated ancestor block hash for the given block ID
