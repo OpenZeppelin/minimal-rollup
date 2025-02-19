@@ -63,7 +63,7 @@ contract DataFeed is IDataFeed {
     }
 
     /// @inheritdoc IDataFeed
-    function directPublish(bytes data, MetadataQuery[] calldata queries) external payable {
+    function directPublish(bytes calldata data, MetadataQuery[] calldata queries) external payable {
         require(data.length > 0, "no data to publish");
 
         uint256 id = directPublicationHashes.length;

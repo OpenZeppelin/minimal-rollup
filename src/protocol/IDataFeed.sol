@@ -57,7 +57,7 @@ interface IDataFeed {
     /// @dev there can be multiple queries because a single publication might represent multiple rollups,
     /// each with their own L1 metadata requirements
     /// @dev append a hash representing the data and L1 metadata to `directPublicationHashes`.
-    function directPublish(bytes data, MetadataQuery[] calldata queries) external payable;
+    function directPublish(bytes calldata data, MetadataQuery[] calldata queries) external payable;
 
     /// @notice retrieve a hash representing a previous publication
     /// @param idx the index of the publication hash
