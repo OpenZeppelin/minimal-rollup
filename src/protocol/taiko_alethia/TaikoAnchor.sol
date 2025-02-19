@@ -3,7 +3,7 @@ pragma solidity ^0.8.28;
 
 contract TaikoAnchor {
     uint256 public immutable fixedBaseFee;
-    address public immutable goldenTouchAddress; // 0x0000777735367b36bC9B61C50022d9D0700dB4Ec
+    address public immutable permittedSender; // 0x0000777735367b36bC9B61C50022d9D0700dB4Ec
 
     uint256 public lastAnchorBlockId;
     uint256 public lastPublicationId;
@@ -11,29 +11,25 @@ contract TaikoAnchor {
     mapping(uint256 blockId => bytes32 blockHash) public blockHashes;
     mapping(uint256 blockId => bytes32 blockHash) public l1BlockHashes;
 
-    modifier onlyGoldenTouch() {
-        require(msg.sender == goldenTouchAddress, "sender not golden touch");
+    modifier onlyFromPermittedSender() {
+        require(msg.sender == permittedSender, "sender not golden touch");
         _;
     }
 
     // This constructor is only used in test as the contract will be pre-deployed in the L2 genesis
-    constructor(uint256 _fixedBaseFee, address _goldenTouchAddress) {
+    constructor(uint256 _fixedBaseFee, address _permittedSender) {
         require(_fixedBaseFee > 0, "fixedBaseFee must be greater than 0");
         fixedBaseFee = _fixedBaseFee;
-        goldenTouchAddress = _goldenTouchAddress;
+        permittedSender = _permittedSender;
 
-        if (block.number == 1) {
-            // This is the case in tests
-            uint256 parentId = block.number - 1;
-            blockHashes[parentId] = blockhash(parentId);
-        }
-
+        uint256 parentId = block.number - 1;
+        blockHashes[parentId] = blockhash(parentId);
         (circularBlocksHash,) = _calcCircularBlocksHash(block.number);
     }
 
-    function anchor(uint256 _publicationId, uint256 _anchorBlockId, bytes32 _anchorBlockHash)
+    function anchor(uint256 _publicationId, uint256 _anchorBlockId, bytes32 _anchorBlockHash, bytes32 _parentGasUsed)
         external
-        onlyGoldenTouch
+        onlyFromPermittedSender
     {
         require(_publicationId > lastPublicationId, "publicationId too small");
         lastPublicationId = _publicationId;
@@ -55,8 +51,7 @@ contract TaikoAnchor {
         require(circularBlocksHash == currentHash, "circular hash mismatch");
         circularBlocksHash = newHash;
 
-        // Simply use a constant base fee for now
-        require(block.basefee == fixedBaseFee, "basefee mismatch");
+        _verifyBaseFee(_parentGasUsed);
     }
 
     /// @dev Calculates the aggregated ancestor block hash for the given block ID
@@ -85,5 +80,10 @@ contract TaikoAnchor {
         assembly {
             newHash_ := keccak256(inputs, mul(256, 32))
         }
+    }
+
+    // For now, we simply use a constant base fee
+    function _verifyBaseFee(bytes32 /*_parentGasUsed*/ ) internal view {
+        require(block.basefee == fixedBaseFee, "basefee mismatch");
     }
 }
