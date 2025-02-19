@@ -3,8 +3,9 @@ pragma solidity ^0.8.28;
 
 import {IDataFeed} from "./IDataFeed.sol";
 import {IVerifier} from "./IVerifier.sol";
-import {CircularBuffer} from "@openzeppelin/contracts/utils/structs/CircularBuffer.sol";
+
 import {Arrays} from "@openzeppelin/contracts/utils/Arrays.sol";
+import {CircularBuffer} from "@openzeppelin/contracts/utils/structs/CircularBuffer.sol";
 
 contract Inbox {
     using CircularBuffer for CircularBuffer.Bytes32CircularBuffer;
