@@ -80,6 +80,6 @@ contract Inbox {
     }
 
     function _proven(uint256 index) private view returns (bool) {
-        return index < _checkpoints.count();
+        return index < _checkpoints._count;
     }
 }
