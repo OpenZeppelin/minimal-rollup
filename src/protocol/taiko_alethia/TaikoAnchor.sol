@@ -33,6 +33,7 @@ contract TaikoAnchor {
     /// 1. This function is transacted as the first transaction in the first L2 block derived from the same publication;
     /// 2. This function's gas limit is a fixed value;
     /// 3. This function will not revert.
+    /// 4. The parameters correspond to the real L1 state.
     /// @param _publicationId The publication that contains this anchor transaction (as the first transaction)
     /// @param _anchorBlockId The latest L1 block known to the L2 blocks in this publication
     /// @param _anchorBlockHash The block hash of the L1 anchor block
