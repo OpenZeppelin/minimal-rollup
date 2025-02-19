@@ -4,6 +4,7 @@ pragma solidity ^0.8.28;
 import {IDataFeed} from "./IDataFeed.sol";
 import {IVerifier} from "./IVerifier.sol";
 import {CircularBuffer} from "@openzeppelin/contracts/utils/structs/CircularBuffer.sol";
+import {Arrays} from "@openzeppelin/contracts/utils/Arrays.sol";
 
 contract Inbox {
     using CircularBuffer for CircularBuffer.Bytes32CircularBuffer;
@@ -12,7 +13,7 @@ contract Inbox {
     CircularBuffer.Bytes32CircularBuffer private _checkpoints;
     /// @dev Maps checkpoints to an always increasing index to ensure a checkpoint belongs
     /// to the current ring (e.g. proving between 3 and 5 will leave indexes 4 and 5 untouched)
-    CircularBuffer.Bytes32CircularBuffer private _checkpointIdxs;
+    uint256[] private _checkpointIdxs;
 
     IDataFeed public immutable _dataFeed;
     // This would usually be retrieved dynamically as in the current Taiko implementation, but for simplicity we are
@@ -35,9 +36,7 @@ contract Inbox {
         // set the genesis checkpoint of the rollup - genesis is trusted to be correct
         require(genesis != 0, "genesis checkpoint cannot be 0");
         _checkpoints.setup(bufferSize);
-        _checkpointIdxs.setup(bufferSize);
         _checkpoints.push(genesis);
-        _checkpointIdxs.push(0);
         _dataFeed = IDataFeed(dataFeed);
         _verifier = IVerifier(verifier);
     }
@@ -67,7 +66,7 @@ contract Inbox {
         uint256 atStart = start % bufferLength;
 
         // Checks
-        require(_proven(start) && _checkpointIdxs._data[atStart] == bytes32(start), NotProven(start));
+        require(_proven(start) && Arrays.unsafeAccess(_checkpointIdxs, atStart).value == start, NotProven(start));
         require(!_proven(end), AlreadyProven(end));
 
         IVerifier(_verifier).verifyProof(
@@ -82,7 +81,7 @@ contract Inbox {
         _checkpoints._count = end;
         uint256 atEnd = end % bufferLength;
         _checkpoints._data[atEnd] = checkpoint;
-        _checkpointIdxs._data[atEnd] = bytes32(end); // Keep track of which index each publication belongs to
+        Arrays.unsafeAccess(_checkpointIdxs, atEnd).value = end; // Track of which index each publication belongs to
         emit CheckpointProven(end, checkpoint);
     }
 
