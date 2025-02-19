@@ -83,7 +83,7 @@ contract DataFeed is IDataFeed {
         bytes32 pubHash = keccak256(abi.encode(publication));
         directPublicationHashes.push(pubHash);
 
-        emit DirectPublished(pubHash, publication);
+        emit Published(pubHash, publication);
     }
 
     function _setMetadata(bytes[] memory metadata, MetadataQuery[] calldata queries) internal {

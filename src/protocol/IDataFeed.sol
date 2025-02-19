@@ -40,7 +40,7 @@ interface IDataFeed {
     /// @notice Emitted when a new direct publication is created
     /// @param pubHash the hash of the new publication
     /// @param publication the DirectPublication struct describing the preimages to pubHash
-    event DirectPublished(bytes32 indexed pubHash, DirectPublication publication);
+    event Published(bytes32 indexed pubHash, DirectPublication publication);
 
     /// @notice Publish arbitrary data in blobs for data availability.
     /// @param numBlobs the number of blobs accompanying this function call.
