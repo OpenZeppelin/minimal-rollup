@@ -1,9 +1,10 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
+import {IDataFeed} from "../IDataFeed.sol";
 import {IPublicationHook} from "../IPublicationHook.sol";
 
-import {IDataFeed} from "../IDataFeed.sol";
+import {IDelayedInclusionStore} from "./IDelayedInclusionStore.sol";
 import {ILookahead} from "./ILookahead.sol";
 
 contract TaikoPublicationHook is IPublicationHook {
@@ -12,9 +13,11 @@ contract TaikoPublicationHook is IPublicationHook {
         uint8 numBlobs;
     }
 
-    struct PrehookOutput {
+    struct TaikoProposal {
         bytes32 anchorBlockhash;
-        bytes32[] blobHashes;
+        // If blobHashes are not empty, all blobs in a group will be concatenated into a single blob and will be decoded
+        // by node/client as a TaikoProposalType1 object (defined in node/client);
+        bytes32[][] blobGroups;
     }
 
     struct PosthookInput {
@@ -24,11 +27,13 @@ contract TaikoPublicationHook is IPublicationHook {
     address public immutable dataFeed;
     address public immutable lookahead;
     uint256 public immutable maxAnchorBlockOffset;
+    IDelayedInclusionStore public immutable delayedInclusionStore;
 
-    constructor(address _dataFeed, address _lookahead, uint256 _maxAnchorBlockOffset) {
+    constructor(address _dataFeed, address _lookahead, uint256 _maxAnchorBlockOffset, address _delayedInclusionStore) {
         dataFeed = _dataFeed;
         lookahead = _lookahead;
         maxAnchorBlockOffset = _maxAnchorBlockOffset;
+        delayedInclusionStore = IDelayedInclusionStore(_delayedInclusionStore);
     }
 
     modifier onlyFromDataFeedByPreconfer(address publisher) {
@@ -56,33 +61,29 @@ contract TaikoPublicationHook is IPublicationHook {
         bytes32 anchorBlockhash = blockhash(_input.anchorBlockId);
         require(anchorBlockhash != 0, "blockhash not found");
 
-        bytes32[] memory blobHashes = new bytes32[](_input.numBlobs);
+        bytes32[][] memory blobGroups = new bytes32[][](1);
+        blobGroups[0] = new bytes32[](_input.numBlobs);
         for (uint8 i; i < _input.numBlobs; i++) {
-            blobHashes[i] = blockhash(_input.anchorBlockId + i);
-            require(blobHashes[i] != 0, "blob not found");
+            blobGroups[0][i] = blockhash(_input.anchorBlockId + i);
+            require(blobGroups[0][i] != 0, "blob not found");
         }
 
-        return abi.encode(PrehookOutput(anchorBlockhash, blobHashes));
+        return abi.encode(TaikoProposal(anchorBlockhash, blobGroups));
     }
 
     /// @inheritdoc IPublicationHook
-    function afterPublish(address publisher, IDataFeed.Publication memory publication, bytes memory input)
+    function afterPublish(address publisher, IDataFeed.Publication memory, /* publication */ bytes memory input)
         external
         payable
         override
         onlyFromDataFeedByPreconfer(publisher)
     {
+        require(input.length == 0, "input not supported");
         require(msg.value == 0, "ETH not required");
-        PosthookInput memory _input = abi.decode(input, (PosthookInput));
 
-        // TODO: check all inclusions due are included, otherwise revert.
+        bytes32[][] memory blobGroups = delayedInclusionStore.processDelayedInclusionByDeadline(block.timestamp);
 
-        uint256 nInclusions = _input.inclusionHashes.length;
-        for (uint256 i; i < nInclusions; ++i) {
-            // TODO: load and encode inclusions into `data;
-            bytes memory data;
-            IDataFeed.HookQuery[] memory emptyHookQuery;
-            IDataFeed(dataFeed).publish(0, data, emptyHookQuery, emptyHookQuery);
-        }
+        IDataFeed.HookQuery[] memory emptyHookQuery;
+        IDataFeed(dataFeed).publish(0, abi.encode(blobGroups), emptyHookQuery, emptyHookQuery);
     }
 }
