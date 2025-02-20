@@ -25,7 +25,7 @@ contract InboxTest is Test {
         end = bound(end, start + 1, 10_000); // Avoid out-of-gas
         for (uint256 i; i < end; i++) {
             dataFeedMock.unsafeSetTransactionGuard(false); // Reset transient lock
-            dataFeedMock.publish(1, queries);
+            dataFeedMock.publish(1, proof[0:0], queries);
         }
 
         vm.expectCall(
