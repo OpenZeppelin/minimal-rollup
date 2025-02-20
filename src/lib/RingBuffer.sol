@@ -71,10 +71,7 @@ library RingBuffer {
         return self;
     }
 
-    function setLastIndex(CheckpointBuffer storage self, uint256 index)
-        internal
-        returns (CheckpointBuffer storage)
-    {
+    function setLastIndex(CheckpointBuffer storage self, uint256 index) internal returns (CheckpointBuffer storage) {
         self._lastIndex = index;
         return self;
     }
