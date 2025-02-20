@@ -27,13 +27,7 @@ contract DataFeed is IDataFeed {
         publicationHashes.push(0);
     }
 
-    /// @notice Publish arbitrary data in blobs for data availability.
-    /// @param numBlobs the number of blobs accompanying this function call.
-    /// @param queries the calls required to retrieve L1 metadata hashes associated with this publication.
-    /// @dev there can be multiple queries because a single publication might represent multiple rollups,
-    /// each with their own L1 metadata requirements
-    /// @dev append a hash representing all blobs and L1 metadata to `publicationHashes`.
-    /// The number of blobs is not validated. Additional blobs are ignored. Empty blobs have a hash of zero.
+    /// @inheritdoc IDataFeed
     function publish(uint256 numBlobs, MetadataQuery[] calldata queries) external payable onlyStandaloneTx {
         require(numBlobs > 0, "no data to publish");
 
@@ -69,9 +63,7 @@ contract DataFeed is IDataFeed {
         emit Published(pubHash, publication);
     }
 
-    /// @notice retrieve a hash representing a previous publication
-    /// @param idx the index of the publication hash
-    /// @return _ the corresponding publication hash
+    /// @inheritdoc IDataFeed
     function getPublicationHash(uint256 idx) external view returns (bytes32) {
         return publicationHashes[idx];
     }
