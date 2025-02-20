@@ -28,26 +28,34 @@ contract DataFeed is IDataFeed {
     }
 
     /// @inheritdoc IDataFeed
-    function publish(uint256 numBlobs, MetadataQuery[] calldata queries) external payable onlyStandaloneTx {
+    function publish(uint256 numBlobs, bytes calldata data, MetadataQuery[] calldata queries)
+        external
+        payable
+        onlyStandaloneTx
+    {
         require(numBlobs > 0, "no data to publish");
 
         uint256 nQueries = queries.length;
         uint256 id = publicationHashes.length;
+
+        bytes32[] memory blobHashes = new bytes32[](numBlobs);
+        for (uint256 i; i < numBlobs; ++i) {
+            blobHashes[i] = blobhash(i);
+        }
+        bytes32 dataHash = keccak256(abi.encode(data, blobHashes));
+
         Publication memory publication = Publication({
             id: id,
             prevHash: publicationHashes[id - 1],
             publisher: msg.sender,
             timestamp: block.timestamp,
             blockNumber: block.number,
-            blobHashes: new bytes32[](numBlobs),
+            dataHash: dataHash,
             queries: queries,
             metadata: new bytes[](nQueries)
         });
 
-        for (uint256 i; i < numBlobs; ++i) {
-            publication.blobHashes[i] = blobhash(i);
-        }
-
+        
         uint256 totalValue;
         for (uint256 i; i < nQueries; ++i) {
             publication.metadata[i] = IMetadataProvider(queries[i].provider).getMetadata{value: queries[i].value}(
