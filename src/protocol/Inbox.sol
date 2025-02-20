@@ -54,19 +54,34 @@ contract Inbox {
         require(end > lastProvenIdx, "Publication already proven");
         require(checkpoint != 0, "Checkpoint cannot be 0");
 
-        Checkpoint storage startCheckpoint = _checkpoints[start % ringbufferSize];
-        require(startCheckpoint.index == start, "Start checkpoint not found");
-
         IVerifier(_verifier).verifyProof(
             _dataFeed.getPublicationHash(start),
             _dataFeed.getPublicationHash(end),
-            startCheckpoint.value,
+            getCheckpoint(start),
             checkpoint,
             proof
         );
-        _checkpoints[end % ringbufferSize] = Checkpoint(end, checkpoint);
+
+        Checkpoint storage endCheckpoint = _checkpointAt(end);
+        endCheckpoint.index = end;
+        endCheckpoint.value = checkpoint;
+
         lastProvenIdx = end;
 
         emit CheckpointProven(end, checkpoint);
+    }
+
+    function getCheckpoint(uint256 index) public view returns (bytes32) {
+        Checkpoint storage checkpoint = _checkpointAt(index);
+        require(checkpoint.index == index, "Checkpoint not found");
+        return checkpoint.value;
+    }
+
+    function getLatestCheckpoint() public view returns (bytes32) {
+        return _checkpointAt(lastProvenIdx).value;
+    }
+
+    function _checkpointAt(uint256 index) internal view returns (Checkpoint storage) {
+        return _checkpoints[index % ringbufferSize];
     }
 }
