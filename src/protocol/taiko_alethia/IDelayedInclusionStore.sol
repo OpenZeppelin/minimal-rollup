@@ -6,5 +6,5 @@ import {ITaikoData} from "./TaikoPublicationHook.sol";
 interface IDelayedInclusionStore {
     function processDelayedInclusionByDeadline(uint256 deadline)
         external
-        returns (ITaikoData.ProposalData[] memory proposalDataList);
+        returns (ITaikoData.DataSource[] memory DataSources);
 }

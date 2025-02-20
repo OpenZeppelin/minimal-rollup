@@ -61,10 +61,10 @@ contract TaikoPublicationHook is IPublicationHook {
             require(blobs[i] != 0, "blob not found");
         }
 
-        ITaikoData.ProposalData[] memory proposalDataList = new ITaikoData.ProposalData[](1);
-        proposalDataList[0].blobs = blobs;
+        ITaikoData.DataSource[] memory dataSources = new ITaikoData.DataSource[](1);
+        dataSources[0].blobs = blobs;
 
-        return abi.encode(ITaikoData.Proposal(anchorBlockhash, proposalDataList));
+        return abi.encode(ITaikoData.Proposal(anchorBlockhash, dataSources));
     }
 
     /// @inheritdoc IPublicationHook
@@ -77,13 +77,13 @@ contract TaikoPublicationHook is IPublicationHook {
         require(input.length == 0, "input not supported");
         require(msg.value == 0, "ETH not required");
 
-        ITaikoData.ProposalData[] memory proposalDataList =
+        ITaikoData.DataSource[] memory dataSources =
             delayedInclusionStore.processDelayedInclusionByDeadline(block.timestamp);
 
-        if (proposalDataList.length > 0) {
-            bytes memory data = abi.encode(ITaikoData.Proposal(0, proposalDataList));
-            IDataFeed.HookQuery[] memory emptyHookQuery;
-            IDataFeed(dataFeed).publish{value: 0}(0, data, emptyHookQuery, emptyHookQuery);
+        if (dataSources.length > 0) {
+            bytes memory data = abi.encode(ITaikoData.Proposal(0, dataSources));
+            IDataFeed.HookQuery[] memory emptyHooks;
+            IDataFeed(dataFeed).publish{value: 0}(0, data, emptyHooks, emptyHooks);
         }
     }
 }
