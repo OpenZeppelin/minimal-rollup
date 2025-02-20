@@ -3,7 +3,7 @@ pragma solidity ^0.8.28;
 
 import {IPublicationHook} from "../IPublicationHook.sol";
 
-import {IDataFeed} from "./IDataFeed.sol";
+import {IDataFeed} from "../IDataFeed.sol";
 import {ILookahead} from "./ILookahead.sol";
 
 contract TaikoHookProvider is IPublicationHook {
