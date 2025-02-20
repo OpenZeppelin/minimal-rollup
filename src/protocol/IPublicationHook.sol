@@ -7,8 +7,9 @@ interface IPublicationHook {
     /// @notice Hook called before a publication
     /// @param publisher The address of the publisher
     /// @param input Arbitrary input to the hook
-    /// @return output Arbitrary output from the hook. Commonly used to return the metadata for the publication.
-    function beforePublish(address publisher, bytes memory input) external payable returns (bytes memory output);
+    /// @return auxData Auxiliary data that should be contained within the publication
+    /// @dev Auxiliary data is typically publication metadata and any other relevant L1 state.
+    function beforePublish(address publisher, bytes memory input) external payable returns (bytes memory auxData);
 
     /// @notice Hook called after a publication
     /// @param publisher The address of the publisher

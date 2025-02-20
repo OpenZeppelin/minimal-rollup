@@ -17,21 +17,20 @@ contract DataFeed is IDataFeed {
     function publish(
         uint256 numBlobs,
         bytes calldata data,
-        HookQuery[] calldata metadataQueries,
+        HookQuery[] calldata preHooks,
         HookQuery[] calldata postHooks
     ) external payable {
-        uint256 nHooks = metadataQueries.length;
+        uint256 nHooks = preHooks.length;
         uint256 totalValue;
-        bytes[] memory metadata = new bytes[](nHooks);
+        bytes[] memory auxData = new bytes[](nHooks);
         for (uint256 i; i < nHooks; ++i) {
-            metadata[i] = IPublicationHook(metadataQueries[i].provider).beforePublish{value: metadataQueries[i].value}(
-                msg.sender, metadataQueries[i].input
+            auxData[i] = IPublicationHook(preHooks[i].provider).beforePublish{value: preHooks[i].value}(
+                msg.sender, preHooks[i].input
             );
-            totalValue += metadataQueries[i].value;
+            totalValue += preHooks[i].value;
         }
 
         uint256 id = publicationHashes.length;
-
         Publication memory publication = Publication({
             id: id,
             prevHash: publicationHashes[id - 1],
@@ -40,9 +39,9 @@ contract DataFeed is IDataFeed {
             blockNumber: block.number,
             blobHashes: new bytes32[](numBlobs),
             data: data,
-            metadataQueries: metadataQueries,
+            preHooks: preHooks,
             postHooks: postHooks,
-            metadata: metadata
+            auxData: auxData
         });
 
         for (uint256 i; i < numBlobs; ++i) {

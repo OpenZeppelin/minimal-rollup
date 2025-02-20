@@ -16,9 +16,9 @@ interface IDataFeed {
         uint256 blockNumber;
         bytes32[] blobHashes;
         bytes data;
-        HookQuery[] metadataQueries;
+        HookQuery[] preHooks;
         HookQuery[] postHooks;
-        bytes[] metadata;
+        bytes[] auxData;
     }
 
     /// @notice Emitted when a new publication is created
@@ -29,14 +29,15 @@ interface IDataFeed {
     /// @notice Publish arbitrary data for data availability.
     /// @param data the data to publish in calldata.
     /// @param numBlobs the number of blobs accompanying this function call.
-    /// @param metadataQueries the calls required to retrieve L1 metadata hashes associated with this publication.
+    /// @param preHooks arbitrary calls to retrieve auxiliary data that should be contained in the publication
     /// @param postHooks arbitrary calls to be executed after the publication
-    /// @dev there can be multiple queries and post hooks because a single publication might represent multiple rollups,
+    /// @dev there can be multiple pre hooks and post hooks because a single publication might represent multiple
+    /// rollups,
     /// each with their own requirements
     function publish(
         uint256 numBlobs,
         bytes calldata data,
-        HookQuery[] calldata metadataQueries,
+        HookQuery[] calldata preHooks,
         HookQuery[] calldata postHooks
     ) external payable;
 
