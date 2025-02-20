@@ -5,13 +5,13 @@ import {IDataFeed} from "./IDataFeed.sol";
 import {IVerifier} from "./IVerifier.sol";
 
 contract Inbox {
-    /// @notice Tracks the latest proven checkpoint for the Inbox
-    /// @dev We don't store previous checkpoints, and instead synchronize them to the `SignalService` for messaging
-    /// @dev A checkpoint is anything that uniquely identifies the state of the rollup at a given data feed
-    /// publication (e.g. a state root).
+    /// @notice The current proven checkpoint representing the latest verified state of the rollup
+    /// @dev Previous checkpoints are not stored here but are synchronized to the `SignalService`
+    /// @dev A checkpoint is a cryptographic commitment (typically a state root) that uniquely identifies
+    /// the state of the rollup at a specific point in time
     bytes32 public checkpoint;
 
-    /// @notice The index of the last publication that was proven
+    /// @notice The index of the most recent proven publication in the data feed
     uint256 public lastProvenIdx;
 
     IDataFeed public immutable _dataFeed;
@@ -35,11 +35,10 @@ contract Inbox {
         _verifier = IVerifier(verifier);
     }
 
-    /// @notice Proves the transition between the last proven checkpoint and a new checkpoint
-    /// @dev Updates the `lastProvenIdx` to `end` on success
-    /// @param end the index of the last publication in this transition.
-    /// @param newCheckpoint the claimed checkpoint at the end of this transition.
-    /// @param proof arbitrary data passed to the `_verifier` contract to confirm the transition validity.
+    /// @notice Verifies and updates the rollup state with a new checkpoint
+    /// @param end The publication index of the proposed checkpoint
+    /// @param newCheckpoint The proposed new checkpoint value to transition to
+    /// @param proof Arbitrary data passed to the `_verifier` contract to confirm the transition validity.
     function proveTransition(uint256 end, bytes32 newCheckpoint, bytes calldata proof) external {
         require(checkpoint != 0, "Checkpoint cannot be 0");
         require(end > lastProvenIdx, "Publication already proven");
