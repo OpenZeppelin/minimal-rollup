@@ -1,23 +1,20 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
+import {RingBuffer} from "../lib/RingBuffer.sol";
 import {IDataFeed} from "./IDataFeed.sol";
 import {IVerifier} from "./IVerifier.sol";
 
 import {Arrays} from "@openzeppelin/contracts/utils/Arrays.sol";
-import {CircularBuffer} from "@openzeppelin/contracts/utils/structs/CircularBuffer.sol";
 
 contract Inbox {
     using Arrays for uint256[];
-    using CircularBuffer for CircularBuffer.Bytes32CircularBuffer;
+    using RingBuffer for RingBuffer.CheckpointBuffer;
 
     /// @dev Tracks proven checkpoints after applying the publications at `_dataFeed`.
     /// A checkpoint is anything that describes the state of the rollup at a given data feed
     /// publication (e.g. a state root).
-    CircularBuffer.Bytes32CircularBuffer private _checkpoints;
-    /// @dev Maps checkpoints to an always increasing index to ensure a checkpoint belongs
-    /// to the current ring (e.g. proving between 3 and 5 will leave indexes 4 and 5 untouched)
-    uint256[] private _checkpointIdxs;
+    RingBuffer.CheckpointBuffer private _checkpoints;
 
     IDataFeed public immutable _dataFeed;
     // This would usually be retrieved dynamically as in the current Taiko implementation, but for simplicity we are
@@ -40,7 +37,7 @@ contract Inbox {
         // set the genesis checkpoint of the rollup - genesis is trusted to be correct
         require(genesis != 0, "genesis checkpoint cannot be 0");
         _checkpoints.setup(bufferSize);
-        _checkpoints.push(genesis);
+        _checkpoints.setAt(0, genesis).setLastIndex(1);
         _dataFeed = IDataFeed(dataFeed);
         _verifier = IVerifier(verifier);
     }
@@ -49,45 +46,46 @@ contract Inbox {
     /// @param at The index to query
     /// @return The checkpoint at the given index (wrapped around buffer length)
     function getCheckpoint(uint256 at) public view returns (bytes32) {
-        return _checkpoints._data[at % _checkpoints.length()];
+        return _checkpoints.at(at).value;
     }
 
-    /// @notice Returns the total number of checkpoints that have been proven
-    /// @return The count of proven checkpoints
-    function checkpointsCount() public view returns (uint256) {
-        return _checkpoints._count;
+    /// @notice Returns the checkpoint at the last publication index
+    /// @return The last checkpoint value
+    function getLastCheckpoint() public view returns (bytes32) {
+        return _checkpoints.last().value;
+    }
+
+    /// @notice Returns the last publication index
+    /// @return The last publication index
+    function getLastIndex() public view returns (uint256) {
+        return _checkpoints.lastIndex();
     }
 
     /// @notice Proves the transition between two checkpoints
-    /// @dev Updates the count of elements in the buffer on success.
+    /// @dev Updates the last index of elements in the buffer on success.
     /// @param start the index of the publication before this transition. Its checkpoint must already be proven.
     /// @param end the index of the last publication in this transition.
     /// @param checkpoint the claimed checkpoint at the end of this transition.
     /// @param proof arbitrary data passed to the `_verifier` contract to confirm the transition validity.
     function proveBetween(uint256 start, uint256 end, bytes32 checkpoint, bytes calldata proof) external {
-        // Cache buffer length (remains constant)
-        uint256 bufferLength = _checkpoints.length();
-        uint256 atStart = start % bufferLength;
-        uint256 count = checkpointsCount();
+        RingBuffer.Checkpoint storage startCheckpoint = _checkpoints.at(start);
 
         // Checks
-        require(start < count && _checkpointIdxs.unsafeAccess(atStart).value == start, NotProven(start));
-        require(end >= count, AlreadyProven(end));
+        uint256 lastIndex = _checkpoints.lastIndex();
+        require(start < lastIndex && startCheckpoint.index == start, NotProven(start));
+        require(end >= lastIndex, AlreadyProven(end));
 
         // Do verify
         IVerifier(_verifier).verifyProof(
             _dataFeed.getPublicationHash(start),
             _dataFeed.getPublicationHash(end),
-            _checkpoints._data[atStart], // getCheckpoint
+            startCheckpoint.value,
             checkpoint,
             proof
         );
 
-        // Add checkpoint at the wrapped "end" position and update count accordingly
-        _checkpoints._count = end;
-        uint256 atEnd = end % bufferLength;
-        _checkpoints._data[atEnd] = checkpoint;
-        _checkpointIdxs.unsafeAccess(atEnd).value = end; // Track of which index each publication belongs to
+        // Add checkpoint at the wrapped "end" position and update last index accordingly
+        _checkpoints.setAt(end, checkpoint).setLastIndex(end);
         emit CheckpointProven(end, checkpoint);
     }
 }

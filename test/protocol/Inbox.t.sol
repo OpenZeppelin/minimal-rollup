@@ -44,6 +44,6 @@ contract InboxTest is Test {
         inbox.proveBetween(start, end, checkpoint, proof);
 
         assertEq(inbox.getCheckpoint(end), checkpoint);
-        assertEq(inbox.checkpointsCount(), end);
+        assertEq(inbox.getLastIndex(), end);
     }
 }
