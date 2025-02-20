@@ -2,7 +2,7 @@
 pragma solidity ^0.8.28;
 
 interface IDataFeed {
-    struct MetadataQuery {
+    struct HookQuery {
         address provider;
         bytes input;
         uint256 value;
@@ -16,8 +16,9 @@ interface IDataFeed {
         uint256 blockNumber;
         bytes32[] blobHashes;
         bytes data;
-        MetadataQuery[] queries;
-        bytes[] metadata;
+        HookQuery[] preHookQueries;
+        HookQuery[] postHookQueries;
+        bytes[] auxData;
     }
 
     /// @notice Emitted when a new publication is created
@@ -26,14 +27,19 @@ interface IDataFeed {
     event Published(bytes32 indexed pubHash, Publication publication);
 
     /// @notice Publish arbitrary data for data availability.
-    /// @param numBlobs the number of blobs accompanying this function call.
     /// @param data the data to publish in calldata.
-    /// @param queries the calls required to retrieve L1 metadata hashes associated with this publication.
-    /// @dev there can be multiple queries because a single publication might represent multiple rollups,
-    /// each with their own L1 metadata requirements
-    /// @dev append a hash representing all blobs and L1 metadata to `publicationHashes`.
-    /// The number of blobs is not validated. Additional blobs are ignored. Empty blobs have a hash of zero.
-    function publish(uint256 numBlobs, bytes calldata data, MetadataQuery[] calldata queries) external payable;
+    /// @param numBlobs the number of blobs accompanying this function call.
+    /// @param preHookQueries arbitrary calls to retrieve auxiliary data that should be contained in the publication
+    /// @param postHookQueries arbitrary calls to be executed after the publication
+    /// @dev there can be multiple pre hooks and post hooks because a single publication might represent multiple
+    /// rollups,
+    /// each with their own requirements
+    function publish(
+        uint256 numBlobs,
+        bytes calldata data,
+        HookQuery[] calldata preHookQueries,
+        HookQuery[] calldata postHookQueries
+    ) external payable;
 
     /// @notice retrieve a hash representing a previous publication
     /// @param idx the index of the publication hash
