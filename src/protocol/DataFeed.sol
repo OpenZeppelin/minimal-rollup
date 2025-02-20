@@ -3,24 +3,10 @@ pragma solidity ^0.8.28;
 
 import {IDataFeed} from "./IDataFeed.sol";
 import {IMetadataProvider} from "./IMetadataProvider.sol";
-import {TransientSlot} from "@openzeppelin/contracts/utils/TransientSlot.sol";
 
 contract DataFeed is IDataFeed {
-    using TransientSlot for *;
-
-    // keccak256(abi.encode(uint256(keccak256("minimal-rollup.storage.TransactionGuard")) - 1)) &
-    // ~bytes32(uint256(0xff))
-    bytes32 private constant _TRANSACTION_GUARD = 0x99b77697c9b37eb2c48d30bc6afcf1840fbb1ccae9217c44df166cd11b25cc00;
-
     /// @dev a list of hashes identifying all data accompanying calls to the `publish` function.
     bytes32[] public publicationHashes;
-
-    modifier onlyStandaloneTx() {
-        require(!_TRANSACTION_GUARD.asBoolean().tload());
-        _TRANSACTION_GUARD.asBoolean().tstore(true);
-        _;
-        // Will clean up at the end of the transaction
-    }
 
     constructor() {
         // guarantee there is always a previous hash
@@ -28,11 +14,7 @@ contract DataFeed is IDataFeed {
     }
 
     /// @inheritdoc IDataFeed
-    function publish(uint256 numBlobs, bytes calldata data, MetadataQuery[] calldata queries)
-        external
-        payable
-        onlyStandaloneTx
-    {
+    function publish(uint256 numBlobs, bytes calldata data, MetadataQuery[] calldata queries) external payable {
         uint256 nQueries = queries.length;
         uint256 id = publicationHashes.length;
 
