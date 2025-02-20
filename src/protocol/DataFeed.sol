@@ -3,7 +3,6 @@ pragma solidity ^0.8.28;
 
 import {IDataFeed} from "./IDataFeed.sol";
 import {IPublicationHook} from "./IPublicationHook.sol";
-import {TransientSlot} from "@openzeppelin/contracts/utils/TransientSlot.sol";
 
 contract DataFeed is IDataFeed {
     /// @dev a list of hashes identifying all data accompanying calls to the `publish` function.
@@ -15,18 +14,21 @@ contract DataFeed is IDataFeed {
     }
 
     /// @inheritdoc IDataFeed
-    function publish(uint256 numBlobs, bytes calldata data, HookQuery[] calldata queries) external payable {
-        uint256 nQueries = queries.length;
-
+    function publish(
+        uint256 numBlobs,
+        bytes calldata data,
+        HookQuery[] calldata metadataQueries,
+        HookQuery[] calldata postHooks
+    ) external payable {
+        uint256 nHooks = metadataQueries.length;
         uint256 totalValue;
-        bytes[] memory metadata = new bytes[](nQueries);
-        for (uint256 i; i < nQueries; ++i) {
-            metadata[i] = IPublicationHook(queries[i].provider).beforePublish{value: queries[i].value}(
-                msg.sender, queries[i].input
+        bytes[] memory metadata = new bytes[](nHooks);
+        for (uint256 i; i < nHooks; ++i) {
+            metadata[i] = IPublicationHook(metadataQueries[i].provider).beforePublish{value: metadataQueries[i].value}(
+                msg.sender, metadataQueries[i].input
             );
-            totalValue += queries[i].value;
+            totalValue += metadataQueries[i].value;
         }
-        require(msg.value == totalValue, "Incorrect ETH passed with publication");
 
         uint256 id = publicationHashes.length;
 
@@ -38,7 +40,8 @@ contract DataFeed is IDataFeed {
             blockNumber: block.number,
             blobHashes: new bytes32[](numBlobs),
             data: data,
-            queries: queries,
+            metadataQueries: metadataQueries,
+            postHooks: postHooks,
             metadata: metadata
         });
 
@@ -49,10 +52,14 @@ contract DataFeed is IDataFeed {
         bytes32 pubHash = keccak256(abi.encode(publication));
         publicationHashes.push(pubHash);
 
-        for (uint256 i; i < nQueries; ++i) {
-            // TODO: handle after_publish
-            IPublicationHook(queries[i].provider).afterPublish{value: queries[i].value}(msg.sender, queries[i].input);
+        nHooks = postHooks.length;
+        for (uint256 i; i < nHooks; ++i) {
+            IPublicationHook(postHooks[i].provider).afterPublish{value: postHooks[i].value}(
+                msg.sender, postHooks[i].input
+            );
+            totalValue += postHooks[i].value;
         }
+        require(msg.value == totalValue, "Incorrect ETH passed with publication");
 
         emit Published(pubHash, publication);
     }
