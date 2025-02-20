@@ -3,20 +3,20 @@ pragma solidity ^0.8.28;
 
 import {DataFeed, IDataFeed} from "../../src/protocol/DataFeed.sol";
 
+import {DataFeed} from "../../src/protocol/DataFeed.sol";
 import {Inbox} from "../../src/protocol/Inbox.sol";
-import {DataFeedMock} from "../mocks/DataFeedMock.sol";
 import {VerifierMock} from "../mocks/VerifierMock.sol";
 import {Test} from "forge-std/Test.sol";
 
 contract InboxTest is Test {
     Inbox inbox;
-    DataFeedMock dataFeedMock;
+    DataFeed dataFeed;
     VerifierMock verifierMock;
 
     function setUp() public virtual {
-        dataFeedMock = new DataFeedMock();
+        dataFeed = new DataFeed();
         verifierMock = new VerifierMock();
-        inbox = new Inbox(100, keccak256("genesis"), address(dataFeedMock), address(verifierMock));
+        inbox = new Inbox(100, keccak256("genesis"), address(dataFeed), address(verifierMock));
     }
 
     function test_proveBetween(uint256 end, bytes32 checkpoint, bytes calldata proof) external {
@@ -24,8 +24,7 @@ contract InboxTest is Test {
         IDataFeed.MetadataQuery[] memory queries = new IDataFeed.MetadataQuery[](0);
         end = bound(end, start + 1, 10_000); // Avoid out-of-gas
         for (uint256 i; i < end; i++) {
-            dataFeedMock.unsafeSetTransactionGuard(false); // Reset transient lock
-            dataFeedMock.publish(1, proof[0:0], queries);
+            dataFeed.publish(1, proof[0:0], queries);
         }
 
         vm.expectCall(
@@ -33,8 +32,8 @@ contract InboxTest is Test {
             abi.encodeCall(
                 VerifierMock.verifyProof,
                 (
-                    dataFeedMock.getPublicationHash(start),
-                    dataFeedMock.getPublicationHash(end),
+                    dataFeed.getPublicationHash(start),
+                    dataFeed.getPublicationHash(end),
                     inbox.getCheckpoint(start),
                     checkpoint,
                     proof
