@@ -6,7 +6,17 @@ import {IPublicationHook} from "../IPublicationHook.sol";
 import {IDataFeed} from "../IDataFeed.sol";
 import {ILookahead} from "./ILookahead.sol";
 
-contract TaikoHookProvider is IPublicationHook {
+contract TaikoPublicationHook is IPublicationHook {
+    struct PrehookInput {
+        uint64 anchorBlockId;
+        uint8 numBlobs;
+    }
+
+    struct PosthookOutput {
+        bytes32 anchorBlockhash;
+        bytes32[] blobHashes;
+    }
+
     uint256 public immutable maxAnchorBlockIdOffset;
     address public immutable lookahead;
 
@@ -23,12 +33,20 @@ contract TaikoHookProvider is IPublicationHook {
             require(ILookahead(lookahead).isCurrentPreconfer(publisher), "not current preconfer");
         }
 
-        uint64 anchorBlockId = abi.decode(input, (uint64));
-        require(maxAnchorBlockIdOffset + anchorBlockId >= block.number, "anchorBlockId is too old");
+        PrehookInput memory _input = abi.decode(input, (PrehookInput));
+        require(maxAnchorBlockIdOffset + _input.anchorBlockId >= block.number, "anchorBlockId too old");
+        require(_input.numBlobs > 0, "numBlobs must be greater than 0");
 
-        bytes32 anchorBlockhash = blockhash(anchorBlockId);
+        bytes32 anchorBlockhash = blockhash(_input.anchorBlockId);
         require(anchorBlockhash != 0, "blockhash not found");
-        return abi.encode(anchorBlockhash);
+
+        bytes32[] memory blobHashes = new bytes32[](_input.numBlobs);
+        for (uint8 i; i < _input.numBlobs; i++) {
+            blobHashes[i] = blockhash(_input.anchorBlockId + i);
+            require(blobHashes[i] != 0, "blob not found");
+        }
+
+        return abi.encode(PosthookOutput(anchorBlockhash, blobHashes));
     }
 
     /// @inheritdoc IPublicationHook
