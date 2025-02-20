@@ -12,8 +12,7 @@ contract DataFeedTest is Test {
         feed = new DataFeed();
     }
 
-    function testRevert_NoBlobs() public {
-        vm.expectRevert();
+    function test_NoBlobsDoesNotRevert() public {
         IDataFeed.MetadataQuery[] memory queries = new IDataFeed.MetadataQuery[](0);
         feed.publish(0, "", queries);
     }

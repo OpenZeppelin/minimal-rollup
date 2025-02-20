@@ -36,22 +36,21 @@ contract DataFeed is IDataFeed {
         uint256 nQueries = queries.length;
         uint256 id = publicationHashes.length;
 
-        bytes32[] memory blobHashes = new bytes32[](numBlobs);
-        for (uint256 i; i < numBlobs; ++i) {
-            blobHashes[i] = blobhash(i);
-        }
-        bytes32 dataHash = keccak256(abi.encode(data, blobHashes));
-
         Publication memory publication = Publication({
             id: id,
             prevHash: publicationHashes[id - 1],
             publisher: msg.sender,
             timestamp: block.timestamp,
             blockNumber: block.number,
-            dataHash: dataHash,
+            blobHashes: new bytes32[](numBlobs),
+            data: data,
             queries: queries,
             metadata: new bytes[](nQueries)
         });
+
+        for (uint256 i; i < numBlobs; ++i) {
+            publication.blobHashes[i] = blobhash(i);
+        }
 
         uint256 totalValue;
         for (uint256 i; i < nQueries; ++i) {
