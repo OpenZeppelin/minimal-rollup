@@ -33,8 +33,6 @@ contract DataFeed is IDataFeed {
         payable
         onlyStandaloneTx
     {
-        require(numBlobs > 0, "no data to publish");
-
         uint256 nQueries = queries.length;
         uint256 id = publicationHashes.length;
 
