@@ -2,7 +2,7 @@
 pragma solidity ^0.8.28;
 
 interface IDataFeed {
-    struct MetadataQuery {
+    struct HookQuery {
         address provider;
         bytes input;
         uint256 value;
@@ -15,7 +15,7 @@ interface IDataFeed {
         uint256 timestamp;
         uint256 blockNumber;
         bytes32[] blobHashes;
-        MetadataQuery[] queries;
+        HookQuery[] queries;
         bytes[] metadata;
     }
 
@@ -27,7 +27,7 @@ interface IDataFeed {
     /// @notice Publish data as blobs for data availability
     /// @param numBlobs the number of blobs accompanying this function call.
     /// @param queries the calls required to retrieve L1 metadata hashes associated with this publication.
-    function publish(uint256 numBlobs, MetadataQuery[] calldata queries) external payable;
+    function publish(uint256 numBlobs, HookQuery[] calldata queries) external payable;
 
     /// @notice Returns the hash of the publication at the given index
     function getPublicationHash(uint256 idx) external view returns (bytes32);
