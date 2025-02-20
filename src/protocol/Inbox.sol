@@ -11,7 +11,7 @@ contract Inbox {
     /// the state of the rollup at a specific point in time
     bytes32 public checkpoint;
 
-    /// @notice The index of the most recent proven publication in the data feed
+    /// @notice The index of the most recent proven publication in the `DataFeed`
     uint256 public lastProvenIdx;
 
     IDataFeed public immutable _dataFeed;
