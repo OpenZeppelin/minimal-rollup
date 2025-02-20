@@ -55,7 +55,6 @@ contract DataFeed is IDataFeed {
             metadata: new bytes[](nQueries)
         });
 
-        
         uint256 totalValue;
         for (uint256 i; i < nQueries; ++i) {
             publication.metadata[i] = IMetadataProvider(queries[i].provider).getMetadata{value: queries[i].value}(
