@@ -2,7 +2,7 @@
 pragma solidity ^0.8.28;
 
 import {IDataFeed} from "./IDataFeed.sol";
-import {IMetadataProvider} from "./IMetadataProvider.sol";
+import {IHookProvider} from "./IHookProvider.sol";
 import {TransientSlot} from "@openzeppelin/contracts/utils/TransientSlot.sol";
 
 contract DataFeed is IDataFeed {
@@ -38,6 +38,16 @@ contract DataFeed is IDataFeed {
         require(numBlobs > 0, "no data to publish");
 
         uint256 nQueries = queries.length;
+
+        uint256 totalValue;
+        bytes[] memory metadata = new bytes[](nQueries);
+        for (uint256 i; i < nQueries; ++i) {
+            metadata[i] =
+                IHookProvider(queries[i].provider).before_publish{value: queries[i].value}(msg.sender, queries[i].input);
+            totalValue += queries[i].value;
+        }
+        require(msg.value == totalValue, "Incorrect ETH passed with publication");
+
         uint256 id = publicationHashes.length;
         Publication memory publication = Publication({
             id: id,
@@ -47,21 +57,17 @@ contract DataFeed is IDataFeed {
             blockNumber: block.number,
             blobHashes: new bytes32[](numBlobs),
             queries: queries,
-            metadata: new bytes[](nQueries)
+            metadata: metadata
         });
 
         for (uint256 i; i < numBlobs; ++i) {
             publication.blobHashes[i] = blobhash(i);
         }
 
-        uint256 totalValue;
         for (uint256 i; i < nQueries; ++i) {
-            publication.metadata[i] = IMetadataProvider(queries[i].provider).getMetadata{value: queries[i].value}(
-                msg.sender, queries[i].input
-            );
-            totalValue += queries[i].value;
+            // TODO: handle after_publish
+            IHookProvider(queries[i].provider).after_publish{value: queries[i].value}(msg.sender, queries[i].input);
         }
-        require(msg.value == totalValue, "Incorrect ETH passed with publication");
 
         bytes32 pubHash = keccak256(abi.encode(publication));
         publicationHashes.push(pubHash);

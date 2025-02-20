@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
-import {IMetadataProvider} from "../IMetadataProvider.sol";
+import {IHookProvider} from "../IHookProvider.sol";
 import {ILookahead} from "./ILookahead.sol";
 
-contract TaikoMetadataProvider is IMetadataProvider {
+contract TaikoHookProvider is IHookProvider {
     uint256 public immutable maxAnchorBlockIdOffset;
     address public immutable lookahead;
 
@@ -13,8 +13,8 @@ contract TaikoMetadataProvider is IMetadataProvider {
         lookahead = _lookahead;
     }
 
-    /// @inheritdoc IMetadataProvider
-    function getMetadata(address publisher, bytes memory input) external payable override returns (bytes memory) {
+    /// @inheritdoc IHookProvider
+    function before_publish(address publisher, bytes memory input) external payable override returns (bytes memory) {
         require(msg.value == 0, "ETH not required");
 
         if (lookahead != address(0)) {
@@ -27,5 +27,11 @@ contract TaikoMetadataProvider is IMetadataProvider {
         bytes32 anchorBlockhash = blockhash(anchorBlockId);
         require(anchorBlockhash != 0, "blockhash not found");
         return abi.encode(anchorBlockhash);
+    }
+
+    /// @inheritdoc IHookProvider
+    function after_publish(address publisher, bytes memory input) external payable override returns (bytes memory) {
+        // TODO: Implement
+        return new bytes(0);
     }
 }
