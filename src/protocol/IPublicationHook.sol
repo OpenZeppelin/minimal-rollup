@@ -14,7 +14,6 @@ interface IPublicationHook {
     /// @param publisher The address of the publisher
     /// @param publication The publication that was just included
     /// @param input Arbitrary input to the hook
-    /// @return output Arbitrary output from the hook.
     function afterPublish(address publisher, IDataFeed.Publication memory publication, bytes memory input)
         external
         payable;
