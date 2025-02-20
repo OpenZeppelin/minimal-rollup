@@ -50,6 +50,7 @@ contract DataFeed is IDataFeed {
 
         bytes32 pubHash = keccak256(abi.encode(publication));
         publicationHashes.push(pubHash);
+        emit Published(pubHash, publication);
 
         nHooks = postHookQueries.length;
         for (uint256 i; i < nHooks; ++i) {
@@ -59,8 +60,6 @@ contract DataFeed is IDataFeed {
             totalValue += postHookQueries[i].value;
         }
         require(msg.value == totalValue, "Incorrect ETH passed with publication");
-
-        emit Published(pubHash, publication);
     }
 
     /// @inheritdoc IDataFeed
