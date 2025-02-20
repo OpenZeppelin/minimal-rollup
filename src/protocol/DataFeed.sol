@@ -3,8 +3,15 @@ pragma solidity ^0.8.28;
 
 import {IDataFeed} from "./IDataFeed.sol";
 import {IPublicationHook} from "./IPublicationHook.sol";
+import {TransientSlot} from "@openzeppelin/contracts/utils/TransientSlot.sol";
 
 contract DataFeed is IDataFeed {
+    using TransientSlot for *;
+
+    // keccak256(abi.encode(uint256(keccak256("minimal-rollup.storage.PublisherSlot")) - 1)) &
+    // ~bytes32(uint256(0xff));
+    bytes32 private constant _PUBLISHER_SLOT = 0xc8658bb11ce958514230cc55a245b4aa68d7de7043c4fad93bb491e28ddc7c00;
+
     /// @dev a list of hashes identifying all data accompanying calls to the `publish` function.
     bytes32[] public publicationHashes;
 
@@ -20,12 +27,14 @@ contract DataFeed is IDataFeed {
         HookQuery[] calldata preHookQueries,
         HookQuery[] calldata postHookQueries
     ) external payable {
+        address publisher = _getPublisher();
+
         uint256 nHooks = preHookQueries.length;
         uint256 totalValue;
         bytes[] memory auxData = new bytes[](nHooks);
         for (uint256 i; i < nHooks; ++i) {
             auxData[i] = IPublicationHook(preHookQueries[i].provider).beforePublish{value: preHookQueries[i].value}(
-                msg.sender, preHookQueries[i].input
+                publisher, preHookQueries[i].input
             );
             totalValue += preHookQueries[i].value;
         }
@@ -34,7 +43,7 @@ contract DataFeed is IDataFeed {
         Publication memory publication = Publication({
             id: id,
             prevHash: publicationHashes[id - 1],
-            publisher: msg.sender,
+            publisher: publisher,
             timestamp: block.timestamp,
             blockNumber: block.number,
             blobHashes: new bytes32[](numBlobs),
@@ -54,7 +63,7 @@ contract DataFeed is IDataFeed {
         nHooks = postHookQueries.length;
         for (uint256 i; i < nHooks; ++i) {
             IPublicationHook(postHookQueries[i].provider).afterPublish{value: postHookQueries[i].value}(
-                msg.sender, publication, postHookQueries[i].input
+                publisher, publication, postHookQueries[i].input
             );
             totalValue += postHookQueries[i].value;
         }
@@ -66,5 +75,13 @@ contract DataFeed is IDataFeed {
     /// @inheritdoc IDataFeed
     function getPublicationHash(uint256 idx) external view returns (bytes32) {
         return publicationHashes[idx];
+    }
+
+    function _getPublisher() internal returns (address publisher) {
+        publisher = _PUBLISHER_SLOT.asAddress().tload();
+        if (publisher == address(0)) {
+            publisher = msg.sender;
+            _PUBLISHER_SLOT.asAddress().tstore(publisher);
+        }
     }
 }
