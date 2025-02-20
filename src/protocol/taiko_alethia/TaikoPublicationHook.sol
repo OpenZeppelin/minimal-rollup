@@ -17,21 +17,33 @@ contract TaikoPublicationHook is IPublicationHook {
         bytes32[] blobHashes;
     }
 
-    uint256 public immutable maxAnchorBlockOffset;
+    address public immutable dataFeed;
     address public immutable lookahead;
+    uint256 public immutable maxAnchorBlockOffset;
 
-    constructor(uint256 _maxAnchorBlockOffset, address _lookahead) {
-        maxAnchorBlockOffset = _maxAnchorBlockOffset;
+    constructor(address _dataFeed, address _lookahead, uint256 _maxAnchorBlockOffset) {
+        dataFeed = _dataFeed;
         lookahead = _lookahead;
+        maxAnchorBlockOffset = _maxAnchorBlockOffset;
     }
 
-    /// @inheritdoc IPublicationHook
-    function beforePublish(address publisher, bytes memory input) external payable override returns (bytes memory) {
-        require(msg.value == 0, "ETH not required");
-
+    modifier onlyFromDataFeedByPreconfer(address publisher) {
+        require(msg.sender == dataFeed, "not datafeed");
         if (lookahead != address(0)) {
             require(ILookahead(lookahead).isCurrentPreconfer(publisher), "not current preconfer");
         }
+        _;
+    }
+
+    /// @inheritdoc IPublicationHook
+    function beforePublish(address publisher, bytes memory input)
+        external
+        payable
+        override
+        onlyFromDataFeedByPreconfer(publisher)
+        returns (bytes memory)
+    {
+        require(msg.value == 0, "ETH not required");
 
         PrehookInput memory _input = abi.decode(input, (PrehookInput));
         require(maxAnchorBlockOffset + _input.anchorBlockId >= block.number, "anchorBlockId too old");
@@ -54,7 +66,10 @@ contract TaikoPublicationHook is IPublicationHook {
         external
         payable
         override
+        onlyFromDataFeedByPreconfer(publisher)
     {
         // TODO: Implement
+
+        // If we call dataFeed.publish(), the msg.sender is this contract, which is wrong.
     }
 }
