@@ -25,7 +25,7 @@ library RingBuffer {
     /// Intialization
 
     function setup(CheckpointBuffer storage self, uint256 size) internal {
-        clear(self);
+        setLastIndex(0); // Clear
         Checkpoint[] storage _checkpoints = self._checkpoints;
         assembly ("memory-safe") {
             sstore(_checkpoints.slot, size)
@@ -33,10 +33,6 @@ library RingBuffer {
     }
 
     /// Getters
-
-    function clear(CheckpointBuffer storage self) internal {
-        self._lastIndex = 0;
-    }
 
     function length(CheckpointBuffer storage self) internal view returns (uint256) {
         return self._checkpoints.length;

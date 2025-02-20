@@ -37,7 +37,7 @@ contract Inbox {
         // set the genesis checkpoint of the rollup - genesis is trusted to be correct
         require(genesis != 0, "genesis checkpoint cannot be 0");
         _checkpoints.setup(bufferSize);
-        _checkpoints.setAt(0, genesis).setLastIndex(1);
+        _checkpoints.setAt(0, genesis);
         _dataFeed = IDataFeed(dataFeed);
         _verifier = IVerifier(verifier);
     }
@@ -46,6 +46,7 @@ contract Inbox {
     /// @param at The index to query
     /// @return The checkpoint at the given index (wrapped around buffer length)
     function getCheckpoint(uint256 at) public view returns (bytes32) {
+        require(_checkpoints.at(at).index == at);
         return _checkpoints.at(at).value;
     }
 
@@ -72,8 +73,8 @@ contract Inbox {
 
         // Checks
         uint256 lastIndex = _checkpoints.lastIndex();
-        require(start < lastIndex && startCheckpoint.index == start, NotProven(start));
-        require(end >= lastIndex, AlreadyProven(end));
+        require(start <= lastIndex && startCheckpoint.index == start, NotProven(start));
+        require(end > lastIndex, AlreadyProven(end));
 
         // Do verify
         IVerifier(_verifier).verifyProof(
