@@ -17,11 +17,11 @@ contract TaikoPublicationHook is IPublicationHook {
         bytes32[] blobHashes;
     }
 
-    uint256 public immutable maxAnchorBlockIdOffset;
+    uint256 public immutable maxAnchorBlockOffset;
     address public immutable lookahead;
 
-    constructor(uint256 _maxAnchorBlockIdOffset, address _lookahead) {
-        maxAnchorBlockIdOffset = _maxAnchorBlockIdOffset;
+    constructor(uint256 _maxAnchorBlockOffset, address _lookahead) {
+        maxAnchorBlockOffset = _maxAnchorBlockOffset;
         lookahead = _lookahead;
     }
 
@@ -34,7 +34,7 @@ contract TaikoPublicationHook is IPublicationHook {
         }
 
         PrehookInput memory _input = abi.decode(input, (PrehookInput));
-        require(maxAnchorBlockIdOffset + _input.anchorBlockId >= block.number, "anchorBlockId too old");
+        require(maxAnchorBlockOffset + _input.anchorBlockId >= block.number, "anchorBlockId too old");
         require(_input.numBlobs > 0, "numBlobs must be greater than 0");
 
         bytes32 anchorBlockhash = blockhash(_input.anchorBlockId);
