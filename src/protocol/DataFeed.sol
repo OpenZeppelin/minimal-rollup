@@ -2,7 +2,7 @@
 pragma solidity ^0.8.28;
 
 import {IDataFeed} from "./IDataFeed.sol";
-import {IMetadataProvider} from "./IMetadataProvider.sol";
+import {IPublicationHook} from "./IPublicationHook.sol";
 
 contract DataFeed is IDataFeed {
     /// @dev a list of hashes identifying all data accompanying calls to the `publish` function.
@@ -14,10 +14,23 @@ contract DataFeed is IDataFeed {
     }
 
     /// @inheritdoc IDataFeed
-    function publish(uint256 numBlobs, bytes calldata data, MetadataQuery[] calldata queries) external payable {
-        uint256 nQueries = queries.length;
-        uint256 id = publicationHashes.length;
+    function publish(
+        uint256 numBlobs,
+        bytes calldata data,
+        HookQuery[] calldata preHookQueries,
+        HookQuery[] calldata postHookQueries
+    ) external payable {
+        uint256 nHooks = preHookQueries.length;
+        uint256 totalValue;
+        bytes[] memory auxData = new bytes[](nHooks);
+        for (uint256 i; i < nHooks; ++i) {
+            auxData[i] = IPublicationHook(preHookQueries[i].provider).beforePublish{value: preHookQueries[i].value}(
+                msg.sender, preHookQueries[i].input
+            );
+            totalValue += preHookQueries[i].value;
+        }
 
+        uint256 id = publicationHashes.length;
         Publication memory publication = Publication({
             id: id,
             prevHash: publicationHashes[id - 1],
@@ -26,25 +39,26 @@ contract DataFeed is IDataFeed {
             blockNumber: block.number,
             blobHashes: new bytes32[](numBlobs),
             data: data,
-            queries: queries,
-            metadata: new bytes[](nQueries)
+            preHookQueries: preHookQueries,
+            postHookQueries: postHookQueries,
+            auxData: auxData
         });
 
         for (uint256 i; i < numBlobs; ++i) {
             publication.blobHashes[i] = blobhash(i);
         }
 
-        uint256 totalValue;
-        for (uint256 i; i < nQueries; ++i) {
-            publication.metadata[i] = IMetadataProvider(queries[i].provider).getMetadata{value: queries[i].value}(
-                msg.sender, queries[i].input
-            );
-            totalValue += queries[i].value;
-        }
-        require(msg.value == totalValue, "Incorrect ETH passed with publication");
-
         bytes32 pubHash = keccak256(abi.encode(publication));
         publicationHashes.push(pubHash);
+
+        nHooks = postHookQueries.length;
+        for (uint256 i; i < nHooks; ++i) {
+            IPublicationHook(postHookQueries[i].provider).afterPublish{value: postHookQueries[i].value}(
+                msg.sender, publication, postHookQueries[i].input
+            );
+            totalValue += postHookQueries[i].value;
+        }
+        require(msg.value == totalValue, "Incorrect ETH passed with publication");
 
         emit Published(pubHash, publication);
     }
