@@ -17,17 +17,17 @@ contract DataFeed is IDataFeed {
     function publish(
         uint256 numBlobs,
         bytes calldata data,
-        HookQuery[] calldata preHooks,
-        HookQuery[] calldata postHooks
+        HookQuery[] calldata preHookQueries,
+        HookQuery[] calldata postHookQueries
     ) external payable {
-        uint256 nHooks = preHooks.length;
+        uint256 nHooks = preHookQueries.length;
         uint256 totalValue;
         bytes[] memory auxData = new bytes[](nHooks);
         for (uint256 i; i < nHooks; ++i) {
-            auxData[i] = IPublicationHook(preHooks[i].provider).beforePublish{value: preHooks[i].value}(
-                msg.sender, preHooks[i].input
+            auxData[i] = IPublicationHook(preHookQueries[i].provider).beforePublish{value: preHookQueries[i].value}(
+                msg.sender, preHookQueries[i].input
             );
-            totalValue += preHooks[i].value;
+            totalValue += preHookQueries[i].value;
         }
 
         uint256 id = publicationHashes.length;
@@ -39,8 +39,8 @@ contract DataFeed is IDataFeed {
             blockNumber: block.number,
             blobHashes: new bytes32[](numBlobs),
             data: data,
-            preHooks: preHooks,
-            postHooks: postHooks,
+            preHookQueries: preHookQueries,
+            postHookQueries: postHookQueries,
             auxData: auxData
         });
 
@@ -51,12 +51,12 @@ contract DataFeed is IDataFeed {
         bytes32 pubHash = keccak256(abi.encode(publication));
         publicationHashes.push(pubHash);
 
-        nHooks = postHooks.length;
+        nHooks = postHookQueries.length;
         for (uint256 i; i < nHooks; ++i) {
-            IPublicationHook(postHooks[i].provider).afterPublish{value: postHooks[i].value}(
-                msg.sender, publication, postHooks[i].input
+            IPublicationHook(postHookQueries[i].provider).afterPublish{value: postHookQueries[i].value}(
+                msg.sender, publication, postHookQueries[i].input
             );
-            totalValue += postHooks[i].value;
+            totalValue += postHookQueries[i].value;
         }
         require(msg.value == totalValue, "Incorrect ETH passed with publication");
 
