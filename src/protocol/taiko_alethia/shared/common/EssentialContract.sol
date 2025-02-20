@@ -3,6 +3,7 @@ pragma solidity ^0.8.24;
 
 import "./AddressResolver.sol";
 import "@openzeppelin/contracts-upgradeable/access/Ownable2StepUpgradeable.sol";
+import "@openzeppelin/contracts/proxy/ERC1967/ERC1967Utils.sol";
 import "@openzeppelin/contracts/proxy/utils/UUPSUpgradeable.sol";
 
 /// @title EssentialContract
@@ -98,7 +99,7 @@ abstract contract EssentialContract is UUPSUpgradeable, Ownable2StepUpgradeable,
     }
 
     function impl() public view returns (address) {
-        return _getImplementation();
+        return ERC1967Utils.getImplementation();
     }
 
     /// @notice Returns true if the contract is paused, and false otherwise.
