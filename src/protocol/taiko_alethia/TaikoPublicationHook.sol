@@ -6,18 +6,12 @@ import {IPublicationHook} from "../IPublicationHook.sol";
 
 import {IDelayedInclusionStore} from "./IDelayedInclusionStore.sol";
 import {ILookahead} from "./ILookahead.sol";
+import {ITaikoData} from "./ITaikoData.sol";
 
 contract TaikoPublicationHook is IPublicationHook {
     struct PrehookInput {
         uint64 anchorBlockId;
         uint8 numBlobs;
-    }
-
-    struct TaikoProposal {
-        bytes32 anchorBlockhash;
-        // If blobHashes are not empty, all blobs in a group will be concatenated into a single blob and will be decoded
-        // by node/client as a TaikoProposalType1 object (defined in node/client);
-        bytes32[][] blobGroups;
     }
 
     struct PosthookInput {
@@ -61,14 +55,16 @@ contract TaikoPublicationHook is IPublicationHook {
         bytes32 anchorBlockhash = blockhash(_input.anchorBlockId);
         require(anchorBlockhash != 0, "blockhash not found");
 
-        bytes32[][] memory blobGroups = new bytes32[][](1);
-        blobGroups[0] = new bytes32[](_input.numBlobs);
+        bytes32[] memory blobs = new bytes32[](_input.numBlobs);
         for (uint8 i; i < _input.numBlobs; i++) {
-            blobGroups[0][i] = blockhash(_input.anchorBlockId + i);
-            require(blobGroups[0][i] != 0, "blob not found");
+            blobs[i] = blockhash(_input.anchorBlockId + i);
+            require(blobs[i] != 0, "blob not found");
         }
 
-        return abi.encode(TaikoProposal(anchorBlockhash, blobGroups));
+        ITaikoData.ProposalData[] memory proposalDataList = new ITaikoData.ProposalData[](1);
+        proposalDataList[0].blobs = blobs;
+
+        return abi.encode(ITaikoData.Proposal(anchorBlockhash, proposalDataList));
     }
 
     /// @inheritdoc IPublicationHook
@@ -81,9 +77,13 @@ contract TaikoPublicationHook is IPublicationHook {
         require(input.length == 0, "input not supported");
         require(msg.value == 0, "ETH not required");
 
-        bytes32[][] memory blobGroups = delayedInclusionStore.processDelayedInclusionByDeadline(block.timestamp);
+        ITaikoData.ProposalData[] memory proposalDataList =
+            delayedInclusionStore.processDelayedInclusionByDeadline(block.timestamp);
 
-        IDataFeed.HookQuery[] memory emptyHookQuery;
-        IDataFeed(dataFeed).publish(0, abi.encode(blobGroups), emptyHookQuery, emptyHookQuery);
+        if (proposalDataList.length > 0) {
+            bytes memory data = abi.encode(ITaikoData.Proposal(0, proposalDataList));
+            IDataFeed.HookQuery[] memory emptyHookQuery;
+            IDataFeed(dataFeed).publish{value: 0}(0, data, emptyHookQuery, emptyHookQuery);
+        }
     }
 }
