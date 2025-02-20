@@ -2,7 +2,7 @@
 pragma solidity ^0.8.28;
 
 import {IDataFeed} from "./IDataFeed.sol";
-import {IHookProvider} from "./IHookProvider.sol";
+import {IPublicationHook} from "./IPublicationHook.sol";
 import {TransientSlot} from "@openzeppelin/contracts/utils/TransientSlot.sol";
 
 contract DataFeed is IDataFeed {
@@ -42,8 +42,9 @@ contract DataFeed is IDataFeed {
         uint256 totalValue;
         bytes[] memory metadata = new bytes[](nQueries);
         for (uint256 i; i < nQueries; ++i) {
-            metadata[i] =
-                IHookProvider(queries[i].provider).beforePublish{value: queries[i].value}(msg.sender, queries[i].input);
+            metadata[i] = IPublicationHook(queries[i].provider).beforePublish{value: queries[i].value}(
+                msg.sender, queries[i].input
+            );
             totalValue += queries[i].value;
         }
         require(msg.value == totalValue, "Incorrect ETH passed with publication");
@@ -69,7 +70,7 @@ contract DataFeed is IDataFeed {
 
         for (uint256 i; i < nQueries; ++i) {
             // TODO: handle after_publish
-            IHookProvider(queries[i].provider).afterPublish{value: queries[i].value}(msg.sender, queries[i].input);
+            IPublicationHook(queries[i].provider).afterPublish{value: queries[i].value}(msg.sender, queries[i].input);
         }
 
         emit Published(pubHash, publication);

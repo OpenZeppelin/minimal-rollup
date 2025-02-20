@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
-interface IHookProvider {
+interface IPublicationHook {
     /// @notice Hook called before a publication
     /// @param publisher The address of the publisher
     /// @param input Arbitrary input to the hook
