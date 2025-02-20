@@ -16,8 +16,14 @@ contract TaikoHookProvider is IPublicationHook {
     }
 
     /// @inheritdoc IPublicationHook
-    function beforePublish(address publisher, bytes memory input) external payable override returns (bytes memory) {
+    function beforePublish(address publisher, bytes calldata publicationData, bytes calldata input)
+        external
+        payable
+        override
+        returns (bytes memory)
+    {
         require(msg.value == 0, "ETH not required");
+        require(publicationData.length == 0, "publicationData not supported");
 
         if (lookahead != address(0)) {
             require(ILookahead(lookahead).isCurrentPreconfer(publisher), "not current preconfer");
@@ -32,7 +38,7 @@ contract TaikoHookProvider is IPublicationHook {
     }
 
     /// @inheritdoc IPublicationHook
-    function afterPublish(address publisher, IDataFeed.Publication memory publication, bytes memory input)
+    function afterPublish(address publisher, IDataFeed.Publication memory publication, bytes calldata input)
         external
         payable
         override

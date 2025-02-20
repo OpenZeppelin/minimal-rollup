@@ -25,7 +25,7 @@ contract DataFeed is IDataFeed {
         bytes[] memory auxData = new bytes[](nHooks);
         for (uint256 i; i < nHooks; ++i) {
             auxData[i] = IPublicationHook(preHookQueries[i].provider).beforePublish{value: preHookQueries[i].value}(
-                msg.sender, preHookQueries[i].input
+                msg.sender, data, preHookQueries[i].input
             );
             totalValue += preHookQueries[i].value;
         }
