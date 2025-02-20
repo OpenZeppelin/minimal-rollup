@@ -2,6 +2,7 @@
 pragma solidity ^0.8.28;
 
 import {IDataFeed} from "./IDataFeed.sol";
+import {IMetadataProvider} from "./IMetadataProvider.sol";
 import {TransientSlot} from "@openzeppelin/contracts/utils/TransientSlot.sol";
 
 contract DataFeed is IDataFeed {
@@ -26,43 +27,47 @@ contract DataFeed is IDataFeed {
         publicationHashes.push(0);
     }
 
-    /// @notice Publish arbitrary data in blobs for data availability.
-    /// @param numBlobs the number of blobs accompanying this function call.
-    /// @param queries the calls required to retrieve L1 metadata hashes associated with this publication.
-    /// @dev there can be multiple queries because a single publication might represent multiple rollups,
-    /// each with their own L1 metadata requirements
-    /// @dev append a hash representing all blobs and L1 metadata to `publicationHashes`.
-    /// The number of blobs is not validated. Additional blobs are ignored. Empty blobs have a hash of zero.
-    function publish(uint256 numBlobs, MetadataQuery[] calldata queries) external payable onlyStandaloneTx {
-        require(numBlobs > 0, "no data to publish");
-
+    /// @inheritdoc IDataFeed
+    function publish(uint256 numBlobs, bytes calldata data, MetadataQuery[] calldata queries)
+        external
+        payable
+        onlyStandaloneTx
+    {
         uint256 nQueries = queries.length;
-        Publication memory publication =
-            Publication(msg.sender, block.timestamp, new bytes32[](numBlobs), queries, new bytes[](nQueries));
+        uint256 id = publicationHashes.length;
+
+        Publication memory publication = Publication({
+            id: id,
+            prevHash: publicationHashes[id - 1],
+            publisher: msg.sender,
+            timestamp: block.timestamp,
+            blockNumber: block.number,
+            blobHashes: new bytes32[](numBlobs),
+            data: data,
+            queries: queries,
+            metadata: new bytes[](nQueries)
+        });
 
         for (uint256 i; i < numBlobs; ++i) {
             publication.blobHashes[i] = blobhash(i);
         }
 
         uint256 totalValue;
-        bool success;
         for (uint256 i; i < nQueries; ++i) {
-            (success, publication.metadata[i]) = queries[i].provider.call{value: queries[i].value}(queries[i].input);
-            require(success, "Metadata query failed");
+            publication.metadata[i] = IMetadataProvider(queries[i].provider).getMetadata{value: queries[i].value}(
+                msg.sender, queries[i].input
+            );
             totalValue += queries[i].value;
         }
         require(msg.value == totalValue, "Incorrect ETH passed with publication");
 
-        bytes32 prevHash = publicationHashes[publicationHashes.length - 1];
-        bytes32 pubHash = keccak256(abi.encode(prevHash, publication));
+        bytes32 pubHash = keccak256(abi.encode(publication));
         publicationHashes.push(pubHash);
 
         emit Published(pubHash, publication);
     }
 
-    /// @notice retrieve a hash representing a previous publication
-    /// @param idx the index of the publication hash
-    /// @return _ the corresponding publication hash
+    /// @inheritdoc IDataFeed
     function getPublicationHash(uint256 idx) external view returns (bytes32) {
         return publicationHashes[idx];
     }
