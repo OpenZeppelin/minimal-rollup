@@ -12,10 +12,11 @@ contract TaikoPublicationHook is IPublicationHook {
         uint8 numBlobs;
     }
 
-    struct PosthookOutput {
+    struct PrehookOutput {
         bytes32 anchorBlockhash;
         bytes32[] blobHashes;
     }
+    
 
     address public immutable dataFeed;
     address public immutable lookahead;
@@ -58,7 +59,7 @@ contract TaikoPublicationHook is IPublicationHook {
             require(blobHashes[i] != 0, "blob not found");
         }
 
-        return abi.encode(PosthookOutput(anchorBlockhash, blobHashes));
+        return abi.encode(PrehookOutput(anchorBlockhash, blobHashes));
     }
 
     /// @inheritdoc IPublicationHook
