@@ -47,7 +47,7 @@ contract TaikoPublicationHook is IPublicationHook {
 
         PrehookInput memory _input = abi.decode(input, (PrehookInput));
         require(maxAnchorBlockOffset + _input.anchorBlockId >= block.number, "anchorBlockId too old");
-        require(_input.numBlobs > 0, "numBlobs must be greater than 0");
+        require(_input.numBlobs > 0, "no blobs used");
 
         bytes32 anchorBlockhash = blockhash(_input.anchorBlockId);
         require(anchorBlockhash != 0, "blockhash not found");
@@ -69,7 +69,5 @@ contract TaikoPublicationHook is IPublicationHook {
         onlyFromDataFeedByPreconfer(publisher)
     {
         // TODO: Implement
-
-        // If we call dataFeed.publish(), the msg.sender is this contract, which is wrong.
     }
 }
