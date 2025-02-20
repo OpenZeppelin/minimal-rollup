@@ -21,8 +21,16 @@ contract DataFeed is IDataFeed {
         HookQuery[] calldata postHooks
     ) external payable {
         uint256 nHooks = preHooks.length;
-        uint256 id = publicationHashes.length;
+        uint256 totalValue;
+        bytes[] memory auxData = new bytes[](nHooks);
+        for (uint256 i; i < nHooks; ++i) {
+            auxData[i] = IPublicationHook(preHooks[i].provider).beforePublish{value: preHooks[i].value}(
+                msg.sender, preHooks[i].input
+            );
+            totalValue += preHooks[i].value;
+        }
 
+        uint256 id = publicationHashes.length;
         Publication memory publication = Publication({
             id: id,
             prevHash: publicationHashes[id - 1],
@@ -33,16 +41,8 @@ contract DataFeed is IDataFeed {
             data: data,
             preHooks: preHooks,
             postHooks: postHooks,
-            auxData: new bytes[](nHooks)
+            auxData: auxData
         });
-
-        uint256 totalValue;
-        for (uint256 i; i < nHooks; ++i) {
-            publication.auxData[i] = IPublicationHook(preHooks[i].provider).beforePublish{value: preHooks[i].value}(
-                msg.sender, preHooks[i].input
-            );
-            totalValue += preHooks[i].value;
-        }
 
         for (uint256 i; i < numBlobs; ++i) {
             publication.blobHashes[i] = blobhash(i);
