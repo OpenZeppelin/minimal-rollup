@@ -20,7 +20,7 @@ contract Inbox {
     /// @dev the highest `pubIdx` in `checkpoints`
     uint256 public lastProvenIdx;
 
-    uint256 public immutable ringbufferSize;
+    uint256 public immutable _ringbufferSize;
     IDataFeed public immutable _dataFeed;
     // This would usually be retrieved dynamically as in the current Taiko implementation, but for simplicity we are
     // just setting it in the constructor
@@ -31,14 +31,18 @@ contract Inbox {
     /// @param checkpoint the checkpoint that was proven
     event CheckpointProven(uint256 indexed pubIdx, bytes32 indexed checkpoint);
 
+    /// @param ringbufferSize the size of the ringbuffer used by checkpoints
     /// @param genesis the checkpoint describing the initial state of the rollup
     /// @param dataFeed the input data source that updates the state of this rollup
     /// @param verifier a contract that can verify the validity of a transition from one checkpoint to another
-    constructor(bytes32 genesis, address dataFeed, address verifier, uint256 _ringbufferSize) {
+    constructor(uint256 ringbufferSize, bytes32 genesis, address dataFeed, address verifier) {
+        require(ringbufferSize > 0, "Ringbuffer cannot be empty");
+        _ringbufferSize = ringbufferSize;
+
         // set the genesis checkpoint of the rollup - genesis is trusted to be correct
         require(genesis != 0, "genesis checkpoint cannot be 0");
-        ringbufferSize = _ringbufferSize;
         _checkpoints[0] = Checkpoint(0, genesis);
+        
         _dataFeed = IDataFeed(dataFeed);
         _verifier = IVerifier(verifier);
     }
@@ -82,6 +86,6 @@ contract Inbox {
     }
 
     function _checkpointAt(uint256 index) internal view returns (Checkpoint storage) {
-        return _checkpoints[index % ringbufferSize];
+        return _checkpoints[index % _ringbufferSize];
     }
 }
