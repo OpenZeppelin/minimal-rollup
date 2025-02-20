@@ -43,7 +43,7 @@ contract DataFeed is IDataFeed {
         bytes[] memory metadata = new bytes[](nQueries);
         for (uint256 i; i < nQueries; ++i) {
             metadata[i] =
-                IHookProvider(queries[i].provider).before_publish{value: queries[i].value}(msg.sender, queries[i].input);
+                IHookProvider(queries[i].provider).beforePublish{value: queries[i].value}(msg.sender, queries[i].input);
             totalValue += queries[i].value;
         }
         require(msg.value == totalValue, "Incorrect ETH passed with publication");
@@ -66,7 +66,7 @@ contract DataFeed is IDataFeed {
 
         for (uint256 i; i < nQueries; ++i) {
             // TODO: handle after_publish
-            IHookProvider(queries[i].provider).after_publish{value: queries[i].value}(msg.sender, queries[i].input);
+            IHookProvider(queries[i].provider).afterPublish{value: queries[i].value}(msg.sender, queries[i].input);
         }
 
         bytes32 pubHash = keccak256(abi.encode(publication));

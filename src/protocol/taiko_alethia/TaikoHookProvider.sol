@@ -14,7 +14,7 @@ contract TaikoHookProvider is IHookProvider {
     }
 
     /// @inheritdoc IHookProvider
-    function before_publish(address publisher, bytes memory input) external payable override returns (bytes memory) {
+    function beforePublish(address publisher, bytes memory input) external payable override returns (bytes memory) {
         require(msg.value == 0, "ETH not required");
 
         if (lookahead != address(0)) {
@@ -30,7 +30,7 @@ contract TaikoHookProvider is IHookProvider {
     }
 
     /// @inheritdoc IHookProvider
-    function after_publish(address publisher, bytes memory input) external payable override returns (bytes memory) {
+    function afterPublish(address publisher, bytes memory input) external payable override returns (bytes memory) {
         // TODO: Implement
         return new bytes(0);
     }
