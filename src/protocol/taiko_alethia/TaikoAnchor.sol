@@ -47,13 +47,15 @@ contract TaikoAnchor {
         lastPublicationId = _publicationId;
 
         // Make sure L1->L2 sync will use newer block hash
-        require(_anchorBlockId >= lastAnchorBlockId, "anchorBlockId too small");
-        require(_anchorBlockHash != 0, "anchorBlockHash is 0");
+        if (_anchorBlockId != 0) {
+            require(_anchorBlockId >= lastAnchorBlockId, "anchorBlockId too small");
+            require(_anchorBlockHash != 0, "anchorBlockHash is 0");
 
-        // Persist anchor block hashes
-        if (_anchorBlockId > lastAnchorBlockId) {
-            lastAnchorBlockId = _anchorBlockId;
-            l1BlockHashes[_anchorBlockId] = _anchorBlockHash;
+            // Persist anchor block hashes
+            if (_anchorBlockId > lastAnchorBlockId) {
+                lastAnchorBlockId = _anchorBlockId;
+                l1BlockHashes[_anchorBlockId] = _anchorBlockHash;
+            }
         }
 
         // Store the parent block hash in the _blockhashes mapping

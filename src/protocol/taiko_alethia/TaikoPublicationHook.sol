@@ -16,7 +16,10 @@ contract TaikoPublicationHook is IPublicationHook {
         bytes32 anchorBlockhash;
         bytes32[] blobHashes;
     }
-    
+
+    struct PosthookInput {
+        bytes32[] inclusionHashes;
+    }
 
     address public immutable dataFeed;
     address public immutable lookahead;
@@ -69,6 +72,17 @@ contract TaikoPublicationHook is IPublicationHook {
         override
         onlyFromDataFeedByPreconfer(publisher)
     {
-        // TODO: Implement
+        require(msg.value == 0, "ETH not required");
+        PosthookInput memory _input = abi.decode(input, (PosthookInput));
+
+        // TODO: check all inclusions due are included, otherwise revert.
+
+        uint256 nInclusions = _input.inclusionHashes.length;
+        for (uint256 i; i < nInclusions; ++i) {
+            // TODO: load and encode inclusions into `data;
+            bytes memory data;
+            IDataFeed.HookQuery[] memory emptyHookQuery;
+            IDataFeed(dataFeed).publish(0, data, emptyHookQuery, emptyHookQuery);
+        }
     }
 }
