@@ -14,12 +14,10 @@ contract DataFeed is IDataFeed {
     }
 
     /// @inheritdoc IDataFeed
-    function publish(
-        uint256 numBlobs,
-        bytes calldata data,
-        HookQuery[] calldata preHookQueries,
-        HookQuery[] calldata postHookQueries
-    ) external payable {
+    function publish(bytes calldata data, HookQuery[] calldata preHookQueries, HookQuery[] calldata postHookQueries)
+        external
+        payable
+    {
         uint256 nHooks = preHookQueries.length;
         uint256 totalValue;
         bytes[] memory auxData = new bytes[](nHooks);
@@ -37,16 +35,11 @@ contract DataFeed is IDataFeed {
             publisher: msg.sender,
             timestamp: block.timestamp,
             blockNumber: block.number,
-            blobHashes: new bytes32[](numBlobs),
             data: data,
             preHookQueries: preHookQueries,
             postHookQueries: postHookQueries,
             auxData: auxData
         });
-
-        for (uint256 i; i < numBlobs; ++i) {
-            publication.blobHashes[i] = blobhash(i);
-        }
 
         bytes32 pubHash = keccak256(abi.encode(publication));
         publicationHashes.push(pubHash);

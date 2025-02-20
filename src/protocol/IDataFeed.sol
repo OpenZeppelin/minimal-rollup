@@ -14,7 +14,6 @@ interface IDataFeed {
         address publisher;
         uint256 timestamp;
         uint256 blockNumber;
-        bytes32[] blobHashes;
         bytes data;
         HookQuery[] preHookQueries;
         HookQuery[] postHookQueries;
@@ -28,18 +27,14 @@ interface IDataFeed {
 
     /// @notice Publish arbitrary data for data availability.
     /// @param data the data to publish in calldata.
-    /// @param numBlobs the number of blobs accompanying this function call.
     /// @param preHookQueries arbitrary calls to retrieve auxiliary data that should be contained in the publication
     /// @param postHookQueries arbitrary calls to be executed after the publication
     /// @dev there can be multiple pre hooks and post hooks because a single publication might represent multiple
     /// rollups,
     /// each with their own requirements
-    function publish(
-        uint256 numBlobs,
-        bytes calldata data,
-        HookQuery[] calldata preHookQueries,
-        HookQuery[] calldata postHookQueries
-    ) external payable;
+    function publish(bytes calldata data, HookQuery[] calldata preHookQueries, HookQuery[] calldata postHookQueries)
+        external
+        payable;
 
     /// @notice retrieve a hash representing a previous publication
     /// @param idx the index of the publication hash

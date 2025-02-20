@@ -12,13 +12,8 @@ contract DataFeedTest is Test {
         feed = new DataFeed();
     }
 
-    function test_NoBlobsDoesNotRevert() public {
+    function test_PublishDoesNotRevert() public {
         IDataFeed.HookQuery[] memory queries = new IDataFeed.HookQuery[](0);
-        feed.publish(0, "", queries, queries);
-    }
-
-    function test_EmptyBlobDoesNotRevert() public {
-        IDataFeed.HookQuery[] memory queries = new IDataFeed.HookQuery[](0);
-        feed.publish(1, "", queries, queries);
+        feed.publish("", queries, queries);
     }
 }
