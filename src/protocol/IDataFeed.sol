@@ -26,7 +26,7 @@ interface IDataFeed {
     /// @param publication the Publication struct describing the preimages to pubHash
     event Published(bytes32 indexed pubHash, Publication publication);
 
-    /// @notice Publish arbitrary data in blobs for data availability.
+    /// @notice Publish arbitrary data for data availability.
     /// @param data the data to publish in calldata.
     /// @param numBlobs the number of blobs accompanying this function call.
     /// @param metadataQueries the calls required to retrieve L1 metadata hashes associated with this publication.
