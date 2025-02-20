@@ -64,13 +64,13 @@ contract DataFeed is IDataFeed {
             publication.blobHashes[i] = blobhash(i);
         }
 
+        bytes32 pubHash = keccak256(abi.encode(publication));
+        publicationHashes.push(pubHash);
+
         for (uint256 i; i < nQueries; ++i) {
             // TODO: handle after_publish
             IHookProvider(queries[i].provider).afterPublish{value: queries[i].value}(msg.sender, queries[i].input);
         }
-
-        bytes32 pubHash = keccak256(abi.encode(publication));
-        publicationHashes.push(pubHash);
 
         emit Published(pubHash, publication);
     }
