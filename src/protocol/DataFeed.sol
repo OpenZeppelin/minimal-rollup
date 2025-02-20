@@ -55,7 +55,7 @@ contract DataFeed is IDataFeed {
         nHooks = postHooks.length;
         for (uint256 i; i < nHooks; ++i) {
             IPublicationHook(postHooks[i].provider).afterPublish{value: postHooks[i].value}(
-                msg.sender, postHooks[i].input
+                msg.sender, publication, postHooks[i].input
             );
             totalValue += postHooks[i].value;
         }

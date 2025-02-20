@@ -2,6 +2,8 @@
 pragma solidity ^0.8.28;
 
 import {IPublicationHook} from "../IPublicationHook.sol";
+
+import {IDataFeed} from "./IDataFeed.sol";
 import {ILookahead} from "./ILookahead.sol";
 
 contract TaikoHookProvider is IPublicationHook {
@@ -30,8 +32,11 @@ contract TaikoHookProvider is IPublicationHook {
     }
 
     /// @inheritdoc IPublicationHook
-    function afterPublish(address publisher, bytes memory input) external payable override returns (bytes memory) {
+    function afterPublish(address publisher, IDataFeed.Publication memory publication, bytes memory input)
+        external
+        payable
+        override
+    {
         // TODO: Implement
-        return new bytes(0);
     }
 }
