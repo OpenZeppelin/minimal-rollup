@@ -41,14 +41,9 @@ contract TaikoInbox {
             require(blobHashes[i] != 0, "data unavailable");
         }
 
-        ITaikoData.Proposal memory proposal = ITaikoData.Proposal({
-            anchorBlockhash: anchorBlockhash,
-            proposalDataList: new ITaikoData.DataSource[](1)
-        });
-        proposal.proposalDataList[0] = ITaikoData.DataSource({
-            blobHashes: blobHashes,
-            data: data
-        });
+        ITaikoData.Proposal memory proposal =
+            ITaikoData.Proposal({anchorBlockhash: anchorBlockhash, proposalDataList: new ITaikoData.DataSource[](1)});
+        proposal.proposalDataList[0] = ITaikoData.DataSource({blobHashes: blobHashes, data: data});
 
         bytes[] memory attributes = new bytes[](1);
         attributes[0] = abi.encode(proposal);
