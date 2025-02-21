@@ -2,7 +2,6 @@
 pragma solidity ^0.8.28;
 
 import {IDataFeed} from "./IDataFeed.sol";
-import {IPublicationHook} from "./IPublicationHook.sol";
 
 contract DataFeed is IDataFeed {
     /// @dev a list of hashes identifying all data accompanying calls to the `publish` function.
@@ -14,18 +13,18 @@ contract DataFeed is IDataFeed {
     }
 
     /// @inheritdoc IDataFeed
-    function publish(bytes[] calldata attributes) external {
+    function publish(bytes[] calldata attributes) external override {
         uint256 id = publicationHashes.length;
         Publication memory publication = Publication({
             id: id,
             prevHash: publicationHashes[id - 1],
             publisher: msg.sender,
             timestamp: block.timestamp,
-            blockNumber: block.number,
+            blockNumber: block.number
         });
 
-        bytes32[] attributeHashes = new bytes32[](attributes.length);
-        for(uint256 i; i < attributes.length; ++i) {
+        bytes32[] memory attributeHashes = new bytes32[](attributes.length);
+        for (uint256 i; i < attributes.length; ++i) {
             attributeHashes[i] = keccak256(attributes[i]);
         }
         bytes32 pubHash = keccak256(abi.encode(publication, attributeHashes));
