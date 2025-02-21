@@ -14,7 +14,7 @@ contract DataFeed is IDataFeed {
     }
 
     /// @inheritdoc IDataFeed
-    function publish(bytes calldata data) external {
+    function publish(bytes[] calldata attributes) external {
         uint256 id = publicationHashes.length;
         Publication memory publication = Publication({
             id: id,
@@ -22,13 +22,16 @@ contract DataFeed is IDataFeed {
             publisher: msg.sender,
             timestamp: block.timestamp,
             blockNumber: block.number,
-            data: data
         });
 
-        bytes32 pubHash = keccak256(abi.encode(publication));
+        bytes32[] attributeHashes = new bytes32[](attributes.length);
+        for(uint256 i; i < attributes.length; ++i) {
+            attributeHashes[i] = keccak256(attributes[i]);
+        }
+        bytes32 pubHash = keccak256(abi.encode(publication, attributeHashes));
         publicationHashes.push(pubHash);
 
-        emit Published(pubHash, publication);
+        emit Published(pubHash, publication, attributes);
     }
 
     /// @inheritdoc IDataFeed

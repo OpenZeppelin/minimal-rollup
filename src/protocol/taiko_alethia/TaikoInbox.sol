@@ -30,7 +30,7 @@ contract TaikoInbox {
             require(blobHashes[i] != 0, "data unavailable");
         }
 
-        bytes memory publicationData =  abi.encode(keccak256(abi.encode(anchorBlockhash, data, blobHashes)));
-        datafeed.publish(publicationData);
+        bytes memory attribute =  abi.encode(anchorBlockhash, data, blobHashes);
+        datafeed.publish([attribute]);
     }
 }
