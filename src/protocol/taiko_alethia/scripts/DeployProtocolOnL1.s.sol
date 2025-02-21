@@ -5,7 +5,7 @@ pragma solidity ^0.8.24;
 import "../../DataFeed.sol";
 import "../../Inbox.sol";
 import "../TaikoMetadataProvider.sol";
-import "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
+import "openzeppelin-contracts/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import "forge-std/Script.sol";
 import "forge-std/console2.sol";
 
