@@ -5,6 +5,7 @@ import {IDataFeed} from "../IDataFeed.sol";
 
 import {IDelayedInclusionStore} from "./IDelayedInclusionStore.sol";
 import {ILookahead} from "./ILookahead.sol";
+import {ITaikoData} from "./ITaikoData.sol";
 
 contract TaikoInbox {
     IDataFeed public immutable datafeed;
@@ -25,7 +26,7 @@ contract TaikoInbox {
         maxAnchorBlockIdOffset = _maxAnchorBlockIdOffset;
     }
 
-    function publish(uint256 nBlobs, bytes calldata data, uint64 anchorBlockId) external {
+    function publish(uint256 nBlobs, uint64 anchorBlockId) external {
         if (address(lookahead) != address(0)) {
             require(lookahead.isCurrentPreconfer(msg.sender), "not current preconfer");
         }
@@ -40,8 +41,17 @@ contract TaikoInbox {
             require(blobHashes[i] != 0, "data unavailable");
         }
 
+        ITaikoData.DataSource[] memory dataSources = new ITaikoData.DataSource[](1);
+        dataSources[0].blobHashes = blobHashes;
+
         bytes[] memory attributes = new bytes[](1);
-        attributes[0] = abi.encode(anchorBlockhash, data, blobHashes);
+        attributes[0] = abi.encode(ITaikoData.Proposal(anchorBlockhash, dataSources));
         datafeed.publish(attributes);
+
+        dataSources = delayedInclusionStore.processDelayedInclusionByDeadline(block.timestamp);
+        if (dataSources.length > 0) {
+            attributes[0] = abi.encode(ITaikoData.Proposal(anchorBlockhash, dataSources));
+            datafeed.publish(attributes);
+        }
     }
 }

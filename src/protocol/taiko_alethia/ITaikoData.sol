@@ -6,7 +6,7 @@ interface ITaikoData {
     /// These blobs are concatenated into a single blob or string, which then is decoded into a specific format as
     /// defined by the node or client.
     struct DataSource {
-        bytes32[] blobs;
+        bytes32[] blobHashes;
     }
 
     /// @dev Represents a proposal, which includes an anchor block hash and an array of data sources.
