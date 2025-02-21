@@ -26,7 +26,7 @@ contract TaikoInbox {
         maxAnchorBlockIdOffset = _maxAnchorBlockIdOffset;
     }
 
-    function publish(uint256 nBlobs, uint64 anchorBlockId) external {
+    function publish(uint256 nBlobs, bytes calldata data, uint64 anchorBlockId) external {
         if (address(lookahead) != address(0)) {
             require(lookahead.isCurrentPreconfer(msg.sender), "not current preconfer");
         }
@@ -41,16 +41,23 @@ contract TaikoInbox {
             require(blobHashes[i] != 0, "data unavailable");
         }
 
-        ITaikoData.DataSource[] memory dataSources = new ITaikoData.DataSource[](1);
-        dataSources[0].blobHashes = blobHashes;
+        ITaikoData.Proposal memory proposal = ITaikoData.Proposal({
+            anchorBlockhash: anchorBlockhash,
+            proposalDataList: new ITaikoData.DataSource[](1)
+        });
+        proposal.proposalDataList[0] = ITaikoData.DataSource({
+            blobHashes: blobHashes,
+            data: data
+        });
 
         bytes[] memory attributes = new bytes[](1);
-        attributes[0] = abi.encode(ITaikoData.Proposal(anchorBlockhash, dataSources));
+        attributes[0] = abi.encode(proposal);
         datafeed.publish(attributes);
 
-        dataSources = delayedInclusionStore.processDelayedInclusionByDeadline(block.timestamp);
-        if (dataSources.length > 0) {
-            attributes[0] = abi.encode(ITaikoData.Proposal(anchorBlockhash, dataSources));
+        // reuse proposal anchorBlockHash
+        proposal.proposalDataList = delayedInclusionStore.processDelayedInclusionByDeadline(block.timestamp);
+        if (proposal.proposalDataList.length > 0) {
+            attributes[0] = abi.encode(proposal);
             datafeed.publish(attributes);
         }
     }

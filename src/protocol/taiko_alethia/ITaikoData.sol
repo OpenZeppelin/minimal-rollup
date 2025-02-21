@@ -7,6 +7,7 @@ interface ITaikoData {
     /// defined by the node or client.
     struct DataSource {
         bytes32[] blobHashes;
+        bytes data;
     }
 
     /// @dev Represents a proposal, which includes an anchor block hash and an array of data sources.
