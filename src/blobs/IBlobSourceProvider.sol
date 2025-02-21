@@ -2,6 +2,7 @@
 pragma solidity ^0.8.28;
 
 interface IBlobSourceProvider {
+    /// @notice Represents a source of data in one or multiple blobs.
     struct BlobSource {
         uint256 blockNumber;
         bytes32[] blobs;
