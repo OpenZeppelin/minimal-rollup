@@ -2,16 +2,26 @@
 pragma solidity ^0.8.28;
 
 import {IDataFeed} from "../IDataFeed.sol";
+
+import {IDelayedInclusionStore} from "./IDelayedInclusionStore.sol";
 import {ILookahead} from "./ILookahead.sol";
 
 contract TaikoInbox {
     IDataFeed public immutable datafeed;
     ILookahead public immutable lookahead;
+    IDelayedInclusionStore public immutable delayedInclusionStore;
+
     uint256 public immutable maxAnchorBlockIdOffset;
 
-    constructor(address _datafeed, address _lookahead, uint256 _maxAnchorBlockIdOffset) {
+    constructor(
+        address _datafeed,
+        address _lookahead,
+        address _delayedInclusionStore,
+        uint256 _maxAnchorBlockIdOffset
+    ) {
         datafeed = IDataFeed(_datafeed);
         lookahead = ILookahead(_lookahead);
+        delayedInclusionStore = IDelayedInclusionStore(_delayedInclusionStore);
         maxAnchorBlockIdOffset = _maxAnchorBlockIdOffset;
     }
 
@@ -25,12 +35,13 @@ contract TaikoInbox {
         require(anchorBlockhash != 0, "blockhash not found");
 
         bytes32[] memory blobHashes = new bytes32[](nBlobs);
-        for(uint i; i < nBlobs; ++i) {
+        for (uint256 i; i < nBlobs; ++i) {
             blobHashes[i] = blobhash(i);
             require(blobHashes[i] != 0, "data unavailable");
         }
 
-        bytes memory attribute =  abi.encode(anchorBlockhash, data, blobHashes);
-        datafeed.publish([attribute]);
+        bytes[] memory attributes = new bytes[](1);
+        attributes[0] = abi.encode(anchorBlockhash, data, blobHashes);
+        datafeed.publish(attributes);
     }
 }
