@@ -8,7 +8,7 @@ contract BlobSourceProvider is IBlobSourceProvider {
     mapping(bytes32 sourceHash => uint256 timestamp) private _savedHashes;
 
     /// @inheritdoc IBlobSourceProvider
-    function getAndSave(uint16[] calldata blobIdxs) external returns (BlobSource memory blobSource, bytes32 hash) {
+    function getAndSaveHash(uint16[] calldata blobIdxs) external returns (BlobSource memory blobSource, bytes32 hash) {
         blobSource = get(blobIdxs);
         hash = _saveHash(blobSource);
     }
