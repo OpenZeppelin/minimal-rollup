@@ -1,0 +1,37 @@
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.28;
+
+import "./IBlobSourceProvider.sol";
+
+contract BlobSourceProvider is IBlobSourceProvider {
+    mapping(bytes32 sourceHash => uint256 timestamp) private _savedHashes;
+
+    function getAndSave(uint16[] calldata blobIdxs) external returns (BlobSource memory blobSource, bytes32 hash) {
+        blobSource = get(blobIdxs);
+        hash = _saveHash(blobSource);
+    }
+
+    function get(uint16[] calldata blobIdxs) public view returns (BlobSource memory) {
+        return _get(blobIdxs);
+    }
+
+    function isValid(BlobSource memory blobSource) external view returns (bool) {
+        return _savedHashes[keccak256(abi.encode(blobSource))] != 0;
+    }
+
+    function _saveHash(BlobSource memory blobSource) private returns (bytes32 hash) {
+        hash = keccak256(abi.encode(blobSource));
+        _savedHashes[hash] = block.timestamp;
+        emit BlobSourceHashSaved(hash);
+    }
+
+    function _get(uint16[] calldata blobIdxs) private view returns (BlobSource memory) {
+        uint256 nBlobs = blobIdxs.length;
+        bytes32[] memory blobs = new bytes32[](nBlobs);
+        for (uint256 i; i < nBlobs; ++i) {
+            blobs[i] = blobhash(blobIdxs[i]);
+            require(blobs[i] != 0, "Blob not found");
+        }
+        return BlobSource(block.number, blobs);
+    }
+}
