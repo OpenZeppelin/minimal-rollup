@@ -22,7 +22,7 @@ contract TaikoInbox {
 
     uint256 public immutable maxAnchorBlockIdOffset;
 
-    uint256 public lastPublicationId;
+    uint64 public lastPublicationId;
 
     // attributes associated with the publication
     uint256 private constant METADATA = 0;
@@ -77,7 +77,7 @@ contract TaikoInbox {
             _lastPublicationId = dataFeed.publish(attributes).id;
         }
 
-        lastPublicationId = _lastPublicationId;
+        lastPublicationId = uint64(_lastPublicationId);
     }
 
     function _buildBlobIndices(uint256 nBlobs) private pure returns (uint256[] memory blobIndices) {
