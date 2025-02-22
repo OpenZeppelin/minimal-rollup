@@ -53,12 +53,15 @@ contract TaikoInbox {
 
         // Build the attribute for the anchor transaction inputs
         require(anchorBlockId >= block.number - maxAnchorBlockIdOffset, "anchorBlockId is too old");
-        bytes32 anchorBlockhash = blockhash(anchorBlockId);
-        require(anchorBlockhash != 0, "blockhash not found");
-        Metadata memory metadata = Metadata(anchorBlockId, anchorBlockhash, false);
+
+        Metadata memory metadata;
+        metadata.anchorBlockId = anchorBlockId;
+        metadata.anchorBlockHash = blockhash(anchorBlockId);
+        require(metadata.anchorBlockHash != 0, "blockhash not found");
         attributes[METADATA] = abi.encode(metadata);
         attributes[LAST_PUBLICATION] = abi.encode(_lastPublicationId);
         attributes[BLOB_REFERENCE] = abi.encode(blobRefRegistry.getRef(_buildBlobIndices(nBlobs)));
+
         _lastPublicationId = dataFeed.publish(attributes).id;
 
         // Publish each delayed inclusion as a separate publication
@@ -69,6 +72,7 @@ contract TaikoInbox {
             attributes[METADATA] = abi.encode(metadata);
             attributes[LAST_PUBLICATION] = abi.encode(_lastPublicationId);
             attributes[BLOB_REFERENCE] = abi.encode(inclusions[i]);
+            
             _lastPublicationId = dataFeed.publish(attributes).id;
         }
 
