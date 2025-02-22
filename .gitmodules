@@ -2,3 +2,6 @@
 	path = lib/forge-std
 	url = https://github.com/foundry-rs/forge-std
 
+[submodule "lib/solidity-mmr"]
+	path = lib/solidity-mmr
+	url = https://github.com/HerodotusDev/solidity-mmr
