@@ -23,8 +23,9 @@ contract DataFeed is IDataFeed {
             blockNumber: block.number
         });
 
-        bytes32[] memory attributeHashes = new bytes32[](attributes.length);
-        for (uint256 i; i < attributes.length; ++i) {
+        uint256 nAttributes = attributes.length;
+        bytes32[] memory attributeHashes = new bytes32[](nAttributes);
+        for (uint256 i; i < nAttributes; ++i) {
             attributeHashes[i] = keccak256(attributes[i]);
         }
         bytes32 pubHash = keccak256(abi.encode(header, attributeHashes));
