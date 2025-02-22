@@ -16,7 +16,12 @@ contract TaikoInbox {
 
     uint256 public immutable maxAnchorBlockIdOffset;
 
-    uint256 public prevPublicationId;
+    uint256 public lastPublicationId;
+
+    // attributes associated with the publication
+    uint256 private constant ANCHOR_TX = 0;
+    uint256 private constant PREV_PUBLICATION = 1;
+    uint256 private constant BLOB_REFERENCE = 2;
 
     constructor(
         address _datafeed,
@@ -38,19 +43,19 @@ contract TaikoInbox {
         }
 
         bytes[] memory attributes = new bytes[](3);
-        uint256 _prevPublicationId = prevPublicationId;
+        uint256 _lastPublicationId = lastPublicationId;
 
         // Build the attribute for the anchor transaction inputs
         require(anchorBlockId >= block.number - maxAnchorBlockIdOffset, "anchorBlockId is too old");
         bytes32 anchorBlockhash = blockhash(anchorBlockId);
         require(anchorBlockhash != 0, "blockhash not found");
-        attributes[0] = abi.encode(datafeed.getNextPublicationId(), anchorBlockId, anchorBlockhash);
+        attributes[ANCHOR_TX] = abi.encode(datafeed.getNextPublicationId(), anchorBlockhash);
 
         // Build the attribute to link back to the previous publication Id;
-        attributes[1] = abi.encode(_prevPublicationId);
+        attributes[PREV_PUBLICATION] = abi.encode(_lastPublicationId);
 
-        attributes[2] = abi.encode(blobRefRegistry.getRef(_buildBlobIndices(nBlobs)));
-        _prevPublicationId = datafeed.publish(attributes).id;
+        attributes[BLOB_REFERENCE] = abi.encode(blobRefRegistry.getRef(_buildBlobIndices(nBlobs)));
+        _lastPublicationId = datafeed.publish(attributes).id;
 
         // Publish each delayed inclusion as a separate publication
         IBlobRefRegistry.BlobRef[] memory blobRefs =
@@ -58,12 +63,12 @@ contract TaikoInbox {
 
         uint256 nBlobRefs = blobRefs.length;
         for (uint256 i; i < nBlobRefs; ++i) {
-            attributes[1] = abi.encode(_prevPublicationId);
-            attributes[2] = abi.encode(blobRefs[i]);
-            _prevPublicationId = datafeed.publish(attributes).id;
+            attributes[PREV_PUBLICATION] = abi.encode(_lastPublicationId);
+            attributes[BLOB_REFERENCE] = abi.encode(blobRefs[i]);
+            _lastPublicationId = datafeed.publish(attributes).id;
         }
 
-        prevPublicationId = _prevPublicationId;
+        lastPublicationId = _lastPublicationId;
     }
 
     function _buildBlobIndices(uint256 nBlobs) private pure returns (uint256[] memory blobIndices) {
