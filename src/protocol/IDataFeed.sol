@@ -8,6 +8,7 @@ interface IDataFeed {
         address publisher;
         uint256 timestamp;
         uint256 blockNumber;
+        bytes32 attributesHash;
     }
 
     /// @notice Emitted when a new publication is created
