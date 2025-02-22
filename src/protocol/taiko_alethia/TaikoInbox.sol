@@ -7,7 +7,6 @@ import {IDataFeed} from "../IDataFeed.sol";
 
 import {IDelayedInclusionStore} from "./IDelayedInclusionStore.sol";
 import {ILookahead} from "./ILookahead.sol";
-import {ITaikoData} from "./ITaikoData.sol";
 
 contract TaikoInbox {
     IDataFeed public immutable datafeed;
@@ -50,19 +49,17 @@ contract TaikoInbox {
         // Build the attribute to link back to the previous publication Id;
         attributes[1] = abi.encode(_prevPublicationId);
 
-        ITaikoData.DataSource memory dataSource;
-        dataSource.blobRef = blobRefRegister.getRef(_buildBlobIndices(nBlobs));
-        attributes[2] = abi.encode(dataSource);
+        attributes[2] = abi.encode(blobRefRegister.getRef(_buildBlobIndices(nBlobs)));
         _prevPublicationId = datafeed.publish(attributes).id;
 
         // Publish each inclusion as a publication
-        ITaikoData.DataSource[] memory dataSources =
+        IBlobRefRegistry.BlobRef[] memory blobRefs =
             delayedInclusionStore.processDelayedInclusionByDeadline(block.timestamp);
 
-        uint256 nDataSources = dataSources.length;
-        for (uint256 i; i < nDataSources; ++i) {
+        uint256 nBlobRefs = blobRefs.length;
+        for (uint256 i; i < nBlobRefs; ++i) {
             attributes[1] = abi.encode(_prevPublicationId);
-            attributes[2] = abi.encode(dataSources[i]);
+            attributes[2] = abi.encode(blobRefs[i]);
             _prevPublicationId = datafeed.publish(attributes).id;
         }
 
