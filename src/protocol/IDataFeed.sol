@@ -12,20 +12,24 @@ interface IDataFeed {
     }
 
     /// @notice Emitted when a new publication is created
-    /// @param pubHash the hash of the new publication
-    /// @param header the metadata associated with the publication
-    /// @param attributes the data contained within the publication
+    /// @param pubHash The hash of the new publication
+    /// @param header The metadata associated with the publication
+    /// @param attributes The data contained within the publication
     event Published(bytes32 indexed pubHash, PublicationHeader header, bytes[] attributes);
 
     /// @notice Publish arbitrary data into the global queue
-    /// @param attributes the data to publish
+    /// @param attributes The data to publish
     /// @return header The publication header
-    /// @dev the data is encoded as an array so each attribute is hashed independently,
+    /// @dev The data is encoded as an array so each attribute is hashed independently,
     /// which allows a single attribute to be validated against a pubHash
     function publish(bytes[] calldata attributes) external returns (PublicationHeader memory header);
 
-    /// @notice retrieve a hash representing a previous publication
-    /// @param idx the index of the publication hash
-    /// @return _ the corresponding publication hash
+    /// @notice Retrieve a hash representing a previous publication
+    /// @param idx The index of the publication hash
+    /// @return _ The corresponding publication hash
     function getPublicationHash(uint256 idx) external view returns (bytes32);
+
+    /// @notice Returns the next publication's ID.
+    /// @return _ The next publication ID.
+    function getNextPublicationId() external view returns (uint256);
 }
