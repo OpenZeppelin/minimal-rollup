@@ -12,7 +12,7 @@ contract TaikoInbox {
     struct Metadata {
         uint256 anchorBlockId;
         bytes32 anchorBlockHash;
-        bool isForcedInclusion;
+        bool isDelayedInclusion;
     }
 
     IDataFeed public immutable dataFeed;
@@ -68,7 +68,7 @@ contract TaikoInbox {
         // Publish each delayed inclusion as a separate publication
         IDelayedInclusionStore.Inclusion[] memory inclusions = delayedInclusionStore.processDueInclusions();
         uint256 nInclusions = inclusions.length;
-        metadata.isForcedInclusion = true;
+        metadata.isDelayedInclusion = true;
         for (uint256 i; i < nInclusions; ++i) {
             attributes[METADATA] = abi.encode(metadata);
             attributes[LAST_PUBLICATION] = abi.encode(_lastPublicationId);
