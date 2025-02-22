@@ -51,13 +51,13 @@ contract TaikoInbox {
         uint256 _lastPublicationId = lastPublicationId;
 
         // Build the attribute for the anchor transaction inputs
-        require(anchorBlockId >= block.number - maxAnchorBlockIdOffset, "anchorBlockId is too old");
+        require(anchorBlockId >= block.number - maxAnchorBlockIdOffset, "anchorBlockId too old");
 
         Metadata memory metadata;
         metadata.anchorBlockId = anchorBlockId;
         metadata.anchorBlockHash = blockhash(anchorBlockId);
         require(metadata.anchorBlockHash != 0, "blockhash not found");
-        
+
         bytes[] memory attributes = new bytes[](3);
         attributes[METADATA] = abi.encode(metadata);
         attributes[LAST_PUBLICATION] = abi.encode(_lastPublicationId);
