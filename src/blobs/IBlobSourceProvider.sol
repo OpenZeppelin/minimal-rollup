@@ -12,5 +12,5 @@ interface IBlobSourceProvider {
 
     function getAndSaveHash(uint16[] calldata blobIdxs) external returns (BlobSource memory blobSource, bytes32 hash);
     function get(uint16[] calldata blobIdxs) external view returns (BlobSource memory);
-    function isValid(BlobSource memory blobSource) external view returns (bool);
+    function isKnown(BlobSource memory blobSource) external view returns (bool);
 }

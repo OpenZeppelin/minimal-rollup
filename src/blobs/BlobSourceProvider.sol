@@ -19,7 +19,7 @@ contract BlobSourceProvider is IBlobSourceProvider {
     }
 
     /// @inheritdoc IBlobSourceProvider
-    function isValid(BlobSource memory blobSource) external view returns (bool) {
+    function isKnown(BlobSource memory blobSource) external view returns (bool) {
         return _savedHashes[keccak256(abi.encode(blobSource))] != 0;
     }
 
