@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
+import {IBlobRefRegistry} from "../../blobs/IBlobRefRegistry.sol";
+
 import {IDataFeed} from "../IDataFeed.sol";
 
 import {IDelayedInclusionStore} from "./IDelayedInclusionStore.sol";
@@ -10,6 +12,7 @@ import {ITaikoData} from "./ITaikoData.sol";
 contract TaikoInbox {
     IDataFeed public immutable datafeed;
     ILookahead public immutable lookahead;
+    IBlobRefRegistry public immutable blobRefRegister;
     IDelayedInclusionStore public immutable delayedInclusionStore;
 
     uint256 public immutable maxAnchorBlockIdOffset;
@@ -19,11 +22,13 @@ contract TaikoInbox {
     constructor(
         address _datafeed,
         address _lookahead,
+        address _blobRefRegister,
         address _delayedInclusionStore,
         uint256 _maxAnchorBlockIdOffset
     ) {
         datafeed = IDataFeed(_datafeed);
         lookahead = ILookahead(_lookahead);
+        blobRefRegister = IBlobRefRegistry(_blobRefRegister);
         delayedInclusionStore = IDelayedInclusionStore(_delayedInclusionStore);
         maxAnchorBlockIdOffset = _maxAnchorBlockIdOffset;
     }
@@ -45,13 +50,10 @@ contract TaikoInbox {
         // Build the attribute to link back to the previous publication Id;
         attributes[1] = abi.encode(_prevPublicationId);
 
-        // Build the attribute for this proposal's data availability
-        bytes32[] memory blobHashes = new bytes32[](nBlobs);
-        for (uint256 i; i < nBlobs; ++i) {
-            blobHashes[i] = blobhash(i);
-            require(blobHashes[i] != 0, "data unavailable");
-        }
-        attributes[2] = abi.encode(blobHashes);
+        ITaikoData.DataSource memory dataSource;
+        dataSource.blobRef = blobRefRegister.getRef(_getBlobIndices(nBlobs));
+
+        attributes[2] = abi.encode(dataSource);
         _prevPublicationId = datafeed.publish(attributes).id;
 
         // Publish each inclusion as a publication
@@ -61,10 +63,17 @@ contract TaikoInbox {
         uint256 nDataSources = dataSources.length;
         for (uint256 i; i < nDataSources; ++i) {
             attributes[1] = abi.encode(_prevPublicationId);
-            attributes[2] = abi.encode(dataSources[i].blobHashes);
+            attributes[2] = abi.encode(dataSources[i]);
             _prevPublicationId = datafeed.publish(attributes).id;
         }
 
         prevPublicationId = _prevPublicationId;
+    }
+
+    function _getBlobIndices(uint256 nBlobs) private pure returns (uint256[] memory blobIndices) {
+        blobIndices = new uint256[](nBlobs);
+        for (uint256 i; i < nBlobs; ++i) {
+            blobIndices[i] = i;
+        }
     }
 }
