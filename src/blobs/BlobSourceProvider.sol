@@ -9,12 +9,12 @@ contract BlobSourceProvider is IBlobSourceProvider {
 
     /// @inheritdoc IBlobSourceProvider
     function getAndSaveHash(uint16[] calldata blobIdxs) external returns (BlobSource memory blobSource, bytes32 hash) {
-        blobSource = get(blobIdxs);
+        blobSource = _get(blobIdxs);
         hash = _saveHash(blobSource);
     }
 
     /// @inheritdoc IBlobSourceProvider
-    function get(uint16[] calldata blobIdxs) public view returns (BlobSource memory) {
+    function get(uint16[] calldata blobIdxs) external view returns (BlobSource memory) {
         return _get(blobIdxs);
     }
 
