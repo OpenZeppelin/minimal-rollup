@@ -54,7 +54,7 @@ contract TaikoInbox {
         attributes[2] = abi.encode(blobHashes);
         _prevPublicationId = datafeed.publish(attributes).id;
 
-        // Public each inclusion as a publication
+        // Publish each inclusion as a publication
         ITaikoData.DataSource[] memory dataSources =
             delayedInclusionStore.processDelayedInclusionByDeadline(block.timestamp);
 
