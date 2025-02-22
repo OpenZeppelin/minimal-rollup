@@ -52,7 +52,6 @@ contract TaikoInbox {
 
         ITaikoData.DataSource memory dataSource;
         dataSource.blobRef = blobRefRegister.getRef(_buildBlobIndices(nBlobs));
-
         attributes[2] = abi.encode(dataSource);
         _prevPublicationId = datafeed.publish(attributes).id;
 
