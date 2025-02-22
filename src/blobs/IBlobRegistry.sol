@@ -15,9 +15,9 @@ interface IBlobRegistry {
     /// @notice Retrieves blob data for given blob indices and saves their hash
     /// @param blobIdxs Array of blob indices to retrieve
     /// @return blobSource The retrieved blob data including block number and blob hashes
-    /// @return hash The keccak256 hash of the encoded blob source
+    /// @return sourceHash The keccak256 hash of the encoded blob source
     /// @dev Should revert if any blob index is invalid or if no blobs are provided
-    function getAndSaveHash(uint256[] calldata blobIdxs)
+    function getAndSaveSourceHash(uint256[] calldata blobIdxs)
         external
         returns (BlobSource memory blobSource, bytes32 sourceHash);
 

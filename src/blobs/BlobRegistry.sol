@@ -32,7 +32,7 @@ contract BlobRegistry is IBlobRegistry {
     /// @return The hash of the blob source
     function _saveSourceHash(BlobSource memory blobSource) private returns (bytes32) {
         bytes32 hash = keccak256(abi.encode(blobSource));
-        _savedHashes[hash] = block.timestamp;
+        _savedSourceHashes[hash] = block.timestamp;
 
         return hash;
     }
