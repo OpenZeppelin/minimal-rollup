@@ -21,4 +21,8 @@ interface ISignalService {
     /// @param proof The merkle proof of the signal
     ///@dev This function should be called on the destination chain
     function verify(uint256 idx, bytes32 signal, bytes32[] calldata proof) external view;
+
+    /// @notice Returns the current MMR root
+    /// @return The current MMR root
+    function getRoot() external view returns (bytes32);
 }

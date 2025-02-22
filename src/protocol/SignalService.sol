@@ -26,8 +26,7 @@ contract SignalService is ISignalService {
         StatelessMmr.verifyProof(idx, signal, proof, _peaks, _count, _root);
     }
 
-    /// @notice Returns the current MMR root
-    /// @return The current MMR root
+    /// @inheritdoc ISignalService
     function getRoot() external view returns (bytes32) {
         return _root;
     }
