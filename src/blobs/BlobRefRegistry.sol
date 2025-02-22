@@ -9,14 +9,14 @@ contract BlobRefRegistry is IBlobRefRegistry {
     mapping(bytes32 refHash => uint256 timestamp) private _savedRefHashes;
 
     /// @inheritdoc IBlobRefRegistry
-    function getRefAndSaveHash(uint256[] calldata blobIdxs) external returns (BlobRef memory ref, bytes32 refHash) {
-        ref = _getRef(blobIdxs);
+    function getRefAndSaveHash(uint256[] calldata blobIndices) external returns (BlobRef memory ref, bytes32 refHash) {
+        ref = _getRef(blobIndices);
         refHash = _saveRefHash(ref);
     }
 
     /// @inheritdoc IBlobRefRegistry
-    function getRef(uint256[] calldata blobIdxs) external view returns (BlobRef memory) {
-        return _getRef(blobIdxs);
+    function getRef(uint256[] calldata blobIndices) external view returns (BlobRef memory) {
+        return _getRef(blobIndices);
     }
 
     /// @inheritdoc IBlobRefRegistry
@@ -34,15 +34,15 @@ contract BlobRefRegistry is IBlobRefRegistry {
     }
 
     /// @dev Retrieves the blob reference for given blob indices
-    /// @param blobIdxs The indices of the blobhashes to retrieve
+    /// @param blobIndices The indices of the blobhashes to retrieve
     /// @return The blob reference constructed from the block's number and the list of blob hashes
-    function _getRef(uint256[] calldata blobIdxs) private view returns (BlobRef memory) {
-        uint256 nBlobs = blobIdxs.length;
+    function _getRef(uint256[] calldata blobIndices) private view returns (BlobRef memory) {
+        uint256 nBlobs = blobIndices.length;
         require(nBlobs != 0, "No blobs provided");
 
         bytes32[] memory blobhashes = new bytes32[](nBlobs);
         for (uint256 i; i < nBlobs; ++i) {
-            blobhashes[i] = blobhash(blobIdxs[i]);
+            blobhashes[i] = blobhash(blobIndices[i]);
             require(blobhashes[i] != 0, "Blob not found");
         }
 
