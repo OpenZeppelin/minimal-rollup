@@ -49,7 +49,7 @@ contract TaikoInbox {
         require(anchorBlockId >= block.number - maxAnchorBlockIdOffset, "anchorBlockId is too old");
         bytes32 anchorBlockhash = blockhash(anchorBlockId);
         require(anchorBlockhash != 0, "blockhash not found");
-        attributes[ANCHOR_TX] = abi.encode(datafeed.getNextPublicationId(), anchorBlockhash);
+        attributes[ANCHOR_TX] = abi.encode(anchorBlockId, anchorBlockhash);
 
         // Build the attribute to link back to the previous publication Id;
         attributes[PREV_PUBLICATION] = abi.encode(_lastPublicationId);
