@@ -74,7 +74,6 @@ contract TaikoInbox {
             attributes[LAST_PUBLICATION] = abi.encode(_lastPublicationId);
             attributes[BLOB_REFERENCE] = abi.encode(inclusions[i]);
 
-
             _lastPublicationId = publicationFeed.publish(attributes).id;
         }
 
