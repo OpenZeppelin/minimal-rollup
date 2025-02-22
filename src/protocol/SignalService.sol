@@ -16,10 +16,8 @@ contract SignalService is ISignalService {
         (uint256 count, bytes32 root, bytes32[] memory peaks) =
             StatelessMmr.appendWithPeaksRetrieval(signal, _peaks, _count, _root);
 
-        _peaks = peaks;
-        _count = count;
-        _root = root;
         emit Signal(signal, count, block.number);
+        (_peaks, _count, _root) = (peaks, count, root);
     }
 
     /// @inheritdoc ISignalService
