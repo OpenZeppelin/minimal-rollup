@@ -40,4 +40,9 @@ contract DataFeed is IDataFeed {
     function getPublicationHash(uint256 idx) external view returns (bytes32) {
         return publicationHashes[idx];
     }
+
+    /// @inheritdoc IDataFeed
+    function getNextPublicationId() external view returns (uint256) {
+        return publicationHashes.length;
+    }
 }
