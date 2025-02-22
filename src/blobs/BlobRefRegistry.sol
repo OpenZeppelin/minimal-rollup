@@ -5,7 +5,7 @@ import "./IBlobRefRegistry.sol";
 
 /// @title BlobRefRegistry
 contract BlobRefRegistry is IBlobRefRegistry {
-    /// @dev A mapping of the hash of a blob reference to the timestamp when it was saved
+    /// @dev A mapping of the hash of a blob ref to the timestamp when it was saved
     mapping(bytes32 refHash => uint256 timestamp) private _savedRefHashes;
 
     /// @inheritdoc IBlobRefRegistry
@@ -24,8 +24,8 @@ contract BlobRefRegistry is IBlobRefRegistry {
         return _savedRefHashes[keccak256(abi.encode(ref))] != 0;
     }
 
-    /// @dev Saves the hash of a blob reference to the registry
-    /// @param ref The blob reference to save
+    /// @dev Saves the hash of a blob ref to the registry
+    /// @param ref The blob ref to save
     /// @return The hash of the blob source
     function _saveRefHash(BlobRef memory ref) private returns (bytes32) {
         bytes32 hash = keccak256(abi.encode(ref));
@@ -33,9 +33,9 @@ contract BlobRefRegistry is IBlobRefRegistry {
         return hash;
     }
 
-    /// @dev Retrieves the blob reference for given blob indices
+    /// @dev Retrieves the blob ref for given blob indices
     /// @param blobIndices The indices of the blobhashes to retrieve
-    /// @return The blob reference constructed from the block's number and the list of blob hashes
+    /// @return The blob ref constructed from the block's number and the list of blob hashes
     function _getRef(uint256[] calldata blobIndices) private view returns (BlobRef memory) {
         uint256 nBlobs = blobIndices.length;
         require(nBlobs != 0, "No blobs provided");
