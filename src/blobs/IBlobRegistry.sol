@@ -2,14 +2,14 @@
 pragma solidity ^0.8.28;
 
 /// @title IBlobRegistry
-/// @notice Interface for accessing and registering blob data from transactions
+/// @notice Interface for accessing and registering blob hashes from transactions
 interface IBlobRegistry {
-    /// @dev Struct containing blob data from a specific block
+    /// @dev Struct containing blob hashes from a specific block
     /// @param blockNumber The block number where the blobs were included
     /// @param blobs Array of blob hashes
     struct BlobSource {
         uint256 blockNumber;
-        bytes32[] blobs;
+        bytes32[] blobhashes;
     }
 
     /// @notice Retrieves blob data for given blob indices and saves their hash
@@ -19,7 +19,7 @@ interface IBlobRegistry {
     /// @dev Should revert if any blob index is invalid or if no blobs are provided
     function getAndSaveHash(uint256[] calldata blobIdxs)
         external
-        returns (BlobSource memory blobSource, bytes32 hash);
+        returns (BlobSource memory blobSource, bytes32 sourceHash);
 
     /// @notice Retrieves blob data for given blob indices without saving
     /// @param blobIdxs Array of blob indices to retrieve
