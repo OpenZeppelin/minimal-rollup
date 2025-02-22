@@ -63,15 +63,14 @@ contract TaikoInbox {
         _lastPublicationId = dataFeed.publish(attributes).id;
 
         // Publish each delayed inclusion as a separate publication
-        IBlobRefRegistry.BlobRef[] memory blobRefs =
-            delayedInclusionStore.processDelayedInclusionByDeadline(block.timestamp);
+        bytes32[] memory blobRefHashes = delayedInclusionStore.processDelayedInclusionByDeadline(block.timestamp);
 
-        uint256 nBlobRefs = blobRefs.length;
+        uint256 nBlobRefs = blobRefHashes.length;
         metadata.isForcedInclusion = true;
         for (uint256 i; i < nBlobRefs; ++i) {
             attributes[METADATA] = abi.encode(metadata);
             attributes[LAST_PUBLICATION] = abi.encode(_lastPublicationId);
-            attributes[BLOB_REFERENCE] = abi.encode(blobRefs[i]);
+            attributes[BLOB_REFERENCE] = abi.encode(blobRefHashes[i]);
             _lastPublicationId = dataFeed.publish(attributes).id;
         }
 
