@@ -20,5 +20,5 @@ interface ISignalService {
     /// @param signal The signal value
     /// @param proof The merkle proof of the signal
     ///@dev This function should be called on the destination chain
-    function verify(uint256 idx, bytes32 signal, bytes32[] memory proof) external view;
+    function verify(uint256 idx, bytes32 signal, bytes32[] calldata proof) external view;
 }
