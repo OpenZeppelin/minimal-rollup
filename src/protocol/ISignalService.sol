@@ -6,9 +6,9 @@ pragma solidity ^0.8.28;
 interface ISignalService {
     ///@notice Emitted for each signal
     ///@param signal The signal value
-    ///@param count The number of signals after the signal was sent
+    ///@param idx The index of the signal
     ///@param blockNumber The block number of the signal
-    event Signal(bytes32 indexed signal, uint256 indexed count, uint256 indexed blockNumber);
+    event Signal(bytes32 indexed signal, uint256 indexed idx, uint256 indexed blockNumber);
 
     /// @notice Sends a signal and update MMR peaks
     /// @param signal The signal value
@@ -16,9 +16,9 @@ interface ISignalService {
     function send(bytes32 signal) external;
 
     /// @notice Verifies a signal has been sent using a merkle proof
-    /// @param count The number of signals after the signal was sent
-    /// @param value The signal value
+    /// @param idx The index of the signal
+    /// @param signal The signal value
     /// @param proof The merkle proof of the signal
     ///@dev This function should be called on the destination chain
-    function verify(uint256 count, bytes32 value, bytes32[] memory proof) external view;
+    function verify(uint256 idx, bytes32 signal, bytes32[] memory proof) external view;
 }

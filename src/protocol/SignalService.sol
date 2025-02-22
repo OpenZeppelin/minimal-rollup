@@ -21,8 +21,8 @@ contract SignalService is ISignalService {
     }
 
     /// @inheritdoc ISignalService
-    function verify(uint256 count, bytes32 value, bytes32[] memory proof) external view {
-        StatelessMmr.verifyProof(count, value, proof, _peaks, _count, _root);
+    function verify(uint256 idx, bytes32 signal, bytes32[] memory proof) external view {
+        StatelessMmr.verifyProof(idx, signal, proof, _peaks, _count, _root);
     }
 
     /// @notice Returns the current MMR root
