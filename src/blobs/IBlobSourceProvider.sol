@@ -7,6 +7,7 @@ interface IBlobSourceProvider {
         uint256 blockNumber;
         bytes32[] blobs;
     }
+
     event BlobSourceHashSaved(bytes32 indexed hash);
 
     function getAndSaveHash(uint16[] calldata blobIdxs) external returns (BlobSource memory blobSource, bytes32 hash);
