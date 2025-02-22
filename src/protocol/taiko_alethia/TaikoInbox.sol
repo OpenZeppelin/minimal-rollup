@@ -53,7 +53,6 @@ contract TaikoInbox {
 
         // Build the attribute to link back to the previous publication Id;
         attributes[PREV_PUBLICATION] = abi.encode(_lastPublicationId);
-
         attributes[BLOB_REFERENCE] = abi.encode(blobRefRegistry.getRef(_buildBlobIndices(nBlobs)));
         _lastPublicationId = dataFeed.publish(attributes).id;
 
