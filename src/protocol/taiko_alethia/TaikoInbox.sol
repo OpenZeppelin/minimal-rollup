@@ -9,7 +9,7 @@ import {IDelayedInclusionStore} from "./IDelayedInclusionStore.sol";
 import {ILookahead} from "./ILookahead.sol";
 
 contract TaikoInbox {
-    IDataFeed public immutable datafeed;
+    IDataFeed public immutable dataFeed;
     ILookahead public immutable lookahead;
     IBlobRefRegistry public immutable blobRefRegistry;
     IDelayedInclusionStore public immutable delayedInclusionStore;
@@ -24,13 +24,13 @@ contract TaikoInbox {
     uint256 private constant BLOB_REFERENCE = 2;
 
     constructor(
-        address _datafeed,
+        address _dataFeed,
         address _lookahead,
         address _blobRefRegistry,
         address _delayedInclusionStore,
         uint256 _maxAnchorBlockIdOffset
     ) {
-        datafeed = IDataFeed(_datafeed);
+        dataFeed = IDataFeed(_dataFeed);
         lookahead = ILookahead(_lookahead);
         blobRefRegistry = IBlobRefRegistry(_blobRefRegistry);
         delayedInclusionStore = IDelayedInclusionStore(_delayedInclusionStore);
@@ -55,7 +55,7 @@ contract TaikoInbox {
         attributes[PREV_PUBLICATION] = abi.encode(_lastPublicationId);
 
         attributes[BLOB_REFERENCE] = abi.encode(blobRefRegistry.getRef(_buildBlobIndices(nBlobs)));
-        _lastPublicationId = datafeed.publish(attributes).id;
+        _lastPublicationId = dataFeed.publish(attributes).id;
 
         // Publish each delayed inclusion as a separate publication
         IBlobRefRegistry.BlobRef[] memory blobRefs =
@@ -65,7 +65,7 @@ contract TaikoInbox {
         for (uint256 i; i < nBlobRefs; ++i) {
             attributes[PREV_PUBLICATION] = abi.encode(_lastPublicationId);
             attributes[BLOB_REFERENCE] = abi.encode(blobRefs[i]);
-            _lastPublicationId = datafeed.publish(attributes).id;
+            _lastPublicationId = dataFeed.publish(attributes).id;
         }
 
         lastPublicationId = _lastPublicationId;
