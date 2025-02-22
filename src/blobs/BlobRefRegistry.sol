@@ -24,7 +24,7 @@ contract BlobRefRegistry is IBlobRefRegistry {
         return _registeredHashes[refHash] != 0;
     }
 
-    /// @dev Registeres the hash of a blob ref to the registry
+    /// @dev Registers the hash of a blob ref to the registry
     /// @param ref The blob ref whose hash to save
     /// @return The hash of the blob source
     function _registerRefHash(BlobRef memory ref) private returns (bytes32) {
