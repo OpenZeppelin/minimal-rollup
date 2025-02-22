@@ -5,13 +5,13 @@ import {IDataFeed} from "./IDataFeed.sol";
 import {IVerifier} from "./IVerifier.sol";
 
 contract Inbox {
-    // TODO: Optimize using the ring buffer design if we don't need to store all checkpoints
-    // Checkpoints can be anything that describes the state of the rollup at a given publication (the most common case
-    // is the state root)
-    /// @dev tracks proven checkpoints after applying the publication at `_dataFeed.getPublicationHash(pubIdx)`
-    mapping(uint256 pubIdx => bytes32 checkpoint) public checkpoints;
+    /// @notice The current proven checkpoint representing the latest verified state of the rollup
+    /// @dev Previous checkpoints are not stored here but are synchronized to the `SignalService`
+    /// @dev A checkpoint is a cryptographic commitment (typically a state root) that uniquely identifies
+    /// the state of the rollup at a specific point in time
+    bytes32 public checkpoint;
 
-    /// @dev the highest `pubIdx` in `checkpoints`
+    /// @notice The index of the most recent proven publication in the `DataFeed`
     uint256 public lastProvenIdx;
 
     IDataFeed public immutable _dataFeed;
@@ -30,28 +30,28 @@ contract Inbox {
     constructor(bytes32 genesis, address dataFeed, address verifier) {
         // set the genesis checkpoint of the rollup - genesis is trusted to be correct
         require(genesis != 0, "genesis checkpoint cannot be 0");
-        checkpoints[0] = genesis;
+        checkpoint = genesis;
         _dataFeed = IDataFeed(dataFeed);
         _verifier = IVerifier(verifier);
     }
 
-    /// @notice Proves the transition between two checkpoints
-    /// @dev Updates the `lastProvenIdx` to `end` on success
-    /// @param start the index of the publication before this transition. Its checkpoint must already be proven.
-    /// @param end the index of the last publication in this transition.
-    /// @param checkpoint the claimed checkpoint at the end of this transition.
-    /// @param proof arbitrary data passed to the `_verifier` contract to confirm the transition validity.
-    function proveBetween(uint256 start, uint256 end, bytes32 checkpoint, bytes calldata proof) external {
+    /// @notice Verifies and updates the rollup state with a new checkpoint
+    /// @param end The publication index of the proposed checkpoint
+    /// @param newCheckpoint The proposed new checkpoint value to transition to
+    /// @param proof Arbitrary data passed to the `_verifier` contract to confirm the transition validity.
+    function proveTransition(uint256 end, bytes32 newCheckpoint, bytes calldata proof) external {
         require(checkpoint != 0, "Checkpoint cannot be 0");
         require(end > lastProvenIdx, "Publication already proven");
-        bytes32 base = checkpoints[start];
-        // this also ensures start <= lastProvenIdx
-        require(base != 0, "Unknown base checkpoint");
 
         IVerifier(_verifier).verifyProof(
-            _dataFeed.getPublicationHash(start), _dataFeed.getPublicationHash(end), base, checkpoint, proof
+            _dataFeed.getPublicationHash(lastProvenIdx),
+            _dataFeed.getPublicationHash(end),
+            checkpoint,
+            newCheckpoint,
+            proof
         );
-        checkpoints[end] = checkpoint;
+
+        checkpoint = newCheckpoint;
         lastProvenIdx = end;
 
         emit CheckpointProven(end, checkpoint);
