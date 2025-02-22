@@ -13,21 +13,24 @@ contract DataFeed is IDataFeed {
     }
 
     /// @inheritdoc IDataFeed
-    function publish(bytes[] calldata attributes) external override {
+    function publish(bytes[] calldata attributes) external override returns (PublicationHeader memory header) {
+        uint256 nAttributes = attributes.length;
+        bytes32[] memory attributeHashes = new bytes32[](nAttributes);
+        for (uint256 i; i < nAttributes; ++i) {
+            attributeHashes[i] = keccak256(attributes[i]);
+        }
+
         uint256 id = publicationHashes.length;
-        PublicationHeader memory header = PublicationHeader({
+        header = PublicationHeader({
             id: id,
             prevHash: publicationHashes[id - 1],
             publisher: msg.sender,
             timestamp: block.timestamp,
-            blockNumber: block.number
+            blockNumber: block.number,
+            attributesHash: keccak256(abi.encode(attributeHashes))
         });
 
-        bytes32[] memory attributeHashes = new bytes32[](attributes.length);
-        for (uint256 i; i < attributes.length; ++i) {
-            attributeHashes[i] = keccak256(attributes[i]);
-        }
-        bytes32 pubHash = keccak256(abi.encode(header, attributeHashes));
+        bytes32 pubHash = keccak256(abi.encode(header));
         publicationHashes.push(pubHash);
 
         emit Published(pubHash, header, attributes);
