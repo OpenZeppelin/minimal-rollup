@@ -26,7 +26,6 @@ contract BlobSourceProvider is IBlobSourceProvider {
     function _saveHash(BlobSource memory blobSource) private returns (bytes32 hash) {
         hash = keccak256(abi.encode(blobSource));
         _savedHashes[hash] = block.timestamp;
-        emit BlobSourceHashSaved(hash);
     }
 
     function _get(uint16[] calldata blobIdxs) private view returns (BlobSource memory) {
