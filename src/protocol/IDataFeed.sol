@@ -16,11 +16,12 @@ interface IDataFeed {
     /// @param attributes the data contained within the publication
     event Published(bytes32 indexed pubHash, PublicationHeader header, bytes[] attributes);
 
-    /// @notice Publish arbitrary data into the global queue.
-    /// @param attributes the data to publish.
+    /// @notice Publish arbitrary data into the global queue
+    /// @param attributes the data to publish
+    /// @return header The publication header
     /// @dev the data is encoded as an array so each attribute is hashed independently,
     /// which allows a single attribute to be validated against a pubHash
-    function publish(bytes[] calldata attributes) external;
+    function publish(bytes[] calldata attributes) external returns (PublicationHeader memory header);
 
     /// @notice retrieve a hash representing a previous publication
     /// @param idx the index of the publication hash

@@ -13,9 +13,9 @@ contract DataFeed is IDataFeed {
     }
 
     /// @inheritdoc IDataFeed
-    function publish(bytes[] calldata attributes) external override {
+    function publish(bytes[] calldata attributes) external override returns (PublicationHeader memory header) {
         uint256 id = publicationHashes.length;
-        PublicationHeader memory header = PublicationHeader({
+        header = PublicationHeader({
             id: id,
             prevHash: publicationHashes[id - 1],
             publisher: msg.sender,
