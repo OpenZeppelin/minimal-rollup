@@ -42,7 +42,7 @@ contract TaikoInbox {
         require(anchorBlockhash != 0, "blockhash not found");
         attributes[0] = abi.encode(anchorBlockId, anchorBlockhash);
 
-        // Build the attirubte to link back to the previous publication Id;
+        // Build the attribute to link back to the previous publication Id;
         attributes[1] = abi.encode(_prevPublicationId);
 
         // Build the attribute for this proposal's data availability
