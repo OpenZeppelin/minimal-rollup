@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
-interface IDataFeed {
+interface IPublicationFeed {
     struct PublicationHeader {
         uint256 id;
         bytes32 prevHash;

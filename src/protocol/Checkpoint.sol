@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
-import {IDataFeed} from "./IDataFeed.sol";
+import {IPublicationFeed} from "./IPublicationFeed.sol";
 import {IVerifier} from "./IVerifier.sol";
 
 contract Checkpoint {
@@ -14,7 +14,7 @@ contract Checkpoint {
     /// @notice The index of the publication associated with the current checkpoint. This value will always increase.
     uint256 public publicationId;
 
-    IDataFeed public immutable _dataFeed;
+    IPublicationFeed public immutable _publicationFeed;
 
     // This would usually be retrieved dynamically as in the current Taiko implementation, but for simplicity we are
     // just setting it in the constructor
@@ -26,13 +26,13 @@ contract Checkpoint {
     event CheckpointProven(uint256 indexed publicationId, bytes32 indexed checkpoint);
 
     /// @param genesis the checkpoint describing the initial state of the rollup
-    /// @param dataFeed the input data source that updates the state of this rollup
+    /// @param publicationFeed the input data source that updates the state of this rollup
     /// @param verifier a contract that can verify the validity of a transition from one checkpoint to another
-    constructor(bytes32 genesis, address dataFeed, address verifier) {
+    constructor(bytes32 genesis, address publicationFeed, address verifier) {
         // set the genesis checkpoint of the rollup - genesis is trusted to be correct
         require(genesis != 0, "genesis checkpoint cannot be 0");
         checkpoint = genesis;
-        _dataFeed = IDataFeed(dataFeed);
+        _publicationFeed = IPublicationFeed(publicationFeed);
         _verifier = IVerifier(verifier);
     }
 
@@ -45,8 +45,8 @@ contract Checkpoint {
         require(end > publicationId, "Publication already proven");
 
         IVerifier(_verifier).verifyProof(
-            _dataFeed.getPublicationHash(publicationId),
-            _dataFeed.getPublicationHash(end),
+            _publicationFeed.getPublicationHash(publicationId),
+            _publicationFeed.getPublicationHash(end),
             checkpoint,
             newCheckpoint,
             proof

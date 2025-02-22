@@ -3,13 +3,13 @@ pragma solidity ^0.8.28;
 
 import {IBlobRefRegistry} from "../../blobs/IBlobRefRegistry.sol";
 
-import {IDataFeed} from "../IDataFeed.sol";
+import {IPublicationFeed} from "../IPublicationFeed.sol";
 
 import {IDelayedInclusionStore} from "./IDelayedInclusionStore.sol";
 import {ILookahead} from "./ILookahead.sol";
 
 contract TaikoInbox {
-    IDataFeed public immutable dataFeed;
+    IPublicationFeed public immutable publicationFeed;
     ILookahead public immutable lookahead;
     IBlobRefRegistry public immutable blobRefRegistry;
     IDelayedInclusionStore public immutable delayedInclusionStore;
@@ -24,13 +24,13 @@ contract TaikoInbox {
     uint256 private constant BLOB_REFERENCE = 2;
 
     constructor(
-        address _dataFeed,
+        address _publicationFeed,
         address _lookahead,
         address _blobRefRegistry,
         address _delayedInclusionStore,
         uint256 _maxAnchorBlockIdOffset
     ) {
-        dataFeed = IDataFeed(_dataFeed);
+        publicationFeed = IPublicationFeed(_publicationFeed);
         lookahead = ILookahead(_lookahead);
         blobRefRegistry = IBlobRefRegistry(_blobRefRegistry);
         delayedInclusionStore = IDelayedInclusionStore(_delayedInclusionStore);
@@ -54,7 +54,7 @@ contract TaikoInbox {
         // Build the attribute to link back to the previous publication Id;
         attributes[PREV_PUBLICATION] = abi.encode(_lastPublicationId);
         attributes[BLOB_REFERENCE] = abi.encode(blobRefRegistry.getRef(_buildBlobIndices(nBlobs)));
-        _lastPublicationId = dataFeed.publish(attributes).id;
+        _lastPublicationId = publicationFeed.publish(attributes).id;
 
         // Publish each delayed inclusion as a separate publication
         IBlobRefRegistry.BlobRef[] memory blobRefs =
@@ -64,7 +64,7 @@ contract TaikoInbox {
         for (uint256 i; i < nBlobRefs; ++i) {
             attributes[PREV_PUBLICATION] = abi.encode(_lastPublicationId);
             attributes[BLOB_REFERENCE] = abi.encode(blobRefs[i]);
-            _lastPublicationId = dataFeed.publish(attributes).id;
+            _lastPublicationId = publicationFeed.publish(attributes).id;
         }
 
         lastPublicationId = _lastPublicationId;
