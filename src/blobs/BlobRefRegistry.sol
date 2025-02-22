@@ -6,12 +6,12 @@ import "./IBlobRefRegistry.sol";
 /// @title BlobRefRegistry
 contract BlobRefRegistry is IBlobRefRegistry {
     /// @dev A mapping of the hash of a blob ref to the timestamp when it was saved
-    mapping(bytes32 refHash => uint256 timestamp) private _savedRefHashes;
+    mapping(bytes32 refHash => uint256 timestamp) private _registeredHashes;
 
     /// @inheritdoc IBlobRefRegistry
-    function getRefAndSaveHash(uint256[] calldata blobIndices) external returns (BlobRef memory ref, bytes32 refHash) {
+    function registerRef(uint256[] calldata blobIndices) external returns (bytes32 refHash, BlobRef memory ref) {
         ref = _getRef(blobIndices);
-        refHash = _saveRefHash(ref);
+        refHash = _registerRefHash(ref);
     }
 
     /// @inheritdoc IBlobRefRegistry
@@ -20,16 +20,17 @@ contract BlobRefRegistry is IBlobRefRegistry {
     }
 
     /// @inheritdoc IBlobRefRegistry
-    function isRefKnown(BlobRef memory ref) external view returns (bool) {
-        return _savedRefHashes[keccak256(abi.encode(ref))] != 0;
+    function isRefRegistered(bytes32 refHash) external view returns (bool) {
+        return _registeredHashes[refHash] != 0;
     }
 
-    /// @dev Saves the hash of a blob ref to the registry
+    /// @dev Registers the hash of a blob ref to the registry
     /// @param ref The blob ref whose hash to save
     /// @return The hash of the blob source
-    function _saveRefHash(BlobRef memory ref) private returns (bytes32) {
+    function _registerRefHash(BlobRef memory ref) private returns (bytes32) {
         bytes32 hash = keccak256(abi.encode(ref));
-        _savedRefHashes[hash] = block.timestamp;
+        _registeredHashes[hash] = block.timestamp;
+        emit Registered(hash, ref);
         return hash;
     }
 
