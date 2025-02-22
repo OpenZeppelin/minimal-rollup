@@ -11,7 +11,7 @@ import {ILookahead} from "./ILookahead.sol";
 contract TaikoInbox {
     IDataFeed public immutable datafeed;
     ILookahead public immutable lookahead;
-    IBlobRefRegistry public immutable blobRefRegister;
+    IBlobRefRegistry public immutable blobRefRegistry;
     IDelayedInclusionStore public immutable delayedInclusionStore;
 
     uint256 public immutable maxAnchorBlockIdOffset;
@@ -21,13 +21,13 @@ contract TaikoInbox {
     constructor(
         address _datafeed,
         address _lookahead,
-        address _blobRefRegister,
+        address _blobRefRegistry,
         address _delayedInclusionStore,
         uint256 _maxAnchorBlockIdOffset
     ) {
         datafeed = IDataFeed(_datafeed);
         lookahead = ILookahead(_lookahead);
-        blobRefRegister = IBlobRefRegistry(_blobRefRegister);
+        blobRefRegistry = IBlobRefRegistry(_blobRefRegistry);
         delayedInclusionStore = IDelayedInclusionStore(_delayedInclusionStore);
         maxAnchorBlockIdOffset = _maxAnchorBlockIdOffset;
     }
@@ -49,7 +49,7 @@ contract TaikoInbox {
         // Build the attribute to link back to the previous publication Id;
         attributes[1] = abi.encode(_prevPublicationId);
 
-        attributes[2] = abi.encode(blobRefRegister.getRef(_buildBlobIndices(nBlobs)));
+        attributes[2] = abi.encode(blobRefRegistry.getRef(_buildBlobIndices(nBlobs)));
         _prevPublicationId = datafeed.publish(attributes).id;
 
         // Publish each inclusion as a publication
