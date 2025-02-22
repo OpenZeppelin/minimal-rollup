@@ -2,14 +2,13 @@
 pragma solidity ^0.8.28;
 
 import {Test, console2} from "forge-std/Test.sol";
-import {DataFeed} from "src/protocol/DataFeed.sol";
-import {IDataFeed} from "src/protocol/IDataFeed.sol";
+import {PublicationFeed} from "src/protocol/PublicationFeed.sol";
 
-contract DataFeedTest is Test {
-    DataFeed feed;
+contract PublicationFeedTest is Test {
+    PublicationFeed feed;
 
     function setUp() public {
-        feed = new DataFeed();
+        feed = new PublicationFeed();
     }
 
     function test_DoNothing() public pure {
