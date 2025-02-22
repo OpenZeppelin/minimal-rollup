@@ -51,7 +51,7 @@ contract TaikoInbox {
         attributes[1] = abi.encode(_prevPublicationId);
 
         ITaikoData.DataSource memory dataSource;
-        dataSource.blobRef = blobRefRegister.getRef(_getBlobIndices(nBlobs));
+        dataSource.blobRef = blobRefRegister.getRef(_buildBlobIndices(nBlobs));
 
         attributes[2] = abi.encode(dataSource);
         _prevPublicationId = datafeed.publish(attributes).id;
@@ -70,7 +70,7 @@ contract TaikoInbox {
         prevPublicationId = _prevPublicationId;
     }
 
-    function _getBlobIndices(uint256 nBlobs) private pure returns (uint256[] memory blobIndices) {
+    function _buildBlobIndices(uint256 nBlobs) private pure returns (uint256[] memory blobIndices) {
         blobIndices = new uint256[](nBlobs);
         for (uint256 i; i < nBlobs; ++i) {
             blobIndices[i] = i;
