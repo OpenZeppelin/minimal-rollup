@@ -52,7 +52,7 @@ contract TaikoInbox {
         attributes[2] = abi.encode(blobRefRegistry.getRef(_buildBlobIndices(nBlobs)));
         _prevPublicationId = datafeed.publish(attributes).id;
 
-        // Publish each inclusion as a publication
+        // Publish each delayed inclusion as a separate publication
         IBlobRefRegistry.BlobRef[] memory blobRefs =
             delayedInclusionStore.processDelayedInclusionByDeadline(block.timestamp);
 
