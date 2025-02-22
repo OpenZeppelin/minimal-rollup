@@ -18,6 +18,11 @@ contract TaikoInbox {
 
     uint256 public lastPublicationId;
 
+    // attributes associated with the publication
+    uint256 private constant ANCHOR_TX = 0;
+    uint256 private constant PREV_PUBLICATION = 1;
+    uint256 private constant BLOB_REFERENCE = 2;
+
     constructor(
         address _datafeed,
         address _lookahead,
@@ -44,12 +49,12 @@ contract TaikoInbox {
         require(anchorBlockId >= block.number - maxAnchorBlockIdOffset, "anchorBlockId is too old");
         bytes32 anchorBlockhash = blockhash(anchorBlockId);
         require(anchorBlockhash != 0, "blockhash not found");
-        attributes[0] = abi.encode(anchorBlockId, anchorBlockhash);
+        attributes[ANCHOR_TX] = abi.encode(anchorBlockId, anchorBlockhash);
 
         // Build the attribute to link back to the previous publication Id;
-        attributes[1] = abi.encode(_lastPublicationId);
+        attributes[PREV_PUBLICATION] = abi.encode(_lastPublicationId);
 
-        attributes[2] = abi.encode(blobRefRegistry.getRef(_buildBlobIndices(nBlobs)));
+        attributes[BLOB_REFERENCE] = abi.encode(blobRefRegistry.getRef(_buildBlobIndices(nBlobs)));
         _lastPublicationId = datafeed.publish(attributes).id;
 
         // Publish each delayed inclusion as a separate publication
@@ -58,8 +63,8 @@ contract TaikoInbox {
 
         uint256 nBlobRefs = blobRefs.length;
         for (uint256 i; i < nBlobRefs; ++i) {
-            attributes[1] = abi.encode(_lastPublicationId);
-            attributes[2] = abi.encode(blobRefs[i]);
+            attributes[PREV_PUBLICATION] = abi.encode(_lastPublicationId);
+            attributes[BLOB_REFERENCE] = abi.encode(blobRefs[i]);
             _lastPublicationId = datafeed.publish(attributes).id;
         }
 
