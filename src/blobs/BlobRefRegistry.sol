@@ -25,7 +25,7 @@ contract BlobRefRegistry is IBlobRefRegistry {
     }
 
     /// @dev Saves the hash of a blob ref to the registry
-    /// @param ref The blob ref to save
+    /// @param ref The blob ref whose hash to save
     /// @return The hash of the blob source
     function _saveRefHash(BlobRef memory ref) private returns (bytes32) {
         bytes32 hash = keccak256(abi.encode(ref));
