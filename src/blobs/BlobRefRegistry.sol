@@ -12,7 +12,6 @@ contract BlobRefRegistry is IBlobRefRegistry {
     function registerRef(uint256[] calldata blobIndices) external returns (bytes32 refHash, BlobRef memory ref) {
         ref = _getRef(blobIndices);
         refHash = _registerRefHash(ref);
-        emit Registered(refHash, ref);
     }
 
     /// @inheritdoc IBlobRefRegistry
