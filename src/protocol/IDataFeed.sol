@@ -2,47 +2,34 @@
 pragma solidity ^0.8.28;
 
 interface IDataFeed {
-    struct HookQuery {
-        address provider;
-        bytes input;
-        uint256 value;
-    }
-
-    struct Publication {
+    struct PublicationHeader {
         uint256 id;
         bytes32 prevHash;
         address publisher;
         uint256 timestamp;
         uint256 blockNumber;
-        bytes32[] blobHashes;
-        bytes data;
-        HookQuery[] preHookQueries;
-        HookQuery[] postHookQueries;
-        bytes[] auxData;
+        bytes32 attributesHash;
     }
 
     /// @notice Emitted when a new publication is created
-    /// @param pubHash the hash of the new publication
-    /// @param publication the Publication struct describing the preimages to pubHash
-    event Published(bytes32 indexed pubHash, Publication publication);
+    /// @param pubHash The hash of the new publication
+    /// @param header The metadata associated with the publication
+    /// @param attributes The data contained within the publication
+    event Published(bytes32 indexed pubHash, PublicationHeader header, bytes[] attributes);
 
-    /// @notice Publish arbitrary data for data availability.
-    /// @param data the data to publish in calldata.
-    /// @param numBlobs the number of blobs accompanying this function call.
-    /// @param preHookQueries arbitrary calls to retrieve auxiliary data that should be contained in the publication
-    /// @param postHookQueries arbitrary calls to be executed after the publication
-    /// @dev there can be multiple pre hooks and post hooks because a single publication might represent multiple
-    /// rollups,
-    /// each with their own requirements
-    function publish(
-        uint256 numBlobs,
-        bytes calldata data,
-        HookQuery[] calldata preHookQueries,
-        HookQuery[] calldata postHookQueries
-    ) external payable;
+    /// @notice Publish arbitrary data into the global queue
+    /// @param attributes The data to publish
+    /// @return header The publication header
+    /// @dev The data is encoded as an array so each attribute is hashed independently,
+    /// which allows a single attribute to be validated against a pubHash
+    function publish(bytes[] calldata attributes) external returns (PublicationHeader memory header);
 
-    /// @notice retrieve a hash representing a previous publication
-    /// @param idx the index of the publication hash
-    /// @return _ the corresponding publication hash
+    /// @notice Retrieve a hash representing a previous publication
+    /// @param idx The index of the publication hash
+    /// @return _ The corresponding publication hash
     function getPublicationHash(uint256 idx) external view returns (bytes32);
+
+    /// @notice Returns the next publication's ID.
+    /// @return _ The next publication ID.
+    function getNextPublicationId() external view returns (uint256);
 }
