@@ -5,7 +5,7 @@ import {ISignalService} from "./ISignalService.sol";
 import {StatelessMmr} from "solidity-mmr/lib/StatelessMmr.sol";
 
 ///@title SignalService
-///@notice An implementation of the ISignalService interface using Merkle Mountain Ranges (MMR).
+///@notice An implementation of ISignalService using Merkle Mountain Ranges (MMR).
 contract SignalService is ISignalService {
     uint256 private _count;
     bytes32 private _root;
