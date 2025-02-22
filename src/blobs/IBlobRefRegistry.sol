@@ -12,12 +12,17 @@ interface IBlobRefRegistry {
         bytes32[] blobhashes;
     }
 
-    /// @notice Validates blobs at given indices, return a ref object, then save the ref hash for later usage
+    /// @notice Emitted when a blob ref hash is registered
+    /// @param refHash The keccak256 hash of the encoded blob ref
+    /// @param ref The blob ref
+    event Registered(bytes32 indexed refHash, BlobRef ref);
+
+    /// @notice Validates blobs at given indices, return a ref object, then register the ref hash for later usage
     /// @param blobIndices Array of blob indices to retrieve
-    /// @return ref The retrieved blob data including block number and blob hashes
     /// @return refHash The keccak256 hash of the encoded blob ref
+    /// @return ref The retrieved blob data including block number and blob hashes
     /// @dev Should revert if any blob index is invalid or if no blobs are provided
-    function getRefAndSaveHash(uint256[] calldata blobIndices) external returns (BlobRef memory ref, bytes32 refHash);
+    function registerRef(uint256[] calldata blobIndices) external returns (bytes32 refHash, BlobRef memory ref);
 
     /// @notice Validates blobs at given indices and return a ref object
     /// @param blobIndices Array of blob indices to retrieve
@@ -25,8 +30,8 @@ interface IBlobRefRegistry {
     /// @dev Should revert if any blob index is invalid or if no blobs are provided
     function getRef(uint256[] calldata blobIndices) external view returns (BlobRef memory);
 
-    /// @notice Checks if a blob reference has been previously saved
-    /// @param ref The blob ref to check
+    /// @notice Checks if a blob reference has been previously registered
+    /// @param refHash The keccak256 hash of the encoded blob ref
     /// @return True if the blob ref hash exists in the registry, false otherwise
-    function isRefKnown(BlobRef memory ref) external view returns (bool);
+    function isRefRegistered(bytes32 refHash) external view returns (bool);
 }
