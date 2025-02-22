@@ -9,25 +9,25 @@ contract BlobRefRegistry is IBlobRefRegistry {
     mapping(bytes32 refHash => uint256 timestamp) private _savedRefHashes;
 
     /// @inheritdoc IBlobRefRegistry
-    function getAndSaveRefHash(uint256[] calldata blobIdxs) external returns (BlobRef memory ref, bytes32 refHash) {
-        ref = _get(blobIdxs);
-        refHash = _saverefHash(ref);
+    function getRefAndSaveHash(uint256[] calldata blobIdxs) external returns (BlobRef memory ref, bytes32 refHash) {
+        ref = _getRef(blobIdxs);
+        refHash = _saveRefHash(ref);
     }
 
     /// @inheritdoc IBlobRefRegistry
-    function get(uint256[] calldata blobIdxs) external view returns (BlobRef memory) {
-        return _get(blobIdxs);
+    function getRef(uint256[] calldata blobIdxs) external view returns (BlobRef memory) {
+        return _getRef(blobIdxs);
     }
 
     /// @inheritdoc IBlobRefRegistry
-    function isKnown(BlobRef memory ref) external view returns (bool) {
+    function isRefKnown(BlobRef memory ref) external view returns (bool) {
         return _savedRefHashes[keccak256(abi.encode(ref))] != 0;
     }
 
     /// @dev Saves the hash of a blob reference to the registry
     /// @param ref The blob reference to save
     /// @return The hash of the blob source
-    function _saverefHash(BlobRef memory ref) private returns (bytes32) {
+    function _saveRefHash(BlobRef memory ref) private returns (bytes32) {
         bytes32 hash = keccak256(abi.encode(ref));
         _savedRefHashes[hash] = block.timestamp;
         return hash;
@@ -36,7 +36,7 @@ contract BlobRefRegistry is IBlobRefRegistry {
     /// @dev Retrieves the blob reference for given blob indices
     /// @param blobIdxs The indices of the blobhashes to retrieve
     /// @return The blob reference constructed from the block's number and the list of blob hashes
-    function _get(uint256[] calldata blobIdxs) private view returns (BlobRef memory) {
+    function _getRef(uint256[] calldata blobIdxs) private view returns (BlobRef memory) {
         uint256 nBlobs = blobIdxs.length;
         require(nBlobs != 0, "No blobs provided");
 

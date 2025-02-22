@@ -17,16 +17,16 @@ interface IBlobRefRegistry {
     /// @return ref The retrieved blob data including block number and blob hashes
     /// @return refHash The keccak256 hash of the encoded blob source
     /// @dev Should revert if any blob index is invalid or if no blobs are provided
-    function getAndSaveRefHash(uint256[] calldata blobIdxs) external returns (BlobRef memory ref, bytes32 refHash);
+    function getRefAndSaveHash(uint256[] calldata blobIdxs) external returns (BlobRef memory ref, bytes32 refHash);
 
     /// @notice Retrieves blob data for given blob indices without saving
     /// @param blobIdxs Array of blob indices to retrieve
     /// @return The blob data including block number and blob hashes
     /// @dev Should revert if any blob index is invalid or if no blobs are provided
-    function get(uint256[] calldata blobIdxs) external view returns (BlobRef memory);
+    function getRef(uint256[] calldata blobIdxs) external view returns (BlobRef memory);
 
     /// @notice Checks if a blob reference has been previously saved
     /// @param ref The blob reference to check
     /// @return True if the blob reference hash exists in the registry, false otherwise
-    function isKnown(BlobRef memory ref) external view returns (bool);
+    function isRefKnown(BlobRef memory ref) external view returns (bool);
 }
