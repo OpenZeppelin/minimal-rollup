@@ -9,13 +9,13 @@ contract BlobRefRegistry is IBlobRefRegistry {
     mapping(bytes32 refHash => uint256 timestamp) private _savedRefHashes;
 
     /// @inheritdoc IBlobRefRegistry
-    function getRefAndSaveHash(uint256[] calldata blobIndices) external returns (BlobRef memory ref, bytes32 refHash) {
+    function getRefAndSaveHash(bytes32 blobIndices) external returns (BlobRef memory ref, bytes32 refHash) {
         ref = _getRef(blobIndices);
         refHash = _saveRefHash(ref);
     }
 
     /// @inheritdoc IBlobRefRegistry
-    function getRef(uint256[] calldata blobIndices) external view returns (BlobRef memory) {
+    function getRef(bytes32 blobIndices) external view returns (BlobRef memory) {
         return _getRef(blobIndices);
     }
 
@@ -34,16 +34,27 @@ contract BlobRefRegistry is IBlobRefRegistry {
     }
 
     /// @dev Retrieves the blob ref for given blob indices
-    /// @param blobIndices The indices of the blobhashes to retrieve
+    /// @param blobIndices A bytes32 value encoding up to 16 blob indices as uint16 values. The right-most uint16
+    /// represents the first blob index. Indices are processed from right to left, stopping at the first 0 index
+    /// encountered (excluding the right-most index).
     /// @return The blob ref constructed from the block's number and the list of blob hashes
-    function _getRef(uint256[] calldata blobIndices) private view returns (BlobRef memory) {
+    function _getRef(bytes32 blobIndices) private view returns (BlobRef memory) {
         uint256 nBlobs = blobIndices.length;
         require(nBlobs != 0, "No blobs provided");
 
-        bytes32[] memory blobhashes = new bytes32[](nBlobs);
-        for (uint256 i; i < nBlobs; ++i) {
-            blobhashes[i] = blobhash(blobIndices[i]);
+        bytes32[] memory blobhashes = new bytes32[](16);
+
+        uint256 i;
+        for (; i < 16; ++i) {
+            uint256 idx = uint16(uint256(blobIndices >> (16 * i)));
+            if (i != 0 && idx == 0) break;
+            blobhashes[i] = blobhash(idx);
             require(blobhashes[i] != 0, "Blob not found");
+        }
+
+        // resize blobhashes
+        assembly {
+            mstore(blobhashes, i)
         }
 
         return BlobRef(block.number, blobhashes);
