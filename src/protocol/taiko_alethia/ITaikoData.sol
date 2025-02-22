@@ -7,6 +7,5 @@ interface ITaikoData {
     /// defined by the node or client.
     struct DataSource {
         bytes32[] blobHashes;
-        bytes data;
     }
 }

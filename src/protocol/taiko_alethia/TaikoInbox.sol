@@ -61,8 +61,7 @@ contract TaikoInbox {
         uint256 nDataSources = dataSources.length;
         for (uint256 i; i < nDataSources; ++i) {
             attributes[1] = abi.encode(_prevPublicationId);
-
-            attributes[2] = abi.encode(dataSources[i]);
+            attributes[2] = abi.encode(dataSources[i].blobHashes);
             _prevPublicationId = datafeed.publish(attributes).id;
         }
 
