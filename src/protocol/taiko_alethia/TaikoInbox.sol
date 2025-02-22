@@ -9,6 +9,12 @@ import {IDelayedInclusionStore} from "./IDelayedInclusionStore.sol";
 import {ILookahead} from "./ILookahead.sol";
 
 contract TaikoInbox {
+    struct Metadata {
+        uint256 anchorBlockId;
+        bytes32 anchorBlockHash;
+        bool isForcedInclusion;
+    }
+
     IDataFeed public immutable datafeed;
     ILookahead public immutable lookahead;
     IBlobRefRegistry public immutable blobRefRegistry;
@@ -19,8 +25,8 @@ contract TaikoInbox {
     uint256 public lastPublicationId;
 
     // attributes associated with the publication
-    uint256 private constant ANCHOR_TX = 0;
-    uint256 private constant PREV_PUBLICATION = 1;
+    uint256 private constant METADATA = 0;
+    uint256 private constant LAST_PUBLICATION = 1;
     uint256 private constant BLOB_REFERENCE = 2;
 
     constructor(
@@ -49,11 +55,10 @@ contract TaikoInbox {
         require(anchorBlockId >= block.number - maxAnchorBlockIdOffset, "anchorBlockId is too old");
         bytes32 anchorBlockhash = blockhash(anchorBlockId);
         require(anchorBlockhash != 0, "blockhash not found");
-        attributes[ANCHOR_TX] = abi.encode(anchorBlockId, anchorBlockhash);
 
-        // Build the attribute to link back to the previous publication Id;
-        attributes[PREV_PUBLICATION] = abi.encode(_lastPublicationId);
-
+        Metadata memory metadata = Metadata(anchorBlockId, anchorBlockhash, false);
+        attributes[METADATA] = abi.encode(metadata);
+        attributes[LAST_PUBLICATION] = abi.encode(_lastPublicationId);
         attributes[BLOB_REFERENCE] = abi.encode(blobRefRegistry.getRef(_buildBlobIndices(nBlobs)));
         _lastPublicationId = datafeed.publish(attributes).id;
 
@@ -62,8 +67,10 @@ contract TaikoInbox {
             delayedInclusionStore.processDelayedInclusionByDeadline(block.timestamp);
 
         uint256 nBlobRefs = blobRefs.length;
+        metadata.isForcedInclusion = true;
         for (uint256 i; i < nBlobRefs; ++i) {
-            attributes[PREV_PUBLICATION] = abi.encode(_lastPublicationId);
+            attributes[METADATA] = abi.encode(metadata);
+            attributes[LAST_PUBLICATION] = abi.encode(_lastPublicationId);
             attributes[BLOB_REFERENCE] = abi.encode(blobRefs[i]);
             _lastPublicationId = datafeed.publish(attributes).id;
         }
