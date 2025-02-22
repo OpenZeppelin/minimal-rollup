@@ -48,7 +48,6 @@ contract TaikoInbox {
             require(lookahead.isCurrentPreconfer(msg.sender), "not current preconfer");
         }
 
-        bytes[] memory attributes = new bytes[](3);
         uint256 _lastPublicationId = lastPublicationId;
 
         // Build the attribute for the anchor transaction inputs
@@ -58,6 +57,8 @@ contract TaikoInbox {
         metadata.anchorBlockId = anchorBlockId;
         metadata.anchorBlockHash = blockhash(anchorBlockId);
         require(metadata.anchorBlockHash != 0, "blockhash not found");
+        
+        bytes[] memory attributes = new bytes[](3);
         attributes[METADATA] = abi.encode(metadata);
         attributes[LAST_PUBLICATION] = abi.encode(_lastPublicationId);
         attributes[BLOB_REFERENCE] = abi.encode(blobRefRegistry.getRef(_buildBlobIndices(nBlobs)));
@@ -72,7 +73,7 @@ contract TaikoInbox {
             attributes[METADATA] = abi.encode(metadata);
             attributes[LAST_PUBLICATION] = abi.encode(_lastPublicationId);
             attributes[BLOB_REFERENCE] = abi.encode(inclusions[i]);
-            
+
             _lastPublicationId = dataFeed.publish(attributes).id;
         }
 
