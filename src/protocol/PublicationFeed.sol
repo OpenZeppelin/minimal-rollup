@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
-import {IDataFeed} from "./IDataFeed.sol";
+import {IPublicationFeed} from "./IPublicationFeed.sol";
 
-contract DataFeed is IDataFeed {
+contract PublicationFeed is IPublicationFeed {
     /// @dev a list of hashes identifying all data accompanying calls to the `publish` function.
     bytes32[] public publicationHashes;
 
@@ -12,7 +12,7 @@ contract DataFeed is IDataFeed {
         publicationHashes.push(0);
     }
 
-    /// @inheritdoc IDataFeed
+    /// @inheritdoc IPublicationFeed
     function publish(bytes[] calldata attributes) external override returns (PublicationHeader memory header) {
         uint256 nAttributes = attributes.length;
         bytes32[] memory attributeHashes = new bytes32[](nAttributes);
@@ -36,12 +36,12 @@ contract DataFeed is IDataFeed {
         emit Published(pubHash, header, attributes);
     }
 
-    /// @inheritdoc IDataFeed
+    /// @inheritdoc IPublicationFeed
     function getPublicationHash(uint256 idx) external view returns (bytes32) {
         return publicationHashes[idx];
     }
 
-    /// @inheritdoc IDataFeed
+    /// @inheritdoc IPublicationFeed
     function getNextPublicationId() external view returns (uint256) {
         return publicationHashes.length;
     }
