@@ -80,24 +80,4 @@ contract CheckpointTracker {
 
         transitions[endCheckpointHash] = startCheckpointHash;
     }
-
-    /// @notice Verifies and updates the rollup state with a new checkpoint
-    /// @param newCheckpoint The proposed new checkpoint value to transition to
-    /// @param proof Arbitrary data passed to the `_verifier` contract to confirm the transition validity.
-    function proveLatestTransition(Checkpoint calldata newCheckpoint, bytes calldata proof) external {
-        require(newCheckpoint.commitment != 0, "Commitment cannot be 0");
-        require(newCheckpoint.publicationId > checkpoint.publicationId, "Publication already proven");
-
-        verifier.verifyProof(
-            publicationFeed.getPublicationHash(checkpoint.publicationId),
-            publicationFeed.getPublicationHash(newCheckpoint.publicationId),
-            checkpoint.commitment,
-            newCheckpoint.commitment,
-            proof
-        );
-
-        checkpoint = newCheckpoint;
-
-        emit CheckpointProven(newCheckpoint.publicationId, newCheckpoint.commitment);
-    }
 }
