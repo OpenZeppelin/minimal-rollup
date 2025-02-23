@@ -4,7 +4,7 @@ pragma solidity ^0.8.28;
 import {IPublicationFeed} from "./IPublicationFeed.sol";
 import {IVerifier} from "./IVerifier.sol";
 
-contract Checkpoint {
+contract CheckpointTracker {
     /// @notice The current proven checkpoint representing the latest verified state of the rollup
     /// @dev Previous checkpoints are not stored here but are synchronized to the `SignalService`
     /// @dev A checkpoint is a cryptographic commitment (typically a state root) that uniquely identifies
