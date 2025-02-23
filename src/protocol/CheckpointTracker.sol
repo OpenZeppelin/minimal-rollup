@@ -46,9 +46,7 @@ contract CheckpointTracker {
     /// @param start The initial checkpoint before the transition
     /// @param end The final checkpoint after the transition
     /// @param proof Arbitrary data passed to the `verifier` contract to confirm the transition validity
-    function proveTransition(Checkpoint calldata start, Checkpoint calldata end, bytes calldata proof)
-        external
-    {
+    function proveTransition(Checkpoint calldata start, Checkpoint calldata end, bytes calldata proof) external {
         bytes32 startCheckpointHash = keccak256(abi.encode(start));
         bytes32 endCheckpointHash = keccak256(abi.encode(end));
 
@@ -66,6 +64,19 @@ contract CheckpointTracker {
             end.commitment,
             proof
         );
+
+        if (start.publicationId == checkpoint.publicationId && start.commitment == checkpoint.commitment) {
+            checkpoint = end;
+            emit CheckpointProven(end.publicationId, end.commitment);
+            return;
+        }
+
+        if (transitions[startCheckpointHash] != 0) {
+            // we are extending a previously proven transition. Combine them into a single transition
+            bytes32 intermediateHash = startCheckpointHash;
+            startCheckpointHash = transitions[startCheckpointHash];
+            delete transitions[intermediateHash];
+        }
 
         transitions[endCheckpointHash] = startCheckpointHash;
     }
