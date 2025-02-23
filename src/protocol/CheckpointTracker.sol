@@ -16,6 +16,10 @@ contract CheckpointTracker {
     /// the state of the rollup at a specific point in time
     Checkpoint public checkpoint;
 
+    /// @notice Verified transitions between two checkpoints
+    /// @dev the startCheckpoint is not necessarily valid, but the endCheckpoint is correctly built on top of it.
+    mapping(bytes32 endCheckpointHash => bytes32 startCheckpointHash) private transitions;
+
     IPublicationFeed public immutable publicationFeed;
 
     // This would usually be retrieved dynamically as in the current Taiko implementation, but for simplicity we are
@@ -36,6 +40,34 @@ contract CheckpointTracker {
         checkpoint.commitment = genesis;
         publicationFeed = IPublicationFeed(_publicationFeed);
         verifier = IVerifier(_verifier);
+    }
+
+    /// @notice Verifies a transition between two checkpoints. Update the latest `checkpoint` if possible
+    /// @param start The initial checkpoint before the transition
+    /// @param end The final checkpoint after the transition
+    /// @param proof Arbitrary data passed to the `verifier` contract to confirm the transition validity
+    function proveTransition(Checkpoint calldata start, Checkpoint calldata end, bytes calldata proof)
+        external
+    {
+        bytes32 startCheckpointHash = keccak256(abi.encode(start));
+        bytes32 endCheckpointHash = keccak256(abi.encode(end));
+
+        require(end.commitment != 0, "Checkpoint commitment cannot be 0");
+        // TODO: once the proving incentive mechanism is in place we should reconsider this requirement because
+        // ideally we would use the proof that creates the longest chain of proven publications.
+        require(transitions[endCheckpointHash] == 0, "End checkpoint already verified");
+        require(start.publicationId < end.publicationId, "Start must be before end");
+        require(end.publicationId < publicationFeed.getNextPublicationId(), "Publication does not exist");
+
+        verifier.verifyProof(
+            publicationFeed.getPublicationHash(start.publicationId),
+            publicationFeed.getPublicationHash(end.publicationId),
+            start.commitment,
+            end.commitment,
+            proof
+        );
+
+        transitions[endCheckpointHash] = startCheckpointHash;
     }
 
     /// @notice Verifies and updates the rollup state with a new checkpoint
