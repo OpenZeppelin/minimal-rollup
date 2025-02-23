@@ -80,4 +80,16 @@ contract CheckpointTracker {
 
         transitions[endCheckpointHash] = startCheckpointHash;
     }
+
+    /// @notice Advance to an already proven checkpoint
+    /// @param end The checkpoint to advance to
+    /// @dev It is possible for `proveTransition` to advance to a checkpoint that can already
+    /// be advanced again. This function can be used to identify the relevant transition.
+    function advanceTo(Checkpoint calldata end) external {
+        bytes32 startCheckpointHash = keccak256(abi.encode(checkpoint));
+        bytes32 endCheckpointHash = keccak256(abi.encode(end));
+        require(transitions[endCheckpointHash] == startCheckpointHash, "Unproven transition");
+        checkpoint = end;
+        emit CheckpointProven(end.publicationId, end.commitment);
+    }
 }
