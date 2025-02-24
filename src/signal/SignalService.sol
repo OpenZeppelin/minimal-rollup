@@ -13,9 +13,9 @@ contract SignalService is
     ReentrancyGuardTransient
 {
     uint64 internal constant SIGNAL_SERVICE_ROLE =
-        uint64(bytes32("signal_service"));
+        uint64(keccak256("Taiko.SignalService.Contract"));
     uint64 internal constant SIGNAL_SERVICE_SYNCER_ROLE =
-        uint64(bytes32("signal_service_syncer"));
+        uint64(keccak256("Taiko.SignalService.Syncer"));
 
     bytes32 internal constant SIGNAL_ROOT = keccak256("SIGNAL_ROOT");
     bytes32 internal constant STATE_ROOT = keccak256("STATE_ROOT");
@@ -35,7 +35,6 @@ contract SignalService is
         CacheOption option;
     }
 
-    error SS_EMPTY_PROOF();
     error SS_INVALID_HOPS_WITH_LOOP();
     error SS_INVALID_LAST_HOP_CHAINID();
     error SS_INVALID_MID_HOP_CHAINID();
@@ -274,7 +273,7 @@ contract SignalService is
         bytes32 _signal,
         bytes calldata _proof,
         bool _prepareCaching
-    ) private view returns (CacheAction[] memory actions) {
+    ) private view {
         require(_app != address(0));
         require(_signal != bytes32(0));
         if (_proof.length == 0) {
@@ -282,15 +281,10 @@ contract SignalService is
                 _receivedSignals[getSignalSlot(_chainId, _app, _signal)],
                 SS_SIGNAL_NOT_RECEIVED()
             );
-            return new CacheAction[](0);
+            return;
         }
 
-        HopProof[] memory hopProofs = abi.decode(_proof, (HopProof[]));
-        if (hopProofs.length == 0) revert SS_EMPTY_PROOF();
-
-        uint64[] memory trace = new uint64[](hopProofs.length - 1);
-
-        actions = new CacheAction[](_prepareCaching ? hopProofs.length : 0);
+        HopProof memory hopProof = abi.decode(_proof, (HopProof));
 
         uint64 chainId = _chainId;
         address app = _app;
@@ -300,7 +294,7 @@ contract SignalService is
         require(
             !authority().hasRole(
                 // There must be only 1 signal service role (i.e. address(this)) per chain
-                uint64(keccak256(abi.encode(SIGNAL_SERVICE_ROLE, chainId))),
+                uint64(keccak256(abi.encode(SIGNAL_SERVICE_ROLE, _chainId))),
                 address(this)
             ),
             SS_INVALID_MID_HOP_CHAINID()
@@ -314,12 +308,8 @@ contract SignalService is
         for (uint256 i; i < hopProofs.length; ++i) {
             hop = hopProofs[i];
 
-            for (uint256 j; j < i; ++j) {
-                if (trace[j] == hop.chainId) revert SS_INVALID_HOPS_WITH_LOOP();
-            }
-
             signalRoot = _verifyHopProof(
-                chainId,
+                _chainId,
                 app,
                 signal,
                 value,
@@ -351,18 +341,6 @@ contract SignalService is
             }
 
             isFullProof = hop.accountProof.length != 0;
-
-            if (_prepareCaching) {
-                actions[i] = CacheAction(
-                    hop.rootHash,
-                    signalRoot,
-                    chainId,
-                    hop.blockId,
-                    isFullProof,
-                    isLastHop,
-                    hop.cacheOption
-                );
-            }
 
             signal = signalForChainData(
                 chainId,
