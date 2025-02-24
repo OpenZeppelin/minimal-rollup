@@ -22,7 +22,6 @@ contract CheckpointTracker is ICheckpointTracker {
     // just setting it in the constructor
     IVerifier public immutable verifier;
 
-
     /// @notice The maximum number of additional checkpoint transitions to apply in a single proof
     /// @dev This limits the overhead required to submit a proof
     uint256 constant MAX_EXTRA_UPDATES = 10;
@@ -65,13 +64,20 @@ contract CheckpointTracker is ICheckpointTracker {
         emit TransitionProven(start, end);
 
         if (startCheckpointHash == provenCheckpointHash) {
-            for(uint256 i; i < MAX_EXTRA_UPDATES && transitions[endCheckpointHash] != 0; ++i) {
-                endCheckpointHash = transitions[endCheckpointHash];
-            }
             provenCheckpointHash = endCheckpointHash;
             emit ProvenCheckpointUpdated(endCheckpointHash);
         } else {
             transitions[startCheckpointHash] = endCheckpointHash;
+        }
+
+        // Update the provenCheckpointHash if possible
+        bytes32 nextHash = transitions[provenCheckpointHash];
+        if (nextHash != 0) {
+            for (uint256 i; i < MAX_EXTRA_UPDATES && transitions[nextHash] != 0; ++i) {
+                nextHash = transitions[nextHash];
+            }
+            provenCheckpointHash = nextHash;
+            emit ProvenCheckpointUpdated(nextHash);
         }
     }
 }
