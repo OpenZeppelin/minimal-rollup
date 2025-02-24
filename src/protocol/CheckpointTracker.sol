@@ -24,7 +24,7 @@ contract CheckpointTracker is ICheckpointTracker {
 
     /// @notice The maximum number of additional checkpoint transitions to apply in a single proof
     /// @dev This limits the overhead required to submit a proof
-    uint256 constant MAX_EXTRA_UPDATES = 10; // TODO: What is a reasonable number here?
+    uint256 private constant MAX_EXTRA_UPDATES = 10; // TODO: What is a reasonable number here?
 
     /// @param _genesis the checkpoint commitment describing the initial state of the rollup
     /// @param _publicationFeed the input data source that updates the state of this rollup
