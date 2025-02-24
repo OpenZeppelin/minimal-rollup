@@ -53,9 +53,11 @@ contract TaikoInbox {
         // Build the attribute for the anchor transaction inputs
         require(anchorBlockId >= block.number - maxAnchorBlockIdOffset, "anchorBlockId too old");
 
-        Metadata memory metadata;
-        metadata.anchorBlockId = anchorBlockId;
-        metadata.anchorBlockHash = blockhash(anchorBlockId);
+        Metadata memory metadata = Metadata({
+            anchorBlockId: anchorBlockId,
+            anchorBlockHash: blockhash(anchorBlockId),
+            isDelayedInclusion: false
+        });
         require(metadata.anchorBlockHash != 0, "blockhash not found");
 
         bytes[] memory attributes = new bytes[](3);
