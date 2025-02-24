@@ -22,17 +22,17 @@ contract CheckpointTracker is ICheckpointTracker {
     // just setting it in the constructor
     IVerifier public immutable verifier;
 
-    /// @param genesis the checkpoint commitment describing the initial state of the rollup
+    /// @param _genesis the checkpoint commitment describing the initial state of the rollup
     /// @param _publicationFeed the input data source that updates the state of this rollup
     /// @param _verifier a contract that can verify the validity of a transition from one checkpoint to another
-    constructor(bytes32 genesis, address _publicationFeed, address _verifier) {
+    constructor(bytes32 _genesis, address _publicationFeed, address _verifier) {
         // set the genesis checkpoint commitment of the rollup - genesis is trusted to be correct
-        require(genesis != 0, "genesis checkpoint commitment cannot be 0");
+        require(_genesis != 0, "genesis checkpoint commitment cannot be 0");
 
         publicationFeed = IPublicationFeed(_publicationFeed);
         verifier = IVerifier(_verifier);
 
-        Checkpoint memory genesisCheckpoint = Checkpoint({publicationId: 0, commitment: genesis});
+        Checkpoint memory genesisCheckpoint = Checkpoint({publicationId: 0, commitment: _genesis});
         provenCheckpointHash = keccak256(abi.encode(genesisCheckpoint));
         emit CheckpointSeen(genesisCheckpoint.publicationId, genesisCheckpoint.commitment, provenCheckpointHash);
         emit CheckpointProven(provenCheckpointHash);
