@@ -33,7 +33,7 @@ contract CheckpointTracker is ICheckpointTracker {
         verifier = IVerifier(_verifier);
     }
 
-    /// @notice Verifies a transition between two checkpoints. Update the latest `checkpoint` if possible
+    /// @notice Verifies a transition between two checkpoints. Update the latest `provenCheckpoint` if possible
     /// @param start The initial checkpoint before the transition
     /// @param end The final checkpoint after the transition
     /// @param proof Arbitrary data passed to the `verifier` contract to confirm the transition validity
