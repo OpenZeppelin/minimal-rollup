@@ -6,11 +6,11 @@ import {IPublicationFeed} from "./IPublicationFeed.sol";
 import {IVerifier} from "./IVerifier.sol";
 
 contract CheckpointTracker is ICheckpointTracker {
-    /// @notice The current proven checkpoint representing the latest verified state of the rollup
+    /// @notice The hash of the current proven checkpoint representing the latest verified state of the rollup
     /// @dev Previous checkpoints are not stored here but are synchronized to the `SignalService`
     /// @dev A checkpoint commitment is any value (typically a state root) that uniquely identifies
     /// the state of the rollup at a specific point in time
-    Checkpoint public provenCheckpoint;
+    bytes32 public provenCheckpointHash;
 
     /// @notice Verified transitions between two checkpoints
     /// @dev the startCheckpoint is not necessarily valid, but the endCheckpoint is correctly built on top of it.
@@ -28,7 +28,11 @@ contract CheckpointTracker is ICheckpointTracker {
     constructor(bytes32 genesis, address _publicationFeed, address _verifier) {
         // set the genesis checkpoint commitment of the rollup - genesis is trusted to be correct
         require(genesis != 0, "genesis checkpoint commitment cannot be 0");
-        provenCheckpoint.commitment = genesis;
+        Checkpoint memory genesisCheckpoint = Checkpoint({
+            publicationId: 0,
+            commitment: genesis
+        });
+        provenCheckpointHash = keccak256(abi.encode(genesisCheckpoint));
         publicationFeed = IPublicationFeed(_publicationFeed);
         verifier = IVerifier(_verifier);
     }
@@ -56,8 +60,8 @@ contract CheckpointTracker is ICheckpointTracker {
             proof
         );
 
-        if (start.publicationId == provenCheckpoint.publicationId && start.commitment == provenCheckpoint.commitment) {
-            provenCheckpoint = end;
+        if (startCheckpointHash == provenCheckpointHash) {
+            provenCheckpointHash = endCheckpointHash;
             emit CheckpointProven(end.publicationId, end.commitment);
             return;
         }
@@ -76,10 +80,9 @@ contract CheckpointTracker is ICheckpointTracker {
     /// @dev It is possible for `proveTransition` to advance to a checkpoint that can already
     /// be advanced again. This function can be used to identify the relevant transition.
     function advanceTo(Checkpoint calldata end) external {
-        bytes32 startCheckpointHash = keccak256(abi.encode(provenCheckpoint));
         bytes32 endCheckpointHash = keccak256(abi.encode(end));
-        require(transitions[startCheckpointHash] == endCheckpointHash, "Unproven transition");
-        provenCheckpoint = end;
+        require(transitions[provenCheckpointHash] == endCheckpointHash, "Unproven transition");
+        provenCheckpointHash = endCheckpointHash;
         emit CheckpointProven(end.publicationId, end.commitment);
     }
 }
