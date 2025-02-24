@@ -50,6 +50,10 @@ contract CheckpointTracker is ICheckpointTracker {
         require(start.publicationId < end.publicationId, "Start must be before end");
         require(end.publicationId < publicationFeed.getNextPublicationId(), "Publication does not exist");
 
+        // Each checkpoint may emit CheckpointSeen as a start and end checkpoint
+        emit CheckpointSeen(start.publicationId, start.commitment, startCheckpointHash);
+        emit CheckpointSeen(end.publicationId, end.commitment, endCheckpointHash);
+
         verifier.verifyProof(
             publicationFeed.getPublicationHash(start.publicationId),
             publicationFeed.getPublicationHash(end.publicationId),
@@ -57,14 +61,8 @@ contract CheckpointTracker is ICheckpointTracker {
             end.commitment,
             proof
         );
-        emit TransitionProven(startCheckpointHash, endCheckpointHash);
 
-        if (transitions[endCheckpointHash] != 0) {
-            // we are prepending to a previously proven transition. Combine them into a single transition
-            endCheckpointHash = transitions[endCheckpointHash];
-        } else {
-            emit CheckpointSeen(end.publicationId, end.commitment, endCheckpointHash);
-        }
+        emit TransitionProven(startCheckpointHash, endCheckpointHash);
 
         if (startCheckpointHash == provenCheckpointHash) {
             while (transitions[endCheckpointHash] != 0) {
@@ -73,7 +71,6 @@ contract CheckpointTracker is ICheckpointTracker {
             provenCheckpointHash = endCheckpointHash;
             emit CheckpointProven(endCheckpointHash);
         } else {
-            emit CheckpointSeen(start.publicationId, start.commitment, startCheckpointHash);
             transitions[startCheckpointHash] = endCheckpointHash;
         }
     }
