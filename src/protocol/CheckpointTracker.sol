@@ -18,7 +18,7 @@ contract CheckpointTracker {
 
     /// @notice Verified transitions between two checkpoints
     /// @dev the startCheckpoint is not necessarily valid, but the endCheckpoint is correctly built on top of it.
-    mapping(bytes32 endCheckpointHash => bytes32 startCheckpointHash) private transitions;
+    mapping(bytes32 startCheckpointHash => bytes32 endCheckpointHash) private transitions;
 
     IPublicationFeed public immutable publicationFeed;
 
@@ -53,7 +53,7 @@ contract CheckpointTracker {
         require(end.commitment != 0, "Checkpoint commitment cannot be 0");
         // TODO: once the proving incentive mechanism is in place we should reconsider this requirement because
         // ideally we would use the proof that creates the longest chain of proven publications.
-        require(transitions[endCheckpointHash] == 0, "End checkpoint already verified");
+        require(transitions[startCheckpointHash] == 0, "Checkpoint already has valid transition");
         require(start.publicationId < end.publicationId, "Start must be before end");
         require(end.publicationId < publicationFeed.getNextPublicationId(), "Publication does not exist");
 
@@ -71,14 +71,14 @@ contract CheckpointTracker {
             return;
         }
 
-        if (transitions[startCheckpointHash] != 0) {
-            // we are extending a previously proven transition. Combine them into a single transition
-            bytes32 intermediateHash = startCheckpointHash;
-            startCheckpointHash = transitions[startCheckpointHash];
+        if (transitions[endCheckpointHash] != 0) {
+            // we are prepending to a previously proven transition. Combine them into a single transition
+            bytes32 intermediateHash = endCheckpointHash;
+            endCheckpointHash = transitions[intermediateHash];
             delete transitions[intermediateHash];
         }
 
-        transitions[endCheckpointHash] = startCheckpointHash;
+        transitions[startCheckpointHash] = endCheckpointHash;
     }
 
     /// @notice Advance to an already proven checkpoint
@@ -88,7 +88,8 @@ contract CheckpointTracker {
     function advanceTo(Checkpoint calldata end) external {
         bytes32 startCheckpointHash = keccak256(abi.encode(checkpoint));
         bytes32 endCheckpointHash = keccak256(abi.encode(end));
-        require(transitions[endCheckpointHash] == startCheckpointHash, "Unproven transition");
+        require(transitions[startCheckpointHash] == endCheckpointHash, "Unproven transition");
+        delete transitions[startCheckpointHash];
         checkpoint = end;
         emit CheckpointProven(end.publicationId, end.commitment);
     }
