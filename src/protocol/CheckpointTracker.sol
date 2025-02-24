@@ -31,6 +31,18 @@ contract CheckpointTracker {
     /// @param commitment the checkpoint commitment that was proven
     event CheckpointProven(uint256 indexed publicationId, bytes32 indexed commitment);
 
+    /// @notice Emitted when a transition is proven
+    /// @param startPublicationId the index of the publication before the transition
+    /// @param startCommitment the checkpoint at the start of the transition
+    /// @param endPublicationId the index of the last publication in the transition
+    /// @param endCommitment the checkpoint after the transition
+    event TransitionProven(
+        uint256 indexed startPublicationId,
+        bytes32 indexed startCommitment,
+        uint256 indexed endPublicationId,
+        bytes32 endCommitment
+    );
+
     /// @param genesis the checkpoint commitment describing the initial state of the rollup
     /// @param _publicationFeed the input data source that updates the state of this rollup
     /// @param _verifier a contract that can verify the validity of a transition from one checkpoint to another
@@ -79,6 +91,7 @@ contract CheckpointTracker {
         }
 
         transitions[startCheckpointHash] = endCheckpointHash;
+        emit TransitionProven(start.publicationId, start.commitment, end.publicationId, end.commitment);
     }
 
     /// @notice Advance to an already proven checkpoint
