@@ -70,6 +70,7 @@ contract TaikoInbox {
         // Publish each delayed inclusion as a separate publication
         IDelayedInclusionStore.Inclusion[] memory inclusions = delayedInclusionStore.processDueInclusions();
         uint256 nInclusions = inclusions.length;
+        // Metadata is the same as the regular publication, so we just set `isDelayedInclusion` to true
         metadata.isDelayedInclusion = true;
         for (uint256 i; i < nInclusions; ++i) {
             attributes[METADATA] = abi.encode(metadata);
