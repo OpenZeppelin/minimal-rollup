@@ -28,7 +28,7 @@ contract CheckpointTracker is ICheckpointTracker {
     constructor(bytes32 genesis, address _publicationFeed, address _verifier) {
         // set the genesis checkpoint commitment of the rollup - genesis is trusted to be correct
         require(genesis != 0, "genesis checkpoint commitment cannot be 0");
-        
+
         publicationFeed = IPublicationFeed(_publicationFeed);
         verifier = IVerifier(_verifier);
 
@@ -38,10 +38,7 @@ contract CheckpointTracker is ICheckpointTracker {
         emit CheckpointProven(provenCheckpointHash);
     }
 
-    /// @notice Verifies a transition between two checkpoints. Update the latest `provenCheckpoint` if possible
-    /// @param start The initial checkpoint before the transition
-    /// @param end The final checkpoint after the transition
-    /// @param proof Arbitrary data passed to the `verifier` contract to confirm the transition validity
+    /// @inheritdoc ICheckpointTracker
     function proveTransition(Checkpoint calldata start, Checkpoint calldata end, bytes calldata proof) external {
         bytes32 startCheckpointHash = keccak256(abi.encode(start));
         bytes32 endCheckpointHash = keccak256(abi.encode(end));
