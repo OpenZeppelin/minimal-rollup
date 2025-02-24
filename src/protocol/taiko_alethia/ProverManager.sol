@@ -4,40 +4,7 @@ pragma solidity ^0.8.28;
 import {Checkpoint} from "../Checkpoint.sol";
 import {IProverManager} from "../IProverManager.sol";
 
-/**
- * @title SimplifiedProverIncentiveManager
- * @notice A simplified version that:
- *   - Uses one mapping (balances) for all funds.
- *   - Accepts publication fees only for the next publication (sequential processing).
- *   - Tracks the pending publication fee in a single variable.
- *   - Includes basic prover bidding and activation logic.
- *
- * Note: This simplified version assumes that publication fees are deposited for publication ID
- *       = lastProvenPublicationId + 1. More complex fee management requires a mapping.
- */
 contract ProverManager is IProverManager {
-    // ----------------------------------------------------------
-    // Configuration parameters
-    // ----------------------------------------------------------
-    uint256 public constant MIN_FEE_STEP = 1 wei;
-    uint256 public maxUnprovenPublications = 10;
-    uint256 public offerActivationDelay = 1 hours;
-    uint256 public exitDelay = 1 hours;
-    uint256 public forcedFeeMultiplier = 2;
-
-    // ----------------------------------------------------------
-    // External contract reference
-    // ----------------------------------------------------------
-    Checkpoint public immutable checkpoint;
-
-    // ----------------------------------------------------------
-    // Global balances mapping (for publishers, provers, etc.)
-    // ----------------------------------------------------------
-    mapping(address => uint256) public balances;
-
-    // ----------------------------------------------------------
-    // Prover state (packed into a struct for potential storage savings)
-    // ----------------------------------------------------------
     struct ProverInfo {
         address prover;
         uint256 stake;
@@ -45,46 +12,62 @@ contract ProverManager is IProverManager {
         uint256 exitAllowedAt;
     }
 
+    // ----------------------------------------------------------
+    // Configuration parameters
+    // ----------------------------------------------------------
+
+    uint256 public minStepFee;
+    uint256 public maxUnprovenPublications;
+    uint256 public offerActivationDelay;
+    uint256 public exitDelay;
+    uint256 public forcedFeeMultiplier;
+    // TODO: this should actually be dynamic, most likely using the latest proven fee
+    uint256 public minStake;
+
+    // ----------------------------------------------------------
+    // Balances and Prover Info
+    // ----------------------------------------------------------
+    /// @notice Balances for proposers and provers
+    mapping(address => uint256) public balances;
+
     ProverInfo public currentProverInfo;
 
     // Pending prover info (if someone is trying to undercut)
     ProverInfo public pendingProverInfo;
-    uint256 public pendingActivationTime; // when the pending prover can activate
+    uint256 public pendingActivationTime;
 
-    // ----------------------------------------------------------
-    // Publication fee tracking
-    // ----------------------------------------------------------
-    // Instead of a mapping keyed by publication ID, we assume sequential publications.
-    // The pendingFee is the total fee (from one or multiple publishers) for the publication
-    // with ID = lastProvenPublicationId + 1.
     uint256 public pendingFee;
 
-    // We track the last proven publication ID (should match Checkpoint.publicationId)
     uint256 public lastProvenPublicationId;
 
-    // ----------------------------------------------------------
-    // Events
-    // ----------------------------------------------------------
+    Checkpoint public immutable checkpoint;
+
     event Deposit(address indexed user, uint256 amount);
     event Withdrawal(address indexed user, uint256 amount);
-    event PublicationFeePaid(address indexed publisher, uint256 feeAmount);
     event ProverOffered(address indexed proposer, uint256 fee, uint256 stake);
     event ProverActivated(address indexed oldProver, address indexed newProver, uint256 fee);
     event ProverSlashed(address indexed prover, uint256 slashedAmount);
 
-    // ----------------------------------------------------------
-    // Constructor
-    // ----------------------------------------------------------
-    constructor(address _checkpoint) {
+    constructor(
+        address _checkpoint,
+        uint256 _minStepFee,
+        uint256 _maxUnprovenPublications,
+        uint256 _offerActivationDelay,
+        uint256 _exitDelay,
+        uint256 _forcedFeeMultiplier
+    ) {
+        minStepFee = _minStepFee;
+        maxUnprovenPublications = _maxUnprovenPublications;
+        offerActivationDelay = _offerActivationDelay;
+        exitDelay = _exitDelay;
+        forcedFeeMultiplier = _forcedFeeMultiplier;
+
         checkpoint = Checkpoint(_checkpoint);
-        // Initialize current prover fee to a very high value (i.e. "infinite")
         currentProverInfo.fee = type(uint256).max;
         lastProvenPublicationId = checkpoint.publicationId();
     }
 
-    // ----------------------------------------------------------
-    // Deposit & Withdrawal (General Balance)
-    // ----------------------------------------------------------
+    /// @notice Deposit ETH into the prover manager. The deposit can be used both for opting in as a prover or proposer
     function deposit() external payable {
         require(msg.value > 0, "No ETH sent");
         balances[msg.sender] += msg.value;
@@ -99,13 +82,8 @@ contract ProverManager is IProverManager {
         emit Withdrawal(msg.sender, amount);
     }
 
-    // ----------------------------------------------------------
-    // Publisher Fee Payment for the Next Publication
-    // ----------------------------------------------------------
-    /**
-     * @notice Publishers pay fees for the next publication (must be sequential).
-     *         They can top up by sending ETH along with the call.
-     */
+    /// @notice Proposers have to pay a fee for each publication they want to get proven.
+    /// @param isForced Whether the publication is a forced publication
     function payPublicationFee(bool isForced) external payable {
         // Accept additional deposit if sent
         if (msg.value > 0) {
@@ -122,29 +100,23 @@ contract ProverManager is IProverManager {
         // Deduct fee from sender's balance and add to pendingFee
         balances[msg.sender] -= requiredFee;
         pendingFee += requiredFee;
-        emit PublicationFeePaid(msg.sender, requiredFee);
     }
 
-    // ----------------------------------------------------------
-    // Prover Bidding & Activation
-    // ----------------------------------------------------------
-    /**
-     * @notice A new prover offers to take over by undercutting the current fee.
-     *         They must lock up a stake by sending ETH.
-     */
+    /// @notice Register yourself as a prover
+    /// @param offeredFee The fee you are willing to charge for proving each publication
     function offerProverRole(uint256 offeredFee) external payable {
-        require(offeredFee + MIN_FEE_STEP <= currentProverInfo.fee, "Fee not low enough");
-        require(msg.value > 0, "Must provide stake");
+        uint256 stake = msg.value;
+        require(offeredFee <= currentProverInfo.fee - minStepFee, "Fee not low enough");
+        require(stake >= minStake, "Must provide enough stake");
+
         // Record pending prover info
-        pendingProverInfo = ProverInfo({prover: msg.sender, stake: msg.value, fee: offeredFee, exitAllowedAt: 0});
+        pendingProverInfo = ProverInfo({prover: msg.sender, stake: stake, fee: offeredFee, exitAllowedAt: 0});
         pendingActivationTime = block.timestamp + offerActivationDelay;
-        emit ProverOffered(msg.sender, offeredFee, msg.value);
+        emit ProverOffered(msg.sender, offeredFee, stake);
     }
 
-    /**
-     * @notice After the activation delay, the pending prover can activate.
-     *         If the current prover is lagging (i.e. has too many unproven publications), they get slashed.
-     */
+    /// @notice Activates the pending prover. Anyone can call this function to prevent the pending prover to opt out if
+    /// the price is not convinient for the.
     function activateProver() external {
         require(msg.sender == pendingProverInfo.prover, "Not pending prover");
         require(block.timestamp >= pendingActivationTime, "Activation delay not passed");
@@ -189,7 +161,7 @@ contract ProverManager is IProverManager {
         );
         uint256 amount = currentProverInfo.stake;
         currentProverInfo.stake = 0;
-        // Instead of sending funds, we add them to the prover’s balance (pull pattern).
+        // Instead of sending funds, we add them to the prover's balance (pull pattern).
         balances[msg.sender] += amount;
     }
 
@@ -209,7 +181,7 @@ contract ProverManager is IProverManager {
 
     /**
      * @notice Called by the Checkpoint contract when a publication is proven.
-     *         The pendingFee is added to the current prover’s balance, and lastProvenPublicationId updated.
+     *         The pendingFee is added to the current prover's balance, and lastProvenPublicationId updated.
      */
     function onProven(address prover, uint256, /*startId*/ uint256 endId) external {
         require(prover == currentProverInfo.prover, "Prover mismatch");
