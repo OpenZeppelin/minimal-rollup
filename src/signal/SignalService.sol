@@ -298,7 +298,11 @@ contract SignalService is
         bytes32 value = _signal;
 
         require(
-            authority().hasRole(SIGNAL_SERVICE_ROLE, address(this)),
+            !authority().hasRole(
+                // There must be only 1 signal service role (i.e. address(this)) per chain
+                uint64(keccak256(abi.encode(SIGNAL_SERVICE_ROLE, chainId))),
+                address(this)
+            ),
             SS_INVALID_MID_HOP_CHAINID()
         );
 
@@ -333,7 +337,15 @@ contract SignalService is
                 require(
                     hop.chainId != 0 &&
                         hop.chainId != block.chainId &&
-                        authority().hasRole(SIGNAL_SERVICE_ROLE, address(this)),
+                        // There must be only 1 signal service role (i.e. address(this)) per chain
+                        !authority().hasRole(
+                            uint64(
+                                keccak256(
+                                    abi.encode(SIGNAL_SERVICE_ROLE, hop.chainId)
+                                )
+                            ),
+                            address(this)
+                        ),
                     SS_INVALID_MID_HOP_CHAINID()
                 );
             }
