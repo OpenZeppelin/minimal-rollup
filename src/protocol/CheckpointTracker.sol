@@ -34,7 +34,6 @@ contract CheckpointTracker is ICheckpointTracker {
 
         Checkpoint memory genesisCheckpoint = Checkpoint({publicationId: 0, commitment: _genesis});
         provenCheckpointHash = keccak256(abi.encode(genesisCheckpoint));
-        emit CheckpointSeen(genesisCheckpoint.publicationId, genesisCheckpoint.commitment, provenCheckpointHash);
         emit CheckpointProven(provenCheckpointHash);
     }
 
@@ -50,10 +49,6 @@ contract CheckpointTracker is ICheckpointTracker {
         require(start.publicationId < end.publicationId, "Start must be before end");
         require(end.publicationId < publicationFeed.getNextPublicationId(), "Publication does not exist");
 
-        // Each checkpoint may emit CheckpointSeen as a start and end checkpoint
-        emit CheckpointSeen(start.publicationId, start.commitment, startCheckpointHash);
-        emit CheckpointSeen(end.publicationId, end.commitment, endCheckpointHash);
-
         verifier.verifyProof(
             publicationFeed.getPublicationHash(start.publicationId),
             publicationFeed.getPublicationHash(end.publicationId),
@@ -62,7 +57,7 @@ contract CheckpointTracker is ICheckpointTracker {
             proof
         );
 
-        emit TransitionProven(startCheckpointHash, endCheckpointHash);
+        emit TransitionProven(start, end);
 
         if (startCheckpointHash == provenCheckpointHash) {
             while (transitions[endCheckpointHash] != 0) {

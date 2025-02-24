@@ -7,21 +7,14 @@ interface ICheckpointTracker {
         bytes32 commitment;
     }
 
-    /// @notice Emitted when a checkpoint is first seen
-    /// @param publicationId The index of the publication for the commitment
-    /// @param commitment The checkpoint commitment
-    /// @param checkpointHash The hash of the checkpoint
-    /// @dev The contract operates on checkpoint hashes. This event can be used to map it to the actual checkpoint.
-    event CheckpointSeen(uint256 indexed publicationId, bytes32 indexed commitment, bytes32 indexed checkpointHash);
-
     /// @notice Emitted when a checkpoint is proven
     /// @param checkpointHash the hash of the proven checkpoint
     event CheckpointProven(bytes32 indexed checkpointHash);
 
     /// @notice Emitted when a transition is proven
-    /// @param startCheckpointHash the hash of the checkpoint before the transition
-    /// @param endCheckpointHash the hash of the checkpoint after the transition
-    event TransitionProven(bytes32 indexed startCheckpointHash, bytes32 indexed endCheckpointHash);
+    /// @param start the checkpoint before the transition
+    /// @param end the checkpoint after the transition
+    event TransitionProven(Checkpoint start, Checkpoint end);
 
     /// @notice Verifies a transition between two checkpoints. Update the latest `provenCheckpoint` if possible
     /// @param start The initial checkpoint before the transition
