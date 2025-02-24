@@ -22,6 +22,11 @@ contract CheckpointTracker is ICheckpointTracker {
     // just setting it in the constructor
     IVerifier public immutable verifier;
 
+
+    /// @notice The maximum number of additional checkpoint transitions to apply in a single proof
+    /// @dev This limits the overhead required to submit a proof
+    uint256 constant MAX_EXTRA_UPDATES = 10;
+
     /// @param _genesis the checkpoint commitment describing the initial state of the rollup
     /// @param _publicationFeed the input data source that updates the state of this rollup
     /// @param _verifier a contract that can verify the validity of a transition from one checkpoint to another
@@ -60,7 +65,7 @@ contract CheckpointTracker is ICheckpointTracker {
         emit TransitionProven(start, end);
 
         if (startCheckpointHash == provenCheckpointHash) {
-            while (transitions[endCheckpointHash] != 0) {
+            for(uint256 i; i < MAX_EXTRA_UPDATES && transitions[endCheckpointHash] != 0; ++i) {
                 endCheckpointHash = transitions[endCheckpointHash];
             }
             provenCheckpointHash = endCheckpointHash;
