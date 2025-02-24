@@ -1,15 +1,11 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
+import {Checkpoint, ICheckpointTracker} from "./ICheckpointTracker.sol";
 import {IPublicationFeed} from "./IPublicationFeed.sol";
 import {IVerifier} from "./IVerifier.sol";
 
-struct Checkpoint {
-    uint256 publicationId;
-    bytes32 commitment;
-}
-
-contract CheckpointTracker {
+contract CheckpointTracker is ICheckpointTracker {
     /// @notice The current proven checkpoint representing the latest verified state of the rollup
     /// @dev Previous checkpoints are not stored here but are synchronized to the `SignalService`
     /// @dev A checkpoint commitment is any value (typically a state root) that uniquely identifies
@@ -25,23 +21,6 @@ contract CheckpointTracker {
     // This would usually be retrieved dynamically as in the current Taiko implementation, but for simplicity we are
     // just setting it in the constructor
     IVerifier public immutable verifier;
-
-    /// @notice Emitted when a checkpoint is proven
-    /// @param publicationId the index of the publication at which the commitment was proven
-    /// @param commitment the checkpoint commitment that was proven
-    event CheckpointProven(uint256 indexed publicationId, bytes32 indexed commitment);
-
-    /// @notice Emitted when a transition is proven
-    /// @param startPublicationId the index of the publication before the transition
-    /// @param startCommitment the checkpoint at the start of the transition
-    /// @param endPublicationId the index of the last publication in the transition
-    /// @param endCommitment the checkpoint after the transition
-    event TransitionProven(
-        uint256 indexed startPublicationId,
-        bytes32 indexed startCommitment,
-        uint256 indexed endPublicationId,
-        bytes32 endCommitment
-    );
 
     /// @param genesis the checkpoint commitment describing the initial state of the rollup
     /// @param _publicationFeed the input data source that updates the state of this rollup
