@@ -21,7 +21,7 @@ contract ProvingAuctionManager {
     struct FeePool {
         uint128 totalFee;
         uint128 totalPublications;
-        mapping(address proposer => uint128 fee) fees;
+        address[] proposers;
     }
 
     struct Balance {
@@ -60,6 +60,10 @@ contract ProvingAuctionManager {
     event ProverSlashed(
         uint256 indexed periodId, address indexed prover, uint256 slashedStake, address fallbackProver, uint256 reward
     );
+    /// @notice Emitted when a user deposits ETH into their balance.
+    event Deposit(address indexed user, uint256 amount);
+    /// @notice Emitted when a user withdraws ETH from their balance.
+    event Withdraw(address indexed user, uint256 amount);
 
     /// @param _checkpointTracker The CheckpointTracker contract address.
     /// @param _auctionDuration Duration of each auction round in seconds.
@@ -83,6 +87,8 @@ contract ProvingAuctionManager {
     /// @notice Deposit ETH into your balance.
     function deposit() external payable {
         balances[msg.sender].available += uint128(msg.value);
+
+        emit Deposit(msg.sender, msg.value);
     }
 
     /// @notice Withdraw available (unlocked) funds.
@@ -91,6 +97,8 @@ contract ProvingAuctionManager {
 
         (bool ok,) = msg.sender.call{value: amount}("");
         require(ok, "Withdraw failed");
+
+        emit Withdraw(msg.sender, amount);
     }
 
     /// @notice Proposers pay for their publications. Funds go to the fee pool and credit their balance.
@@ -102,18 +110,21 @@ contract ProvingAuctionManager {
         uint256 periodId = _getPeriodId(block.timestamp);
         feePools[periodId].totalFee += maxFeePerPublication;
         feePools[periodId].totalPublications++;
-        feePools[periodId].fees[msg.sender] += maxFeePerPublication;
+        feePools[periodId].proposers.push(msg.sender);
     }
 
     /// @notice Commits to prove a certain period.
+    /// @dev The Dutch auction for a period is done in the next one(e.g. period 1 is auctioned in period 2).
     /// @param periodId The period you are committing to prove. It will usually be the current period, but in case no
     /// one opted in during that period, a prover can step in and use the `maxFeePerPublication`
     function commitToProve(uint256 periodId) external {
         require(block.timestamp >= auctionGenesis, "Auctions not started yet");
         require(auctions[periodId].prover == address(0), "Period already has an elected prover");
 
-        uint256 periodStart = auctionGenesis + periodId * auctionDuration;
-        uint256 elapsed = block.timestamp - periodStart;
+        uint256 periodEnd = auctionGenesis + (periodId + 1) * auctionDuration;
+        require(block.timestamp > periodEnd, "You can only commit to a previous period");
+
+        uint256 elapsed = block.timestamp - periodEnd;
         if (elapsed > auctionDuration) {
             // We are participating in an old period.
             elapsed = auctionDuration;
@@ -160,10 +171,17 @@ contract ProvingAuctionManager {
             balance.available += auction.stake + publicationFees;
             balance.locked -= auction.stake;
 
-            // TODO: how do we allow the proposers to withdraw the remaining balance(maxFeePerPublication - actualFee)?
-            emit ProverFinalized(periodId, prover, publicationFees);
+            // return the remaining balance to proposers
+            uint128 refund =
+                uint128((maxFeePerPublication - feePools[periodId].totalFee) / feePools[periodId].proposers.length);
+            if (refund > 0) {
+                for (uint256 i = 0; i < feePools[periodId].proposers.length; i++) {
+                    address proposer = feePools[periodId].proposers[i];
+                    balances[proposer].available += refund;
+                }
+            }
         } else {
-            // Late: fallback finalizes. Slash the accepted prover.
+            // Late: Slash the accepted prover.
             uint128 stake = auction.stake;
             balances[prover].locked -= stake;
 
@@ -181,9 +199,5 @@ contract ProvingAuctionManager {
     function _getPeriodId(uint256 timestamp) internal view returns (uint256) {
         require(timestamp >= auctionGenesis, "Auction not started yet");
         return (timestamp - auctionGenesis) / auctionDuration;
-    }
-
-    receive() external payable {
-        balances[msg.sender].available += uint128(msg.value);
     }
 }
