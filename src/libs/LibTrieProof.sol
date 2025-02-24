@@ -5,57 +5,43 @@ import "src/vendor/optimism/rlp/RLPReader.sol";
 import "src/vendor/optimism/rlp/RLPWriter.sol";
 import "src/vendor/optimism/trie/SecureMerkleTrie.sol";
 
-/// @title LibTrieProof
+/// @title Merkle-Patricia Trie Proof Verification
 /// @custom:security-contact security@taiko.xyz
 library LibTrieProof {
-    // The consensus format representing account is RLP encoded in the
-    // following order: nonce, balance, storageHash, codeHash.
-    uint256 private constant _ACCOUNT_FIELD_INDEX_STORAGE_HASH = 2;
+    /// @dev Verifies storage value and retrieves account's storage root
+    /// @param accountProof Merkle proof for account state against global stateRoot
+    /// @param stateProof Merkle proof for slot value against account's storageRoot
+    /// @return valid True if both proofs verify successfully
+    /// @return storageRoot The account's storage root derived from accountProof
+    function verifyStorage(
+        address account,
+        bytes32 slot,
+        bytes32 value,
+        bytes32 stateRoot,
+        bytes[] memory accountProof,
+        bytes[] memory stateProof
+    ) internal pure returns (bool valid, bytes32 storageRoot) {
+        RLPReader.RLPItem[] memory accountState =
+            RLPReader.readList(SecureMerkleTrie.get(abi.encodePacked(account), accountProof, stateRoot));
 
-    error LTP_INVALID_ACCOUNT_PROOF();
-    error LTP_INVALID_INCLUSION_PROOF();
+        // Ethereum's State Trie state layout is a 4-item array of nonce, balance, storageRoot, codeHash]
+        // See https://ethereum.org/en/developers/docs/data-structures-and-encoding/patricia-merkle-trie/#state-trie
+        storageRoot = bytes32(RLPReader.readBytes(accountState[2]));
 
-    /// @notice Verifies that the value of a slot in the storage of an account is value.
-    ///
-    /// @param _rootHash The merkle root of state tree or the account tree. If accountProof's length
-    /// is zero, it is used as the account's storage root, otherwise it will be used as the state
-    /// root.
-    /// @param _addr The address of contract.
-    /// @param _slot The slot in the contract.
-    /// @param _value The value to be verified.
-    /// @param _accountProof The account proof
-    /// @param _storageProof The storage proof
-    /// @return storageRoot_ The account's storage root
-    function verifyMerkleProof(
-        bytes32 _rootHash,
-        address _addr,
-        bytes32 _slot,
-        bytes32 _value,
-        bytes[] memory _accountProof,
-        bytes[] memory _storageProof
-    )
+        return (verifyState(slot, value, storageRoot, stateProof), storageRoot);
+    }
+
+    /// @dev Verifies a value in Merkle-Patricia trie using inclusion proof
+    /// @param key Slot/key to verify in the trie
+    /// @param value Expected value at specified key
+    /// @param stateRoot Root hash of the trie to verify against
+    function verifyState(bytes32 key, bytes32 value, bytes32 stateRoot, bytes[] memory proof)
         internal
         pure
-        returns (bytes32 storageRoot_)
+        returns (bool valid)
     {
-        if (_accountProof.length != 0) {
-            bytes memory rlpAccount =
-                SecureMerkleTrie.get(abi.encodePacked(_addr), _accountProof, _rootHash);
-
-            require(rlpAccount.length != 0, LTP_INVALID_ACCOUNT_PROOF());
-
-            RLPReader.RLPItem[] memory accountState = RLPReader.readList(rlpAccount);
-
-            storageRoot_ =
-                bytes32(RLPReader.readBytes(accountState[_ACCOUNT_FIELD_INDEX_STORAGE_HASH]));
-        } else {
-            storageRoot_ = _rootHash;
-        }
-
-        bool verified = SecureMerkleTrie.verifyInclusionProof(
-            bytes.concat(_slot), RLPWriter.writeUint(uint256(_value)), _storageProof, storageRoot_
+        return SecureMerkleTrie.verifyInclusionProof(
+            bytes.concat(key), RLPWriter.writeUint(uint256(value)), proof, stateRoot
         );
-
-        require(verified, LTP_INVALID_INCLUSION_PROOF());
     }
 }
