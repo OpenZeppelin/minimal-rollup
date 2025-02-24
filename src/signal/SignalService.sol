@@ -50,15 +50,17 @@ abstract contract SignalService is ISignalService {
     }
 
     /// @inheritdoc ISignalService
-    function verifyStorage(
-        address account,
+    function verifySignal(
+        address signalService,
         bytes32 root,
         uint64 chainId,
         bytes32 signal,
         bytes[] calldata accountProof,
         bytes[] calldata storageProof
     ) external pure virtual returns (bool valid, bytes32 storageRoot) {
-        return account.verifyStorage(root, signalSlot(chainId, account, signal), signal, accountProof, storageProof);
+        return signalService.verifyStorage(
+            root, signalSlot(chainId, signalService, signal), signal, accountProof, storageProof
+        );
     }
 
     /// @dev Must revert if the caller is not an authorized receiver.

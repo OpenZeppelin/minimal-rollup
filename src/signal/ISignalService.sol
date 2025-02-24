@@ -16,7 +16,7 @@ interface ISignalService {
     event SignalSent(address account, bytes32 signal);
     event SignalsReceived(bytes32[] slots);
 
-    /// @dev The signal is received (not verified). Consider using `verifyStorage` or `verifyState`.
+    /// @dev The signal is received (not verified). Consider using `verifySignal`.
     function signalReceived(bytes32 slot) external view returns (bool received);
 
     /// @dev Derives a namespaced storage slot to store the signal following ERC-7201 to avoid storage collisions.
@@ -25,13 +25,13 @@ interface ISignalService {
     /// @dev Stores a data signal and returns its storage location.
     function sendSignal(bytes32 signal) external returns (bytes32 slot);
 
-    /// @dev Marks signals from specified storage slots as received.
+    /// @dev Marks signals from specified storage slots as received. Useful to provide a signal not yet verifiable.
     function receiveSignal(bytes32[] calldata slots) external;
 
     /// @dev Verifies if the signal can be proved to be part of a merkle tree defined by `root` for the specified
-    /// account storage. See `signalSlot` for the storage slot derivation.
-    function verifyStorage(
-        address account,
+    /// signal service storage. See `signalSlot` for the storage slot derivation.
+    function verifySignal(
+        address signalService,
         bytes32 root,
         uint64 chainId,
         bytes32 signal,
