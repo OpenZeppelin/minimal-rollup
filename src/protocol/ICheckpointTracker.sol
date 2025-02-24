@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
-struct Checkpoint {
-    uint256 publicationId;
-    bytes32 commitment;
-}
-
 interface ICheckpointTracker {
+    struct Checkpoint {
+        uint256 publicationId;
+        bytes32 commitment;
+    }
+
     /// @notice Emitted when a checkpoint is proven
     /// @param publicationId the index of the publication at which the commitment was proven
     /// @param commitment the checkpoint commitment that was proven

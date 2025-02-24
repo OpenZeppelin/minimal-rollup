@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
-import {Checkpoint, ICheckpointTracker} from "./ICheckpointTracker.sol";
+import {ICheckpointTracker} from "./ICheckpointTracker.sol";
 import {IPublicationFeed} from "./IPublicationFeed.sol";
 import {IVerifier} from "./IVerifier.sol";
 
