@@ -36,10 +36,20 @@ contract SignalService is ISignalService, AccessManaged {
         return _topBlockId[chainId][kind];
     }
 
+    function isReceivedSignal(bytes32 signal) external {
+        return _receivedSignals[signal];
+    }
+
     /// EXTERNAL
 
     function sendSignal(bytes32 _signal) external returns (bytes32) {
         return _sendSignal(msg.sender, _signal, _signal);
+    }
+
+    function receiveSignals(
+        bytes32[] calldata _signalSlots
+    ) external virtual restricted {
+        _receiveSignals(_signalSlots);
     }
 
     function proveSignalReceived(
@@ -62,6 +72,12 @@ contract SignalService is ISignalService, AccessManaged {
             .getBytes32Slot()
             .value = _value;
         emit SignalSent(_app, _signal, slot_, _value);
+    }
+
+    function _receiveSignals(bytes32[] calldata _signalSlots) internal virtual {
+        for (uint256 i; i < _signalSlots.length; ++i)
+            _receivedSignals[_signalSlots[i]] = true;
+        emit SignalsReceived(_signalSlots);
     }
 
     function _proveSignalReceived(
