@@ -16,7 +16,16 @@ interface ISignalService {
     event SignalSent(address account, bytes32 signal);
     event SignalsReceived(bytes32[] slots);
 
+    /// @dev The signal is sent.
+    function signalSent(address account, bytes32 signal) external view returns (bool sent);
+
+    /// @dev Same as `signalSent` that takes the slot as input.
+    function signalSent(bytes32 slot) external view returns (bool sent);
+
     /// @dev The signal is received (not verified). Consider using `verifySignal`.
+    function signalReceived(uint64 chainId, address account, bytes32 signal) external view returns (bool received);
+
+    /// @dev Same as `signalReceived` that takes the slot as input.
     function signalReceived(bytes32 slot) external view returns (bool received);
 
     /// @dev Derives a namespaced storage slot to store the signal following ERC-7201 to avoid storage collisions.

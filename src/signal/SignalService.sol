@@ -29,6 +29,26 @@ abstract contract SignalService is ISignalService {
     }
 
     /// @inheritdoc ISignalService
+    function signalSent(address account, bytes32 signal) public view virtual returns (bool sent) {
+        return signalSent(signalSlot(block.chainid.toUint64(), account, signal));
+    }
+
+    /// @inheritdoc ISignalService
+    function signalSent(bytes32 slot) public view virtual returns (bool sent) {
+        return slot.getBytes32Slot().value != 0;
+    }
+
+    /// @inheritdoc ISignalService
+    function signalReceived(uint64 chainId, address account, bytes32 signal)
+        public
+        view
+        virtual
+        returns (bool received)
+    {
+        return signalReceived(chainId, account, signal);
+    }
+
+    /// @inheritdoc ISignalService
     function signalReceived(bytes32 slot) public view virtual returns (bool received) {
         return _receivedSignals[slot];
     }
