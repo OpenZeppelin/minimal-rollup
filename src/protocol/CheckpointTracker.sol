@@ -64,9 +64,7 @@ contract CheckpointTracker is ICheckpointTracker {
 
         if (transitions[endCheckpointHash] != 0) {
             // we are prepending to a previously proven transition. Combine them into a single transition
-            bytes32 intermediateHash = endCheckpointHash;
-            endCheckpointHash = transitions[intermediateHash];
-            delete transitions[intermediateHash];
+            endCheckpointHash = transitions[endCheckpointHash];
         }
 
         transitions[startCheckpointHash] = endCheckpointHash;
@@ -81,7 +79,6 @@ contract CheckpointTracker is ICheckpointTracker {
         bytes32 startCheckpointHash = keccak256(abi.encode(provenCheckpoint));
         bytes32 endCheckpointHash = keccak256(abi.encode(end));
         require(transitions[startCheckpointHash] == endCheckpointHash, "Unproven transition");
-        delete transitions[startCheckpointHash];
         provenCheckpoint = end;
         emit CheckpointProven(end.publicationId, end.commitment);
     }
