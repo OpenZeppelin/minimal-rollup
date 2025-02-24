@@ -51,12 +51,12 @@ contract CheckpointTracker is ICheckpointTracker {
         require(transitions[startHash] == 0, "Checkpoint already has valid transition");
         require(start.publicationId < end.publicationId, "Start must be before end");
 
-        bytes32 endPublicationId = publicationFeed.getPublicationHash(end.publicationId);
-        require(endPublicationId != 0, "Publication does not exist");
+        bytes32 endPublicationHash = publicationFeed.getPublicationHash(end.publicationId);
+        require(endPublicationHash != 0, "Publication does not exist");
 
         verifier.verifyProof(
             publicationFeed.getPublicationHash(start.publicationId),
-            endPublicationId,
+            endPublicationHash,
             start.commitment,
             end.commitment,
             proof
