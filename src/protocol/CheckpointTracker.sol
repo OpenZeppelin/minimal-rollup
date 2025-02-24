@@ -2,6 +2,8 @@
 pragma solidity ^0.8.28;
 
 import {ICheckpointTracker} from "./ICheckpointTracker.sol";
+
+import {IProvingCommitment} from "./IProvingCommitment.sol";
 import {IPublicationFeed} from "./IPublicationFeed.sol";
 import {IVerifier} from "./IVerifier.sol";
 
@@ -17,7 +19,7 @@ contract CheckpointTracker is ICheckpointTracker {
     mapping(bytes32 startHash => bytes32 endHash) public transitions;
 
     IPublicationFeed public immutable publicationFeed;
-
+    IProvingCommitment public immutable provingCommitment;
     // This would usually be retrieved dynamically as in the current Taiko implementation, but for simplicity we are
     // just setting it in the constructor
     IVerifier public immutable verifier;
@@ -26,17 +28,16 @@ contract CheckpointTracker is ICheckpointTracker {
     /// @dev This limits the overhead required to submit a proof
     uint256 constant MAX_EXTRA_UPDATES = 10; // TODO: What is a reasonable number here?
 
-
     /// @param _genesis the checkpoint commitment describing the initial state of the rollup
     /// @param _publicationFeed the input data source that updates the state of this rollup
     /// @param _verifier a contract that can verify the validity of a transition from one checkpoint to another
-    constructor(bytes32 _genesis, address _publicationFeed, address _verifier) {
+    constructor(bytes32 _genesis, address _publicationFeed, address _verifier, address _provingCommitment) {
         // set the genesis checkpoint commitment of the rollup - genesis is trusted to be correct
         require(_genesis != 0, "genesis checkpoint commitment cannot be 0");
 
         publicationFeed = IPublicationFeed(_publicationFeed);
         verifier = IVerifier(_verifier);
-
+        provingCommitment = IProvingCommitment(_provingCommitment);
         Checkpoint memory genesisCheckpoint = Checkpoint({publicationId: 0, commitment: _genesis});
         provenHash = keccak256(abi.encode(genesisCheckpoint));
         emit CheckpointUpdated(provenHash);
@@ -64,8 +65,12 @@ contract CheckpointTracker is ICheckpointTracker {
 
         emit TransitionProven(start, end);
 
+        // TODO: calculate period. Make sure that start is the first publication of the period and end is the last
+        // publication of the period
+        uint256 periodId = 0;
         if (startHash == provenHash) {
             provenHash = endHash;
+            provingCommitment.finalizeCommitment(periodId, msg.sender);
             emit CheckpointUpdated(endHash);
         } else {
             transitions[startHash] = endHash;
@@ -78,6 +83,7 @@ contract CheckpointTracker is ICheckpointTracker {
                 nextHash = transitions[nextHash];
             }
             provenHash = nextHash;
+            provingCommitment.finalizeCommitment(periodId, msg.sender);
             emit CheckpointUpdated(nextHash);
         }
     }

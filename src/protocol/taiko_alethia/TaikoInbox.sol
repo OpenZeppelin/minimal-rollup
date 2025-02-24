@@ -8,11 +8,14 @@ import {IPublicationFeed} from "../IPublicationFeed.sol";
 import {IDelayedInclusionStore} from "./IDelayedInclusionStore.sol";
 import {ILookahead} from "./ILookahead.sol";
 
+import {IProvingCommitment} from "../IProvingCommitment.sol";
+
 contract TaikoInbox {
     IPublicationFeed public immutable publicationFeed;
     ILookahead public immutable lookahead;
     IBlobRefRegistry public immutable blobRefRegistry;
     IDelayedInclusionStore public immutable delayedInclusionStore;
+    IProvingCommitment public immutable provingCommitment;
 
     uint256 public immutable maxAnchorBlockIdOffset;
 
@@ -28,12 +31,14 @@ contract TaikoInbox {
         address _lookahead,
         address _blobRefRegistry,
         address _delayedInclusionStore,
+        address _provingCommitment,
         uint256 _maxAnchorBlockIdOffset
     ) {
         publicationFeed = IPublicationFeed(_publicationFeed);
         lookahead = ILookahead(_lookahead);
         blobRefRegistry = IBlobRefRegistry(_blobRefRegistry);
         delayedInclusionStore = IDelayedInclusionStore(_delayedInclusionStore);
+        provingCommitment = IProvingCommitment(_provingCommitment);
         maxAnchorBlockIdOffset = _maxAnchorBlockIdOffset;
     }
 
@@ -55,6 +60,9 @@ contract TaikoInbox {
         attributes[PREV_PUBLICATION] = abi.encode(_lastPublicationId);
         attributes[BLOB_REFERENCE] = abi.encode(blobRefRegistry.getRef(_buildBlobIndices(nBlobs)));
         _lastPublicationId = publicationFeed.publish(attributes).id;
+
+        // Pay for the publication
+        provingCommitment.payForPublication();
 
         // Publish each delayed inclusion as a separate publication
         IBlobRefRegistry.BlobRef[] memory blobRefs =

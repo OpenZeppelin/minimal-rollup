@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
-contract ProvingAuctionManager {
+contract ProvingCommitment {
     // /// @dev Information about a period of publications.
     // struct Period {
     //     FeePool feePool;
@@ -104,13 +104,14 @@ contract ProvingAuctionManager {
     /// @notice Proposers pay for their publications. Funds go to the fee pool and credit their balance.
     // TODO: should we treat forced publications differently?
     // TODO: make this payable to allow just in time deposits
-    function payForPublication() external {
-        balances[msg.sender].available -= maxFeePerPublication;
+    // TODO: allow paying for multiple publications at once
+    function payForPublication(address proposer) external {
+        balances[proposer].available -= maxFeePerPublication;
 
         uint256 periodId = _getPeriodId(block.timestamp);
         feePools[periodId].totalFee += maxFeePerPublication;
         feePools[periodId].totalPublications++;
-        feePools[periodId].proposers.push(msg.sender);
+        feePools[periodId].proposers.push(proposer);
     }
 
     /// @notice Commits to prove a certain period.
@@ -172,8 +173,8 @@ contract ProvingAuctionManager {
             balance.locked -= auction.stake;
 
             // return the remaining balance to proposers
-            uint128 refund =
-                uint128((maxFeePerPublication - feePools[periodId].totalFee) / feePools[periodId].proposers.length);
+            // TODO: get `maxFeePerPublication` from the fee pool
+            uint128 refund = (maxFeePerPublication - auction.feePerPublication);
             if (refund > 0) {
                 for (uint256 i = 0; i < feePools[periodId].proposers.length; i++) {
                     address proposer = feePools[periodId].proposers[i];
