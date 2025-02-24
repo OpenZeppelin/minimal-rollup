@@ -71,6 +71,7 @@ contract CheckpointTracker is ICheckpointTracker {
             provenCheckpointHash = endCheckpointHash;
             emit CheckpointProven(endCheckpointHash);
         } else {
+            emit CheckpointSeen(start.publicationId, start.commitment, startCheckpointHash);
             transitions[startCheckpointHash] = endCheckpointHash;
         }
     }
