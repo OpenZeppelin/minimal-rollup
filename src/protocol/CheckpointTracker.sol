@@ -57,6 +57,7 @@ contract CheckpointTracker is ICheckpointTracker {
             end.commitment,
             proof
         );
+        emit TransitionProven(startCheckpointHash, endCheckpointHash);
 
         if (transitions[endCheckpointHash] != 0) {
             // we are prepending to a previously proven transition. Combine them into a single transition
@@ -65,10 +66,8 @@ contract CheckpointTracker is ICheckpointTracker {
             emit CheckpointSeen(end.publicationId, end.commitment, endCheckpointHash);
         }
 
-        emit TransitionProven(startCheckpointHash, endCheckpointHash);
-
         if (startCheckpointHash == provenCheckpointHash) {
-            while(transitions[endCheckpointHash] != 0) {
+            while (transitions[endCheckpointHash] != 0) {
                 endCheckpointHash = transitions[endCheckpointHash];
             }
             provenCheckpointHash = endCheckpointHash;
