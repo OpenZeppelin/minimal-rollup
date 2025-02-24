@@ -26,7 +26,6 @@ contract CheckpointTracker is ICheckpointTracker {
     /// @dev This limits the overhead required to submit a proof
     uint256 constant MAX_EXTRA_UPDATES = 10; // TODO: What is a reasonable number here?
 
-
     /// @param _genesis the checkpoint commitment describing the initial state of the rollup
     /// @param _publicationFeed the input data source that updates the state of this rollup
     /// @param _verifier a contract that can verify the validity of a transition from one checkpoint to another
@@ -71,14 +70,24 @@ contract CheckpointTracker is ICheckpointTracker {
             transitions[startHash] = endHash;
         }
 
-        // Update the provenCheckpointHash if possible
-        bytes32 nextHash = transitions[provenHash];
-        if (nextHash != 0) {
-            for (uint256 i; i < MAX_EXTRA_UPDATES && transitions[nextHash] != 0; ++i) {
-                nextHash = transitions[nextHash];
-            }
-            provenHash = nextHash;
-            emit CheckpointUpdated(nextHash);
+        _updateProvenHash();
+    }
+
+    /// @dev To limit the overhead, we cannot require a proof to find the last proven checkpoint
+    /// Instead, each proof should advance the checkpoint by a manageable increment, regardless
+    /// of which transition it proves.
+    function _updateProvenHash() internal {
+        bytes32 newProvenHash = transitions[provenHash];
+        if (newProvenHash == 0) {
+            return;
         }
+        // Use another variable to avoid extra storage loads
+        bytes32 nextRecord = newProvenHash;
+        for (uint256 i; i < MAX_EXTRA_UPDATES && nextRecord != 0; ++i) {
+            newProvenHash = nextRecord;
+            nextRecord = transitions[nextRecord];
+        }
+        provenHash = newProvenHash;
+        emit CheckpointUpdated(newProvenHash);
     }
 }
