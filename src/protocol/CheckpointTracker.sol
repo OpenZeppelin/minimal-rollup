@@ -34,7 +34,7 @@ contract CheckpointTracker is ICheckpointTracker {
 
         Checkpoint memory genesisCheckpoint = Checkpoint({publicationId: 0, commitment: _genesis});
         provenCheckpointHash = keccak256(abi.encode(genesisCheckpoint));
-        emit CheckpointProven(provenCheckpointHash);
+        emit ProvenCheckpointUpdated(provenCheckpointHash);
     }
 
     /// @inheritdoc ICheckpointTracker
@@ -64,7 +64,7 @@ contract CheckpointTracker is ICheckpointTracker {
                 endCheckpointHash = transitions[endCheckpointHash];
             }
             provenCheckpointHash = endCheckpointHash;
-            emit CheckpointProven(endCheckpointHash);
+            emit ProvenCheckpointUpdated(endCheckpointHash);
         } else {
             transitions[startCheckpointHash] = endCheckpointHash;
         }

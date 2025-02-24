@@ -7,9 +7,9 @@ interface ICheckpointTracker {
         bytes32 commitment;
     }
 
-    /// @notice Emitted when a checkpoint is proven
-    /// @param checkpointHash the hash of the proven checkpoint
-    event CheckpointProven(bytes32 indexed checkpointHash);
+    /// @notice Emitted when the proven checkpoint is updated
+    /// @param checkpointHash the hash of the last proven checkpoint
+    event ProvenCheckpointUpdated(bytes32 indexed checkpointHash);
 
     /// @notice Emitted when a transition is proven
     /// @param start the checkpoint before the transition
