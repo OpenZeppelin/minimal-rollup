@@ -68,6 +68,9 @@ contract CheckpointTracker is ICheckpointTracker {
         emit TransitionProven(startCheckpointHash, endCheckpointHash);
 
         if (startCheckpointHash == provenCheckpointHash) {
+            while(transitions[endCheckpointHash] != 0) {
+                endCheckpointHash = transitions[endCheckpointHash];
+            }
             provenCheckpointHash = endCheckpointHash;
             emit CheckpointProven(endCheckpointHash);
         } else {
