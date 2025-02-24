@@ -14,7 +14,7 @@ contract CheckpointTracker {
     /// @dev Previous checkpoints are not stored here but are synchronized to the `SignalService`
     /// @dev A checkpoint commitment is any value (typically a state root) that uniquely identifies
     /// the state of the rollup at a specific point in time
-    Checkpoint public checkpoint;
+    Checkpoint public provenCheckpoint;
 
     /// @notice Verified transitions between two checkpoints
     /// @dev the startCheckpoint is not necessarily valid, but the endCheckpoint is correctly built on top of it.
@@ -37,7 +37,7 @@ contract CheckpointTracker {
     constructor(bytes32 genesis, address _publicationFeed, address _verifier) {
         // set the genesis checkpoint commitment of the rollup - genesis is trusted to be correct
         require(genesis != 0, "genesis checkpoint commitment cannot be 0");
-        checkpoint.commitment = genesis;
+        provenCheckpoint.commitment = genesis;
         publicationFeed = IPublicationFeed(_publicationFeed);
         verifier = IVerifier(_verifier);
     }
@@ -65,8 +65,8 @@ contract CheckpointTracker {
             proof
         );
 
-        if (start.publicationId == checkpoint.publicationId && start.commitment == checkpoint.commitment) {
-            checkpoint = end;
+        if (start.publicationId == provenCheckpoint.publicationId && start.commitment == provenCheckpoint.commitment) {
+            provenCheckpoint = end;
             emit CheckpointProven(end.publicationId, end.commitment);
             return;
         }
@@ -86,11 +86,11 @@ contract CheckpointTracker {
     /// @dev It is possible for `proveTransition` to advance to a checkpoint that can already
     /// be advanced again. This function can be used to identify the relevant transition.
     function advanceTo(Checkpoint calldata end) external {
-        bytes32 startCheckpointHash = keccak256(abi.encode(checkpoint));
+        bytes32 startCheckpointHash = keccak256(abi.encode(provenCheckpoint));
         bytes32 endCheckpointHash = keccak256(abi.encode(end));
         require(transitions[startCheckpointHash] == endCheckpointHash, "Unproven transition");
         delete transitions[startCheckpointHash];
-        checkpoint = end;
+        provenCheckpoint = end;
         emit CheckpointProven(end.publicationId, end.commitment);
     }
 }
