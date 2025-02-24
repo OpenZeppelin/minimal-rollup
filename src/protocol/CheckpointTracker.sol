@@ -45,17 +45,18 @@ contract CheckpointTracker is ICheckpointTracker {
     function proveTransition(Checkpoint calldata start, Checkpoint calldata end, bytes calldata proof) external {
         bytes32 startHash = keccak256(abi.encode(start));
         bytes32 endHash = keccak256(abi.encode(end));
+        bytes32 endPublicationId = publicationFeed.getPublicationHash(end.publicationId);
 
         require(end.commitment != 0, "Checkpoint commitment cannot be 0");
         // TODO: once the proving incentive mechanism is in place we should reconsider this requirement because
         // ideally we would use the proof that creates the longest chain of proven publications.
         require(transitions[startHash] == 0, "Checkpoint already has valid transition");
         require(start.publicationId < end.publicationId, "Start must be before end");
-        require(publicationFeed.getPublicationHash(end.publicationId) != 0, "Publication does not exist");
+        require(endPublicationId != 0, "Publication does not exist");
 
         verifier.verifyProof(
             publicationFeed.getPublicationHash(start.publicationId),
-            publicationFeed.getPublicationHash(end.publicationId),
+            endPublicationId,
             start.commitment,
             end.commitment,
             proof
