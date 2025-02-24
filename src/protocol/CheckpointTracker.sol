@@ -51,7 +51,7 @@ contract CheckpointTracker is ICheckpointTracker {
         // ideally we would use the proof that creates the longest chain of proven publications.
         require(transitions[startHash] == 0, "Checkpoint already has valid transition");
         require(start.publicationId < end.publicationId, "Start must be before end");
-        require(end.publicationId < publicationFeed.getNextPublicationId(), "Publication does not exist");
+        require(publicationFeed.getPublicationHash(end.publicationId) != 0, "Publication does not exist");
 
         verifier.verifyProof(
             publicationFeed.getPublicationHash(start.publicationId),
