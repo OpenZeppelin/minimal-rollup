@@ -55,7 +55,7 @@ abstract contract SignalService is ISignalService {
 
     /// @inheritdoc ISignalService
     function signalSlot(uint64 chainId, address account, bytes32 signal) public pure virtual returns (bytes32 slot) {
-        bytes32 namespaceId = keccak256(abi.encodePacked(chainId, account, signal));
+        bytes32 namespaceId = keccak256(abi.encode(chainId, account, signal));
         return keccak256(abi.encode(uint256(namespaceId) - 1)) & ~bytes32(uint256(0xff));
     }
 
