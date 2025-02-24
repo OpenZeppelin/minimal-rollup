@@ -28,13 +28,14 @@ contract CheckpointTracker is ICheckpointTracker {
     constructor(bytes32 genesis, address _publicationFeed, address _verifier) {
         // set the genesis checkpoint commitment of the rollup - genesis is trusted to be correct
         require(genesis != 0, "genesis checkpoint commitment cannot be 0");
-        Checkpoint memory genesisCheckpoint = Checkpoint({
-            publicationId: 0,
-            commitment: genesis
-        });
-        provenCheckpointHash = keccak256(abi.encode(genesisCheckpoint));
+        
         publicationFeed = IPublicationFeed(_publicationFeed);
         verifier = IVerifier(_verifier);
+
+        Checkpoint memory genesisCheckpoint = Checkpoint({publicationId: 0, commitment: genesis});
+        provenCheckpointHash = keccak256(abi.encode(genesisCheckpoint));
+        emit CheckpointSeen(genesisCheckpoint.publicationId, genesisCheckpoint.commitment, provenCheckpointHash);
+        emit CheckpointProven(provenCheckpointHash);
     }
 
     /// @notice Verifies a transition between two checkpoints. Update the latest `provenCheckpoint` if possible
@@ -60,29 +61,20 @@ contract CheckpointTracker is ICheckpointTracker {
             proof
         );
 
-        if (startCheckpointHash == provenCheckpointHash) {
-            provenCheckpointHash = endCheckpointHash;
-            emit CheckpointProven(end.publicationId, end.commitment);
-            return;
-        }
-
         if (transitions[endCheckpointHash] != 0) {
             // we are prepending to a previously proven transition. Combine them into a single transition
             endCheckpointHash = transitions[endCheckpointHash];
+        } else {
+            emit CheckpointSeen(end.publicationId, end.commitment, endCheckpointHash);
         }
 
-        transitions[startCheckpointHash] = endCheckpointHash;
-        emit TransitionProven(start.publicationId, start.commitment, end.publicationId, end.commitment);
-    }
+        emit TransitionProven(startCheckpointHash, endCheckpointHash);
 
-    /// @notice Advance to an already proven checkpoint
-    /// @param end The checkpoint to advance to
-    /// @dev It is possible for `proveTransition` to advance to a checkpoint that can already
-    /// be advanced again. This function can be used to identify the relevant transition.
-    function advanceTo(Checkpoint calldata end) external {
-        bytes32 endCheckpointHash = keccak256(abi.encode(end));
-        require(transitions[provenCheckpointHash] == endCheckpointHash, "Unproven transition");
-        provenCheckpointHash = endCheckpointHash;
-        emit CheckpointProven(end.publicationId, end.commitment);
+        if (startCheckpointHash == provenCheckpointHash) {
+            provenCheckpointHash = endCheckpointHash;
+            emit CheckpointProven(endCheckpointHash);
+        } else {
+            transitions[startCheckpointHash] = endCheckpointHash;
+        }
     }
 }
