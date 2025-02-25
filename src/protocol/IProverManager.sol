@@ -1,17 +1,26 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
-interface IProverManager {
-    /**
-     * @notice Checks if `prover` is currently allowed to prove a publication
-     *         transitioning from `startId` to `endId`.
-     */
-    function canProve(address prover, uint256 startId, uint256 endId) external view returns (bool);
+import {ICheckpointTracker} from "./ICheckpointTracker.sol";
+import {IPublicationFeed} from "./IPublicationFeed.sol";
 
-    /**
-     * @notice Called by the Checkpoint contract after a successful proof.
-     *         This gives the incentives contract a chance to reward the prover
-     *         and update internal accounting or slash the previous prover if needed.
-     */
-    function onProven(address prover, uint256 startId, uint256 endId) external;
+interface IProverManager {
+    function proveOwnPeriod(
+        ICheckpointTracker.Checkpoint calldata start,
+        ICheckpointTracker.Checkpoint calldata end,
+        IPublicationFeed.PublicationHeader calldata endPublicationHeader,
+        bytes calldata nextPublicationHeaderBytes,
+        bytes calldata proof,
+        uint256 periodId
+    ) external;
+
+    /// @notice Called by a prover when the originally assigned prover was evicted or passed its deadline for proving.
+    function proveOtherPeriod(
+        ICheckpointTracker.Checkpoint calldata start,
+        ICheckpointTracker.Checkpoint calldata end,
+        IPublicationFeed.PublicationHeader[] calldata publicationHeadersToProve, // these are the rollup's publications
+        IPublicationFeed.PublicationHeader calldata nextPublicationHeader,
+        bytes calldata proof,
+        uint256 periodId
+    ) external;
 }

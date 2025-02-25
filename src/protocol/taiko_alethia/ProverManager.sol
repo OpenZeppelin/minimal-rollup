@@ -4,17 +4,18 @@ pragma solidity ^0.8.28;
 import {ICheckpointTracker} from "../ICheckpointTracker.sol";
 import {IProverManager} from "../IProverManager.sol";
 import {IPublicationFeed} from "../IPublicationFeed.sol";
+import {IProposerFees} from "../IProposerFees.sol";
+import {IProverManager} from "../IProverManager.sol";
 
-contract ProverManager {
+contract ProverManager is IProposerFees, IProverManager{
     struct Period {
         address prover;
         uint256 livenessBond; // stake the prover has to pay to register
         uint256 accumulatedFees; // the fees accumulated by proposers' publications for this period
         uint256 fee; // per-publication fee (in wei)
         uint256 exitAllowedAt; //the time when the prover will be evicted
-        uint256 deadline; // the time by which the prover needs to submit a proof(this should only be needed after
-            // eviction)
-        bool slashed; //  flag that signlas the prover should be slashed
+        uint256 deadline; // the time by which the prover needs to submit a proof(this is only needed after a prover exits or is replaced)
+        bool slashed; //  flag that signlas the prover should be slashed(they have been evicted)
     }
 
     address public immutable inbox;
@@ -43,6 +44,8 @@ contract ProverManager {
     uint256 public livenessBond;
     /// @notice The percentage of the liveness bond that the evictor gets as an incentive
     uint256 public evictorIncentivePercentage;
+    /// @notice The percentage of the liveness bond(at the moment of the slashing) that is burned when a prover is slashed
+    uint256 public burnedStakePercentage;
 
     /// @notice Common balances for proposers and provers
     mapping(address => uint256) public balances;
@@ -70,13 +73,15 @@ contract ProverManager {
         uint256 _delayedFeeMultiplier,
         address _inbox,
         address _checkpointTracker,
-        address _publicationFeed
+        address _publicationFeed,
+        uint256 _burnedStakePercentage
     ) {
         minStepPercentage = _minStepPercentage;
         oldPublicationWindow = _oldPublicationWindow;
         offerActivationDelay = _offerActivationDelay;
         exitDelay = _exitDelay;
         delayedFeeMultiplier = _delayedFeeMultiplier;
+        burnedStakePercentage = _burnedStakePercentage;
         inbox = _inbox;
         checkpointTracker = ICheckpointTracker(_checkpointTracker);
         publicationFeed = IPublicationFeed(_publicationFeed);
@@ -98,10 +103,9 @@ contract ProverManager {
         emit Withdrawal(msg.sender, amount);
     }
 
-    /// @notice Proposers have to pay a fee for each publication they want to get proven. This should be called only by
-    /// the Inbox contract.
+    
+    /// @inheritdoc IProposerFees
     /// @dev This function advances to the next period if the current period has ended.
-    /// @param isDelayed Whether the publication is a delayed publication
     function payPublicationFee(address proposer, bool isDelayed) external payable {
         require(msg.sender == inbox, "Only the Inbox contract can call this function");
 
@@ -232,6 +236,7 @@ contract ProverManager {
     function proveOwnPeriod(
         ICheckpointTracker.Checkpoint calldata start,
         ICheckpointTracker.Checkpoint calldata end,
+        IPublicationFeed.PublicationHeader calldata endPublicationHeader,
         bytes calldata nextPublicationHeaderBytes,
         bytes calldata proof,
         uint256 periodId
@@ -239,37 +244,91 @@ contract ProverManager {
         Period storage period = periods[periodId];
         if (period.deadline != 0) {
             // This means that there is a deadline for the prover, we have to make sure they are within that deadline
-            require(block.timestamp < period.deadline, "Deadline has passed");
+            require(block.timestamp <= period.deadline, "Deadline has passed");
         }
+
+        // Verify that the end publication is within the period and valid
+        uint256 periodEnd = period.exitAllowedAt;
+        require(keccak256(abi.encode(endPublicationHeader)) == publicationFeed.getPublicationHash(end.publicationId), "Publication hash does not match");
+        require(endPublicationHeader.id == end.publicationId, "This is not the end publication");
+        require(endPublicationHeader.timestamp < periodEnd, "End publication is not within the period");
 
         checkpointTracker.proveTransition(start, end, proof);
 
-        // This means that the prover is claiming that they have finished all their publications for the period
         if (nextPublicationHeaderBytes.length > 0) {
-            uint256 periodEnd = period.exitAllowedAt;
+            // This means that the prover is claiming that they have finished all their publications for the period
             IPublicationFeed.PublicationHeader memory nextPublicationHeader =
                 abi.decode(nextPublicationHeaderBytes, (IPublicationFeed.PublicationHeader));
-            require(nextPublicationHeader.id == end.publicationId + 1, "Publication id does not match");
-            require(nextPublicationHeader.timestamp > periodEnd, "Publication is not after the period end");
+            require(nextPublicationHeader.id == end.publicationId + 1, "This is not the next publication");
+            require(nextPublicationHeader.timestamp > periodEnd, "Next publication is not after the period end");
             require(
                 keccak256(abi.encode(nextPublicationHeader))
                     == publicationFeed.getPublicationHash(nextPublicationHeader.id),
                 "Publication hash does not match"
             );
 
-            // If we have, distribute the funds to the prover
+            // If they have finished all their publications for the period, distribute the funds to the prover
             balances[period.prover] += period.accumulatedFees + period.livenessBond;
             delete periods[periodId];
         }
     }
 
-    /// @notice Called by a prover when the originally assigned prover was evicted or passed its deadline for proving.
+    /// @inheritdoc IProverManager
     function proveOtherPeriod(
         ICheckpointTracker.Checkpoint calldata start,
         ICheckpointTracker.Checkpoint calldata end,
-        IPublicationFeed.PublicationHeader[] calldata publicationHeadersToProve,
+        IPublicationFeed.PublicationHeader[] calldata publicationHeadersToProve, // these are the rollup's publications
         IPublicationFeed.PublicationHeader calldata nextPublicationHeader,
         bytes calldata proof,
         uint256 periodId
-    ) external {}
+    ) external {
+        Period storage period = periods[periodId];
+        uint256 numPubs = publicationHeadersToProve.length;
+        IPublicationFeed.PublicationHeader memory endPublicationHeader = publicationHeadersToProve[numPubs - 1];
+
+        require(period.slashed || block.timestamp > period.deadline, "We are still within the proving period");
+
+        //TODO: Should we check that the first publication is after the period start?
+       // Verify that the end publication is within the period and valid
+        uint256 periodEnd = period.exitAllowedAt;
+        require(keccak256(abi.encode(endPublicationHeader)) == publicationFeed.getPublicationHash(end.publicationId), "Publication hash does not match");
+        require(endPublicationHeader.id == end.publicationId, "This is not the end publication");
+        require(endPublicationHeader.timestamp < periodEnd, "End publication is not within the period");
+
+        // Verify that the next publication is valid and after the period end
+        require(nextPublicationHeader.id == end.publicationId + 1, "This is not the next publication");
+        require(nextPublicationHeader.timestamp > periodEnd, "Next publication is not after the period end");
+        require(
+            keccak256(abi.encode(nextPublicationHeader))
+                == publicationFeed.getPublicationHash(nextPublicationHeader.id),
+            "Publication hash does not match"
+        );
+
+        //Verify that all the publications are correct and linked together(they belong to this rollup)
+        for (uint256 i = 0; i < numPubs; i++) {
+            require(keccak256(abi.encode(publicationHeadersToProve[i])) == publicationFeed.getPublicationHash(publicationHeadersToProve[i].id), "Publication hash does not match");
+            if (i > 0) {
+                bytes32 prevHash = keccak256(abi.encode(publicationHeadersToProve[i-1]));
+                require(prevHash == publicationHeadersToProve[i].prevHash, "Previous publication hash does not match");
+            }
+        }
+
+        checkpointTracker.proveTransition(start, end, proof);
+
+        // Distribute the funds
+        uint256 _livenessBond = period.livenessBond;
+        uint256 accumulatedFees = period.accumulatedFees;
+        uint256 newProverFees = period.fee * numPubs;
+
+        // Pay the designed prover for the work they already did
+        balances[period.prover] += accumulatedFees - newProverFees;
+        
+        // Compensate the new prover(fees for the set of publications + a portion of the liveness bond)
+        uint256 livenessBondReward = _livenessBond * (100 - burnedStakePercentage) / 100;
+        balances[msg.sender] += newProverFees + livenessBondReward;
+
+        // Delete the period. This implicitely burns the remaining part of the liveness bond
+        delete periods[periodId];
+        
+    }
 }
