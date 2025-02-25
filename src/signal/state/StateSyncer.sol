@@ -59,11 +59,11 @@ abstract contract StateSyncer is IStateSyncer {
         return LibTrieProof.verifyState(slot, signal, commitment, proof);
     }
 
-    function syncState(uint64 chainId, uint64 publicationId, bytes32 commitment) external virtual onlySyncer {
-        _syncState(chainId, publicationId, commitment);
+    function syncCommitment(uint64 chainId, uint64 publicationId, bytes32 commitment) external virtual onlySyncer {
+        _syncCommitment(chainId, publicationId, commitment);
     }
 
-    function _syncState(uint64 chainId, uint64 publicationId, bytes32 commitment) internal virtual {
+    function _syncCommitment(uint64 chainId, uint64 publicationId, bytes32 commitment) internal virtual {
         if (latestPublicationId(chainId) < publicationId) {
             _latestPublicationId[chainId] = publicationId;
             _commitmentAt[chainId][publicationId] = commitment;
