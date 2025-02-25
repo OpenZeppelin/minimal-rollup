@@ -41,7 +41,6 @@ contract CheckpointTracker is ICheckpointTracker {
         emit CheckpointUpdated(provenHash);
     }
 
-    /// @inheritdoc ICheckpointTracker
     function proveTransition(Checkpoint calldata start, Checkpoint calldata end, bytes calldata proof) external {
         require(end.commitment != 0, "Checkpoint commitment cannot be 0");
         bytes32 startHash = keccak256(abi.encode(start));
