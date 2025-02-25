@@ -15,6 +15,12 @@ import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 interface ISignalService {
     event SignalsReceived(bytes32[] slots);
 
+    /// @dev Not the checkpoints contract
+    error UnauthorizedCheckpoints(address caller);
+
+    /// @dev Checkpoint contract.
+    function checkpoints() external view returns (address);
+
     /// @dev The signal is sent.
     function signalSent(address account, bytes32 signal) external view returns (bool sent);
 

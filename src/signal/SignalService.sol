@@ -13,24 +13,38 @@ import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 /// `verifySignal`. Storing the verification status is up to the accounts that interact with this service.
 ///
 /// For cases when the signal cannot be verified immediately (e.g., a storage proof of the L1 state in the L2),
-/// the contract defines a receiver role that must be implemented in `_checkReceiver`. Consider implementing
-/// an access control mechanism for this purpose.
-abstract contract SignalService is ISignalService {
+/// the contract defines a checkpoints contract getter that returns the Checkpoint contract address.
+contract SignalService is ISignalService {
     using SafeCast for uint256;
     using StorageSlot for bytes32;
     using LibTrieProof for address;
 
+    address immutable _checkpoints;
+
     mapping(bytes32 signal => bool) private _receivedSignals;
 
-    /// @dev Only an authorized receiver.
-    modifier onlyReceiver() {
-        _checkReceiver(msg.sender);
+    /// @dev Only the checkpoints contract.
+    modifier onlyCheckpoints() {
+        _checkCheckpoints(msg.sender);
         _;
     }
 
+    constructor(address checkpoints_) {
+        _checkpoints = checkpoints_;
+    }
+
+    /// @dev Checkpoint contract.
+    function checkpoints() public view virtual returns (address) {
+        return _checkpoints;
+    }
+
     /// @inheritdoc ISignalService
-    function signalSent(address account, bytes32 signal) public view virtual returns (bool sent) {
-        return signalSent(signalSlot(block.chainid.toUint64(), account, signal));
+    function signalSent(
+        address account,
+        bytes32 signal
+    ) public view virtual returns (bool sent) {
+        return
+            signalSent(signalSlot(block.chainid.toUint64(), account, signal));
     }
 
     /// @inheritdoc ISignalService
@@ -39,33 +53,46 @@ abstract contract SignalService is ISignalService {
     }
 
     /// @inheritdoc ISignalService
-    function signalReceived(uint64 chainId, address account, bytes32 signal)
-        public
-        view
-        virtual
-        returns (bool received)
-    {
+    function signalReceived(
+        uint64 chainId,
+        address account,
+        bytes32 signal
+    ) public view virtual returns (bool received) {
         return signalReceived(signalSlot(chainId, account, signal));
     }
 
     /// @inheritdoc ISignalService
-    function signalReceived(bytes32 slot) public view virtual returns (bool received) {
+    function signalReceived(
+        bytes32 slot
+    ) public view virtual returns (bool received) {
         return _receivedSignals[slot];
     }
 
     /// @inheritdoc ISignalService
-    function signalSlot(uint64 chainId, address account, bytes32 signal) public pure virtual returns (bytes32 slot) {
+    function signalSlot(
+        uint64 chainId,
+        address account,
+        bytes32 signal
+    ) public pure virtual returns (bytes32 slot) {
         bytes32 namespaceId = keccak256(abi.encode(chainId, account, signal));
-        return keccak256(abi.encode(uint256(namespaceId) - 1)) & ~bytes32(uint256(0xff));
+        unchecked {
+            return
+                keccak256(abi.encode(uint256(namespaceId) - 1)) &
+                ~bytes32(uint256(0xff));
+        }
     }
 
     /// @inheritdoc ISignalService
-    function sendSignal(bytes32 signal) external virtual returns (bytes32 slot) {
+    function sendSignal(
+        bytes32 signal
+    ) external virtual returns (bytes32 slot) {
         return _sendSignal(msg.sender, signal);
     }
 
     /// @inheritdoc ISignalService
-    function receiveSignal(bytes32[] calldata slots) external virtual onlyReceiver {
+    function receiveSignal(
+        bytes32[] calldata slots
+    ) external virtual onlyCheckpoints {
         _receiveSignal(slots);
     }
 
@@ -78,15 +105,25 @@ abstract contract SignalService is ISignalService {
         bytes[] calldata accountProof,
         bytes[] calldata storageProof
     ) external pure virtual returns (bool valid, bytes32 storageRoot) {
-        return signalService.verifyStorage(
-            root, signalSlot(chainId, signalService, signal), signal, accountProof, storageProof
-        );
+        return
+            signalService.verifyStorage(
+                root,
+                signalSlot(chainId, signalService, signal),
+                signal,
+                accountProof,
+                storageProof
+            );
     }
 
     /// @dev Must revert if the caller is not an authorized receiver.
-    function _checkReceiver(address caller) internal virtual;
+    function _checkCheckpoints(address caller) internal virtual {
+        require(caller == checkpoints(), UnauthorizedCheckpoints(caller));
+    }
 
-    function _sendSignal(address account, bytes32 signal) internal virtual returns (bytes32 slot) {
+    function _sendSignal(
+        address account,
+        bytes32 signal
+    ) internal virtual returns (bytes32 slot) {
         slot = signalSlot(block.chainid.toUint64(), account, signal);
         slot.getBytes32Slot().value = signal;
         return slot;
