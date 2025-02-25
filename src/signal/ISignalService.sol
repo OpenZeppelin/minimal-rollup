@@ -1,10 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
-import {LibTrieProof} from "../libs/LibTrieProof.sol";
-import {StorageSlot} from "@openzeppelin/contracts/utils/StorageSlot.sol";
-import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
-
 /// @dev Secure cross-chain messaging system for broadcasting arbitrary data (i.e. signals).
 ///
 /// Signals enable generalized on-chain communication, primarily for data transmission rather than value transfer.
@@ -13,8 +9,13 @@ import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 /// Signals are broadcast without specific recipients, allowing flexible cross-chain data sourcing from any
 /// source chain state (e.g., full transaction logs or contract storage).
 interface ISignalService {
-    event SignalSent(address account, bytes32 signal);
     event SignalsReceived(bytes32[] slots);
+
+    /// @dev Not the checkpoint tracker contract
+    error UnauthorizedCheckpoints(address caller);
+
+    /// @dev CheckpointTracker contract.
+    function checkpointTracker() external view returns (address);
 
     /// @dev The signal is sent.
     function signalSent(address account, bytes32 signal) external view returns (bool sent);

@@ -12,20 +12,29 @@ import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 /// The service defines the minimal logic to broadcast signals through `sendSignal` and verify them with
 /// `verifySignal`. Storing the verification status is up to the accounts that interact with this service.
 ///
-/// For cases when the signal cannot verified immediately (e.g., a storage proof of the L1 state in the L2),
-/// the contract defines a receiver role that must be implemented in `_checkReceiver`. Consider implementing
-/// an access control mechanism for this purpose.
-abstract contract SignalService is ISignalService {
+/// For cases when the signal cannot be verified immediately (e.g., a storage proof of the L1 state in the L2),
+/// the contract defines a checkpointTracker that returns the CheckpointTracker contract address.
+contract SignalService is ISignalService {
     using SafeCast for uint256;
     using StorageSlot for bytes32;
-    using LibTrieProof for address;
+
+    address immutable _checkpointTracker;
 
     mapping(bytes32 signal => bool) private _receivedSignals;
 
-    /// @dev Only an authorized receiver.
-    modifier onlyReceiver() {
-        _checkReceiver(msg.sender);
+    /// @dev Only the checkpoint tracker contract.
+    modifier onlyCheckpointTracker() {
+        _checkCheckpointTracker(msg.sender);
         _;
+    }
+
+    constructor(address checkpointTracker_) {
+        _checkpointTracker = checkpointTracker_;
+    }
+
+    /// @dev Checkpoint contract.
+    function checkpointTracker() public view virtual returns (address) {
+        return _checkpointTracker;
     }
 
     /// @inheritdoc ISignalService
@@ -45,7 +54,7 @@ abstract contract SignalService is ISignalService {
         virtual
         returns (bool received)
     {
-        return signalReceived(chainId, account, signal);
+        return signalReceived(signalSlot(chainId, account, signal));
     }
 
     /// @inheritdoc ISignalService
@@ -56,7 +65,9 @@ abstract contract SignalService is ISignalService {
     /// @inheritdoc ISignalService
     function signalSlot(uint64 chainId, address account, bytes32 signal) public pure virtual returns (bytes32 slot) {
         bytes32 namespaceId = keccak256(abi.encode(chainId, account, signal));
-        return keccak256(abi.encode(uint256(namespaceId) - 1)) & ~bytes32(uint256(0xff));
+        unchecked {
+            return keccak256(abi.encode(uint256(namespaceId) - 1)) & ~bytes32(uint256(0xff));
+        }
     }
 
     /// @inheritdoc ISignalService
@@ -65,7 +76,7 @@ abstract contract SignalService is ISignalService {
     }
 
     /// @inheritdoc ISignalService
-    function receiveSignal(bytes32[] calldata slots) external virtual onlyReceiver {
+    function receiveSignal(bytes32[] calldata slots) external virtual onlyCheckpointTracker {
         _receiveSignal(slots);
     }
 
@@ -78,18 +89,20 @@ abstract contract SignalService is ISignalService {
         bytes[] calldata accountProof,
         bytes[] calldata storageProof
     ) external pure virtual returns (bool valid, bytes32 storageRoot) {
-        return signalService.verifyStorage(
-            root, signalSlot(chainId, signalService, signal), signal, accountProof, storageProof
+        return LibTrieProof.verifyStorage(
+            signalService, root, signalSlot(chainId, signalService, signal), signal, accountProof, storageProof
         );
     }
 
     /// @dev Must revert if the caller is not an authorized receiver.
-    function _checkReceiver(address caller) internal virtual;
+    function _checkCheckpointTracker(address caller) internal virtual {
+        require(caller == checkpointTracker(), UnauthorizedCheckpoints(caller));
+    }
 
+    /// @dev Allows signaling a `0` value. However, it's considered a no-op for the destination chain.
     function _sendSignal(address account, bytes32 signal) internal virtual returns (bytes32 slot) {
         slot = signalSlot(block.chainid.toUint64(), account, signal);
         slot.getBytes32Slot().value = signal;
-        emit SignalSent(account, signal);
         return slot;
     }
 

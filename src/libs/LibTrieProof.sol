@@ -24,7 +24,7 @@ library LibTrieProof {
         RLPReader.RLPItem[] memory accountState =
             RLPReader.readList(SecureMerkleTrie.get(abi.encodePacked(account), accountProof, stateRoot));
 
-        // Ethereum's State Trie state layout is a 4-item array of nonce, balance, storageRoot, codeHash]
+        // Ethereum's State Trie state layout is a 4-item array of [nonce, balance, storageRoot, codeHash]
         // See https://ethereum.org/en/developers/docs/data-structures-and-encoding/patricia-merkle-trie/#state-trie
         storageRoot = bytes32(RLPReader.readBytes(accountState[2]));
 
