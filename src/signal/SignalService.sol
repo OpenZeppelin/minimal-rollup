@@ -17,7 +17,6 @@ import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 contract SignalService is ISignalService {
     using SafeCast for uint256;
     using StorageSlot for bytes32;
-    using LibTrieProof for address;
 
     address immutable _checkpoints;
 
@@ -90,8 +89,8 @@ contract SignalService is ISignalService {
         bytes[] calldata accountProof,
         bytes[] calldata storageProof
     ) external pure virtual returns (bool valid, bytes32 storageRoot) {
-        return signalService.verifyStorage(
-            root, signalSlot(chainId, signalService, signal), signal, accountProof, storageProof
+        return LibTrieProof.verifyStorage(
+            signalService, root, signalSlot(chainId, signalService, signal), signal, accountProof, storageProof
         );
     }
 
