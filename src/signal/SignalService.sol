@@ -39,12 +39,8 @@ contract SignalService is ISignalService {
     }
 
     /// @inheritdoc ISignalService
-    function signalSent(
-        address account,
-        bytes32 signal
-    ) public view virtual returns (bool sent) {
-        return
-            signalSent(signalSlot(block.chainid.toUint64(), account, signal));
+    function signalSent(address account, bytes32 signal) public view virtual returns (bool sent) {
+        return signalSent(signalSlot(block.chainid.toUint64(), account, signal));
     }
 
     /// @inheritdoc ISignalService
@@ -53,46 +49,35 @@ contract SignalService is ISignalService {
     }
 
     /// @inheritdoc ISignalService
-    function signalReceived(
-        uint64 chainId,
-        address account,
-        bytes32 signal
-    ) public view virtual returns (bool received) {
+    function signalReceived(uint64 chainId, address account, bytes32 signal)
+        public
+        view
+        virtual
+        returns (bool received)
+    {
         return signalReceived(signalSlot(chainId, account, signal));
     }
 
     /// @inheritdoc ISignalService
-    function signalReceived(
-        bytes32 slot
-    ) public view virtual returns (bool received) {
+    function signalReceived(bytes32 slot) public view virtual returns (bool received) {
         return _receivedSignals[slot];
     }
 
     /// @inheritdoc ISignalService
-    function signalSlot(
-        uint64 chainId,
-        address account,
-        bytes32 signal
-    ) public pure virtual returns (bytes32 slot) {
+    function signalSlot(uint64 chainId, address account, bytes32 signal) public pure virtual returns (bytes32 slot) {
         bytes32 namespaceId = keccak256(abi.encode(chainId, account, signal));
         unchecked {
-            return
-                keccak256(abi.encode(uint256(namespaceId) - 1)) &
-                ~bytes32(uint256(0xff));
+            return keccak256(abi.encode(uint256(namespaceId) - 1)) & ~bytes32(uint256(0xff));
         }
     }
 
     /// @inheritdoc ISignalService
-    function sendSignal(
-        bytes32 signal
-    ) external virtual returns (bytes32 slot) {
+    function sendSignal(bytes32 signal) external virtual returns (bytes32 slot) {
         return _sendSignal(msg.sender, signal);
     }
 
     /// @inheritdoc ISignalService
-    function receiveSignal(
-        bytes32[] calldata slots
-    ) external virtual onlyCheckpoints {
+    function receiveSignal(bytes32[] calldata slots) external virtual onlyCheckpoints {
         _receiveSignal(slots);
     }
 
@@ -105,14 +90,9 @@ contract SignalService is ISignalService {
         bytes[] calldata accountProof,
         bytes[] calldata storageProof
     ) external pure virtual returns (bool valid, bytes32 storageRoot) {
-        return
-            signalService.verifyStorage(
-                root,
-                signalSlot(chainId, signalService, signal),
-                signal,
-                accountProof,
-                storageProof
-            );
+        return signalService.verifyStorage(
+            root, signalSlot(chainId, signalService, signal), signal, accountProof, storageProof
+        );
     }
 
     /// @dev Must revert if the caller is not an authorized receiver.
@@ -120,10 +100,7 @@ contract SignalService is ISignalService {
         require(caller == checkpoints(), UnauthorizedCheckpoints(caller));
     }
 
-    function _sendSignal(
-        address account,
-        bytes32 signal
-    ) internal virtual returns (bytes32 slot) {
+    function _sendSignal(address account, bytes32 signal) internal virtual returns (bytes32 slot) {
         slot = signalSlot(block.chainid.toUint64(), account, signal);
         slot.getBytes32Slot().value = signal;
         return slot;
