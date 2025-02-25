@@ -89,7 +89,6 @@ abstract contract SignalService is ISignalService {
     function _sendSignal(address account, bytes32 signal) internal virtual returns (bytes32 slot) {
         slot = signalSlot(block.chainid.toUint64(), account, signal);
         slot.getBytes32Slot().value = signal;
-        emit SignalSent(account, signal);
         return slot;
     }
 

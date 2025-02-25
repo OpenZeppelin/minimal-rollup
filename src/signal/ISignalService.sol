@@ -13,7 +13,6 @@ import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 /// Signals are broadcast without specific recipients, allowing flexible cross-chain data sourcing from any
 /// source chain state (e.g., full transaction logs or contract storage).
 interface ISignalService {
-    event SignalSent(address account, bytes32 signal);
     event SignalsReceived(bytes32[] slots);
 
     /// @dev The signal is sent.
