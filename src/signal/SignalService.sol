@@ -45,7 +45,7 @@ abstract contract SignalService is ISignalService {
         virtual
         returns (bool received)
     {
-        return signalReceived(chainId, account, signal);
+        return signalReceived(signalSlot(chainId, account, signal));
     }
 
     /// @inheritdoc ISignalService
