@@ -2,9 +2,15 @@
 pragma solidity ^0.8.28;
 
 interface ICheckpointTracker {
+    struct Commitment {
+        bytes32 blockHash;
+        bytes32 stateRoot;
+        bytes32 signalRoot;
+    }
+
     struct Checkpoint {
         uint256 publicationId;
-        bytes commitment;
+        Commitment commitment;
     }
 
     /// @notice Emitted when the proven checkpoint is updated

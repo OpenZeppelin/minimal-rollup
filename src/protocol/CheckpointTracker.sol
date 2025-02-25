@@ -26,19 +26,21 @@ contract CheckpointTracker is ICheckpointTracker {
     /// @dev This limits the overhead required to submit a proof
     uint256 private constant MAX_EXTRA_UPDATES = 10; // TODO: What is a reasonable number here?
 
-    /// @param _genesisComittment the commitment describing the initial state of the rollup
+    /// @param _genesisBlockHash the commitment describing the initial state of the rollup
     /// @param _publicationFeed the input data source that updates the state of this rollup
     /// @param _verifier a contract that can verify the validity of a transition from one checkpoint to another
-    constructor(bytes memory _genesisComittment, address _publicationFeed, address _verifier) {
+    constructor(bytes32 _genesisBlockHash, address _publicationFeed, address _verifier) {
         publicationFeed = IPublicationFeed(_publicationFeed);
         verifier = IVerifier(_verifier);
 
         uint256 genesisPublicationId = 0;
-        bytes32 genesisCommitmentHash = keccak256(_genesisComittment);
+
+        Commitment memory genesisCommitment = Commitment({blockHash: _genesisBlockHash, stateRoot: 0, signalRoot: 0});
+        bytes32 genesisCommitmentHash = keccak256(abi.encode(genesisCommitment));
         latestCheckpointHash = keccak256(abi.encodePacked(genesisPublicationId, genesisCommitmentHash));
 
-        Checkpoint memory genesisCheckpoint = Checkpoint(genesisPublicationId, _genesisComittment);
-        emit CheckpointUpdated(genesisCommitmentHash, genesisCheckpoint);
+        Checkpoint memory genesisCheckpoint = Checkpoint(genesisPublicationId, genesisCommitment);
+        emit CheckpointUpdated(latestCheckpointHash, genesisCheckpoint);
     }
 
     function proveTransition(
@@ -47,7 +49,6 @@ contract CheckpointTracker is ICheckpointTracker {
         Checkpoint calldata endCheckpoint,
         bytes calldata proof
     ) external {
-        require(endCheckpoint.commitment.length != 0, "Checkpoint commitment cannot be empty");
         bytes32 startChekpointHash = keccak256(abi.encodePacked(startPublicationId, startCommitmentHash));
 
         // TODO: once the proving incentive mechanism is in place we should reconsider this requirement because
@@ -60,7 +61,11 @@ contract CheckpointTracker is ICheckpointTracker {
         require(endPublicationHash != 0, "Publication does not exist");
 
         verifier.verifyProof(
-            startPublicationHash, endPublicationHash, endPublicationHash, keccak256(endCheckpoint.commitment), proof
+            startPublicationHash,
+            endPublicationHash,
+            endPublicationHash,
+            keccak256(abi.encode(endCheckpoint.commitment)),
+            proof
         );
 
         // TODO: in some cases, this endcheckpoint don't need to be saved, but lets do it in the future after ABI are
@@ -86,8 +91,6 @@ contract CheckpointTracker is ICheckpointTracker {
         if (_latestCheckpointHash != latestCheckpointHash) {
             latestCheckpointHash = _latestCheckpointHash;
             emit CheckpointUpdated(_latestCheckpointHash, latestCheckpoint);
-
-            // TODO: save latestCheckpoint to signal service?
         }
     }
 }
