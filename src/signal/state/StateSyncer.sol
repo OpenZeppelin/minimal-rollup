@@ -8,7 +8,6 @@ import {IStateSyncer} from "./IStateSyncer.sol";
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 
 abstract contract StateSyncer is IStateSyncer {
-    using LibTrieProof for bytes32;
     using SafeCast for uint256;
 
     address private immutable _signalService;
@@ -27,7 +26,7 @@ abstract contract StateSyncer is IStateSyncer {
 
     function syncSignal(uint64 chainId, uint64 blockNumber, bytes32 root)
         public
-        view
+        pure
         virtual
         returns (bytes32 signal)
     {
@@ -36,10 +35,6 @@ abstract contract StateSyncer is IStateSyncer {
 
     function signalService() public view virtual returns (ISignalService) {
         return ISignalService(_signalService);
-    }
-
-    function stateSynced(uint64 chainId, uint64 blockNumber, bytes32 root) public view virtual returns (bool) {
-        return stateAt(chainId, blockNumber) == root;
     }
 
     function stateAt(uint64 chainId, uint64 blockNumber) public view virtual returns (bytes32 root) {
@@ -61,7 +56,7 @@ abstract contract StateSyncer is IStateSyncer {
     {
         bytes32 slot =
             signalService().signalSlot(block.chainid.toUint64(), address(this), syncSignal(chainId, blockNumber, root));
-        return slot.verifyState(syncSignal(chainId, blockNumber, root), root, proof);
+        return LibTrieProof.verifyState(slot, syncSignal(chainId, blockNumber, root), root, proof);
     }
 
     function syncState(uint64 chainId, uint64 blockNumber, bytes32 root) external virtual onlySyncer {
