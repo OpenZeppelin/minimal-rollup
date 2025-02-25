@@ -51,11 +51,8 @@ contract CheckpointTracker2 {
             bytes32 checkpointHash = keccak256(abi.encode(checkpoint));
 
             _checkpoint = transitions[checkpointHash];
-            if (checkpoint.publicationId != 0) {
-                _provenParentHash = checkpointHash;
-            } else {
-                break;
-            }
+            if (checkpoint.publicationId != 0) break;
+            _provenParentHash = checkpointHash;
         }
 
         if (provenParentHash == _provenParentHash) {
