@@ -14,38 +14,54 @@ contract CheckpointTracker2 {
 
     event CheckpointProven(Checkpoint checkpoint);
 
-    event TransitionProven(bytes32 startHash, Checkpoint end);
+    event TransitionProven(bytes32 parentHash, Checkpoint end);
 
-    bytes32 public lastStartHash;
-    mapping(bytes32 startHash => Checkpoint endCheckpoint) public transitions;
+    bytes32 public provenParentHash;
+    mapping(bytes32 parentHash => Checkpoint endCheckpoint) public transitions;
 
-    function proveTransition(Checkpoint calldata start, Checkpoint calldata end, bytes calldata proof) external {
-        require(end.publicationId != 0, "End publication id cannot be 0");
-        require(end.blockNumber != 0, "End block number cannot be 0");
-        require(end.blockHash != 0, "End block hash cannot be 0");
+    function proveTransition(Checkpoint calldata parent, Checkpoint calldata checkpoint, bytes calldata proof)
+        external
+    {
+        require(checkpoint.publicationId != 0, "End publication id cannot be 0");
+        require(checkpoint.blockNumber != 0, "End block number cannot be 0");
+        require(checkpoint.blockHash != 0, "End block hash cannot be 0");
 
-        require(end.publicationId > start.publicationId, "End publication id must be greater than start publication id");
-        require(end.blockNumber > start.blockNumber, "End block number must be greater than start block number");
+        require(
+            checkpoint.publicationId > parent.publicationId,
+            "End publication id must be greater than parent publication id"
+        );
+        require(
+            checkpoint.blockNumber > parent.blockNumber, "End block number must be greater than parent block number"
+        );
 
-        bytes32 startHash = keccak256(abi.encode(start));
+        bytes32 parentHash = keccak256(abi.encode(parent));
 
-        require(transitions[startHash].publicationId == 0, "transition already proven");
+        require(transitions[parentHash].publicationId == 0, "transition already proven");
 
         // Verify the proof below
 
         // If the proof is valid, set the end checkpoint
-        transitions[startHash] = end; // TODO: sometimes we do not need to save this transition
-        emit TransitionProven(startHash, end);
+        transitions[parentHash] = checkpoint; // TODO: sometimes we do not need to save this transition
+        emit TransitionProven(parentHash, checkpoint);
 
-        bytes32 endHash = keccak256(abi.encode(end));
+        bytes32 _provenParentHash = provenParentHash;
+        Checkpoint memory _checkpoint = transitions[_provenParentHash];
+
         while (true) {
-            Checkpoint memory nextCheckpoint = transitions[endHash];
-            if (nextCheckpoint.publicationId == 0) break;
+            bytes32 checkpointHash = keccak256(abi.encode(checkpoint));
 
-            lastStartHash = endHash;
-            emit CheckpointProven(nextCheckpoint);
-            
-            endHash = keccak256(abi.encode(nextCheckpoint));
+            _checkpoint = transitions[checkpointHash];
+            if (checkpoint.publicationId != 0) {
+                _provenParentHash = checkpointHash;
+            } else {
+                break;
+            }
+        }
+
+        if (provenParentHash == _provenParentHash) {
+            provenParentHash = _provenParentHash;
+            // IStateSyncer.syncState(_checkpoint.blockNumber, _checkpoint.blockHash);
+            emit CheckpointProven(_checkpoint);
         }
     }
 }
