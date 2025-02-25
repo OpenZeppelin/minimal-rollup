@@ -10,7 +10,7 @@ contract CheckpointTracker is ICheckpointTracker {
     /// @dev Previous checkpoints are not stored here but are synchronized to the `SignalService`
     /// @dev A checkpoint commitment is any value (typically a state root) that uniquely identifies
     /// the state of the rollup at a specific point in time
-    bytes32 public latestCheckpointHash;
+    bytes32 public provenHash;
 
     /// @notice Verified transitions between two checkpoints
     /// @dev the start checkpoint is not necessarily valid, but the end checkpoint is correctly built on top of it.
@@ -35,7 +35,7 @@ contract CheckpointTracker is ICheckpointTracker {
 
         uint256 genesisPublicationId = 0;
         bytes32 genesisCommitmentHash = keccak256(_genesisComittment);
-        latestCheckpointHash = keccak256(abi.encodePacked(genesisPublicationId, genesisCommitmentHash));
+        provenHash = keccak256(abi.encodePacked(genesisPublicationId, genesisCommitmentHash));
 
         Checkpoint memory genesisCheckpoint = Checkpoint(genesisPublicationId, _genesisComittment);
         emit CheckpointUpdated(genesisCommitmentHash, genesisCheckpoint);
@@ -75,17 +75,17 @@ contract CheckpointTracker is ICheckpointTracker {
     /// Instead, each proof should advance the checkpoint by a manageable increment, regardless
     /// of which transition it proves.
     function _updateLatestCheckpoint() internal {
-        bytes32 _latestCheckpointHash = latestCheckpointHash;
+        bytes32 _provenHash = provenHash;
         Checkpoint memory latestCheckpoint;
 
         for (uint256 i; i < MAX_EXTRA_UPDATES; ++i) {
-            latestCheckpoint = transitions[_latestCheckpointHash];
+            latestCheckpoint = transitions[_provenHash];
             if (latestCheckpoint.publicationId == 0) break;
         }
 
-        if (_latestCheckpointHash != latestCheckpointHash) {
-            latestCheckpointHash = _latestCheckpointHash;
-            emit CheckpointUpdated(_latestCheckpointHash, latestCheckpoint);
+        if (_provenHash != provenHash) {
+            provenHash = _provenHash;
+            emit CheckpointUpdated(_provenHash, latestCheckpoint);
 
             // TODO: save latestCheckpoint to signal service?
         }
