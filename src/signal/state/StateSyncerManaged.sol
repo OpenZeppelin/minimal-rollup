@@ -8,14 +8,14 @@ import {AccessManaged} from "@openzeppelin/contracts/access/manager/AccessManage
 
 /// @dev StateSyncer with a syncer role managed through an AccessManager authority.
 contract StateSyncerManaged is StateSyncer, AccessManaged {
-    uint64 internal constant SIGNAL_RECEIVER_ROLE = uint64(uint256(keccak256("Taiko.StateSyncer.Syncer")));
+    uint64 internal constant STATE_SYNCER_ROLE = uint64(uint256(keccak256("Taiko.StateSyncer.Syncer")));
 
     /// @dev Sets the manager.
     constructor(address manager, address signalService_) AccessManaged(manager) StateSyncer(signalService_) {}
 
     /// @inheritdoc StateSyncer
     function _checkSyncer(address caller) internal virtual override {
-        (bool member,) = IAccessManager(authority()).hasRole(SIGNAL_RECEIVER_ROLE, caller);
+        (bool member,) = IAccessManager(authority()).hasRole(STATE_SYNCER_ROLE, caller);
         require(member, AccessManagedUnauthorized(caller));
     }
 }
