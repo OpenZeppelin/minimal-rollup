@@ -4,6 +4,7 @@ pragma solidity ^0.8.28;
 import {LibTrieProof} from "../libs/LibTrieProof.sol";
 import {ISignalService} from "./ISignalService.sol";
 
+import {SlotDerivation} from "@openzeppelin/contracts/utils/SlotDerivation.sol";
 import {StorageSlot} from "@openzeppelin/contracts/utils/StorageSlot.sol";
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 
@@ -17,6 +18,7 @@ import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 contract SignalService is ISignalService {
     using SafeCast for uint256;
     using StorageSlot for bytes32;
+    using SlotDerivation for string;
 
     address immutable _checkpointTracker;
 
@@ -64,10 +66,7 @@ contract SignalService is ISignalService {
 
     /// @inheritdoc ISignalService
     function signalSlot(uint64 chainId, address account, bytes32 signal) public pure virtual returns (bytes32 slot) {
-        bytes32 namespaceId = keccak256(abi.encode(chainId, account, signal));
-        unchecked {
-            return keccak256(abi.encode(uint256(namespaceId) - 1)) & ~bytes32(uint256(0xff));
-        }
+        return string(abi.encodePacked(chainId, account, signal)).erc7201Slot();
     }
 
     /// @inheritdoc ISignalService
