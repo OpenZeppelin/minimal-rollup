@@ -14,7 +14,7 @@ contract CheckpointTracker is ICheckpointTracker {
 
     /// @notice Verified transitions between two checkpoints
     /// @dev the start checkpoint is not necessarily valid, but the end checkpoint is correctly built on top of it.
-    mapping(bytes32 startCheckpointHash => Checkpoint endCheckpoint) public transitions;
+    mapping(bytes32 startHash => Checkpoint endCheckpoint) public transitions;
 
     IPublicationFeed public immutable publicationFeed;
 
