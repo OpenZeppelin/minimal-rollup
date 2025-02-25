@@ -33,29 +33,29 @@ contract CheckpointTracker is ICheckpointTracker {
         publicationFeed = IPublicationFeed(_publicationFeed);
         verifier = IVerifier(_verifier);
 
-        uint256 genesisPublicationId = 0;
+        uint256 genesisPubId = 0;
         bytes32 genesisCommitmentHash = keccak256(_genesisComittment);
-        provenHash = keccak256(abi.encodePacked(genesisPublicationId, genesisCommitmentHash));
+        provenHash = keccak256(abi.encodePacked(genesisPubId, genesisCommitmentHash));
 
-        Checkpoint memory genesisCheckpoint = Checkpoint(genesisPublicationId, _genesisComittment);
+        Checkpoint memory genesisCheckpoint = Checkpoint(genesisPubId, _genesisComittment);
         emit CheckpointUpdated(genesisCommitmentHash, genesisCheckpoint);
     }
 
     function proveTransition(
-        uint256 startPublicationId,
+        uint256 startPubId,
         uint256 startCommitmentHash,
         Checkpoint calldata endCheckpoint,
         bytes calldata proof
     ) external {
         require(endCheckpoint.commitment.length != 0, "Checkpoint commitment cannot be empty");
-        bytes32 startChekpointHash = keccak256(abi.encodePacked(startPublicationId, startCommitmentHash));
+        bytes32 startChekpointHash = keccak256(abi.encodePacked(startPubId, startCommitmentHash));
 
         // TODO: once the proving incentive mechanism is in place we should reconsider this requirement because
         // ideally we would use the proof that creates the longest chain of proven publications.
         require(transitions[startChekpointHash].publicationId == 0, "Checkpoint already has valid transition");
-        require(startPublicationId < endCheckpoint.publicationId, "Start must be before end");
+        require(startPubId < endCheckpoint.publicationId, "Start must be before end");
 
-        bytes32 startPublicationHash = publicationFeed.getPublicationHash(startPublicationId);
+        bytes32 startPublicationHash = publicationFeed.getPublicationHash(startPubId);
         bytes32 endPublicationHash = publicationFeed.getPublicationHash(endCheckpoint.publicationId);
         require(endPublicationHash != 0, "Publication does not exist");
 
@@ -66,7 +66,7 @@ contract CheckpointTracker is ICheckpointTracker {
         // TODO: in some cases, this endcheckpoint don't need to be saved, but lets do it in the future after ABI are
         // finalized.
         transitions[startChekpointHash] = endCheckpoint;
-        emit TransitionProven(startPublicationId, startCommitmentHash, endCheckpoint);
+        emit TransitionProven(startPubId, startCommitmentHash, endCheckpoint);
 
         _updateLatestCheckpoint();
     }
