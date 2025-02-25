@@ -13,28 +13,28 @@ import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 /// `verifySignal`. Storing the verification status is up to the accounts that interact with this service.
 ///
 /// For cases when the signal cannot be verified immediately (e.g., a storage proof of the L1 state in the L2),
-/// the contract defines a checkpoints contract getter that returns the Checkpoint contract address.
+/// the contract defines a checkpointTracker that returns the CheckpointTracker contract address.
 contract SignalService is ISignalService {
     using SafeCast for uint256;
     using StorageSlot for bytes32;
 
-    address immutable _checkpoints;
+    address immutable _checkpointTracker;
 
     mapping(bytes32 signal => bool) private _receivedSignals;
 
-    /// @dev Only the checkpoints contract.
-    modifier onlyCheckpoints() {
-        _checkCheckpoints(msg.sender);
+    /// @dev Only the checkpoint tracker contract.
+    modifier onlyCheckpointTracker() {
+        _checkCheckpointTracker(msg.sender);
         _;
     }
 
-    constructor(address checkpoints_) {
-        _checkpoints = checkpoints_;
+    constructor(address checkpointTracker_) {
+        _checkpointTracker = checkpointTracker_;
     }
 
     /// @dev Checkpoint contract.
-    function checkpoints() public view virtual returns (address) {
-        return _checkpoints;
+    function checkpointTracker() public view virtual returns (address) {
+        return _checkpointTracker;
     }
 
     /// @inheritdoc ISignalService
@@ -76,7 +76,7 @@ contract SignalService is ISignalService {
     }
 
     /// @inheritdoc ISignalService
-    function receiveSignal(bytes32[] calldata slots) external virtual onlyCheckpoints {
+    function receiveSignal(bytes32[] calldata slots) external virtual onlyCheckpointTracker {
         _receiveSignal(slots);
     }
 
@@ -95,8 +95,8 @@ contract SignalService is ISignalService {
     }
 
     /// @dev Must revert if the caller is not an authorized receiver.
-    function _checkCheckpoints(address caller) internal virtual {
-        require(caller == checkpoints(), UnauthorizedCheckpoints(caller));
+    function _checkCheckpointTracker(address caller) internal virtual {
+        require(caller == checkpointTracker(), UnauthorizedCheckpoints(caller));
     }
 
     /// @dev Allows signaling a `0` value. However, it's considered a no-op for the destination chain.
