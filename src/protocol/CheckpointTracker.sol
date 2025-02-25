@@ -10,7 +10,6 @@ contract CheckpointTracker is ICheckpointTracker {
     /// @dev Previous checkpoints are not stored here but are synchronized to the `SignalService`
     /// @dev A checkpoint commitment is any value (typically a state root) that uniquely identifies
     /// the state of the rollup at a specific point in time
-    Checkpoint public latestCheckpoint;
     bytes32 public latestCheckpointHash;
 
     /// @notice Verified transitions between two checkpoints
@@ -39,8 +38,6 @@ contract CheckpointTracker is ICheckpointTracker {
         latestCheckpointHash = keccak256(abi.encodePacked(genesisPublicationId, genesisCommitmentHash));
 
         Checkpoint memory genesisCheckpoint = Checkpoint(genesisPublicationId, _genesisComittment);
-        latestCheckpoint = genesisCheckpoint;
-
         emit CheckpointUpdated(genesisCommitmentHash, genesisCheckpoint);
     }
 
@@ -79,17 +76,16 @@ contract CheckpointTracker is ICheckpointTracker {
     /// of which transition it proves.
     function _updateLatestCheckpoint() internal {
         bytes32 _latestCheckpointHash = latestCheckpointHash;
-        Checkpoint memory _latestCheckpoint;
+        Checkpoint memory latestCheckpoint;
 
         for (uint256 i; i < MAX_EXTRA_UPDATES; ++i) {
-            _latestCheckpoint = transitions[_latestCheckpointHash];
-            if (_latestCheckpoint.publicationId == 0) break;
+            latestCheckpoint = transitions[_latestCheckpointHash];
+            if (latestCheckpoint.publicationId == 0) break;
         }
 
         if (_latestCheckpointHash != latestCheckpointHash) {
             latestCheckpointHash = _latestCheckpointHash;
-            latestCheckpoint = _latestCheckpoint;
-            emit CheckpointUpdated(_latestCheckpointHash, _latestCheckpoint);
+            emit CheckpointUpdated(_latestCheckpointHash, latestCheckpoint);
 
             // TODO: save latestCheckpoint to signal service?
         }
