@@ -5,6 +5,12 @@ import {ICheckpointTracker} from "./ICheckpointTracker.sol";
 import {IPublicationFeed} from "./IPublicationFeed.sol";
 
 interface IProverManager {
+    function registerProver(uint256 offeredFee) external;
+
+    function exit() external;
+    
+    function evictProver(uint256 publicationId, IPublicationFeed.PublicationHeader calldata publicationHeader) external;
+    
     function proveOwnPeriod(
         ICheckpointTracker.Checkpoint calldata start,
         ICheckpointTracker.Checkpoint calldata end,
