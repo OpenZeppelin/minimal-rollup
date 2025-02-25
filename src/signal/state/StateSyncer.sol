@@ -54,7 +54,7 @@ abstract contract StateSyncer is IStateSyncer {
         view
         returns (bool valid)
     {
-        bytes signal = syncSignal(chainId, publicationId, commitment);
+        bytes32 signal = syncSignal(chainId, publicationId, commitment);
         bytes32 slot = signalService().signalSlot(block.chainid.toUint64(), address(this), signal);
         return LibTrieProof.verifyState(slot, signal, commitment, proof);
     }
