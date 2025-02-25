@@ -11,6 +11,7 @@ contract CheckpointTrackerTest is Test {
     CheckpointTracker tracker;
     NullVerifier verifier;
     PublicationFeed feed;
+    address proverMananger = vm.addr(1);
 
     // Sample data
     bytes32[] pubHashes;
@@ -30,7 +31,7 @@ contract CheckpointTrackerTest is Test {
         feed = new PublicationFeed();
         createSampleFeed();
 
-        tracker = new CheckpointTracker(keccak256(abi.encode(0)), address(feed), address(verifier));
+        tracker = new CheckpointTracker(keccak256(abi.encode(0)), address(feed), address(verifier), proverMananger);
         createSampleCheckpoints();
         proof = abi.encode("proof");
     }

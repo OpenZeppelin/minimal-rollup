@@ -21,6 +21,7 @@ contract CheckpointTracker is ICheckpointTracker {
     // This would usually be retrieved dynamically as in the current Taiko implementation, but for simplicity we are
     // just setting it in the constructor
     IVerifier public immutable verifier;
+    address public proverManager;
 
     /// @notice The maximum number of additional checkpoint transitions to apply in a single proof
     /// @dev This limits the overhead required to submit a proof
@@ -29,13 +30,13 @@ contract CheckpointTracker is ICheckpointTracker {
     /// @param _genesis the checkpoint commitment describing the initial state of the rollup
     /// @param _publicationFeed the input data source that updates the state of this rollup
     /// @param _verifier a contract that can verify the validity of a transition from one checkpoint to another
-    constructor(bytes32 _genesis, address _publicationFeed, address _verifier) {
+    constructor(bytes32 _genesis, address _publicationFeed, address _verifier, address _proverManager) {
         // set the genesis checkpoint commitment of the rollup - genesis is trusted to be correct
         require(_genesis != 0, "genesis checkpoint commitment cannot be 0");
 
         publicationFeed = IPublicationFeed(_publicationFeed);
         verifier = IVerifier(_verifier);
-
+        proverManager = _proverManager;
         Checkpoint memory genesisCheckpoint = Checkpoint({publicationId: 0, commitment: _genesis});
         provenHash = keccak256(abi.encode(genesisCheckpoint));
         emit CheckpointUpdated(provenHash);
@@ -43,6 +44,10 @@ contract CheckpointTracker is ICheckpointTracker {
 
     /// @inheritdoc ICheckpointTracker
     function proveTransition(Checkpoint calldata start, Checkpoint calldata end, bytes calldata proof) external {
+        if (proverManager != address(0)) {
+            require(msg.sender == proverManager, "Only the prover manager can call this function");
+        }
+
         require(end.commitment != 0, "Checkpoint commitment cannot be 0");
         bytes32 startHash = keccak256(abi.encode(start));
 
@@ -66,6 +71,7 @@ contract CheckpointTracker is ICheckpointTracker {
 
         bytes32 endHash = keccak256(abi.encode(end));
         if (startHash == provenHash) {
+            // If we were starting from the last proven state, advance the chain
             provenHash = endHash;
             emit CheckpointUpdated(endHash);
         } else {
