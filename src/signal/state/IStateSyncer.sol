@@ -4,20 +4,23 @@ pragma solidity ^0.8.28;
 import {ISignalService} from "../ISignalService.sol";
 
 interface IStateSyncer {
-    event ChainDataSynced(uint64 indexed chainId, uint64 indexed blockNumber, bytes32 root);
+    event ChainDataSynced(uint64 indexed chainId, uint64 indexed publicationId, bytes32 commitment);
 
-    function syncSignal(uint64 chainId, uint64 blockNumber, bytes32 root) external view returns (bytes32 signal);
+    function syncSignal(uint64 chainId, uint64 publicationId, bytes32 commitment)
+        external
+        view
+        returns (bytes32 signal);
 
-    function stateAt(uint64 chainId, uint64 blockNumber) external view returns (bytes32 root);
+    function commitmentAt(uint64 chainId, uint64 publicationId) external view returns (bytes32 commitment);
 
-    function latestState(uint64 chainId) external view returns (bytes32 root);
+    function latestCommitment(uint64 chainId) external view returns (bytes32 commitment);
 
-    function latestBlock(uint64 chainId) external view returns (uint64 blockNumber);
+    function latestPublicationId(uint64 chainId) external view returns (uint64 publicationId);
 
-    function verifyState(uint64 chainId, uint64 blockNumber, bytes32 root, bytes[] calldata proof)
+    function verifyCommitment(uint64 chainId, uint64 publicationId, bytes32 commitment, bytes[] calldata proof)
         external
         view
         returns (bool valid);
 
-    function syncState(uint64 chainId, uint64 blockNumber, bytes32 root) external;
+    function syncState(uint64 chainId, uint64 publicationId, bytes32 commitment) external;
 }

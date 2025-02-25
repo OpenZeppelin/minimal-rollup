@@ -12,8 +12,8 @@ abstract contract StateSyncer is IStateSyncer {
 
     address private immutable _signalService;
 
-    mapping(uint64 chainId => uint64 blockNumber) private _latestBlock;
-    mapping(uint64 chainId => mapping(uint64 blockNumber => bytes32 root)) private _stateAt;
+    mapping(uint64 chainId => uint64 publicationId) private _latestPublicationId;
+    mapping(uint64 chainId => mapping(uint64 publicationId => bytes32 commitment)) private _commitmentAt;
 
     modifier onlySyncer() {
         _checkSyncer(msg.sender);
@@ -24,51 +24,52 @@ abstract contract StateSyncer is IStateSyncer {
         _signalService = signalService_;
     }
 
-    function syncSignal(uint64 chainId, uint64 blockNumber, bytes32 root)
+    function syncSignal(uint64 chainId, uint64 publicationId, bytes32 commitment)
         public
         pure
         virtual
         returns (bytes32 signal)
     {
-        return keccak256(abi.encode(chainId, blockNumber, root));
+        return keccak256(abi.encode(chainId, publicationId, commitment));
     }
 
     function signalService() public view virtual returns (ISignalService) {
         return ISignalService(_signalService);
     }
 
-    function stateAt(uint64 chainId, uint64 blockNumber) public view virtual returns (bytes32 root) {
-        return _stateAt[chainId][blockNumber];
+    function commitmentAt(uint64 chainId, uint64 publicationId) public view virtual returns (bytes32 commitment) {
+        return _commitmentAt[chainId][publicationId];
     }
 
-    function latestState(uint64 chainId) public view virtual returns (bytes32 root) {
-        return stateAt(chainId, latestBlock(chainId));
+    function latestCommitment(uint64 chainId) public view virtual returns (bytes32 commitment) {
+        return commitmentAt(chainId, latestPublicationId(chainId));
     }
 
-    function latestBlock(uint64 chainId) public view virtual returns (uint64 blockNumber) {
-        return _latestBlock[chainId];
+    function latestPublicationId(uint64 chainId) public view virtual returns (uint64 publicationId) {
+        return _latestPublicationId[chainId];
     }
 
-    function verifyState(uint64 chainId, uint64 blockNumber, bytes32 root, bytes[] calldata proof)
+    function verifyCommitment(uint64 chainId, uint64 publicationId, bytes32 commitment, bytes[] calldata proof)
         public
         view
         returns (bool valid)
     {
-        bytes32 slot =
-            signalService().signalSlot(block.chainid.toUint64(), address(this), syncSignal(chainId, blockNumber, root));
-        return LibTrieProof.verifyState(slot, syncSignal(chainId, blockNumber, root), root, proof);
+        bytes32 slot = signalService().signalSlot(
+            block.chainid.toUint64(), address(this), syncSignal(chainId, publicationId, commitment)
+        );
+        return LibTrieProof.verifyState(slot, syncSignal(chainId, publicationId, commitment), commitment, proof);
     }
 
-    function syncState(uint64 chainId, uint64 blockNumber, bytes32 root) external virtual onlySyncer {
-        _syncState(chainId, blockNumber, root);
+    function syncState(uint64 chainId, uint64 publicationId, bytes32 commitment) external virtual onlySyncer {
+        _syncState(chainId, publicationId, commitment);
     }
 
-    function _syncState(uint64 chainId, uint64 blockNumber, bytes32 root) internal virtual {
-        if (latestBlock(chainId) < blockNumber) {
-            _latestBlock[chainId] = blockNumber;
-            _stateAt[chainId][blockNumber] = root;
-            signalService().sendSignal(syncSignal(chainId, blockNumber, root));
-            emit ChainDataSynced(chainId, blockNumber, root);
+    function _syncState(uint64 chainId, uint64 publicationId, bytes32 commitment) internal virtual {
+        if (latestPublicationId(chainId) < publicationId) {
+            _latestPublicationId[chainId] = publicationId;
+            _commitmentAt[chainId][publicationId] = commitment;
+            signalService().sendSignal(syncSignal(chainId, publicationId, commitment));
+            emit ChainDataSynced(chainId, publicationId, commitment);
         }
     }
 
