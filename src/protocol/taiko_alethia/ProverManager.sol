@@ -221,10 +221,12 @@ contract ProverManager {
 
     /// @notice Called by a prover to submit a proof for a set of publications he is assigned to.
     /// @dev This only works if the prover is within their deadline.
-    /// @dev If the prover has finished all their publications for the period, they can also claim the fees and the liveness bond.
+    /// @dev If the prover has finished all their publications for the period, they can also claim the fees and the
+    /// liveness bond.
     /// @param start The initial checkpoint before the transition
     /// @param end The final checkpoint after the transition
-    /// @param nextPublicationHeaderBytes Optional parameter that should only be sent when the prover has finished all their publications for the period.
+    /// @param nextPublicationHeaderBytes Optional parameter that should only be sent when the prover has finished all
+    /// their publications for the period.
     /// @param proof Arbitrary data passed to the `verifier` contract to confirm the transition validity
     /// @param periodId The id of the period for which the proof is submitted
     function proveOwnPeriod(
@@ -245,20 +247,21 @@ contract ProverManager {
         // This means that the prover is claiming that they have finished all their publications for the period
         if (nextPublicationHeaderBytes.length > 0) {
             uint256 periodEnd = period.exitAllowedAt;
-            IPublicationFeed.PublicationHeader memory nextPublicationHeader = abi.decode(
-                nextPublicationHeaderBytes,
-                (IPublicationFeed.PublicationHeader)
-            );
+            IPublicationFeed.PublicationHeader memory nextPublicationHeader =
+                abi.decode(nextPublicationHeaderBytes, (IPublicationFeed.PublicationHeader));
             require(nextPublicationHeader.id == end.publicationId + 1, "Publication id does not match");
             require(nextPublicationHeader.timestamp > periodEnd, "Publication is not after the period end");
-            require(keccak256(abi.encode(nextPublicationHeader)) == publicationFeed.getPublicationHash(nextPublicationHeader.id), "Publication hash does not match");
-            
+            require(
+                keccak256(abi.encode(nextPublicationHeader))
+                    == publicationFeed.getPublicationHash(nextPublicationHeader.id),
+                "Publication hash does not match"
+            );
+
             // If we have, distribute the funds to the prover
             balances[period.prover] += period.accumulatedFees + period.livenessBond;
             delete periods[periodId];
         }
     }
-
 
     /// @notice Called by a prover when the originally assigned prover was evicted or passed its deadline for proving.
     function proveOtherPeriod(
@@ -268,7 +271,5 @@ contract ProverManager {
         IPublicationFeed.PublicationHeader calldata nextPublicationHeader,
         bytes calldata proof,
         uint256 periodId
-    ) external {
-
-    }
+    ) external {}
 }
