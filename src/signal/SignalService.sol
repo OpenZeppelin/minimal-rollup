@@ -12,7 +12,7 @@ import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 /// The service defines the minimal logic to broadcast signals through `sendSignal` and verify them with
 /// `verifySignal`. Storing the verification status is up to the accounts that interact with this service.
 ///
-/// For cases when the signal cannot verified immediately (e.g., a storage proof of the L1 state in the L2),
+/// For cases when the signal cannot be verified immediately (e.g., a storage proof of the L1 state in the L2),
 /// the contract defines a receiver role that must be implemented in `_checkReceiver`. Consider implementing
 /// an access control mechanism for this purpose.
 abstract contract SignalService is ISignalService {
