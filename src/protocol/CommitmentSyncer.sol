@@ -11,6 +11,8 @@ abstract contract CommitmentSyncer is ICommitmentSyncer {
     using SafeCast for uint256;
     using LibSignal for bytes32;
 
+    error InvalidCommitment();
+
     mapping(uint64 chainId => uint64 publicationId) private _latestPublicationId;
     mapping(uint64 chainId => mapping(uint64 publicationId => bytes32 commitment)) private _commitmentAt;
 
@@ -51,7 +53,14 @@ abstract contract CommitmentSyncer is ICommitmentSyncer {
         return LibTrieProof.verifyState(value.deriveSlot(), value, stateRoot, proof);
     }
 
-    function syncCommitment(uint64 chainId, uint64 publicationId, bytes32 commitment) external virtual onlySyncer {
+    function syncCommitment(
+        uint64 chainId,
+        uint64 publicationId,
+        bytes32 commitment,
+        bytes32 stateRoot,
+        bytes[] calldata proof
+    ) external virtual onlySyncer {
+        require(verifyCommitment(chainId, publicationId, commitment, stateRoot, proof), InvalidCommitment());
         _syncCommitment(chainId, publicationId, commitment);
     }
 
