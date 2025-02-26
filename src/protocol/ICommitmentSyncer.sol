@@ -17,6 +17,13 @@ interface ICommitmentSyncer {
     /// @dev Commitment identifier.
     function id(uint64 chainId, uint64 height, bytes32 commitment) external pure returns (bytes32 value);
 
+    /// @dev Verifies that a `commitment` is valid for the provided `chainId`, `height` and `root`.
+    /// The `root` MUST be trusted.
+    function verifyCommitment(uint64 chainId, uint64 height, bytes32 commitment, bytes32 root, bytes[] calldata proof)
+        external
+        view
+        returns (bool valid, bytes32 value);
+
     /// @dev Get commitment at a particular `height` for `chainId`.
     function commitmentAt(uint64 chainId, uint64 height) external view returns (bytes32 commitment);
 
@@ -25,13 +32,6 @@ interface ICommitmentSyncer {
 
     /// @dev Get the latest commitment height for a `chainId`.
     function latestHeight(uint64 chainId) external view returns (uint64 height);
-
-    /// @dev Verifies that a `commitment` is valid for the provided `chainId`, `height` and `root`.
-    /// The `root` MUST be trusted.
-    function verifyCommitment(uint64 chainId, uint64 height, bytes32 commitment, bytes32 root, bytes[] calldata proof)
-        external
-        view
-        returns (bool valid);
 
     /// @dev Syncs a `commitment` as long as it's a valid one.
     /// The `root` MUST be trusted.

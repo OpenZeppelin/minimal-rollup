@@ -44,6 +44,17 @@ abstract contract CommitmentSyncer is ICommitmentSyncer {
     }
 
     /// @inheritdoc ICommitmentSyncer
+    function verifyCommitment(uint64 chainId, uint64 height, bytes32 commitment, bytes32 root, bytes[] calldata proof)
+        public
+        view
+        virtual
+        returns (bool valid, bytes32 value)
+    {
+        value = id(chainId, height, commitment);
+        return (LibTrieProof.verifyState(value.deriveSlot(), value, root, proof), value);
+    }
+
+    /// @inheritdoc ICommitmentSyncer
     function commitmentAt(uint64 chainId, uint64 height) public view virtual returns (bytes32 commitment) {
         return _commitment[chainId][height];
     }
@@ -56,17 +67,6 @@ abstract contract CommitmentSyncer is ICommitmentSyncer {
     /// @inheritdoc ICommitmentSyncer
     function latestHeight(uint64 chainId) public view virtual returns (uint64 height) {
         return _latestHeight[chainId];
-    }
-
-    /// @inheritdoc ICommitmentSyncer
-    function verifyCommitment(uint64 chainId, uint64 height, bytes32 commitment, bytes32 root, bytes[] calldata proof)
-        public
-        view
-        virtual
-        returns (bool valid)
-    {
-        bytes32 value = id(chainId, height, commitment);
-        return LibTrieProof.verifyState(value.deriveSlot(), value, root, proof);
     }
 
     /// @inheritdoc ICommitmentSyncer
@@ -94,8 +94,11 @@ abstract contract CommitmentSyncer is ICommitmentSyncer {
     function _checkCommitment(uint64 chainId, uint64 height, bytes32 commitment, bytes32 root, bytes[] calldata proof)
         internal
         virtual
+        returns (bytes32 value)
     {
-        require(verifyCommitment(chainId, height, commitment, root, proof), InvalidCommitment());
+        bool valid;
+        (valid, value) = verifyCommitment(chainId, height, commitment, root, proof);
+        require(valid, InvalidCommitment());
     }
 
     /// @dev Must revert if the caller is not an authorized syncer.
