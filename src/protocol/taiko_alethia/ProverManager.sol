@@ -13,9 +13,9 @@ contract ProverManager is IProposerFees, IProverManager{
         uint256 livenessBond; // stake the prover has to pay to register
         uint256 accumulatedFees; // the fees accumulated by proposers' publications for this period
         uint256 fee; // per-publication fee (in wei)
-        uint256 exitAllowedAt; //the time when the prover will be evicted
-        uint256 deadline; // the time by which the prover needs to submit a proof(this is only needed after a prover exits or is replaced)
-        bool slashed; //  flag that signlas the prover should be slashed(they have been evicted)
+        uint256 exitAllowedAt; // the time when the prover will be evicted
+        uint256 deadline; // the time by which the prover needs to submit a proof (this is only needed after a prover exits or is replaced)
+        bool slashed; // flag that signals the prover should be slashed (they have been evicted)
     }
 
     address public immutable inbox;
