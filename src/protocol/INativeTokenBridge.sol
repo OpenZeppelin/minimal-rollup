@@ -2,17 +2,19 @@
 pragma solidity ^0.8.28;
 
 interface INativeTokenBridge {
-    event Transfer(uint64 blockNumber, address from, address to, uint256 value);
+    event Ticket(uint64 blockNumber, address from, address to, uint256 value);
 
     error InvalidClaim();
     error FailedClaim();
 
-    function transferId(uint64 chainId, uint64 blockNumber, address from, address to, uint256 value)
+    function claimed(bytes32 id) external view returns (bool);
+
+    function ticketId(uint64 chainId, uint64 blockNumber, address from, address to, uint256 value)
         external
         view
         returns (bytes32 id);
 
-    function verifyClaim(
+    function verifyTicket(
         uint64 sourceChainId,
         uint64 blockNumber,
         address from,
@@ -22,9 +24,9 @@ interface INativeTokenBridge {
         bytes[] calldata proof
     ) external view returns (bool verified, bytes32 id);
 
-    function transfer(address to) external payable;
+    function createTicket(address to) external payable;
 
-    function claim(
+    function claimTicket(
         uint64 sourceChainId,
         uint64 blockNumber,
         address from,
