@@ -39,7 +39,7 @@ abstract contract CommitmentSyncer is ICommitmentSyncer {
     }
 
     /// @inheritdoc ICommitmentSyncer
-    function id(uint64 chainId, uint64 height, bytes32 commitment) public pure virtual returns (bytes32 value) {
+    function commitmentId(uint64 chainId, uint64 height, bytes32 commitment) public pure virtual returns (bytes32 id) {
         return keccak256(abi.encodePacked(chainId, height, commitment));
     }
 
@@ -48,10 +48,10 @@ abstract contract CommitmentSyncer is ICommitmentSyncer {
         public
         view
         virtual
-        returns (bool valid, bytes32 value)
+        returns (bool valid, bytes32 id)
     {
-        value = id(chainId, height, commitment);
-        return (LibTrieProof.verifyState(value.deriveSlot(), value, root, proof), value);
+        id = commitmentId(chainId, height, commitment);
+        return (LibTrieProof.verifyState(id.deriveSlot(), id, root, proof), id);
     }
 
     /// @inheritdoc ICommitmentSyncer
@@ -79,13 +79,14 @@ abstract contract CommitmentSyncer is ICommitmentSyncer {
         _syncCommitment(chainId, height, commitment);
     }
 
-    /// @dev Internal version of `syncCommitment` without access control and without verifying the commitment.
+    /// @dev Internal version of `syncCommitment` without access control.
     /// Emits `CommitmentSynced` if the provided `height` is larger than `latestHeight` for `chainId`.
-    function _syncCommitment(uint64 chainId, uint64 height, bytes32 commitment) internal virtual {
+    function _syncCommitment(bytes32 id, uint64 chainId, uint64 height, bytes32 commitment) internal virtual {
         if (latestHeight(chainId) < height) {
             _latestHeight[chainId] = height;
             _commitment[chainId][height] = commitment;
-            id(chainId, height, commitment).signal();
+            // assert(id == commitmentId(chainId, height, commitment));
+            id.signal();
             emit CommitmentSynced(chainId, height, commitment);
         }
     }
@@ -94,10 +95,10 @@ abstract contract CommitmentSyncer is ICommitmentSyncer {
     function _checkCommitment(uint64 chainId, uint64 height, bytes32 commitment, bytes32 root, bytes[] calldata proof)
         internal
         virtual
-        returns (bytes32 value)
+        returns (bytes32 id)
     {
         bool valid;
-        (valid, value) = verifyCommitment(chainId, height, commitment, root, proof);
+        (valid, id) = verifyCommitment(chainId, height, commitment, root, proof);
         require(valid, InvalidCommitment());
     }
 

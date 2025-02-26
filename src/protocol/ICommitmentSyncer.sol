@@ -15,14 +15,14 @@ interface ICommitmentSyncer {
     error InvalidCommitment();
 
     /// @dev Commitment identifier.
-    function id(uint64 chainId, uint64 height, bytes32 commitment) external pure returns (bytes32 value);
+    function commitmentId(uint64 chainId, uint64 height, bytes32 commitment) external pure returns (bytes32 id);
 
     /// @dev Verifies that a `commitment` is valid for the provided `chainId`, `height` and `root`.
     /// The `root` MUST be trusted.
     function verifyCommitment(uint64 chainId, uint64 height, bytes32 commitment, bytes32 root, bytes[] calldata proof)
         external
         view
-        returns (bool valid, bytes32 value);
+        returns (bool valid, bytes32 id);
 
     /// @dev Get commitment at a particular `height` for `chainId`.
     function commitmentAt(uint64 chainId, uint64 height) external view returns (bytes32 commitment);
