@@ -16,13 +16,13 @@ contract ETHBridge is IETHBridge {
         return _claimed[id];
     }
 
-    function ticketId(uint64 blockNumber, address from, address to, uint256 value)
+    function ticketId(uint64 destinationChainId, uint64 blockNumber, address from, address to, uint256 value)
         public
         view
         virtual
         returns (bytes32 id)
     {
-        return keccak256(abi.encodePacked(blockNumber, from, to, value));
+        return keccak256(abi.encodePacked(destinationChainId, blockNumber, from, to, value));
     }
 
     function verifyTicket(
@@ -35,16 +35,16 @@ contract ETHBridge is IETHBridge {
         bytes[] calldata accountProof,
         bytes[] calldata proof
     ) public view virtual returns (bool verified, bytes32 id) {
-        id = ticketId(blockNumber, from, to, value);
+        id = ticketId(block.chainid.toUint64(), blockNumber, from, to, value);
         (verified,) = address(this).verifySignal(root, sourceChainId, id, accountProof, proof);
         return (verified, id);
     }
 
-    function createTicket(address to) external payable virtual {
+    function createTicket(uint64 destinationChainId, address to) external payable virtual {
         address from = msg.sender;
         uint64 blockNumber = block.number.toUint64();
-        ticketId(blockNumber, from, to, msg.value).signal();
-        emit Ticket(blockNumber, from, to, msg.value);
+        ticketId(destinationChainId, blockNumber, from, to, msg.value).signal();
+        emit Ticket(destinationChainId, blockNumber, from, to, msg.value);
     }
 
     function claimTicket(
