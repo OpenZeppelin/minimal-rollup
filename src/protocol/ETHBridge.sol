@@ -6,16 +6,19 @@ import {LibTrieProof} from "../libs/LibTrieProof.sol";
 import {IETHBridge} from "./IETHBridge.sol";
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 
+/// @dev Bridge implementation to send native ETH to other chains using storage proofs.
 contract ETHBridge is IETHBridge {
     using SafeCast for uint256;
     using LibSignal for *;
 
     mapping(bytes32 id => bool) _claimed;
 
+    /// @inheritdoc IETHBridge
     function claimed(bytes32 id) public view virtual returns (bool) {
         return _claimed[id];
     }
 
+    /// @inheritdoc IETHBridge
     function ticketId(uint64 destinationChainId, uint64 blockNumber, address from, address to, uint256 value)
         public
         view
@@ -25,6 +28,7 @@ contract ETHBridge is IETHBridge {
         return keccak256(abi.encodePacked(destinationChainId, blockNumber, from, to, value));
     }
 
+    /// @inheritdoc IETHBridge
     function verifyTicket(
         uint64 sourceChainId,
         uint64 blockNumber,
@@ -40,12 +44,14 @@ contract ETHBridge is IETHBridge {
         return (verified, id);
     }
 
+    /// @inheritdoc IETHBridge
     function createTicket(uint64 destinationChainId, address to) external payable virtual {
         uint64 blockNumber = block.number.toUint64();
         ticketId(destinationChainId, blockNumber, msg.sender, to, msg.value).signal();
         emit Ticket(destinationChainId, blockNumber, msg.sender, to, msg.value);
     }
 
+    /// @inheritdoc IETHBridge
     function claimTicket(
         uint64 sourceChainId,
         uint64 blockNumber,
@@ -61,6 +67,7 @@ contract ETHBridge is IETHBridge {
         _sendETH(to, value);
     }
 
+    /// @dev Reverts if the ticket is invalid.
     function _checkClaimTicket(
         uint64 sourceChainId,
         uint64 blockNumber,
@@ -77,6 +84,7 @@ contract ETHBridge is IETHBridge {
         require(valid, InvalidTicket());
     }
 
+    /// @dev Function to transfer ETH to the receiver but ignoring the returndata.
     function _sendETH(address to, uint256 value) private returns (bool success) {
         assembly ("memory-safe") {
             success := call(gas(), to, value, 0, 0, 0, 0)
