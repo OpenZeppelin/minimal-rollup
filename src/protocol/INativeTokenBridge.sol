@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
-interface INativeBridge {
+interface INativeTokenBridge {
     event Transfer(uint64 blockNumber, address from, address to, uint256 value);
 
     error InvalidClaim();
