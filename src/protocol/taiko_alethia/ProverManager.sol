@@ -13,9 +13,9 @@ contract ProverManager is IProposerFees, IProverManager{
         uint256 livenessBond; // stake the prover has to pay to register
         uint256 accumulatedFees; // the fees accumulated by proposers' publications for this period
         uint256 fee; // per-publication fee (in wei)
-        uint256 exitAllowedAt; // the time when the prover will be evicted
-        uint256 deadline; // the time by which the prover needs to submit a proof (this is only needed after a prover exits or is replaced)
-        bool slashed; // flag that signals the prover should be slashed (they have been evicted)
+        uint256 end; // the end of the period(this may happen because the prover exits, is evicted or outbid)
+        uint256 deadline; // the time by which the prover needs to submit a proof(this is only needed after a prover exits or is replaced)
+        bool slashed; // flag that signlas the prover should be slashed(they have been evicted)
     }
 
     address public immutable inbox;
@@ -62,8 +62,8 @@ contract ProverManager is IProposerFees, IProverManager{
     event ProverOffered(address indexed proposer, uint256 fee, uint256 stake);
     event ProverActivated(address indexed oldProver, address indexed newProver, uint256 fee);
     event ProverSlashed(address indexed prover, address indexed slasher, uint256 slashedAmount);
-    event ProverEvicted(address indexed prover, address indexed evictor, uint256 exitAllowedAt, uint256 livenessBond);
-    event ProverExited(address indexed prover, uint256 exitAllowedAt, uint256 provingDeadline);
+    event ProverEvicted(address indexed prover, address indexed evictor, uint256 periodEnd, uint256 livenessBond);
+    event ProverExited(address indexed prover, uint256 periodEnd, uint256 provingDeadline);
 
     constructor(
         uint256 _minStepPercentage,
@@ -116,7 +116,7 @@ contract ProverManager is IProposerFees, IProverManager{
         }
 
         uint256 currentPeriod = currentPeriodId;
-        uint256 currentPeriodExit = periods[currentPeriod].exitAllowedAt;
+        uint256 currentPeriodExit = periods[currentPeriod].end;
 
         if (block.timestamp > currentPeriodExit) {
             // Advance to the next period
@@ -150,15 +150,15 @@ contract ProverManager is IProposerFees, IProverManager{
         uint256 currentFee = _currentPeriod.fee;
         uint256 nextFee = _nextPeriod.fee;
         uint256 requiredMaxFee;
-        if (_currentPeriod.prover != address(0) && _currentPeriod.exitAllowedAt == 0) {
+        if (_currentPeriod.prover != address(0) && _currentPeriod.end == 0) {
             // Only if there is a prover for the current period, and they have not been evicted yet we need to check if
             // the offer is below their's
             requiredMaxFee = currentFee - (currentFee * minStepPercentage / 100);
             require(offeredFee <= requiredMaxFee, "Offered fee not low enough");
 
-            uint256 exitAllowedAt = block.timestamp + offerActivationDelay;
-            _currentPeriod.exitAllowedAt = exitAllowedAt;
-            _currentPeriod.deadline = exitAllowedAt + provingDeadline;
+            uint256 periodEnd = block.timestamp + offerActivationDelay;
+            _currentPeriod.end = periodEnd;
+            _currentPeriod.deadline = periodEnd + provingDeadline;
         }
 
         address _nextProverAddress = _nextPeriod.prover;
@@ -193,17 +193,17 @@ contract ProverManager is IProposerFees, IProverManager{
         uint256 publicationTimestamp = publicationHeader.timestamp;
         require(publicationTimestamp + oldPublicationWindow < block.timestamp, "Publication is not old enough");
 
-        uint256 exitAllowedAt = block.timestamp + innactiveExitDelay;
+        uint256 periodEnd = block.timestamp + innactiveExitDelay;
         Period storage period = periods[currentPeriodId];
         period.slashed = true;
-        period.exitAllowedAt = exitAllowedAt;
+        period.end = periodEnd;
 
         // Reward the evictor
         uint256 evictorIncentive = period.livenessBond * evictorIncentivePercentage / 100;
         balances[msg.sender] += evictorIncentive;
         period.livenessBond -= evictorIncentive;
 
-        emit ProverEvicted(period.prover, msg.sender, exitAllowedAt, period.livenessBond);
+        emit ProverEvicted(period.prover, msg.sender, periodEnd, period.livenessBond);
     }
 
     /// @notice The current prover can signal exit to eventually pull out their liveness bond.
@@ -213,14 +213,14 @@ contract ProverManager is IProposerFees, IProverManager{
         Period storage period = periods[currentPeriodId];
         address _prover = period.prover;
         require(msg.sender == _prover, "Not current prover");
-        require(period.exitAllowedAt == 0, "Prover already exited");
+        require(period.end == 0, "Prover already exited");
 
-        uint256 exitAllowedAt = block.timestamp + exitDelay;
-        uint256 _provingDeadline = exitAllowedAt + provingDeadline;
-        period.exitAllowedAt = exitAllowedAt;
+        uint256 periodEnd = block.timestamp + exitDelay;
+        uint256 _provingDeadline = periodEnd + provingDeadline;
+        period.end = periodEnd;
         period.deadline = _provingDeadline;
 
-        emit ProverExited(_prover, exitAllowedAt, _provingDeadline);
+        emit ProverExited(_prover, periodEnd, _provingDeadline);
     }
 
     /// @notice Called by a prover to submit a proof for a set of publications he is assigned to.
@@ -248,7 +248,7 @@ contract ProverManager is IProposerFees, IProverManager{
         }
 
         // Verify that the end publication is within the period and valid
-        uint256 periodEnd = period.exitAllowedAt;
+        uint256 periodEnd = period.end;
         require(keccak256(abi.encode(endPublicationHeader)) == publicationFeed.getPublicationHash(end.publicationId), "Publication hash does not match");
         require(endPublicationHeader.id == end.publicationId, "This is not the end publication");
         require(endPublicationHeader.timestamp < periodEnd, "End publication is not within the period");
@@ -290,7 +290,7 @@ contract ProverManager is IProposerFees, IProverManager{
 
         //TODO: Should we check that the first publication is after the period start?
        // Verify that the end publication is within the period and valid
-        uint256 periodEnd = period.exitAllowedAt;
+        uint256 periodEnd = period.end;
         require(keccak256(abi.encode(endPublicationHeader)) == publicationFeed.getPublicationHash(end.publicationId), "Publication hash does not match");
         require(endPublicationHeader.id == end.publicationId, "This is not the end publication");
         require(endPublicationHeader.timestamp < periodEnd, "End publication is not within the period");
