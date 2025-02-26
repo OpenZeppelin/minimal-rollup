@@ -1,14 +1,12 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
-import {ISignalService} from "../ISignalService.sol";
-
-interface IStateSyncer {
-    event ChainDataSynced(uint64 indexed chainId, uint64 indexed publicationId, bytes32 commitment);
+interface ICommitmentSyncer {
+    event CommitmentSynced(uint64 indexed chainId, uint64 indexed publicationId, bytes32 commitment);
 
     function syncSignal(uint64 chainId, uint64 publicationId, bytes32 commitment)
         external
-        view
+        pure
         returns (bytes32 signal);
 
     function commitmentAt(uint64 chainId, uint64 publicationId) external view returns (bytes32 commitment);

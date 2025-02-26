@@ -1,16 +1,15 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
-import {LibTrieProof} from "../../libs/LibTrieProof.sol";
-import {ISignalService} from "../ISignalService.sol";
-import {IStateSyncer} from "./IStateSyncer.sol";
+import {LibSignal} from "../libs/LibSignal.sol";
+import {LibTrieProof} from "../libs/LibTrieProof.sol";
+import {ICommitmentSyncer} from "./ICommitmentSyncer.sol";
 
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 
-abstract contract StateSyncer is IStateSyncer {
+abstract contract CommitmentSyncer is ICommitmentSyncer {
     using SafeCast for uint256;
-
-    address private immutable _signalService;
+    using LibSignal for bytes32;
 
     mapping(uint64 chainId => uint64 publicationId) private _latestPublicationId;
     mapping(uint64 chainId => mapping(uint64 publicationId => bytes32 commitment)) private _commitmentAt;
@@ -20,21 +19,13 @@ abstract contract StateSyncer is IStateSyncer {
         _;
     }
 
-    constructor(address signalService_) {
-        _signalService = signalService_;
-    }
-
     function syncSignal(uint64 chainId, uint64 publicationId, bytes32 commitment)
         public
         pure
         virtual
         returns (bytes32 signal)
     {
-        return keccak256(abi.encode(chainId, publicationId, commitment));
-    }
-
-    function signalService() public view virtual returns (ISignalService) {
-        return ISignalService(_signalService);
+        return keccak256(abi.encodePacked(chainId, publicationId, commitment));
     }
 
     function commitmentAt(uint64 chainId, uint64 publicationId) public view virtual returns (bytes32 commitment) {
@@ -53,12 +44,11 @@ abstract contract StateSyncer is IStateSyncer {
         uint64 chainId,
         uint64 publicationId,
         bytes32 commitment,
-        bytes32 root,
+        bytes32 stateRoot,
         bytes[] calldata proof
     ) public view returns (bool valid) {
         bytes32 signal = syncSignal(chainId, publicationId, commitment);
-        bytes32 slot = signalService().signalSlot(block.chainid.toUint64(), address(this), signal);
-        return LibTrieProof.verifyState(slot, signal, root, proof);
+        return LibTrieProof.verifyState(signal.signalSlot(), signal, stateRoot, proof);
     }
 
     function syncCommitment(uint64 chainId, uint64 publicationId, bytes32 commitment) external virtual onlySyncer {
@@ -69,8 +59,8 @@ abstract contract StateSyncer is IStateSyncer {
         if (latestPublicationId(chainId) < publicationId) {
             _latestPublicationId[chainId] = publicationId;
             _commitmentAt[chainId][publicationId] = commitment;
-            signalService().sendSignal(syncSignal(chainId, publicationId, commitment));
-            emit ChainDataSynced(chainId, publicationId, commitment);
+            syncSignal(chainId, publicationId, commitment).sendSignal();
+            emit StateSynced(chainId, publicationId, commitment);
         }
     }
 
