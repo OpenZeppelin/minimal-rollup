@@ -19,11 +19,11 @@ abstract contract CommitmentSyncer is ICommitmentSyncer {
         _;
     }
 
-    function syncSignal(uint64 chainId, uint64 publicationId, bytes32 commitment)
+    function syncValue(uint64 chainId, uint64 publicationId, bytes32 commitment)
         public
         pure
         virtual
-        returns (bytes32 signal)
+        returns (bytes32 value)
     {
         return keccak256(abi.encodePacked(chainId, publicationId, commitment));
     }
@@ -47,8 +47,8 @@ abstract contract CommitmentSyncer is ICommitmentSyncer {
         bytes32 stateRoot,
         bytes[] calldata proof
     ) public view returns (bool valid) {
-        bytes32 signal = syncSignal(chainId, publicationId, commitment);
-        return LibTrieProof.verifyState(signal.signalSlot(), signal, stateRoot, proof);
+        bytes32 value = syncValue(chainId, publicationId, commitment);
+        return LibTrieProof.verifyState(value.deriveSlot(), value, stateRoot, proof);
     }
 
     function syncCommitment(uint64 chainId, uint64 publicationId, bytes32 commitment) external virtual onlySyncer {
@@ -59,8 +59,8 @@ abstract contract CommitmentSyncer is ICommitmentSyncer {
         if (latestPublicationId(chainId) < publicationId) {
             _latestPublicationId[chainId] = publicationId;
             _commitmentAt[chainId][publicationId] = commitment;
-            syncSignal(chainId, publicationId, commitment).sendSignal();
-            emit StateSynced(chainId, publicationId, commitment);
+            syncValue(chainId, publicationId, commitment).signal();
+            emit CommitmentSynced(chainId, publicationId, commitment);
         }
     }
 

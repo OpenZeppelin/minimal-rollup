@@ -4,10 +4,10 @@ pragma solidity ^0.8.28;
 interface ICommitmentSyncer {
     event CommitmentSynced(uint64 indexed chainId, uint64 indexed publicationId, bytes32 commitment);
 
-    function syncSignal(uint64 chainId, uint64 publicationId, bytes32 commitment)
+    function syncValue(uint64 chainId, uint64 publicationId, bytes32 commitment)
         external
         pure
-        returns (bytes32 signal);
+        returns (bytes32 value);
 
     function commitmentAt(uint64 chainId, uint64 publicationId) external view returns (bytes32 commitment);
 

@@ -6,11 +6,11 @@ import {SlotDerivation} from "@openzeppelin/contracts/utils/SlotDerivation.sol";
 import {StorageSlot} from "@openzeppelin/contracts/utils/StorageSlot.sol";
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 
-/// @dev Library for secure broadcasting cross-chain arbitrary data (i.e. signals).
+/// @dev Library for secure broadcasting (i.e. signaling) cross-chain arbitrary data.
 ///
-/// Sending a signal consists of storing a `bytes32` value in a namespaced storage location to guarantee non-collision
-/// slots derived by EVM languages such as Solidity or Vyper. Smart contracts utilizing this library will send signals
-/// with the `sendSignal` function, allowing to generate a storage proof with an `eth_getProof` RPC call.
+/// Signaling a value consists of storing a `bytes32` in a namespaced storage location to guarantee non-collision
+/// slots derived by EVM languages such as Solidity or Vyper. Smart contracts utilizing this library will signal values
+/// with the `signal` function, allowing to generate a storage proof with an `eth_getProof` RPC call.
 ///
 /// Later, on a destination chain the signal can be proven by providing the proof to `verifySignal` as long as the
 /// state root is trusted (e.g. the L1 state root can made available on the L2 by the proposer).
@@ -19,56 +19,56 @@ library LibSignal {
     using StorageSlot for bytes32;
     using SlotDerivation for string;
 
-    /// @dev A signal was stored at a namespaced slot for the current `msg.sender` and `block.chainid`.
-    function signalSent(bytes32 signal) internal view returns (bool) {
-        return signalSent(signalSlot(block.chainid.toUint64(), msg.sender, signal));
+    /// @dev A `value` was signaled at a namespaced slot for the current `msg.sender` and `block.chainid`.
+    function signaled(bytes32 value) internal view returns (bool) {
+        return signaled(deriveSlot(block.chainid.toUint64(), msg.sender, value));
     }
 
-    /// @dev A signal was stored at a namespaced slot for the current `block.chainid`.
-    function signalSent(address account, bytes32 signal) internal view returns (bool) {
-        return signalSent(signalSlot(block.chainid.toUint64(), account, signal));
+    /// @dev A `value` was signaled at a namespaced slot for the current `block.chainid`.
+    function signaled(address account, bytes32 value) internal view returns (bool) {
+        return signaled(deriveSlot(block.chainid.toUint64(), account, value));
     }
 
-    /// @dev A signal was stored at a namespaced slot. See `signalSlot`.
-    function signalSent(uint64 chainId, address account, bytes32 signal) internal view returns (bool) {
-        return signalSent(signalSlot(chainId, account, signal));
+    /// @dev A `value` was signaled at a namespaced slot. See `deriveSlot`.
+    function signaled(uint64 chainId, address account, bytes32 value) internal view returns (bool) {
+        return signaledAt(deriveSlot(chainId, account, value));
     }
 
-    /// @dev A signal was stored at a namespaced `slot`. See `signalSlot`.
-    function slotSignaled(bytes32 slot) internal view returns (bool) {
+    /// @dev A `value` was signaled at a `slot`. See `deriveSlot`.
+    function signaledAt(bytes32 slot) internal view returns (bool) {
         return slot.getBytes32Slot().value != 0;
     }
 
-    /// @dev Store a signal at a namespaced slot for the current `msg.sender` and `block.chainid`.
-    function sendSignal(bytes32 signal) internal returns (bytes32) {
-        return sendSignal(block.chainid.toUint64(), msg.sender, signal);
+    /// @dev Signal a `value` at a namespaced slot for the current `msg.sender` and `block.chainid`.
+    function signal(bytes32 value) internal returns (bytes32) {
+        return signal(block.chainid.toUint64(), msg.sender, value);
     }
 
-    /// @dev Store a signal at a namespaced slot for the current `block.chainid`.
-    function sendSignal(address account, bytes32 signal) internal returns (bytes32) {
-        return sendSignal(block.chainid.toUint64(), account, signal);
+    /// @dev Signal a `value` at a namespaced slot for the current `block.chainid`.
+    function signal(address account, bytes32 value) internal returns (bytes32) {
+        return signal(block.chainid.toUint64(), account, value);
     }
 
-    /// @dev Store a signal at a namespaced slot. See `signalSlot`.
-    function sendSignal(uint64 chainId, address account, bytes32 signal) internal returns (bytes32) {
-        bytes32 slot = signalSlot(chainId, account, signal);
-        slot.getBytes32Slot().value = signal;
+    /// @dev Signal a `value` at a namespaced slot. See `deriveSlot`.
+    function signal(uint64 chainId, address account, bytes32 value) internal returns (bytes32) {
+        bytes32 slot = deriveSlot(chainId, account, value);
+        slot.getBytes32Slot().value = value;
         return slot;
     }
 
     /// @dev Returns the storage slot for a signal. Namespaced to the current `block.chainid` and `msg.sender`.
-    function signalSlot(bytes32 signal) internal view returns (bytes32) {
-        return signalSlot(msg.sender, signal);
+    function deriveSlot(bytes32 value) internal view returns (bytes32) {
+        return deriveSlot(msg.sender, value);
     }
 
     /// @dev Returns the storage slot for a signal. Namespaced to the current `block.chainid`.
-    function signalSlot(address account, bytes32 signal) internal view returns (bytes32) {
-        return signalSlot(block.chainid.toUint64(), account, signal);
+    function deriveSlot(address account, bytes32 value) internal view returns (bytes32) {
+        return deriveSlot(block.chainid.toUint64(), account, value);
     }
 
     /// @dev Returns the storage slot for a signal.
-    function signalSlot(uint64 chainId, address account, bytes32 signal) internal pure returns (bytes32) {
-        return string(abi.encodePacked(chainId, account, signal)).erc7201Slot();
+    function deriveSlot(uint64 chainId, address account, bytes32 value) internal pure returns (bytes32) {
+        return string(abi.encodePacked(chainId, account, value)).erc7201Slot();
     }
 
     /// @dev Performs a storage proof on the `account`. User must ensure the `root` is trusted for the given `chainId`.
@@ -76,12 +76,12 @@ library LibSignal {
         address account,
         bytes32 root,
         uint64 chainId,
-        bytes32 signal,
+        bytes32 value,
         bytes[] memory accountProof,
         bytes[] memory storageProof
     ) internal pure returns (bool valid, bytes32 storageRoot) {
         return LibTrieProof.verifyStorage(
-            account, signalSlot(chainId, account, signal), signal, root, accountProof, storageProof
+            account, deriveSlot(chainId, account, value), value, root, accountProof, storageProof
         );
     }
 }
