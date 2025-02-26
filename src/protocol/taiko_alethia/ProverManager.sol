@@ -34,7 +34,7 @@ contract ProverManager is IProposerFees, IProverManager{
     uint256 public exitDelay;
     /// @notice The delay after which the current prover is evicted if they are inactive
     /// @dev This cannot happen immediately to allow other provers to bid for the role
-    uint256 public innactiveExitDelay;
+    uint256 public inactiveExitDelay;
     /// @notice The multiplier for delayed publications
     uint256 public delayedFeeMultiplier;
     ///@notice The deadline for a prover to submit a valid proof after their period ends
@@ -193,7 +193,7 @@ contract ProverManager is IProposerFees, IProverManager{
         uint256 publicationTimestamp = publicationHeader.timestamp;
         require(publicationTimestamp + oldPublicationWindow < block.timestamp, "Publication is not old enough");
 
-        uint256 exitAllowedAt = block.timestamp + innactiveExitDelay;
+        uint256 exitAllowedAt = block.timestamp + inactiveExitDelay;
         Period storage period = periods[currentPeriodId];
         period.slashed = true;
         period.exitAllowedAt = exitAllowedAt;
