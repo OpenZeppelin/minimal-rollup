@@ -1,18 +1,14 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
-import {LibSignal} from "../libs/LibSignal.sol";
 import {LibTrieProof} from "../libs/LibTrieProof.sol";
 
 import {LibValueTicket} from "../libs/LibValueTicket.sol";
 import {IETHBridge} from "./IETHBridge.sol";
-import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 
 /// @dev Bridge implementation to send native ETH to other chains using storage proofs.
 contract ETHBridge is IETHBridge {
-    using SafeCast for uint256;
-    using LibSignal for *;
-    using LibValueTicket for uint64;
+    using LibValueTicket for LibValueTicket.ValueTicket;
 
     mapping(bytes32 id => bool) _claimed;
 
@@ -22,50 +18,36 @@ contract ETHBridge is IETHBridge {
     }
 
     /// @inheritdoc IETHBridge
-    function ticketId(uint64 destinationChainId, uint64 blockNumber, address from, address to, uint256 value)
-        public
-        view
-        virtual
-        returns (bytes32 id)
-    {
-        return destinationChainId.ticketId(blockNumber, from, to, value);
+    function ticketId(LibValueTicket.ValueTicket memory ticket) public view virtual returns (bytes32 id) {
+        return ticket.id();
     }
 
     /// @inheritdoc IETHBridge
     function verifyTicket(
-        uint64 sourceChainId,
-        uint64 blockNumber,
-        address from,
-        address to,
-        uint256 value,
+        LibValueTicket.ValueTicket memory ticket,
         bytes32 root,
-        bytes[] calldata accountProof,
-        bytes[] calldata proof
+        bytes[] memory accountProof,
+        bytes[] memory proof
     ) public view virtual returns (bool verified, bytes32 id) {
-        return sourceChainId.verifyTicket(blockNumber, from, to, value, root, accountProof, proof);
+        return ticket.verifyTicket(root, accountProof, proof);
     }
 
     /// @inheritdoc IETHBridge
-    function createTicket(uint64 destinationChainId, address to) external payable virtual {
-        address from = msg.sender;
-        uint256 value = msg.value;
-        destinationChainId.createTicket(from, to, value);
-        emit ETHTicket(destinationChainId, blockNumber, msg.sender, to, msg.value);
+    function createTicket(uint64 chainId, address to) external payable virtual {
+        emit ETHTicket(LibValueTicket.createTicket(chainId, msg.sender, to, msg.value));
     }
 
     /// @inheritdoc IETHBridge
     function claimTicket(
-        uint64 sourceChainId,
-        uint64 blockNumber,
-        address from,
-        address to,
-        uint256 value,
+        LibValueTicket.ValueTicket memory ticket,
         bytes32 root,
-        bytes[] calldata accountProof,
-        bytes[] calldata proof
+        bytes[] memory accountProof,
+        bytes[] memory proof
     ) external virtual {
-        _claimed[sourceChainId.checkTicket(blockNumber, from, to, value, root, accountProof, proof)] = true;
-        _sendETH(to, value);
+        bytes32 id_ = ticket.checkTicket(root, accountProof, proof);
+        require(!claimed(id_), AlreadyClaimed());
+        _claimed[id_] = true;
+        _sendETH(ticket.to, ticket.value);
     }
 
     /// @dev Function to transfer ETH to the receiver but ignoring the returndata.
