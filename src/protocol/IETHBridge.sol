@@ -3,9 +3,9 @@ pragma solidity ^0.8.28;
 
 /// @dev Bridges native value (i.e. ETH) by emitting tickets.
 ///
-/// Tickets are unique per chain, block number, sender, receiver and value. These can be created by
-/// sending value to the `createTicket` function. Later, the receiver can claim the ticket on the
-/// destination chain by using a storage proof.
+/// Tickets are unique per chain (source and destination), block number, sender, receiver and value. These can be
+/// created by sending value to the `createTicket` function. Later, the receiver can claim the ticket on the destination
+/// chain by using a storage proof.
 ///
 /// ETH bridge MUST be deployed at the same address on both chains.
 interface IETHBridge {
