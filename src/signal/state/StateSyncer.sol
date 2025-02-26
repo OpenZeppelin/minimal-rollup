@@ -49,14 +49,16 @@ abstract contract StateSyncer is IStateSyncer {
         return _latestPublicationId[chainId];
     }
 
-    function verifyCommitment(uint64 chainId, uint64 publicationId, bytes32 commitment, bytes[] calldata proof)
-        public
-        view
-        returns (bool valid)
-    {
+    function verifyCommitment(
+        uint64 chainId,
+        uint64 publicationId,
+        bytes32 commitment,
+        bytes32 root,
+        bytes[] calldata proof
+    ) public view returns (bool valid) {
         bytes32 signal = syncSignal(chainId, publicationId, commitment);
         bytes32 slot = signalService().signalSlot(block.chainid.toUint64(), address(this), signal);
-        return LibTrieProof.verifyState(slot, signal, commitment, proof);
+        return LibTrieProof.verifyState(slot, signal, root, proof);
     }
 
     function syncCommitment(uint64 chainId, uint64 publicationId, bytes32 commitment) external virtual onlySyncer {

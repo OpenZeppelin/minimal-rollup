@@ -17,10 +17,13 @@ interface IStateSyncer {
 
     function latestPublicationId(uint64 chainId) external view returns (uint64 publicationId);
 
-    function verifyCommitment(uint64 chainId, uint64 publicationId, bytes32 commitment, bytes[] calldata proof)
-        external
-        view
-        returns (bool valid);
+    function verifyCommitment(
+        uint64 chainId,
+        uint64 publicationId,
+        bytes32 commitment,
+        bytes32 root,
+        bytes[] calldata proof
+    ) external view returns (bool valid);
 
-    function syncState(uint64 chainId, uint64 publicationId, bytes32 commitment) external;
+    function syncCommitment(uint64 chainId, uint64 publicationId, bytes32 commitment) external;
 }
