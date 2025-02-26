@@ -41,10 +41,9 @@ contract ETHBridge is IETHBridge {
     }
 
     function createTicket(uint64 destinationChainId, address to) external payable virtual {
-        address from = msg.sender;
         uint64 blockNumber = block.number.toUint64();
-        ticketId(destinationChainId, blockNumber, from, to, msg.value).signal();
-        emit Ticket(destinationChainId, blockNumber, from, to, msg.value);
+        ticketId(destinationChainId, blockNumber, msg.sender, to, msg.value).signal();
+        emit Ticket(destinationChainId, blockNumber, msg.sender, to, msg.value);
     }
 
     function claimTicket(
