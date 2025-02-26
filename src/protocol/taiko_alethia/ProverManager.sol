@@ -40,7 +40,7 @@ contract ProverManager is IProposerFees, IProverManager{
     ///@notice The deadline for a prover to submit a valid proof after their period ends
     uint256 public provingDeadline;
     /// @notice The minimum stake required to be a prover
-    /// @dev This should be enough to cover the cost of a new prover if the current prover becomes innactive
+    /// @dev This should be enough to cover the cost of a new prover if the current prover becomes inactive
     uint256 public livenessBond;
     /// @notice The percentage of the liveness bond that the evictor gets as an incentive
     uint256 public evictorIncentivePercentage;
