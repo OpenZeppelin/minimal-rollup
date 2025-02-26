@@ -140,7 +140,7 @@ contract ProverManager is IProposerFees, IProverManager {
         }
 
         uint256 requiredFee = periods[currentPeriod].fee;
-        //TODO: I'm not sure this is the corret way to deal with this
+        //TODO: I'm not sure this is the correct way to deal with this
         if (isDelayed) {
             requiredFee *= delayedFeeMultiplier;
         }
@@ -349,7 +349,7 @@ contract ProverManager is IProposerFees, IProverManager {
         uint256 livenessBondReward = _livenessBond - burnedStake;
         balances[msg.sender] += newProverFees + livenessBondReward;
 
-        // Delete the period. This implicitely burns the remaining part of the liveness bond by locking it in the
+        // Delete the period. This implicitly burns the remaining part of the liveness bond by locking it in the
         // contract
         // TODO: We might want to move "burned stake" to the treasury instead or something else other than burning it.
         delete periods[periodId];
@@ -357,7 +357,7 @@ contract ProverManager is IProposerFees, IProverManager {
         //TODO: emit an event
     }
 
-    /// @dev Caculates the percentage of a given numerator scaling up to avoid precision loss
+    /// @dev Calculates the percentage of a given numerator scaling up to avoid precision loss
     /// @param amount The number to calculate the percentage of
     /// @param bps The percentage expressed in basis points(https://muens.io/solidity-percentages)
     function calculatePercentage(uint256 amount, uint256 bps) private pure returns (uint256) {
