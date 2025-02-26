@@ -8,7 +8,7 @@ pragma solidity ^0.8.28;
 /// destination chain by using a storage proof.
 ///
 /// ETH bridge MUST be deployed at the same address on both chains.
-interface IETHTokenBridge {
+interface IETHBridge {
     event Ticket(uint64 blockNumber, address from, address to, uint256 value);
 
     error InvalidTicket();
@@ -17,10 +17,7 @@ interface IETHTokenBridge {
 
     function claimed(bytes32 id) external view returns (bool);
 
-    function ticketId(uint64 chainId, uint64 blockNumber, address from, address to, uint256 value)
-        external
-        view
-        returns (bytes32 id);
+    function ticketId(uint64 blockNumber, address from, address to, uint256 value) external view returns (bytes32 id);
 
     function verifyTicket(
         uint64 sourceChainId,
@@ -29,6 +26,7 @@ interface IETHTokenBridge {
         address to,
         uint256 value,
         bytes32 root,
+        bytes[] calldata accountProof,
         bytes[] calldata proof
     ) external view returns (bool verified, bytes32 id);
 
@@ -41,6 +39,7 @@ interface IETHTokenBridge {
         address to,
         uint256 value,
         bytes32 root,
+        bytes[] calldata accountProof,
         bytes[] calldata proof
     ) external;
 }
