@@ -50,9 +50,9 @@ contract ProverManager is IProposerFees, IProverManager{
     /// @notice Common balances for proposers and provers
     mapping(address => uint256) public balances;
     /// @notice Periods represent proving windows
-    /// @dev Most of the time we are dealing with the current period or next period(bids for the next period),
+    /// @dev Most of the time we are dealing with the current period or next period (bids for the next period),
     /// but we need periods in the past to track publications that still need to be proven after the prover is
-    /// evicted(or exits)
+    /// evicted (or exits)
     mapping(uint256 periodId => Period period) public periods;
     /// @notice The current period
     uint256 public currentPeriodId;
