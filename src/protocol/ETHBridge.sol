@@ -3,10 +3,10 @@ pragma solidity ^0.8.28;
 
 import {LibSignal} from "../libs/LibSignal.sol";
 import {LibTrieProof} from "../libs/LibTrieProof.sol";
-import {INativeTokenBridge} from "./INativeTokenBridge.sol";
+import {IETHBridge} from "./IETHBridge.sol";
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 
-contract NativeTokenBridge is INativeTokenBridge {
+contract ETHBridge is IETHBridge {
     using SafeCast for uint256;
     using LibSignal for bytes32;
 
@@ -56,7 +56,7 @@ contract NativeTokenBridge is INativeTokenBridge {
     ) external virtual {
         bytes32 id = _checkClaimTicket(sourceChainId, blockNumber, from, to, value, root, proof);
         _claimed[id] = true;
-        _sendNativeValue(to, value);
+        _sendETH(to, value);
     }
 
     function _checkClaimTicket(
@@ -74,7 +74,7 @@ contract NativeTokenBridge is INativeTokenBridge {
         require(valid, InvalidTicket());
     }
 
-    function _sendNativeValue(address to, uint256 value) private returns (bool success) {
+    function _sendETH(address to, uint256 value) private returns (bool success) {
         assembly ("memory-safe") {
             success := call(gas(), to, value, 0, 0, 0, 0)
         }

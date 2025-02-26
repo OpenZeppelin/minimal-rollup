@@ -1,7 +1,14 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
-interface INativeTokenBridge {
+/// @dev Bridges native value (i.e. ETH) by emitting tickets.
+///
+/// Tickets are unique per chain, block number, sender, receiver and value. These can be created by
+/// sending value to the `createTicket` function. Later, the receiver can claim the ticket on the
+/// destination chain by using a storage proof.
+///
+/// ETH bridge MUST be deployed at the same address on both chains.
+interface IETHTokenBridge {
     event Ticket(uint64 blockNumber, address from, address to, uint256 value);
 
     error InvalidTicket();
