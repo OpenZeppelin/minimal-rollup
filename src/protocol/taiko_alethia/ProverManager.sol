@@ -36,6 +36,7 @@ contract ProverManager is IProposerFees, IProverManager{
     /// @dev This cannot happen immediately to allow other provers to bid for the role
     uint256 public inactiveExitDelay;
     /// @notice The multiplier for delayed publications
+    /// @dev Delayed publications are charged at a higher fee, since they can potentially be much larger than regular publications
     uint256 public delayedFeeMultiplier;
     ///@notice The deadline for a prover to submit a valid proof after their period ends
     uint256 public provingDeadline;
@@ -70,17 +71,25 @@ contract ProverManager is IProposerFees, IProverManager{
         uint256 _oldPublicationWindow,
         uint256 _offerActivationDelay,
         uint256 _exitDelay,
+        uint256 _inactiveExitDelay,
         uint256 _delayedFeeMultiplier,
+        uint256 _provingDeadline,
+        uint256 _livenessBond,
+        uint256 _evictorIncentivePercentage,
+        uint256 _burnedStakePercentage,
         address _inbox,
         address _checkpointTracker,
-        address _publicationFeed,
-        uint256 _burnedStakePercentage
+        address _publicationFeed
     ) {
         minStepPercentage = _minStepPercentage;
         oldPublicationWindow = _oldPublicationWindow;
         offerActivationDelay = _offerActivationDelay;
         exitDelay = _exitDelay;
+        inactiveExitDelay = _inactiveExitDelay;
         delayedFeeMultiplier = _delayedFeeMultiplier;
+        provingDeadline = _provingDeadline;
+        livenessBond = _livenessBond;
+        evictorIncentivePercentage = _evictorIncentivePercentage;
         burnedStakePercentage = _burnedStakePercentage;
         inbox = _inbox;
         checkpointTracker = ICheckpointTracker(_checkpointTracker);
