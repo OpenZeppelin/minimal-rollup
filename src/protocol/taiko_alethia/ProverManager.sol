@@ -44,15 +44,15 @@ contract ProverManager is IProposerFees, IProverManager{
     uint256 public livenessBond;
     /// @notice The percentage of the liveness bond that the evictor gets as an incentive
     uint256 public evictorIncentivePercentage;
-    /// @notice The percentage of the liveness bond(at the moment of the slashing) that is burned when a prover is slashed
+    /// @notice The percentage of the liveness bond (at the moment of the slashing) that is burned when a prover is slashed
     uint256 public burnedStakePercentage;
 
     /// @notice Common balances for proposers and provers
     mapping(address => uint256) public balances;
     /// @notice Periods represent proving windows
-    /// @dev Most of the time we are dealing with the current period or next period(bids for the next period),
+    /// @dev Most of the time we are dealing with the current period or next period (bids for the next period),
     /// but we need periods in the past to track publications that still need to be proven after the prover is
-    /// evicted(or exits)
+    /// evicted (or exits)
     mapping(uint256 periodId => Period period) public periods;
     /// @notice The current period
     uint256 public currentPeriodId;
