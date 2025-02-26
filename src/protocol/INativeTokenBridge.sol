@@ -5,6 +5,7 @@ interface INativeTokenBridge {
     event Transfer(uint64 blockNumber, address from, address to, uint256 value);
 
     error InvalidClaim();
+    error FailedClaim();
 
     function transferId(uint64 chainId, uint64 blockNumber, address from, address to, uint256 value)
         external

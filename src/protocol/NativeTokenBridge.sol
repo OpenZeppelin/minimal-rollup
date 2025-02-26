@@ -56,7 +56,7 @@ contract NativeTokenBridge is INativeTokenBridge {
         assembly ("memory-safe") {
             success := call(gas(), to, value, 0, 0, 0, 0)
         }
-        require(success);
+        require(success, FailedClaim());
     }
 
     function _checkClaim(
