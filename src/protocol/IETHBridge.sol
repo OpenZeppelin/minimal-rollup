@@ -10,10 +10,7 @@ pragma solidity ^0.8.28;
 /// ETH bridge MUST be deployed at the same address on both chains.
 interface IETHBridge {
     /// @dev Sender (`from`) sent `value` at `blockNumber` to the receiver (`to`). Claimable on `destinationChainId`.
-    event Ticket(uint64 destinationChainId, uint64 blockNumber, address from, address to, uint256 value);
-
-    /// @dev The ticket is not valid (i.e. couldn't be verified)
-    error InvalidTicket();
+    event ETHTicket(uint64 destinationChainId, uint64 blockNumber, address from, address to, uint256 value);
 
     /// @dev Failed to call the receiver with value.
     error FailedClaim();
