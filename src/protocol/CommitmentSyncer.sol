@@ -75,8 +75,7 @@ abstract contract CommitmentSyncer is ICommitmentSyncer {
         virtual
         onlyCheckpointTracker
     {
-        _checkCommitment(chainId, height, commitment, root, proof);
-        _syncCommitment(chainId, height, commitment);
+        _syncCommitment(_checkCommitment(chainId, height, commitment, root, proof), chainId, height, commitment);
     }
 
     /// @dev Internal version of `syncCommitment` without access control.
@@ -85,6 +84,7 @@ abstract contract CommitmentSyncer is ICommitmentSyncer {
         if (latestHeight(chainId) < height) {
             _latestHeight[chainId] = height;
             _commitment[chainId][height] = commitment;
+            // Invariant:
             // assert(id == commitmentId(chainId, height, commitment));
             id.signal();
             emit CommitmentSynced(chainId, height, commitment);
