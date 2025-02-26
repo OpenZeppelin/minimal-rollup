@@ -44,7 +44,7 @@ contract ProverManager is IProposerFees, IProverManager{
     uint256 public livenessBond;
     /// @notice The percentage of the liveness bond that the evictor gets as an incentive
     uint256 public evictorIncentivePercentage;
-    /// @notice The percentage of the liveness bond(at the moment of the slashing) that is burned when a prover is slashed
+    /// @notice The percentage of the liveness bond (at the moment of the slashing) that is burned when a prover is slashed
     uint256 public burnedStakePercentage;
 
     /// @notice Common balances for proposers and provers
