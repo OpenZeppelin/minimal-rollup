@@ -12,7 +12,7 @@ contract NativeTokenBridge is INativeTokenBridge {
 
     mapping(bytes32 id => bool) _claimed;
 
-    function claimed(bytes32 id) external view returns (bool) {
+    function claimed(bytes32 id) public view virtual returns (bool) {
         return _claimed[id];
     }
 
