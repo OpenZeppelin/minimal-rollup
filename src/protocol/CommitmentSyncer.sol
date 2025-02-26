@@ -3,76 +3,82 @@ pragma solidity ^0.8.28;
 
 import {LibSignal} from "../libs/LibSignal.sol";
 import {LibTrieProof} from "../libs/LibTrieProof.sol";
+
+import {ICheckpointTracker} from "./ICheckpointTracker.sol";
 import {ICommitmentSyncer} from "./ICommitmentSyncer.sol";
 
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 
+/// @dev Tracks and synchronizes commitments from different chains using their chainId.
 abstract contract CommitmentSyncer is ICommitmentSyncer {
     using SafeCast for uint256;
     using LibSignal for bytes32;
 
-    error InvalidCommitment();
+    /// @dev The caller is not a recognized checkpoint tracker.
+    error UnauthorizedCheckpointTracker();
 
-    mapping(uint64 chainId => uint64 publicationId) private _latestPublicationId;
-    mapping(uint64 chainId => mapping(uint64 publicationId => bytes32 commitment)) private _commitmentAt;
+    address private immutable _checkpointTracker;
 
-    modifier onlySyncer() {
-        _checkSyncer(msg.sender);
+    mapping(uint64 chainId => uint64) private _latestHeight;
+    mapping(uint64 chainId => mapping(uint64 height => bytes32)) private _commitment;
+
+    modifier onlyCheckpointTracker() {
+        _checkCheckpointTracker(msg.sender);
         _;
     }
 
-    function syncValue(uint64 chainId, uint64 publicationId, bytes32 commitment)
-        public
-        pure
-        virtual
-        returns (bytes32 value)
-    {
-        return keccak256(abi.encodePacked(chainId, publicationId, commitment));
+    constructor(address checkpointTracker_) {
+        _checkpointTracker = checkpointTracker_;
     }
 
-    function commitmentAt(uint64 chainId, uint64 publicationId) public view virtual returns (bytes32 commitment) {
-        return _commitmentAt[chainId][publicationId];
+    function checkpointTracker() public view virtual returns (ICheckpointTracker) {
+        return ICheckpointTracker(_checkpointTracker);
+    }
+
+    function id(uint64 chainId, uint64 height, bytes32 commitment) public pure virtual returns (bytes32 value) {
+        return keccak256(abi.encodePacked(chainId, height, commitment));
+    }
+
+    function commitmentAt(uint64 chainId, uint64 height) public view virtual returns (bytes32 commitment) {
+        return _commitment[chainId][height];
     }
 
     function latestCommitment(uint64 chainId) public view virtual returns (bytes32 commitment) {
-        return commitmentAt(chainId, latestPublicationId(chainId));
+        return commitmentAt(chainId, latestHeight(chainId));
     }
 
-    function latestPublicationId(uint64 chainId) public view virtual returns (uint64 publicationId) {
-        return _latestPublicationId[chainId];
+    function latestHeight(uint64 chainId) public view virtual returns (uint64 height) {
+        return _latestHeight[chainId];
     }
 
-    function verifyCommitment(
-        uint64 chainId,
-        uint64 publicationId,
-        bytes32 commitment,
-        bytes32 stateRoot,
-        bytes[] calldata proof
-    ) public view returns (bool valid) {
-        bytes32 value = syncValue(chainId, publicationId, commitment);
-        return LibTrieProof.verifyState(value.deriveSlot(), value, stateRoot, proof);
+    function verifyCommitment(uint64 chainId, uint64 height, bytes32 commitment, bytes32 root, bytes[] calldata proof)
+        public
+        view
+        virtual
+        returns (bool valid)
+    {
+        bytes32 value = id(chainId, height, commitment);
+        return LibTrieProof.verifyState(value.deriveSlot(), value, root, proof);
     }
 
-    function syncCommitment(
-        uint64 chainId,
-        uint64 publicationId,
-        bytes32 commitment,
-        bytes32 stateRoot,
-        bytes[] calldata proof
-    ) external virtual onlySyncer {
-        require(verifyCommitment(chainId, publicationId, commitment, stateRoot, proof), InvalidCommitment());
-        _syncCommitment(chainId, publicationId, commitment);
+    function syncCommitment(uint64 chainId, uint64 height, bytes32 commitment, bytes32 root, bytes[] calldata proof)
+        external
+        virtual
+        onlyCheckpointTracker
+    {
+        require(verifyCommitment(chainId, height, commitment, root, proof), InvalidCommitment());
+        _syncCommitment(chainId, height, commitment);
     }
 
-    function _syncCommitment(uint64 chainId, uint64 publicationId, bytes32 commitment) internal virtual {
-        if (latestPublicationId(chainId) < publicationId) {
-            _latestPublicationId[chainId] = publicationId;
-            _commitmentAt[chainId][publicationId] = commitment;
-            syncValue(chainId, publicationId, commitment).signal();
-            emit CommitmentSynced(chainId, publicationId, commitment);
+    function _syncCommitment(uint64 chainId, uint64 height, bytes32 commitment) internal virtual {
+        if (latestHeight(chainId) < height) {
+            _latestHeight[chainId] = height;
+            _commitment[chainId][height] = commitment;
+            id(chainId, height, commitment).signal();
+            emit CommitmentSynced(chainId, height, commitment);
         }
     }
 
     /// @dev Must revert if the caller is not an authorized syncer.
-    function _checkSyncer(address caller) internal virtual;
+    function _checkCheckpointTracker(address caller) internal virtual {}
 }
