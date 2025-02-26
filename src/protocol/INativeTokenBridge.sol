@@ -4,7 +4,7 @@ pragma solidity ^0.8.28;
 interface INativeTokenBridge {
     event Ticket(uint64 blockNumber, address from, address to, uint256 value);
 
-    error InvalidClaim();
+    error InvalidTicket();
     error FailedClaim();
 
     function claimed(bytes32 id) external view returns (bool);

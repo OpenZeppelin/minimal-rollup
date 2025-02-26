@@ -70,7 +70,7 @@ contract NativeTokenBridge is INativeTokenBridge {
     ) internal virtual returns (bytes32 id) {
         bool valid;
         (valid, id) = verifyTicket(sourceChainId, blockNumber, from, to, value, root, proof);
-        require(valid, InvalidClaim());
+        require(valid, InvalidTicket());
     }
 
     function _sendNativeValue(address to, uint256 value) private returns (bool success) {
