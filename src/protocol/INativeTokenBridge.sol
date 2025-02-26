@@ -6,6 +6,7 @@ interface INativeTokenBridge {
 
     error InvalidTicket();
     error FailedClaim();
+    error AlreadyClaimed();
 
     function claimed(bytes32 id) external view returns (bool);
 
