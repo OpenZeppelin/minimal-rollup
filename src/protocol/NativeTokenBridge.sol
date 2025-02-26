@@ -55,7 +55,6 @@ contract NativeTokenBridge is INativeTokenBridge {
         bytes[] calldata proof
     ) external virtual {
         bytes32 id = _checkClaimTicket(sourceChainId, blockNumber, from, to, value, root, proof);
-        require(!claimed(id), AlreadyClaimed());
         _claimed[id] = true;
         _sendNativeValue(to, value);
     }
@@ -71,6 +70,7 @@ contract NativeTokenBridge is INativeTokenBridge {
     ) internal virtual returns (bytes32 id) {
         bool valid;
         (valid, id) = verifyTicket(sourceChainId, blockNumber, from, to, value, root, proof);
+        require(!claimed(id), AlreadyClaimed());
         require(valid, InvalidTicket());
     }
 
