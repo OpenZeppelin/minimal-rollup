@@ -34,13 +34,13 @@ contract ProverManager is IProposerFees, IProverManager{
     uint256 public exitDelay;
     /// @notice The delay after which the current prover is evicted if they are inactive
     /// @dev This cannot happen immediately to allow other provers to bid for the role
-    uint256 public innactiveExitDelay;
+    uint256 public inactiveExitDelay;
     /// @notice The multiplier for delayed publications
     uint256 public delayedFeeMultiplier;
     ///@notice The deadline for a prover to submit a valid proof after their period ends
     uint256 public provingDeadline;
     /// @notice The minimum stake required to be a prover
-    /// @dev This should be enough to cover the cost of a new prover if the current prover becomes innactive
+    /// @dev This should be enough to cover the cost of a new prover if the current prover becomes inactive
     uint256 public livenessBond;
     /// @notice The percentage of the liveness bond that the evictor gets as an incentive
     uint256 public evictorIncentivePercentage;
@@ -193,7 +193,7 @@ contract ProverManager is IProposerFees, IProverManager{
         uint256 publicationTimestamp = publicationHeader.timestamp;
         require(publicationTimestamp + oldPublicationWindow < block.timestamp, "Publication is not old enough");
 
-        uint256 periodEnd = block.timestamp + innactiveExitDelay;
+        uint256 periodEnd = block.timestamp + inactiveExitDelay;
         Period storage period = periods[currentPeriodId];
         period.slashed = true;
         period.end = periodEnd;
