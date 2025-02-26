@@ -31,12 +31,7 @@ library LibSignal {
 
     /// @dev A `value` was signaled at a namespaced slot. See `deriveSlot`.
     function signaled(uint64 chainId, address account, bytes32 value) internal view returns (bool) {
-        return signaledAt(deriveSlot(chainId, account, value));
-    }
-
-    /// @dev A `value` was signaled at a `slot`. See `deriveSlot`.
-    function signaledAt(bytes32 slot) internal view returns (bool) {
-        return slot.getBytes32Slot().value != 0;
+        return deriveSlot(chainId, account, value).getBytes32Slot().value != 0;
     }
 
     /// @dev Signal a `value` at a namespaced slot for the current `msg.sender` and `block.chainid`.
