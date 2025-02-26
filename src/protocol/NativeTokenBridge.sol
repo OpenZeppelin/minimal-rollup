@@ -52,11 +52,7 @@ contract NativeTokenBridge is INativeTokenBridge {
     ) external virtual {
         bytes32 id = _checkClaim(sourceChainId, blockNumber, from, to, value, root, proof);
         _claimed[id] = true;
-        bool success;
-        assembly ("memory-safe") {
-            success := call(gas(), to, value, 0, 0, 0, 0)
-        }
-        require(success, FailedClaim());
+        _sendNativeValue(to, value);
     }
 
     function _checkClaim(
@@ -71,5 +67,12 @@ contract NativeTokenBridge is INativeTokenBridge {
         bool valid;
         (valid, id) = verifyClaim(sourceChainId, blockNumber, from, to, value, root, proof);
         require(valid, InvalidClaim());
+    }
+
+    function _sendNativeValue(address to, uint256 value) private returns (bool success) {
+        assembly ("memory-safe") {
+            success := call(gas(), to, value, 0, 0, 0, 0)
+        }
+        require(success, FailedClaim());
     }
 }
