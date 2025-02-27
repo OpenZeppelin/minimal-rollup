@@ -2,19 +2,27 @@
 pragma solidity ^0.8.28;
 
 import {LibSignal} from "../libs/LibSignal.sol";
+import {SlotDerivation} from "@openzeppelin/contracts/utils/SlotDerivation.sol";
+import {StorageSlot} from "@openzeppelin/contracts/utils/StorageSlot.sol";
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 
-/// @dev Library to create and verify value tickets per chain (source and destination), block number, sender, receiver.
+/// @dev Library to create and verify value tickets per chain (source and destination), nonce, sender, receiver.
 ///
 /// Tickets can be used to bridge ETH or standard tokens (e.g. ERC20, ERC271, ERC1155) with the only condition of having
 /// the same contract deployed on both chains and a trusted source of a state root.
 library LibValueTicket {
     using SafeCast for uint256;
+    using StorageSlot for bytes32;
     using LibSignal for *;
+    using SlotDerivation for *;
+
+    // keccak256(abi.encode(uint256(keccak256("LibValueTicket.nonces")) - 1)) & ~bytes32(uint256(0xff))
+    bytes32 private constant VALUE_TICKET_NONCES_STORAGE =
+        0x23c95d7a21dec6ba744555d361d2572ad62017f33fd3da51a4ffa8cde254e900;
 
     struct ValueTicket {
         uint64 chainId;
-        uint64 blockNumber;
+        uint64 nonce;
         address from;
         address to;
         uint256 value;
@@ -28,7 +36,7 @@ library LibValueTicket {
         return keccak256(abi.encode(ticket));
     }
 
-    /// @dev Verifies that a ticket created at `blockNumber` by the receiver (`from`) is valid for the receiver (`to`)
+    /// @dev Verifies that a ticket created with `nonce` by the receiver (`from`) is valid for the receiver (`to`)
     /// to claim `value` on this chain. It does so by performing an storage proof of `address(this)` on the source chain
     /// using `accountProof` and validating it against the network state `root` using `proof`.
     /// The `root` MUST be trusted.
@@ -47,14 +55,13 @@ library LibValueTicket {
         internal
         returns (ValueTicket memory ticket)
     {
-        uint64 blockNumber = block.number.toUint64();
-        ticket = ValueTicket(destinationChainId, blockNumber, from, to, value);
+        ticket = ValueTicket(destinationChainId, _useNonce(from).toUint64(), from, to, value);
         bytes32 _id = id(ticket);
         _id.signal();
         return ticket;
     }
 
-    /// @dev Reverts if a ticket was not created by `from` at `blockNumber` on `sourceChainId`. See `verifyTicket`.
+    /// @dev Reverts if a ticket was not created by `from` with `nonce` on `chainId`. See `verifyTicket`.
     function checkTicket(ValueTicket memory ticket, bytes32 root, bytes[] memory accountProof, bytes[] memory proof)
         internal
         view
@@ -63,5 +70,16 @@ library LibValueTicket {
         (bool valid, bytes32 _id) = verifyTicket(ticket, root, accountProof, proof);
         require(valid, InvalidTicket());
         return _id;
+    }
+
+    /// @dev Consumes a nonce and returns the current value and increments nonce.
+    function _useNonce(address account) internal returns (uint256) {
+        // For each account, the nonce has an initial value of 0, can only be incremented by one, and cannot be
+        // decremented or reset. This guarantees that the nonce never overflows.
+
+        unchecked {
+            // It is important to do x++ and not ++x here.
+            return VALUE_TICKET_NONCES_STORAGE.deriveMapping(account).getUint256Slot().value++;
+        }
     }
 }

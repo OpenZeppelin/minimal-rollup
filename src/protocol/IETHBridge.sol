@@ -10,7 +10,7 @@ import {LibValueTicket} from "../libs/LibValueTicket.sol";
 ///
 /// ETH bridge MUST be deployed at the same address on both chains.
 interface IETHBridge {
-    /// @dev Sender (`from`) sent `value` at `blockNumber` to the receiver (`to`). Claimable on `chainId`.
+    /// @dev Sender (`from`) sent `value` with `nonce` to the receiver (`to`). Claimable on `chainId`.
     event ETHTicket(LibValueTicket.ValueTicket ticket);
 
     /// @dev A ticket was claimed.
@@ -28,7 +28,7 @@ interface IETHBridge {
     /// @dev Ticket identifier.
     function ticketId(LibValueTicket.ValueTicket memory ticket) external view returns (bytes32 id);
 
-    /// @dev Verifies if a ticket defined created on the `chainId` at `blockNumber` by the receiver (`from`) is valid
+    /// @dev Verifies if a ticket defined created on the `chainId` with `nonce` by the receiver (`from`) is valid
     /// for the receiver `to` to claim `value` on this chain by performing an storage proof of this bridge address using
     /// `accountProof` and validating it against the network state root using `proof`.
     function verifyTicket(
@@ -41,7 +41,7 @@ interface IETHBridge {
     /// @dev Creates a ticket with `msg.value` ETH for the receiver (`to`) to claim on the `chainId`.
     function createTicket(uint64 chainId, address to) external payable;
 
-    /// @dev Claims a ticket created on `chainId` by the sender (`from`) at `blockNumber`. The `value` ETH claimed  is
+    /// @dev Claims a ticket created on `chainId` by the sender (`from`) with `nonce`. The `value` ETH claimed  is
     /// sent to the receiver (`to`) after verifying the proofs. See `verifyTicket`.
     function claimTicket(
         LibValueTicket.ValueTicket memory ticket,
