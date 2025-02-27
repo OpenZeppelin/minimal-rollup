@@ -12,6 +12,16 @@ interface IBlobRefRegistry {
         bytes32[] blobhashes;
     }
 
+    /// @dev Struct representing a slice of data from a BlobRef
+    /// @param blobRefHash The keccak256 hash of the encoded BlobRef
+    /// @param startIndex The start index of the blob slice`
+    /// @param endIndex The end index of the blob slice
+    struct BlobSlice {
+        bytes32 blobRefHash;
+        uint32 startIndex;
+        uint32 endIndex;
+    }
+
     /// @notice Emitted when a blob ref hash is registered
     /// @param refHash The keccak256 hash of the encoded blob ref
     /// @param ref The blob ref
