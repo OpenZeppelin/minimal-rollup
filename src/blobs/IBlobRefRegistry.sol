@@ -19,7 +19,7 @@ interface IBlobRefRegistry {
     struct BlobSlice {
         bytes32 blobRefHash;
         uint32 startIndex;
-        uint32 endIndex;
+        uint32 size;
     }
 
     /// @notice Emitted when a blob ref hash is registered
