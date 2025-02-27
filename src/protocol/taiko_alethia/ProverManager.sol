@@ -189,6 +189,7 @@ contract ProverManager is IProposerFees, IProverManager {
         // Record the next period info
         _nextPeriod.prover = msg.sender;
         _nextPeriod.fee = offeredFee;
+        balances[_nextProverAddress] -= _livenessBond;
         _nextPeriod.livenessBond = _livenessBond;
 
         emit ProverOffer(msg.sender, offeredFee, _livenessBond);
@@ -201,7 +202,7 @@ contract ProverManager is IProposerFees, IProverManager {
         external
     {
         require(
-            keccak256(abi.encode(publicationHeader)) == publicationFeed.getPublicationHash(publicationId),
+            publicationFeed.validateHeader(publicationHeader, publicationId),
             "Publication hash does not match"
         );
 
@@ -263,7 +264,7 @@ contract ProverManager is IProposerFees, IProverManager {
         // Verify that the end publication is within the period and valid
         uint256 periodEnd = period.end;
         require(
-            keccak256(abi.encode(endPublicationHeader)) == publicationFeed.getPublicationHash(end.publicationId),
+            publicationFeed.validateHeader(endPublicationHeader, end.publicationId),
             "Publication hash does not match"
         );
         require(endPublicationHeader.timestamp < periodEnd, "End publication is not within the period");
@@ -277,8 +278,7 @@ contract ProverManager is IProposerFees, IProverManager {
             require(nextPublicationHeader.id == end.publicationId + 1, "This is not the next publication");
             require(nextPublicationHeader.timestamp > periodEnd, "Next publication is not after the period end");
             require(
-                keccak256(abi.encode(nextPublicationHeader))
-                    == publicationFeed.getPublicationHash(nextPublicationHeader.id),
+                publicationFeed.validateHeader(nextPublicationHeader, nextPublicationHeader.id),
                 "Publication hash does not match"
             );
 
@@ -308,7 +308,7 @@ contract ProverManager is IProposerFees, IProverManager {
         // Verify that the end publication is within the period and valid
         uint256 periodEnd = period.end;
         require(
-            keccak256(abi.encode(endPublicationHeader)) == publicationFeed.getPublicationHash(end.publicationId),
+            publicationFeed.validateHeader(endPublicationHeader, end.publicationId),
             "Publication hash does not match"
         );
         require(endPublicationHeader.timestamp < periodEnd, "End publication is not within the period");
@@ -317,15 +317,14 @@ contract ProverManager is IProposerFees, IProverManager {
         require(nextPublicationHeader.id == end.publicationId + 1, "This is not the next publication");
         require(nextPublicationHeader.timestamp > periodEnd, "Next publication is not after the period end");
         require(
-            keccak256(abi.encode(nextPublicationHeader)) == publicationFeed.getPublicationHash(nextPublicationHeader.id),
+            publicationFeed.validateHeader(nextPublicationHeader, nextPublicationHeader.id),
             "Publication hash does not match"
         );
 
         //Verify that all the publications are correct and linked together(they belong to this rollup)
         for (uint256 i = 0; i < numPubs; i++) {
             require(
-                keccak256(abi.encode(publicationHeadersToProve[i]))
-                    == publicationFeed.getPublicationHash(publicationHeadersToProve[i].id),
+                publicationFeed.validateHeader(publicationHeadersToProve[i], publicationHeadersToProve[i].id),
                 "Publication hash does not match"
             );
             if (i > 0) {
