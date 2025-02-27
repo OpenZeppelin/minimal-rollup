@@ -16,10 +16,6 @@ library LibValueTicket {
     using LibSignal for *;
     using SlotDerivation for *;
 
-    // keccak256(abi.encode(uint256(keccak256("LibValueTicket.nonces")) - 1)) & ~bytes32(uint256(0xff))
-    bytes32 private constant VALUE_TICKET_NONCES_STORAGE =
-        0x23c95d7a21dec6ba744555d361d2572ad62017f33fd3da51a4ffa8cde254e900;
-
     struct ValueTicket {
         uint64 chainId;
         uint64 nonce;
@@ -73,13 +69,15 @@ library LibValueTicket {
     }
 
     /// @dev Consumes a nonce and returns the current value and increments nonce.
-    function _useNonce(address account) internal returns (uint256) {
+    function _useNonce(address account) private returns (uint256) {
         // For each account, the nonce has an initial value of 0, can only be incremented by one, and cannot be
         // decremented or reset. This guarantees that the nonce never overflows.
 
         unchecked {
             // It is important to do x++ and not ++x here.
-            return VALUE_TICKET_NONCES_STORAGE.deriveMapping(account).getUint256Slot().value++;
+            // slot: keccak256(abi.encode(uint256(keccak256("LibValueTicket.nonces")) - 1)) & ~bytes32(uint256(0xff))
+            return 0x23c95d7a21dec6ba744555d361d2572ad62017f33fd3da51a4ffa8cde254e900.deriveMapping(account)
+                .getUint256Slot().value++;
         }
     }
 }
