@@ -13,6 +13,9 @@ interface IETHBridge {
     /// @dev Sender (`from`) sent `value` at `blockNumber` to the receiver (`to`). Claimable on `chainId`.
     event ETHTicket(LibValueTicket.ValueTicket ticket);
 
+    /// @dev A ticket was claimed.
+    event ETHTicketClaimed(LibValueTicket.ValueTicket ticket);
+
     /// @dev Failed to call the receiver with value.
     error FailedClaim();
 

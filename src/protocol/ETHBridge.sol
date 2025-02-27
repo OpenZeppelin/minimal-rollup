@@ -7,6 +7,9 @@ import {LibValueTicket} from "../libs/LibValueTicket.sol";
 import {IETHBridge} from "./IETHBridge.sol";
 
 /// @dev Bridge implementation to send native ETH to other chains using storage proofs.
+///
+/// IMPORTANT: No recovery mechanism is implemented in case an account creates a ticket that can't be claimed. Consider
+/// implementing one on top of this bridge for more specific use cases.
 contract ETHBridge is IETHBridge {
     using LibValueTicket for LibValueTicket.ValueTicket;
 
@@ -48,6 +51,7 @@ contract ETHBridge is IETHBridge {
         require(!claimed(id_), AlreadyClaimed());
         _claimed[id_] = true;
         _sendETH(ticket.to, ticket.value);
+        emit ETHTicketClaimed(ticket);
     }
 
     /// @dev Function to transfer ETH to the receiver but ignoring the returndata.
