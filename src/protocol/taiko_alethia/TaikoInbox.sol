@@ -5,6 +5,8 @@ import {IBlobRefRegistry} from "../../blobs/IBlobRefRegistry.sol";
 
 import {IPublicationFeed} from "../IPublicationFeed.sol";
 
+import {ISignalService} from "../ISignalService.sol";
+
 import {IDelayedInclusionStore} from "./IDelayedInclusionStore.sol";
 import {ILookahead} from "./ILookahead.sol";
 
@@ -13,12 +15,14 @@ contract TaikoInbox {
         uint256 anchorBlockId;
         bytes32 anchorBlockHash;
         bool isDelayedInclusion;
+        bytes32[] signalSlots;
     }
 
     IPublicationFeed public immutable publicationFeed;
     ILookahead public immutable lookahead;
     IBlobRefRegistry public immutable blobRefRegistry;
     IDelayedInclusionStore public immutable delayedInclusionStore;
+    ISignalService public immutable signalService;
 
     uint256 public immutable maxAnchorBlockIdOffset;
 
@@ -34,16 +38,18 @@ contract TaikoInbox {
         address _lookahead,
         address _blobRefRegistry,
         address _delayedInclusionStore,
+        address _signalService,
         uint256 _maxAnchorBlockIdOffset
     ) {
         publicationFeed = IPublicationFeed(_publicationFeed);
         lookahead = ILookahead(_lookahead);
         blobRefRegistry = IBlobRefRegistry(_blobRefRegistry);
         delayedInclusionStore = IDelayedInclusionStore(_delayedInclusionStore);
+        signalService = ISignalService(_signalService);
         maxAnchorBlockIdOffset = _maxAnchorBlockIdOffset;
     }
 
-    function publish(uint256 nBlobs, uint64 anchorBlockId) external {
+    function publish(uint256 nBlobs, uint64 anchorBlockId, bytes32[] calldata signalSlots) external {
         if (address(lookahead) != address(0)) {
             require(lookahead.isCurrentPreconfer(msg.sender), "not current preconfer");
         }
@@ -53,10 +59,13 @@ contract TaikoInbox {
         // Build the attribute for the anchor transaction inputs
         require(anchorBlockId >= block.number - maxAnchorBlockIdOffset, "anchorBlockId too old");
 
+        _verifySignalSlots(signalSlots);
+
         Metadata memory metadata = Metadata({
             anchorBlockId: anchorBlockId,
             anchorBlockHash: blockhash(anchorBlockId),
-            isDelayedInclusion: false
+            isDelayedInclusion: false,
+            signalSlots: signalSlots
         });
         require(metadata.anchorBlockHash != 0, "blockhash not found");
 
@@ -87,6 +96,12 @@ contract TaikoInbox {
         blobIndices = new uint256[](nBlobs);
         for (uint256 i; i < nBlobs; ++i) {
             blobIndices[i] = i;
+        }
+    }
+
+    function _verifySignalSlots(bytes32[] calldata signalSlots) private view {
+        for (uint256 i; i < signalSlots.length; ++i) {
+            require(signalService.isSignalSent(signalSlots[i]), "signal not sent");
         }
     }
 }
