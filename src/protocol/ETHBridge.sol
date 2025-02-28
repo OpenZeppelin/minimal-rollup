@@ -39,7 +39,7 @@ contract ETHBridge is IETHBridge {
         bytes[] memory accountProof,
         bytes[] memory proof
     ) public view virtual returns (bool verified, bytes32 id) {
-        return ticket.verifyTicket(root, accountProof, proof);
+        return ticket.verifyTicket(signalService, root, accountProof, proof);
     }
 
     /// @inheritdoc IETHBridge
@@ -59,7 +59,7 @@ contract ETHBridge is IETHBridge {
         bytes[] memory accountProof,
         bytes[] memory proof
     ) external virtual {
-        bytes32 id_ = ticket.checkTicket(root, accountProof, proof);
+        bytes32 id_ = ticket.checkTicket(signalService, root, accountProof, proof);
         require(!claimed(id_), AlreadyClaimed());
         _claimed[id_] = true;
         _sendETH(ticket.to, ticket.value);

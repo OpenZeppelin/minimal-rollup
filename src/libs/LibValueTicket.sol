@@ -37,13 +37,24 @@ library LibValueTicket {
     /// to claim `value` on this chain. It does so by performing an storage proof of `address(this)` on the source chain
     /// using `accountProof` and validating it against the network state `root` using `proof`.
     /// The `root` MUST be trusted.
-    function verifyTicket(ValueTicket memory ticket, bytes32 root, bytes[] memory accountProof, bytes[] memory proof)
-        internal
-        view
-        returns (bool verified, bytes32 _id)
-    {
+    /// @dev For L1->L2 same slot signalling this should be called with no accountProof. In this case the signal will be
+    /// verified against the receivedSignals mapping in the SignalService (filled by the proposer)
+    function verifyTicket(
+        ValueTicket memory ticket,
+        address signalService,
+        bytes32 root,
+        bytes[] memory accountProof,
+        bytes[] memory storageProof
+    ) internal view returns (bool verified, bytes32 _id) {
         _id = id(ticket);
-        (verified,) = address(this).verifySignal(root, ticket.chainId, _id, accountProof, proof);
+        if (accountProof.length == 0) {
+            ISignalService(signalService).verifySignal(
+                address(this), root, ticket.chainId, _id, accountProof, storageProof
+            );
+            // true because call will revert otherwise
+            return (true, _id);
+        }
+        (verified,) = address(this).verifySignal(root, ticket.chainId, _id, accountProof, storageProof);
         return (verified, _id);
     }
 
@@ -70,12 +81,14 @@ library LibValueTicket {
     }
 
     /// @dev Reverts if a ticket was not created by `from` with `nonce` on `chainId`. See `verifyTicket`.
-    function checkTicket(ValueTicket memory ticket, bytes32 root, bytes[] memory accountProof, bytes[] memory proof)
-        internal
-        view
-        returns (bytes32)
-    {
-        (bool valid, bytes32 _id) = verifyTicket(ticket, root, accountProof, proof);
+    function checkTicket(
+        ValueTicket memory ticket,
+        address signalService,
+        bytes32 root,
+        bytes[] memory accountProof,
+        bytes[] memory proof
+    ) internal view returns (bytes32) {
+        (bool valid, bytes32 _id) = verifyTicket(ticket, signalService, root, accountProof, proof);
         require(valid, InvalidTicket());
         return _id;
     }
