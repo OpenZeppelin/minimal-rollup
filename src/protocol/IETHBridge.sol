@@ -13,6 +13,10 @@ interface IETHBridge {
     /// @dev Sender (`from`) sent `value` with `nonce` to the receiver (`to`). Claimable on `chainId`.
     event ETHTicket(LibValueTicket.ValueTicket ticket);
 
+    /// @dev Sender (`from`) sent `value` with `nonce` to the receiver (`to`). Claimable on `chainId` within the same
+    /// slot.
+    event FastETHTicket(LibValueTicket.ValueTicket ticket);
+
     /// @dev A ticket was claimed.
     event ETHTicketClaimed(LibValueTicket.ValueTicket ticket);
 

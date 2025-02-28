@@ -61,10 +61,11 @@ library LibValueTicket {
     /// @dev Creates a ticket with `msg.value` ETH for the receiver (`to`) to claim on the `destinationChainId`.
     function createTicket(uint64 destinationChainId, address from, address to, uint256 value)
         internal
-        returns (ValueTicket memory)
+        returns (ValueTicket memory ticket)
     {
-        ValueTicket memory ticket = ValueTicket(destinationChainId, _useNonce(from).toUint64(), from, to, value);
-        id(ticket).signal();
+        ticket = ValueTicket(destinationChainId, _useNonce(from).toUint64(), from, to, value);
+        bytes32 _id = id(ticket);
+        _id.signal();
         return ticket;
     }
 
@@ -75,8 +76,9 @@ library LibValueTicket {
         internal
         returns (ValueTicket memory)
     {
-        ValueTicket memory ticket = ValueTicket(destinationChainId, _useNonce(from).toUint64(), from, to, value);
-        ISignalService(signalService).sendSignal(id(ticket));
+        ticket = ValueTicket(destinationChainId, _useNonce(from).toUint64(), from, to, value);
+        bytes32 _id = id(ticket);
+        ISignalService(signalService).sendSignal(_id);
         return ticket;
     }
 
