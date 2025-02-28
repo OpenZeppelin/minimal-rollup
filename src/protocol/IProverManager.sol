@@ -12,7 +12,7 @@ interface IProverManager {
     function evictProver(uint256 publicationId, IPublicationFeed.PublicationHeader calldata publicationHeader)
         external;
 
-    function proveOwnPeriod(
+    function proveActivePeriod(
         ICheckpointTracker.Checkpoint calldata start,
         ICheckpointTracker.Checkpoint calldata end,
         IPublicationFeed.PublicationHeader calldata endPublicationHeader,
