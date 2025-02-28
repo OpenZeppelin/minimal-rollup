@@ -41,6 +41,10 @@ interface IETHBridge {
     /// @dev Creates a ticket with `msg.value` ETH for the receiver (`to`) to claim on the `chainId`.
     function createTicket(uint64 chainId, address to) external payable;
 
+    /// @dev Creates a ticket that is redeamable within the same slot.
+    /// @dev This is only for L1->L2 bridging
+    function createFastTicket(uint64 chainId, address to) external payable;
+
     /// @dev Claims a ticket created on `chainId` by the sender (`from`) with `nonce`. The `value` ETH claimed  is
     /// sent to the receiver (`to`) after verifying the proofs. See `verifyTicket`.
     function claimTicket(

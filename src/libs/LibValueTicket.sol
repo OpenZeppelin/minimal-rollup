@@ -2,6 +2,7 @@
 pragma solidity ^0.8.28;
 
 import {LibSignal} from "../libs/LibSignal.sol";
+import {ISignalService} from "../protocol/ISignalService.sol";
 import {SlotDerivation} from "@openzeppelin/contracts/utils/SlotDerivation.sol";
 import {StorageSlot} from "@openzeppelin/contracts/utils/StorageSlot.sol";
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
@@ -49,11 +50,22 @@ library LibValueTicket {
     /// @dev Creates a ticket with `msg.value` ETH for the receiver (`to`) to claim on the `destinationChainId`.
     function createTicket(uint64 destinationChainId, address from, address to, uint256 value)
         internal
-        returns (ValueTicket memory ticket)
+        returns (ValueTicket memory)
     {
-        ticket = ValueTicket(destinationChainId, _useNonce(from).toUint64(), from, to, value);
-        bytes32 _id = id(ticket);
-        _id.signal();
+        ValueTicket memory ticket = ValueTicket(destinationChainId, _useNonce(from).toUint64(), from, to, value);
+        id(ticket).signal();
+        return ticket;
+    }
+
+    /// @dev Creates a ticket with `msg.value` ETH for the receiver (`to`) to claim on the `destinationChainId`.
+    /// This redeamable within the same slot.
+    /// @dev This is only for L1->L2 bridging
+    function createFastTicket(uint64 destinationChainId, address from, address to, uint256 value, address signalService)
+        internal
+        returns (ValueTicket memory)
+    {
+        ValueTicket memory ticket = ValueTicket(destinationChainId, _useNonce(from).toUint64(), from, to, value);
+        ISignalService(signalService).sendSignal(id(ticket));
         return ticket;
     }
 

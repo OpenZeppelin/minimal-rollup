@@ -5,6 +5,7 @@ import {LibTrieProof} from "../libs/LibTrieProof.sol";
 
 import {LibValueTicket} from "../libs/LibValueTicket.sol";
 import {IETHBridge} from "./IETHBridge.sol";
+import {ISignalService} from "./ISignalService.sol";
 
 /// @dev Bridge implementation to send native ETH to other chains using storage proofs.
 ///
@@ -13,7 +14,13 @@ import {IETHBridge} from "./IETHBridge.sol";
 contract ETHBridge is IETHBridge {
     using LibValueTicket for LibValueTicket.ValueTicket;
 
+    address public immutable signalService;
+
     mapping(bytes32 id => bool) _claimed;
+
+    constructor(address _signalService) {
+        signalService = _signalService;
+    }
 
     /// @inheritdoc IETHBridge
     function claimed(bytes32 id) public view virtual returns (bool) {
@@ -38,6 +45,11 @@ contract ETHBridge is IETHBridge {
     /// @inheritdoc IETHBridge
     function createTicket(uint64 chainId, address to) external payable virtual {
         emit ETHTicket(LibValueTicket.createTicket(chainId, msg.sender, to, msg.value));
+    }
+
+    /// @inheritdoc IETHBridge
+    function createFastTicket(uint64 chainId, address to) external payable virtual {
+        emit ETHTicket(LibValueTicket.createFastTicket(chainId, msg.sender, to, msg.value, signalService));
     }
 
     /// @inheritdoc IETHBridge
