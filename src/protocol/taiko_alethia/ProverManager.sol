@@ -7,6 +7,7 @@ import {IProposerFees} from "../IProposerFees.sol";
 import {IProverManager} from "../IProverManager.sol";
 import {IProverManager} from "../IProverManager.sol";
 import {IPublicationFeed} from "../IPublicationFeed.sol";
+import "forge-std/Test.sol";
 
 contract ProverManager is IProposerFees, IProverManager {
     struct Period {
@@ -189,7 +190,10 @@ contract ProverManager is IProposerFees, IProverManager {
         // Record the next period info
         _nextPeriod.prover = msg.sender;
         _nextPeriod.fee = offeredFee;
-        balances[_nextProverAddress] -= _livenessBond;
+        console.log("Prover2 balance: ", balances[_nextProverAddress]);
+        console.log("Prover1 balance: ", balances[_currentPeriod.prover]);
+        console.log("livenessBond", _livenessBond);
+        balances[msg.sender] -= _livenessBond;
         _nextPeriod.livenessBond = _livenessBond;
 
         emit ProverOffer(msg.sender, offeredFee, _livenessBond);

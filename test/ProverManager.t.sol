@@ -130,8 +130,8 @@ contract RegisterProverTest is Test {
 
         vm.startPrank(prover2);
         proverManager.deposit{value: LIVENESS_BOND}();
-        console.log("Prover2 balance: ", proverManager.balances(prover2));
-        console.log("Prover1 balance: ", proverManager.balances(prover1));
+        // console.log("Prover2 balance: ", proverManager.balances(prover2));
+        // console.log("Prover1 balance: ", proverManager.balances(prover1));
         proverManager.registerProver(underbidFee);
         vm.stopPrank();
 
