@@ -201,10 +201,7 @@ contract ProverManager is IProposerFees, IProverManager {
     function evictProver(uint256 publicationId, IPublicationFeed.PublicationHeader calldata publicationHeader)
         external
     {
-        require(
-            publicationFeed.validateHeader(publicationHeader, publicationId),
-            "Publication hash does not match"
-        );
+        require(publicationFeed.validateHeader(publicationHeader, publicationId), "Publication hash does not match");
 
         uint256 publicationTimestamp = publicationHeader.timestamp;
         require(publicationTimestamp + oldPublicationWindow < block.timestamp, "Publication is not old enough");
@@ -264,8 +261,7 @@ contract ProverManager is IProposerFees, IProverManager {
         // Verify that the end publication is within the period and valid
         uint256 periodEnd = period.end;
         require(
-            publicationFeed.validateHeader(endPublicationHeader, end.publicationId),
-            "Publication hash does not match"
+            publicationFeed.validateHeader(endPublicationHeader, end.publicationId), "Publication hash does not match"
         );
         require(endPublicationHeader.timestamp < periodEnd, "End publication is not within the period");
 
@@ -308,8 +304,7 @@ contract ProverManager is IProposerFees, IProverManager {
         // Verify that the end publication is within the period and valid
         uint256 periodEnd = period.end;
         require(
-            publicationFeed.validateHeader(endPublicationHeader, end.publicationId),
-            "Publication hash does not match"
+            publicationFeed.validateHeader(endPublicationHeader, end.publicationId), "Publication hash does not match"
         );
         require(endPublicationHeader.timestamp < periodEnd, "End publication is not within the period");
 
