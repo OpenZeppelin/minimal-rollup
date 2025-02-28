@@ -2,9 +2,7 @@
 pragma solidity ^0.8.28;
 
 import {ICheckpointTracker} from "../ICheckpointTracker.sol";
-
 import {IProposerFees} from "../IProposerFees.sol";
-import {IProverManager} from "../IProverManager.sol";
 import {IProverManager} from "../IProverManager.sol";
 import {IPublicationFeed} from "../IPublicationFeed.sol";
 import "forge-std/Test.sol";
@@ -16,8 +14,7 @@ contract ProverManager is IProposerFees, IProverManager {
         uint256 accumulatedFees; // the fees accumulated by proposers' publications for this period
         uint256 fee; // per-publication fee (in wei)
         uint256 end; // the end of the period(this may happen because the prover exits, is evicted or outbid)
-        uint256 deadline; // the time by which the prover needs to submit a proof(this is only needed after a prover
-            // exits or is replaced)
+        uint256 deadline; // the time by which the prover needs to submit a proof(this is only needed after a prover exits or is replaced)
         bool slashed; // flag that signlas the prover should be slashed(they have been evicted)
     }
 
@@ -29,14 +26,14 @@ contract ProverManager is IProposerFees, IProverManager {
     /// @notice The minimum percentage by which the new bid has to be lower than the current best value
     /// @dev This value needs to be expressed in basis points
     /// @dev This is used to prevent gas wars where the new prover undercuts the current prover by just a few wei
-    uint256 public minStepPercentage;
-    /// @notice The time window after which a publication is considered old and the prover can be evicted
-    uint256 public oldPublicationWindow;
+    uint256 public minUndercutPercentage;
+    /// @notice The time window after which a publication is considered old enough and if the prover hasn't poven it yet can be evicted
+    uint256 public livenessWindow;
     /// @notice The delay after which the next prover becomes active
     /// @dev The reason we don't allow this to happen immediately is so that:
     /// 1. Other provers can bid for the role
     /// 2. Ensure the current prover window is not too short
-    uint256 public offerActivationDelay;
+    uint256 public succesionDelay;
     /// @notice The delay after which the current prover can exit, or is removed if evicted because they are inactive
     /// @dev The reason we don't allow this to happen immediately is to allow enough time for other provers to bid
     /// and to prepare their hardware
@@ -71,15 +68,14 @@ contract ProverManager is IProposerFees, IProverManager {
     event Deposit(address indexed user, uint256 amount);
     event Withdrawal(address indexed user, uint256 amount);
     event ProverOffer(address indexed proposer, uint256 fee, uint256 stake);
-    event ProverActivated(address indexed oldProver, address indexed newProver, uint256 fee);
     event ProverSlashed(address indexed prover, address indexed slasher, uint256 slashedAmount);
     event ProverEvicted(address indexed prover, address indexed evictor, uint256 periodEnd, uint256 livenessBond);
     event ProverExited(address indexed prover, uint256 periodEnd, uint256 provingDeadline);
 
     constructor(
-        uint256 _minStepPercentage,
-        uint256 _oldPublicationWindow,
-        uint256 _offerActivationDelay,
+        uint256 _minUndercutPercentage,
+        uint256 _livenessWindow,
+        uint256 _succesionDelay,
         uint256 _exitDelay,
         uint256 _delayedFeeMultiplier,
         uint256 _provingDeadline,
@@ -90,9 +86,9 @@ contract ProverManager is IProposerFees, IProverManager {
         address _checkpointTracker,
         address _publicationFeed
     ) {
-        minStepPercentage = _minStepPercentage;
-        oldPublicationWindow = _oldPublicationWindow;
-        offerActivationDelay = _offerActivationDelay;
+        minUndercutPercentage = _minUndercutPercentage;
+        livenessWindow = _livenessWindow;
+        succesionDelay = _succesionDelay;
         exitDelay = _exitDelay;
         delayedFeeMultiplier = _delayedFeeMultiplier;
         provingDeadline = _provingDeadline;
@@ -151,7 +147,7 @@ contract ProverManager is IProposerFees, IProverManager {
         periods[currentPeriod].accumulatedFees += requiredFee;
     }
 
-    /// @notice Register as a prover for the next period by offering to charge a fee at least `minStepPercentage` than
+    /// @notice Register as a prover for the next period by offering to charge a fee at least `minUndercutPercentage` than
     /// the current best price.
     /// @dev The current best price may be the current prover's fee or the fee of the next bid, depending on a few
     /// conditions.
@@ -169,10 +165,10 @@ contract ProverManager is IProposerFees, IProverManager {
         if (_currentPeriod.prover != address(0) && _currentPeriod.end == 0) {
             // Only if there is a prover for the current period, and the period is still active we need to check if
             // the offer is below their's
-            requiredMaxFee = currentFee - calculatePercentage(currentFee, minStepPercentage);
+            requiredMaxFee = currentFee - calculatePercentage(currentFee, minUndercutPercentage);
             require(offeredFee <= requiredMaxFee, "Offered fee not low enough");
 
-            uint256 periodEnd = block.timestamp + offerActivationDelay;
+            uint256 periodEnd = block.timestamp + succesionDelay;
             _currentPeriod.end = periodEnd;
             _currentPeriod.deadline = periodEnd + provingDeadline;
         }
@@ -180,7 +176,7 @@ contract ProverManager is IProposerFees, IProverManager {
         address _nextProverAddress = _nextPeriod.prover;
         if (_nextProverAddress != address(0)) {
             // If there's already a bid for the next period, we need to check if the offered fee is below that
-            requiredMaxFee = nextFee - calculatePercentage(nextFee, minStepPercentage);
+            requiredMaxFee = nextFee - calculatePercentage(nextFee, minUndercutPercentage);
             require(offeredFee <= requiredMaxFee, "Offered fee not low enough");
 
             // Refund the liveness bond to the losing bid
@@ -208,7 +204,7 @@ contract ProverManager is IProposerFees, IProverManager {
         require(publicationFeed.validateHeader(publicationHeader, publicationId), "Publication hash does not match");
 
         uint256 publicationTimestamp = publicationHeader.timestamp;
-        require(publicationTimestamp + oldPublicationWindow < block.timestamp, "Publication is not old enough");
+        require(publicationTimestamp + livenessWindow < block.timestamp, "Publication is not old enough");
 
         uint256 periodEnd = block.timestamp + exitDelay;
         Period storage period = periods[currentPeriodId];
@@ -240,8 +236,8 @@ contract ProverManager is IProposerFees, IProverManager {
         emit ProverExited(_prover, periodEnd, _provingDeadline);
     }
 
-    /// @notice Called by a prover to submit a proof for a set of publications he is assigned to.
-    /// @dev This only works if the prover is within their deadline.
+    /// @notice Submits a proof for the active period
+    /// @dev An active period is not necessarily the current period, it just means that the prover is within their deadline.
     /// @dev If the prover has finished all their publications for the period, they can also claim the fees and the
     /// liveness bond.
     /// @param start The initial checkpoint before the transition
@@ -250,7 +246,7 @@ contract ProverManager is IProposerFees, IProverManager {
     /// their publications for the period.
     /// @param proof Arbitrary data passed to the `verifier` contract to confirm the transition validity
     /// @param periodId The id of the period for which the proof is submitted
-    function proveOwnPeriod(
+    function proveActivePeriod(
         ICheckpointTracker.Checkpoint calldata start,
         ICheckpointTracker.Checkpoint calldata end,
         IPublicationFeed.PublicationHeader calldata endPublicationHeader,
