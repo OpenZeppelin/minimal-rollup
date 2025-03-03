@@ -5,7 +5,6 @@ import {ICheckpointTracker} from "../ICheckpointTracker.sol";
 import {IProposerFees} from "../IProposerFees.sol";
 import {IProverManager} from "../IProverManager.sol";
 import {IPublicationFeed} from "../IPublicationFeed.sol";
-import "forge-std/Test.sol";
 
 contract ProverManager is IProposerFees, IProverManager {
     struct Period {
@@ -14,7 +13,8 @@ contract ProverManager is IProposerFees, IProverManager {
         uint256 accumulatedFees; // the fees accumulated by proposers' publications for this period
         uint256 fee; // per-publication fee (in wei)
         uint256 end; // the end of the period(this may happen because the prover exits, is evicted or outbid)
-        uint256 deadline; // the time by which the prover needs to submit a proof(this is only needed after a prover exits or is replaced)
+        uint256 deadline; // the time by which the prover needs to submit a proof(this is only needed after a prover
+            // exits or is replaced)
         bool slashed; // flag that signlas the prover should be slashed(they have been evicted)
     }
 
@@ -27,7 +27,8 @@ contract ProverManager is IProposerFees, IProverManager {
     /// @dev This value needs to be expressed in basis points
     /// @dev This is used to prevent gas wars where the new prover undercuts the current prover by just a few wei
     uint256 public minUndercutPercentage;
-    /// @notice The time window after which a publication is considered old enough and if the prover hasn't poven it yet can be evicted
+    /// @notice The time window after which a publication is considered old enough and if the prover hasn't poven it yet
+    /// can be evicted
     uint256 public livenessWindow;
     /// @notice The delay after which the next prover becomes active
     /// @dev The reason we don't allow this to happen immediately is so that:
@@ -147,7 +148,8 @@ contract ProverManager is IProposerFees, IProverManager {
         periods[currentPeriod].accumulatedFees += requiredFee;
     }
 
-    /// @notice Register as a prover for the next period by offering to charge a fee at least `minUndercutPercentage` than
+    /// @notice Register as a prover for the next period by offering to charge a fee at least `minUndercutPercentage`
+    /// than
     /// the current best price.
     /// @dev The current best price may be the current prover's fee or the fee of the next bid, depending on a few
     /// conditions.
@@ -186,9 +188,6 @@ contract ProverManager is IProposerFees, IProverManager {
         // Record the next period info
         _nextPeriod.prover = msg.sender;
         _nextPeriod.fee = offeredFee;
-        console.log("Prover2 balance: ", balances[_nextProverAddress]);
-        console.log("Prover1 balance: ", balances[_currentPeriod.prover]);
-        console.log("livenessBond", _livenessBond);
         balances[msg.sender] -= _livenessBond;
         _nextPeriod.livenessBond = _livenessBond;
 
@@ -237,7 +236,8 @@ contract ProverManager is IProposerFees, IProverManager {
     }
 
     /// @notice Submits a proof for the active period
-    /// @dev An active period is not necessarily the current period, it just means that the prover is within their deadline.
+    /// @dev An active period is not necessarily the current period, it just means that the prover is within their
+    /// deadline.
     /// @dev If the prover has finished all their publications for the period, they can also claim the fees and the
     /// liveness bond.
     /// @param start The initial checkpoint before the transition
