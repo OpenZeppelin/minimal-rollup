@@ -9,7 +9,7 @@ import {IPublicationFeed} from "../IPublicationFeed.sol";
 contract ProverManager is IProposerFees, IProverManager {
     struct Period {
         address prover;
-        uint256 livenessBond; // stake the prover has to pay to register
+        uint256 stake; // stake the prover has to pay to register
         uint256 accumulatedFees; // the fees accumulated by proposers' publications for this period
         uint256 fee; // per-publication fee (in wei)
         uint256 end; // the end of the period(this may happen because the prover exits, is evicted or outbid)
@@ -182,14 +182,14 @@ contract ProverManager is IProposerFees, IProverManager {
             require(offeredFee <= requiredMaxFee, "Offered fee not low enough");
 
             // Refund the liveness bond to the losing bid
-            balances[_nextProverAddress] += _nextPeriod.livenessBond;
+            balances[_nextProverAddress] += _nextPeriod.stake;
         }
 
         // Record the next period info
         _nextPeriod.prover = msg.sender;
         _nextPeriod.fee = offeredFee;
         balances[msg.sender] -= _livenessBond;
-        _nextPeriod.livenessBond = _livenessBond;
+        _nextPeriod.stake = _livenessBond;
 
         emit ProverOffer(msg.sender, offeredFee, _livenessBond);
     }
@@ -211,11 +211,11 @@ contract ProverManager is IProposerFees, IProverManager {
         period.end = periodEnd;
 
         // Reward the evictor
-        uint256 evictorIncentive = calculatePercentage(period.livenessBond, evictorIncentivePercentage);
+        uint256 evictorIncentive = calculatePercentage(period.stake, evictorIncentivePercentage);
         balances[msg.sender] += evictorIncentive;
-        period.livenessBond -= evictorIncentive;
+        period.stake -= evictorIncentive;
 
-        emit ProverEvicted(period.prover, msg.sender, periodEnd, period.livenessBond);
+        emit ProverEvicted(period.prover, msg.sender, periodEnd, period.stake);
     }
 
     /// @notice The current prover can signal exit to eventually pull out their liveness bond.
@@ -279,7 +279,7 @@ contract ProverManager is IProposerFees, IProverManager {
             );
 
             // If they have finished all their publications for the period, distribute the funds to the prover
-            balances[period.prover] += period.accumulatedFees + period.livenessBond;
+            balances[period.prover] += period.accumulatedFees + period.stake;
             delete periods[periodId];
         }
         //TODO: emit an event
@@ -331,7 +331,7 @@ contract ProverManager is IProposerFees, IProverManager {
         checkpointTracker.proveTransition(start, end, proof);
 
         // Distribute the funds
-        uint256 _livenessBond = period.livenessBond;
+        uint256 _livenessBond = period.stake;
         uint256 accumulatedFees = period.accumulatedFees;
         uint256 newProverFees = period.fee * numPubs;
 
