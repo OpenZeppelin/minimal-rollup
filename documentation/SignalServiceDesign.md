@@ -8,7 +8,7 @@ This is process is described by this diagram.
 
 Currently each application is responsible for their own signalling (i.e. there is no central storage of all signals). This means any potential relaying must be done on an app by app basis. We only provide a standard signalling library to store and verify signals on chain.
 
-This approach has latency issues since the latest L1 state root may only update every X number of L2 blocks, causing newer L2 blocks to not have access to the most current L1 state root. This is why there is an alternative method used for message passing.
+This approach works well, but has some latency since the latest L1 state root in the case of Taiko is only accessible when the L2 proposer submits a new publication to the L1 and includes a new anchor tx to the L2.
 
 ## Same Slot L1 → L2 Message Passing
 
