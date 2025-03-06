@@ -28,7 +28,7 @@ For example, the `TaikoInbox` contract reverts if:
 - the publisher is not the expected preconfer
 - the specified anchor block (supposed to be a recent L1 block) is too old or in the future.
 
-<span style="color: orange;">In principle these could be checked on L2</span> but they are properties of the L1 state so it seems natural (and simpler) to perform those validations on L1. Moreover, the preconfer check relies on the Universal Registry Contract, which exists on L1 and is not designed for easy portability.
+<span style="color: orange;">In principle these could be checked on L2</span> but they are properties of the L1 state so it seems natural (and simpler) to perform those validations on L1. Moreover, the preconfer check in the lookahead contract is expected to use the Universal Registry Contract, which exists on L1 and does not have a queryable state root that can be included with the publication (which would be necessary to perform real-time validation on L2).
 
 In any case, it is up to the rollup node to convert the data referenced by the publication hashes into a sequence of L2 blocks.
 
