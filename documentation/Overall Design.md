@@ -43,7 +43,8 @@ We define a checkpoint as the L2 block hash after applying all the transactions 
 - this implies a prover can make a proof over any number of publications. The proving market creates a liveness incentive but otherwise there are no restrictions on proof size or frequency, so provers are free to optimize and aggregate (potentially across different rollups) however they want.
 - we only save a checkpoint to the L1 (in the rollup's `CheckpointTracker` contract) when it has been proven. The prover specifies the relevant publications when submitting a proof.
 
-We expect most proofs to span several publications, so most checkpoints will not be posted to L1. Morever, the current proving market design does not require multiple simultaneous provers, so for simplicity, we do not support parallel proving (i.e. each proof must start from the latest proven checkpoint). Only the latest proven checkpoint is saved in storage (overwriting the previous one).
+We expect most proofs to span several publications, so most checkpoints will not be posted to L1. 
+The current prover market design incentivizes provers for long windows of time, reducing the need to support parallel proving (where multiple transitions can be proven at the same time and only when join together the rollup has a verified checkpoint). Because of this, only the latest proven checkpoint needs to be saved in storage (overwriting the previous one).
 
 <p align="center"><img src="./design_images.3.png"/></p>
 
