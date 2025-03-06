@@ -2,6 +2,10 @@
 
 This repository contains the [smart contracts](src/) and [documentation](documentation/) for a based rollup stack that Taiko Alethia and other rollups will use. This stack will support preconfirmations from day one and is designed to be **minimal - this means easy to understand, audit and extend**.
 
+> [!WARNING]
+> This project is still in active development. It has never been audited nor thoroughly reviewed for security vulnerabilities.
+> Do not use in production.
+
 ## Goals
 
 1. **Minimal L1 footprint - cheaper costs for proposing, proving and sending messages**
