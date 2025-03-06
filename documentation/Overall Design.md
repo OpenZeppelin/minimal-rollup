@@ -44,7 +44,7 @@ We define a checkpoint as the L2 block hash after applying all the transactions 
 - we only save a checkpoint to the L1 (in the rollup's `CheckpointTracker` contract) when it has been proven. The prover specifies the relevant publications when submitting a proof.
 
 We expect most proofs to span several publications, so most checkpoints will not be posted to L1. 
-The current prover market design incentivizes provers for long windows of time, reducing the need to support parallel proving (where multiple transitions can be proven at the same time and only when join together the rollup has a verified checkpoint). Because of this, only the latest proven checkpoint needs to be saved in storage (overwriting the previous one).
+The current prover market design incentivizes provers for long windows of time, reducing the need to support parallel proving (where multiple transitions can be proven at the same time and can be joined together to advance the proven checkpoint). Because of this, only the latest proven checkpoint needs to be saved in storage (overwriting the previous one).
 
 <p align="center"><img src="./design_images.3.png"/></p>
 
