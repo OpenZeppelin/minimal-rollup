@@ -2,6 +2,7 @@
 \usepackage{tikz}
 \usetikzlibrary{positioning}
 \usetikzlibrary {shapes.geometric}
+\usetikzlibrary {backgrounds}
 \usepackage[nomessages]{fp}
 
 % We will update these variables to reuse commands within a diagram
@@ -17,6 +18,7 @@
 \tikzstyle{txOrigin} = [circle, draw, fill=lightgray, inner sep=2]
 \tikzstyle{contract} = [rectangle, rounded corners, text centered, draw, inner sep=10pt]
 \tikzstyle{arrow} = [->]
+\tikzstyle{background rectangle} = [fill=white]
 
 \newcommand{\timeline}{
     \node (t0) at (0,0) {};
@@ -59,7 +61,7 @@
 
 % Introduce Publication Feed
 \ifnum \sourceNo = 0
-\begin{tikzpicture}
+\begin{tikzpicture}[framed]
     \structure
     \pubHash \blobs{3} 
     \pubHash \blobs{1}
@@ -70,7 +72,7 @@
 
 % Introduce Rollup Inbox
 \ifnum \sourceNo = 1
-\begin{tikzpicture}[node distance=2cm]
+\begin{tikzpicture}[node distance=2cm, framed]
     \node (origin) at (0,0) [txOrigin] {};
     \node (inbox) [right=of origin, contract] {Rollup Inbox};
     \node (pubFeed) [right=of inbox, contract] {\texttt{PublicationFeed}};
@@ -104,7 +106,7 @@
 
 % Introduce L2 blocks
 \ifnum \sourceNo = 2
-\begin{tikzpicture}
+\begin{tikzpicture}[framed]
     \structure
     \pubHash \blobs{3} \rollupBlocks{8}
     \pubHash \blobs{1} \rollupBlocks{5}
@@ -149,7 +151,7 @@
 
 % Introduce Checkpoints
 \ifnum \sourceNo = 3
-\begin{tikzpicture}
+\begin{tikzpicture}[framed]
     \structure
     \genesisCheckpoint \saveCheckpoint
 
@@ -218,7 +220,7 @@
 \tikzstyle{pubHash} = [circle, color=\col, anchor=west] % remove "draw"
 \tikzstyle{arrow} = [opacity=0]
 
-\begin{tikzpicture}
+\begin{tikzpicture}[framed]
     \structure
     \node [gray, anchor=west] at (nextPubHash) {[Described below]};
 
@@ -270,7 +272,7 @@
 
 % Non-shared publications
 \ifnum \sourceNo = 5
-\begin{tikzpicture}
+\begin{tikzpicture}[framed]
     \structure
 
     \switchToA \genesisCheckpoint \saveCheckpoint

@@ -11,7 +11,7 @@ Recall, a rollup requires:
 
 We want to minimize L1 processing, so for each L1 transaction we simply denote all the blobs and any relevant L1 data as a "publication" and save the publication hash in L1 storage (in the `PublicationFeed` contract).
 
-<p align="center" style="background-color: white;"><img src="./design_images.0.png"/></p>
+<p align="center"><img src="./design_images.0.png"/></p>
 
 All L2 validations occur off-chain, so publications never revert. Invalid publications will be no-ops, but this fact is part of the actual L2 state transition function (so L2 nodes will still process the publication and provers will prove that they are no-ops). This should not happen in practice because there is no reason for anyone to publish a no-op.
 
@@ -21,7 +21,7 @@ Technically, the rollup-specific contract may still choose to revert publication
 - the inbox performs validations, specifies the relevant blobs, and potentially adds additional data.
 - the inbox saves the publication in the `PublicationFeed` contract.
 
-<p align="center" style="background-color: white;"><img src="./design_images.1.png"/></p>
+<p align="center"><img src="./design_images.1.png"/></p>
 
 For example, the `TaikoInbox` contract reverts if:
 
@@ -32,7 +32,7 @@ For example, the `TaikoInbox` contract reverts if:
 
 In any case, it is up to the rollup node to convert the data referenced by the publication hashes into a sequence of L2 blocks.
 
-<p align="center" style="background-color: white;"><img src="./design_images.2.png"/></p>
+<p align="center"><img src="./design_images.2.png"/></p>
 
 
 ## Checkpoints
@@ -45,7 +45,7 @@ We define a checkpoint as the L2 block hash after applying all the transactions 
 
 We expect most proofs to span several publications, so most checkpoints will not be posted to L1. Morever, the current proving market design does not require multiple simultaneous provers, so for simplicity, we do not support parallel proving (i.e. each proof must start from the latest proven checkpoint). Only the latest proven checkpoint is saved in storage (overwriting the previous one).
 
-<p align="center" style="background-color: white;"><img src="./design_images.3.png"/></p>
+<p align="center"><img src="./design_images.3.png"/></p>
 
 ## Delayed Inclusion
 
@@ -61,7 +61,7 @@ Any rollup can introduce a delayed inclusion mechanism by deferring calls to the
 
 We support blob sharing by simplying allowing blobs to contain transactions destined for different rollups, without making any attempt to disentangle them on L1. Rollup nodes must be designed to filter out irrelevant transactions.
 
-<p align="center" style="background-color: white;"><img src="./design_images.4.png"/></p>
+<p align="center"><img src="./design_images.4.png"/></p>
 
 ## Shared Publication Feed
 
@@ -89,4 +89,4 @@ Instead, a publisher is expected to call the inbox of every rollup that should p
 
 As an optimization, the `TaikoInbox` contract includes a pointer to the previous Taiko publication so provers do not need to process the irrelevant publications.
 
-<p align="center" style="background-color: white;"><img src="./design_images.5.png"/></p>
+<p align="center"><img src="./design_images.5.png"/></p>
