@@ -28,6 +28,5 @@ The signal service (SS) is used for cases where the message is to be sent within
 
 ## Questions
 
-- How do L2 applications have access to ‘trusted’ L1 state root?
 - Usefulness of commitment syncer - how is this currently being used to get a trusted root.
 - L2 → L1 messaging
