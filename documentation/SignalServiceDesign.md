@@ -16,7 +16,7 @@ The signal service (SS) is used for cases where the message is to be sent within
 
 1. The proposer listens to any signals being stored on the L1 SS
 2. The proposer (during his allocated slot) can selectively inject L1 → L2 signals when proposing a batch in `publish` function.
-3. Signals will be verified that they exist in the SS’s storage.
+3. The inbox contract will verify that the Signals exist in the SS’s storage.
 4. A trusted entity (owned by the rollup) will then call `receiveSignal` on the L2 SS. This will fill a mapping of `_receivedSignals` to true (signal —> true)
 5. Any application that requires same slot signalling will just verify the signal is found in the `_receivedSignals` mapping i.e. they don’t need to provide a storage proof
 
