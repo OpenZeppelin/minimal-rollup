@@ -1,0 +1,106 @@
+# Blob Structure
+
+## Context
+
+In the [Overall Design document](./Overall%20Design.md) we noted that blobs can be shared between multiple rollups. Here we propose a possible supporting blob structure.
+
+The design goals are:
+
+- blob boundaries are not meaningful, but each publication should be contained within a transaction.
+- proposers can decide on a per-publication basis which rollups to include. This will depend on whether they happen to have proposal rights for multiple rollups in that slot and which transactions are available.
+- rollups can support any form of compression (including no compression). When multiple rollups use the same compression algorithm, their transactions should be compressible together, which would produce better compression ratios.
+- we should be minimally opinionated so rollups can update the structure as desired.
+
+
+## Existing standards
+
+### Nethermind's proposal
+
+Nethermind has created [this proposal](https://hackmd.io/@linoscope/blob-sharing-for-based-rollups). While I appreciate the simplicity, I believe it is not optimal in our case because:
+
+- the segmentation information is published on L1, and we are attempting to minimize our L1 requirements.
+- rollups that share a compression algorithm should be able to decompress the publication before splitting it.
+
+### Spire's proposal
+
+Spire has created [this proposal](https://paragraph.xyz/@spire/shared-blob-compression). I am not convinced that the Merkle tree structure is useful because:
+
+- the main advantage of a Merkle tree is to efficiently prove some leaves. In our case we will need each rollup to process the full list of transactions in the publication, so at the very least we should treat each rollup's transactions as one leaf.
+- if two rollups share a compression algorithm, both transaction lists will need to be decompressed together (if they want to take advantage of shared compression), so in that case they should also be a single leaf, and we will need an additional mechanism to describe the split within the compressed blob.
+
+It seems a flat structure (which is one of the options they mention) is both simpler and more efficient.
+
+Their proposal also requires registering with the blob aggregation service so it knows which DA layer and compression mechanism to use. Moreover, the rollups are responsible for ensuring the blobs they retrieve out of the aggregation service match the ones that were passed in (using a signature).
+
+ In our case we are only interested in Ethereum as the DA layer, and we would like to avoid introducing an additional off-chain service. Since the supported compression algorithms are unlikely to change often, we can let rollups register them on chain so individual L1 proposers can see the registrations.
+
+### Dankrad's proposal
+
+Dankrad has create [this proposal](https://ethresear.ch/t/suggested-format-for-shard-blob-header/9996). This seems suitable for our purposes, except I would make the modifications:
+
+- each supported compression algorithm could map to one of the "application ids" (so it's more of a data format identifier rather than an application identifier)
+    - in this way, multiple rollups can find and decompress the same compressed data. We will then need a way to split the decompressed data by rollups. I suggest using the same format inside the compressed segment.
+- his post allows for up to 1535 applications per blob. This has some cascading effects:
+    - the header is expected to be sorted by application ID, and each application will look for their record (which tells them where to find the actual data) using a binary search
+    - applications must use this search mechanism precisely. If the header is not sorted correctly or the binary search fails for whatever reason, the data should be considered missing (or junk). We do not want a scenario where different clients reach different conclusions about what data is stored for a given application ID
+    - even though each of our publications can span several blobs, I expect there will only be a handful of rollups per publication (and they may even be grouped under the same compression id). Instead of doing a binary search, I recommend applications do a linear search through the whole header to ensure it has the expected structure (ie. sorted application IDs)
+
+
+## The proposal
+
+With these modifications to Dankrad's proposal, here is a complete description of my suggestion. I will describe what an L2 rollup node shoud do to update it state. The corresponding protocol for proposers and provers should follow pretty naturally.
+
+### Preparation
+
+Whoever configures the rollup should publish (perhaps in an on-chain registry) the full list of unique 3-byte data identifiers that the rollup nodes should process. This should include an identifier for:
+
+- its own rollup transactions
+- any other rollup transactions it should process (eg. for embedded rollups)
+- any other data feeds it should process (eg. for synchrony or coordination)
+- any compression (or other data processing) algorithms it supports
+
+### Publication Hashes
+
+The rollup node should find relevant publication hashes in the `PublicationFeed` contract. This will include anything published by its inbox plus any other data feeds that it is watching. There may be multiple relevant publications that share the same blobs, and the rollup node will need to track which blobs it is processing for which reasons. In the simplest case it is just looking for its own rollup transactions inside publications made by its own inbox.
+
+### Publication Headers
+
+For each relevant hash, the publication is the concatenation of all the corresponding blobs. The rollup node should retrieve and validate the first 31-byte chunk, and interpret it as a header with the structure:
+
+- the version (set to zero) (1 byte)
+- header length in chunks, excluding this one (1 byte)
+    - I expect this to be zero most of the time
+- multiplier (1 byte)
+    - the log base 2 of a scaling factor for data offsets
+    - i.e. if this value is $x$ and an offset is specified as $y$, the relevant data starts at chunk $2^x \cdot y$
+- Up to 5 data type records consisting of
+    - data identifier (3 bytes)
+    - offset to corresponding segment after accounting for the multiplier (2 bytes)
+- Pad the remaining space with zeroes. Note that zero is an invalid data identifier, so there should be no confusion about what counts as padding.
+
+If the header is larger than one chunk, retrieve and validate the remaining chunks. They should all be structured with the same data type records (up to 6 in a chunk) and padded with zeros.
+
+Although we are not using binary search, I still think it is useful to have a deterministic structure. Therefore, in addition to validating the header structure, the rollup nodes should ensure:
+
+- all data identifiers are listed in ascending order
+- the actual data segments are also in the same order (i.e. the segment offsets are strictly increasing)
+- all segment offsets point within the publication
+    - note that the size of a segment is implicitly defined by where the next segment starts.
+
+Assuming the publication header is valid, the rollup node will know which chunks to retrieve and validate to find its relevant segments.
+
+
+### Compressed segments
+
+The data identifier will indicate which kind of compression (eg. gzip, lz4, etc) was used. After decompression, the segment should use the same structure so that it can be further subdivided. For simplicity:
+
+- the segment header should be outside the compression. This means the expected contents can be identified (and potentially ignored) before retrieving the whole segment and decompressing it.
+- we should disallow nested compressed segments. I suspect they are unlikely to achieve much (you can always define the data identifier as multiple rounds of a compression algorithm) and we don't want the node to have to recurse indefinitely only to find the publication is poorly formed.
+
+### Rollup segments
+
+After finding and decompressing all relevant segments, the rollup node should process them. The data structure should be defined by the particular use case, but I would recommend
+
+- avoid derivable information (such as block hashes or state roots)
+- instead, the segment should include the minimum information required to reconstruct the state, which would be something like raw L2 transactions interspersed with block timestamp delimiters.
+- pad the rest of the segment with zeros
