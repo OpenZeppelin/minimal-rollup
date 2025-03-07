@@ -38,13 +38,13 @@ The L2 ETH bridge is presumed to have unlimited ETH, functioning as the canonica
 
 Below is a diagram showing the 'slow' ETH bridging pathway. The L2 ETH bridge requires the latest L1 state root (containing the L1 signal) to verify the L1 storage proof.
 
-![[Taiko Messaging.png]]
+![Slow](<Taiko Messaging.png>)
 
 #### Fast ETH deposits
 
 In contrast here is diagram showing the 'fast' signalling pathway. In this scenario the L2 ETH bridge can just verify that the signal is present in the L2 `receivedSignal` mapping instead of relying on a the L1 state root. This mapping would have already been filled when the block was proposed.
 
-![[Fast.png]]
+![Fast](Fast.png)
 
 In either case however, the message being stored consist of the `destinationChainId`, `nonce` (to prevent storage collision), `from` address, `to` address and `value` (amount of ETH). These values form a `ValueTicket`. The `ValueTicket` is hashed and stored as the `value` of the signal.
 
