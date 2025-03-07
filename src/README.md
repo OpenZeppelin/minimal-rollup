@@ -6,6 +6,7 @@ Contracts in other directories are not part of the core protocol, but still prov
 
 ## Project Structure
 
+```
 src/
 ├── blobs/ --> Common registry to store blob references
 ├── bridges/ --> Bridge implementations for common token standards
@@ -14,3 +15,4 @@ src/
 │   ├── taiko_alethia/ --> Opinionated implementations for the Taiko Alethia rollup
 ├── signal/ --> Signal service contracts
 ├── vendor/ --> Contracts and libraries from other projects that we use
+```
