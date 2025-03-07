@@ -5,6 +5,7 @@ import {IBlobRefRegistry} from "../../blobs/IBlobRefRegistry.sol";
 
 import {IPublicationFeed} from "../IPublicationFeed.sol";
 
+import {IProposerFees} from "../IProposerFees.sol";
 import {IDelayedInclusionStore} from "./IDelayedInclusionStore.sol";
 import {ILookahead} from "./ILookahead.sol";
 
@@ -19,6 +20,7 @@ contract TaikoInbox {
     ILookahead public immutable lookahead;
     IBlobRefRegistry public immutable blobRefRegistry;
     IDelayedInclusionStore public immutable delayedInclusionStore;
+    IProposerFees public immutable proposerFees;
 
     uint256 public immutable maxAnchorBlockIdOffset;
 
@@ -34,16 +36,18 @@ contract TaikoInbox {
         address _lookahead,
         address _blobRefRegistry,
         address _delayedInclusionStore,
-        uint256 _maxAnchorBlockIdOffset
+        uint256 _maxAnchorBlockIdOffset,
+        address _proposerFees
     ) {
         publicationFeed = IPublicationFeed(_publicationFeed);
         lookahead = ILookahead(_lookahead);
         blobRefRegistry = IBlobRefRegistry(_blobRefRegistry);
         delayedInclusionStore = IDelayedInclusionStore(_delayedInclusionStore);
         maxAnchorBlockIdOffset = _maxAnchorBlockIdOffset;
+        proposerFees = IProposerFees(_proposerFees);
     }
 
-    function publish(uint256 nBlobs, uint64 anchorBlockId) external {
+    function publish(uint256 nBlobs, uint64 anchorBlockId) external payable {
         if (address(lookahead) != address(0)) {
             require(lookahead.isCurrentPreconfer(msg.sender), "not current preconfer");
         }
@@ -65,6 +69,7 @@ contract TaikoInbox {
         attributes[LAST_PUBLICATION] = abi.encode(_lastPublicationId);
         attributes[BLOB_REFERENCE] = abi.encode(blobRefRegistry.getRef(_buildBlobIndices(nBlobs)));
 
+        proposerFees.payPublicationFee{value: msg.value}(msg.sender, false);
         _lastPublicationId = publicationFeed.publish(attributes).id;
 
         // Publish each delayed inclusion as a separate publication
@@ -77,6 +82,7 @@ contract TaikoInbox {
             attributes[LAST_PUBLICATION] = abi.encode(_lastPublicationId);
             attributes[BLOB_REFERENCE] = abi.encode(inclusions[i]);
 
+            proposerFees.payPublicationFee{value: msg.value}(msg.sender, true);
             _lastPublicationId = publicationFeed.publish(attributes).id;
         }
 

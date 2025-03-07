@@ -5,16 +5,22 @@ import {ICheckpointTracker} from "./ICheckpointTracker.sol";
 import {IPublicationFeed} from "./IPublicationFeed.sol";
 
 interface IProverManager {
-    function registerProver(uint256 offeredFee) external;
+    /// @notice Bid to become the prover for the next period
+    /// @param offeredFee The fee you are willing to charge for proving each publication
+    function bid(uint256 offeredFee) external;
 
+    /// @notice The current prover can signal exit to eventually pull out their liveness bond.
     function exit() external;
 
+    /// @notice Evicts a prover that has been inactive, marking the prover for slashing
+    /// @param publicationId The publication id that the caller is claiming is too old and hasn't been proven
     function evictProver(uint256 publicationId, IPublicationFeed.PublicationHeader calldata publicationHeader)
         external;
 
-    function proveActivePeriod(
+    function proveOpenPeriod(
         ICheckpointTracker.Checkpoint calldata start,
         ICheckpointTracker.Checkpoint calldata end,
+        IPublicationFeed.PublicationHeader calldata startPublication,
         IPublicationFeed.PublicationHeader calldata endPublicationHeader,
         bytes calldata nextPublicationHeaderBytes,
         bytes calldata proof,
@@ -22,7 +28,7 @@ interface IProverManager {
     ) external;
 
     /// @notice Called by a prover when the originally assigned prover was evicted or passed its deadline for proving.
-    function proveOtherPeriod(
+    function proveClosedPeriod(
         ICheckpointTracker.Checkpoint calldata start,
         ICheckpointTracker.Checkpoint calldata end,
         IPublicationFeed.PublicationHeader[] calldata publicationHeadersToProve, // these are the rollup's publications

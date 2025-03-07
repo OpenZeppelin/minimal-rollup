@@ -21,6 +21,8 @@ contract RegisterProverTest is Test {
     address public admin = address(0x1);
     address public prover1 = address(0x2);
     address public prover2 = address(0x3);
+    address public initialProver = address(0x4);
+
 
     bytes32[] pubHashes;
     ICheckpointTracker.Checkpoint[] checkpoints;
@@ -40,6 +42,7 @@ contract RegisterProverTest is Test {
     uint256 public constant LIVENESS_BOND = 10 ether;
     uint256 public constant EVICTOR_INCENTIVE_PERCENTAGE = 1000; // 10%
     uint256 public constant BURNED_STAKE_PERCENTAGE = 5000; // 50%
+    uint256 public constant INITIAL_PROVER_FEE = 1 ether; // Big enough so that it is easy to outbid
 
     function setUp() public {
         vm.startPrank(admin);
@@ -62,7 +65,9 @@ contract RegisterProverTest is Test {
             BURNED_STAKE_PERCENTAGE,
             inboxAddress,
             address(tracker),
-            address(feed)
+            address(feed),
+            initialProver,
+            INITIAL_PROVER_FEE
         );
 
         tracker =
@@ -114,7 +119,7 @@ contract RegisterProverTest is Test {
         vm.startPrank(prover1);
         proverManager.deposit{value: LIVENESS_BOND}();
         assertEq(proverManager.balances(prover1), LIVENESS_BOND);
-        proverManager.registerProver(initialFee);
+        proverManager.bid(initialFee);
         vm.stopPrank();
 
         (address registeredProver, uint256 livenessBond, uint256 accumulatedFees, uint256 fee,,,) =
@@ -132,7 +137,7 @@ contract RegisterProverTest is Test {
         proverManager.deposit{value: LIVENESS_BOND}();
         // console.log("Prover2 balance: ", proverManager.balances(prover2));
         // console.log("Prover1 balance: ", proverManager.balances(prover1));
-        proverManager.registerProver(underbidFee);
+        proverManager.bid(underbidFee);
         vm.stopPrank();
 
         // // Check that prover2 has replaced prover1 for the next period
