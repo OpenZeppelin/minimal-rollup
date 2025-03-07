@@ -239,17 +239,7 @@ contract ProverManager is IProposerFees, IProverManager {
         emit ProverExited(_prover, periodEnd, _provingDeadline);
     }
 
-    /// @notice Submits a proof for an open period
-    /// @dev An open period is not necessarily the current period, it just means that the prover is within their
-    /// deadline.
-    /// @dev If the prover has finished all their publications for the period, they can also claim the fees and the
-    /// liveness bond.
-    /// @param start The initial checkpoint before the transition
-    /// @param end The final checkpoint after the transition
-    /// @param nextPublicationHeaderBytes Optional parameter that should only be sent when the prover has finished all
-    /// their publications for the period.
-    /// @param proof Arbitrary data passed to the `verifier` contract to confirm the transition validity
-    /// @param periodId The id of the period for which the proof is submitted
+    /// @inheritdoc IProverManager
     function proveOpenPeriod(
         ICheckpointTracker.Checkpoint calldata start,
         ICheckpointTracker.Checkpoint calldata end,
@@ -263,90 +253,61 @@ contract ProverManager is IProposerFees, IProverManager {
         Period storage previousPeriod = periods[periodId - 1];
         require(block.timestamp <= period.deadline, "Deadline has passed");
 
-        // Verify that the end publication is valid and inside the period
         uint256 periodEnd = period.end;
-        require(
-            publicationFeed.validateHeader(endPublicationHeader, end.publicationId), "Publication hash does not match"
+        uint256 previousPeriodEnd = previousPeriod.end;
+
+        _validateBasePublications(
+            start, end, startPublicationHeader, endPublicationHeader, periodEnd, previousPeriodEnd
         );
-        require(endPublicationHeader.timestamp < periodEnd, "End publication is not within the period");
 
         checkpointTracker.proveTransition(start, end, proof);
 
-        //Verify that the start publication is valid and also inside the period
-        uint256 previousPeriodEnd = previousPeriod.end;
-        require(
-            publicationFeed.validateHeader(startPublicationHeader, start.publicationId),
-            "Publication hash does not match"
-        );
-        require(startPublicationHeader.timestamp > previousPeriodEnd, "Start publication is not within the period");
-
         if (nextPublicationHeaderBytes.length > 0) {
             // This means that the prover is claiming that they have finished all their publications for the period
-            IPublicationFeed.PublicationHeader memory nextPublicationHeader =
+            IPublicationFeed.PublicationHeader memory nextPub =
                 abi.decode(nextPublicationHeaderBytes, (IPublicationFeed.PublicationHeader));
-            require(nextPublicationHeader.id == end.publicationId + 1, "This is not the next publication");
-            require(nextPublicationHeader.timestamp > periodEnd, "Next publication is not after the period end");
-            require(
-                publicationFeed.validateHeader(nextPublicationHeader, nextPublicationHeader.id),
-                "Publication hash does not match"
-            );
+            _validateNextPublicationHeader(nextPub, end.publicationId + 1, periodEnd);
 
-            // If they have finished all their publications for the period, distribute the funds to the prover
-            balances[period.prover] += period.accumulatedFees + period.stake;
-            delete periods[periodId];
+            // Finalize the period: transfer accumulated fees and stake.
+            uint256 accumulatedFees = period.accumulatedFees;
+            uint256 stake = period.stake;
+            balances[period.prover] += accumulatedFees + stake;
         }
     }
 
     /// @inheritdoc IProverManager
+    /// @dev This function pays the offender prover for the work they already did, and distributes remaining fees and a
+    /// portion of the liveness bond to the new prover.
+    /// @dev A portion of the liveness bond is burned by locking it in the contract forever.
     function proveClosedPeriod(
         ICheckpointTracker.Checkpoint calldata start,
         ICheckpointTracker.Checkpoint calldata end,
-        IPublicationFeed.PublicationHeader[] calldata publicationHeadersToProve, // these are the rollup's publications
+        IPublicationFeed.PublicationHeader[] calldata publicationHeadersToProve,
         IPublicationFeed.PublicationHeader calldata nextPublicationHeader,
         bytes calldata proof,
         uint256 periodId
     ) external {
         Period storage period = periods[periodId];
         Period storage previousPeriod = periods[periodId - 1];
-        uint256 numPubs = publicationHeadersToProve.length;
-        IPublicationFeed.PublicationHeader memory endPublicationHeader = publicationHeadersToProve[numPubs - 1];
-        IPublicationFeed.PublicationHeader memory startPublicationHeader = publicationHeadersToProve[0];
-        require(period.evicted || block.timestamp > period.deadline, "We are still within the proving period");
+        require(period.evicted || block.timestamp > period.deadline, "The period is still open");
 
-        // Verify that the end publication is within the period and valid
         uint256 periodEnd = period.end;
-        require(
-            publicationFeed.validateHeader(endPublicationHeader, end.publicationId), "Publication hash does not match"
-        );
-        require(endPublicationHeader.timestamp < periodEnd, "End publication is not within the period");
-
-        // Verify that the start publication is valid and also inside the period
         uint256 previousPeriodEnd = previousPeriod.end;
-        require(
-            publicationFeed.validateHeader(startPublicationHeader, start.publicationId),
-            "Publication hash does not match"
-        );
-        require(startPublicationHeader.timestamp > previousPeriodEnd, "Start publication is not within the period");
+        uint256 numPubs = publicationHeadersToProve.length;
+        IPublicationFeed.PublicationHeader memory startPub = publicationHeadersToProve[0];
+        IPublicationFeed.PublicationHeader memory endPub = publicationHeadersToProve[numPubs - 1];
 
-        // Verify that the next publication is valid and after the period end
-        require(nextPublicationHeader.id == end.publicationId + 1, "This is not the next publication");
-        require(nextPublicationHeader.timestamp > periodEnd, "Next publication is not after the period end");
-        require(
-            publicationFeed.validateHeader(nextPublicationHeader, nextPublicationHeader.id),
-            "Publication hash does not match"
-        );
+        _validatePublicationChain(publicationHeadersToProve);
 
-        //Verify that all the publications are correct and linked together(they belong to this rollup)
-        for (uint256 i = 0; i < numPubs; i++) {
-            require(
-                publicationFeed.validateHeader(publicationHeadersToProve[i], publicationHeadersToProve[i].id),
-                "Publication hash does not match"
-            );
-            if (i > 0) {
-                bytes32 prevHash = keccak256(abi.encode(publicationHeadersToProve[i - 1]));
-                require(prevHash == publicationHeadersToProve[i].prevHash, "Previous publication hash does not match");
-            }
-        }
+        // Ensure that publications are inside the period
+        require(endPub.timestamp < periodEnd, "End publication is not within the period");
+        require(startPub.timestamp > previousPeriodEnd, "Start publication is not within the period");
+
+        // Ensure that checkpoints actually match the publications
+        require(start.publicationId == startPub.id, "Start checkpoint publication ID mismatch");
+        require(end.publicationId == endPub.id, "End checkpoint publication ID mismatch");
+
+        _validateNextPublicationHeader(nextPublicationHeader, end.publicationId + 1, periodEnd);
 
         checkpointTracker.proveTransition(start, end, proof);
 
@@ -362,11 +323,6 @@ contract ProverManager is IProposerFees, IProverManager {
         uint256 burnedStake = calculatePercentage(_livenessBond, burnedStakePercentage);
         uint256 livenessBondReward = _livenessBond - burnedStake;
         balances[msg.sender] += newProverFees + livenessBondReward;
-
-        // Delete the period. This implicitly burns the remaining part of the liveness bond by locking it in the
-        // contract
-        // TODO: We might want to move "burned stake" to the treasury instead or something else other than burning it.
-        delete periods[periodId];
     }
 
     /// @dev Calculates the percentage of a given numerator scaling up to avoid precision loss
@@ -375,5 +331,55 @@ contract ProverManager is IProposerFees, IProverManager {
     function calculatePercentage(uint256 amount, uint256 bps) private pure returns (uint256) {
         require((amount * bps) >= 10_000);
         return amount * bps / 10_000;
+    }
+
+    /// @dev Validates the start and end publication headers and ensures that they are within the period.
+    /// @param start The initial checkpoint before the transition
+    /// @param end The final checkpoint after the transition
+    /// @param startPub The start publication header
+    /// @param endPub The end publication header
+    /// @param periodEnd The end of the period
+    /// @param previousPeriodEnd The end of the previous period
+    function _validateBasePublications(
+        ICheckpointTracker.Checkpoint memory start,
+        ICheckpointTracker.Checkpoint memory end,
+        IPublicationFeed.PublicationHeader memory startPub,
+        IPublicationFeed.PublicationHeader memory endPub,
+        uint256 periodEnd,
+        uint256 previousPeriodEnd
+    ) private view {
+        require(publicationFeed.validateHeader(endPub, end.publicationId), "End publication hash does not match");
+        require(endPub.timestamp < periodEnd, "End publication is not within the period");
+
+        require(publicationFeed.validateHeader(startPub, start.publicationId), "Start publication hash does not match");
+        require(startPub.timestamp > previousPeriodEnd, "Start publication is not within the period");
+    }
+
+    /// @dev Validates the next publication header and ensures that it is after the period end.
+    /// @param nextPub The next publication header
+    /// @param expectedId The expected id of the next publication
+    /// @param periodEnd The end of the period
+    function _validateNextPublicationHeader(
+        IPublicationFeed.PublicationHeader memory nextPub,
+        uint256 expectedId,
+        uint256 periodEnd
+    ) private view {
+        require(nextPub.id == expectedId, "This is not the next publication");
+        require(nextPub.timestamp > periodEnd, "Next publication is not after the period end");
+        require(publicationFeed.validateHeader(nextPub, nextPub.id), "Publication hash does not match");
+    }
+
+    /// @dev Validates a chain of publication headers.
+    /// @param headers The chain of publication headers to validate
+    function _validatePublicationChain(IPublicationFeed.PublicationHeader[] memory headers) private view {
+        uint256 numPubs = headers.length;
+        //Verify that all the publications are correct and linked together(they belong to this rollup)
+        for (uint256 i = 1; i < numPubs; ++i) {
+            require(publicationFeed.validateHeader(headers[i], headers[i].id), "Publication hash does not match");
+            if (i > 0) {
+                bytes32 prevHash = keccak256(abi.encode(headers[i - 1]));
+                require(prevHash == headers[i].prevHash, "Previous publication hash does not match");
+            }
+        }
     }
 }

@@ -17,10 +17,23 @@ interface IProverManager {
     function evictProver(uint256 publicationId, IPublicationFeed.PublicationHeader calldata publicationHeader)
         external;
 
+    /// @notice Submits a proof for an open period
+    /// @dev An open period is not necessarily the current period, it just means that the prover is within their
+    /// deadline.
+    /// @dev If the prover has finished all their publications for the period, they can also claim the fees and their
+    /// liveness bond.
+    /// @param start The initial checkpoint before the transition
+    /// @param end The final checkpoint after the transition
+    /// @param startPublicationHeader The start publication header
+    /// @param endPublicationHeader The end publication header
+    /// @param nextPublicationHeaderBytes Optional parameter that should only be sent when the prover has finished all
+    /// their publications for the period.
+    /// @param proof Arbitrary data passed to the `verifier` contract to confirm the transition validity
+    /// @param periodId The id of the period for which the proof is submitted
     function proveOpenPeriod(
         ICheckpointTracker.Checkpoint calldata start,
         ICheckpointTracker.Checkpoint calldata end,
-        IPublicationFeed.PublicationHeader calldata startPublication,
+        IPublicationFeed.PublicationHeader calldata startPublicationHeader,
         IPublicationFeed.PublicationHeader calldata endPublicationHeader,
         bytes calldata nextPublicationHeaderBytes,
         bytes calldata proof,
@@ -28,6 +41,13 @@ interface IProverManager {
     ) external;
 
     /// @notice Called by a prover when the originally assigned prover was evicted or passed its deadline for proving.
+    /// @dev This function should slash the prover and distribute their stake to compensate the new prover.
+    /// @param start The initial checkpoint before the transition
+    /// @param end The final checkpoint after the transition
+    /// @param publicationHeadersToProve The chain of publication headers to prove
+    /// @param nextPublicationHeader The next publication header
+    /// @param proof Arbitrary data passed to the `verifier` contract to confirm the transition validity
+    /// @param periodId The id of the period for which the proof is submitted
     function proveClosedPeriod(
         ICheckpointTracker.Checkpoint calldata start,
         ICheckpointTracker.Checkpoint calldata end,
