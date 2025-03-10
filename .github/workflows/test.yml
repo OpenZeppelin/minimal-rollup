@@ -36,10 +36,10 @@ jobs:
 
       - name: Run Forge build
         run: |
-          forge build --viar-ir --sizes
+          forge build --via-ir --sizes
         id: build
 
       - name: Run Forge tests
         run: |
-          forge test -vvv
+          forge test --via-ir -vvv
         id: test
