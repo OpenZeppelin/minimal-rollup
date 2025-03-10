@@ -11,7 +11,8 @@ contract CheckpointTrackerTest is Test {
     CheckpointTracker tracker;
     NullVerifier verifier;
     PublicationFeed feed;
-    address proverMananger = vm.addr(1);
+    // For the unit tests, we do it without a prover manager
+    address proverMananger = address(0);
 
     // Sample data
     bytes32[] pubHashes;
