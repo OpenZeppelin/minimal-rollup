@@ -195,7 +195,7 @@ contract ProverManagerTest is Test {
     function test_bid_RevertWhen_InsufficientBalance() public {
         // Attempt to bid without sufficient balance for liveness bond
         vm.prank(prover2);
-        vm.expectRevert();
+        vm.expectRevert("Insufficient balance for liveness bond");
         proverManager.bid(0.05 ether);
     }
 
@@ -209,7 +209,7 @@ contract ProverManagerTest is Test {
         uint256 insufficientlyReducedFee = INITIAL_FEE - minUndercut + 1;
 
         vm.prank(prover1);
-        vm.expectRevert();
+        vm.expectRevert("Offered fee not low enough");
         proverManager.bid(insufficientlyReducedFee);
     }
 
@@ -289,7 +289,7 @@ contract ProverManagerTest is Test {
         uint256 insufficientlyReducedFee = firstBidFee - minUndercut + 1;
 
         vm.prank(prover2);
-        vm.expectRevert();
+        vm.expectRevert("Offered fee not low enough");
         proverManager.bid(insufficientlyReducedFee);
     }
 
@@ -337,7 +337,7 @@ contract ProverManagerTest is Test {
         // Evict the prover with a publication that is not old enough
         vm.warp(block.timestamp + LIVENESS_WINDOW);
         vm.prank(evictor);
-        vm.expectRevert();
+        vm.expectRevert("Publication is not old enough");
         proverManager.evictProver(pubId, header);
     }
 
@@ -352,7 +352,7 @@ contract ProverManagerTest is Test {
 
         // Evict the prover with an invalid publication header
         vm.prank(evictor);
-        vm.expectRevert();
+        vm.expectRevert("Publication hash does not match");
         proverManager.evictProver(pubId, header);
     }
 

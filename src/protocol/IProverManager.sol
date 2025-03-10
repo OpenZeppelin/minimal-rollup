@@ -14,6 +14,7 @@ interface IProverManager {
 
     /// @notice Evicts a prover that has been inactive, marking the prover for slashing
     /// @param publicationId The publication id that the caller is claiming is too old and hasn't been proven
+    /// @param publicationHeader The publication header that the caller is claiming is too old and hasn't been proven
     function evictProver(uint256 publicationId, IPublicationFeed.PublicationHeader calldata publicationHeader)
         external;
 
@@ -40,18 +41,18 @@ interface IProverManager {
         uint256 periodId
     ) external;
 
-    /// @notice Called by a prover when the originally assigned prover was evicted or passed its deadline for proving.
-    /// @dev This function should slash the prover and distribute their stake to compensate the new prover.
+    /// @notice Called by a prover when the originally assigned prover is passed its deadline
+    /// @dev This function should slash the prover and distribute their stake to compensate the new prover
     /// @param start The initial checkpoint before the transition
     /// @param end The final checkpoint after the transition
     /// @param publicationHeadersToProve The chain of publication headers to prove
-    /// @param nextPublicationHeader The next publication header
+    /// @param nextPublicationHeader The next publication header. It should be after the period end
     /// @param proof Arbitrary data passed to the `verifier` contract to confirm the transition validity
     /// @param periodId The id of the period for which the proof is submitted
     function proveClosedPeriod(
         ICheckpointTracker.Checkpoint calldata start,
         ICheckpointTracker.Checkpoint calldata end,
-        IPublicationFeed.PublicationHeader[] calldata publicationHeadersToProve, // these are the rollup's publications
+        IPublicationFeed.PublicationHeader[] calldata publicationHeadersToProve,
         IPublicationFeed.PublicationHeader calldata nextPublicationHeader,
         bytes calldata proof,
         uint256 periodId
