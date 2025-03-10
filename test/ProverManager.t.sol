@@ -44,22 +44,28 @@ contract ProverManagerTest is Test {
 
         // Fund the initial prover so the constructor can receive the required livenessBond.
         vm.deal(initialProver, 10 ether);
+        
+        // Create the config struct for the constructor
+        ProverManager.ProverManagerConfig memory config = ProverManager.ProverManagerConfig({
+            minUndercutPercentage: MIN_UNDERCUT_PERCENTAGE,
+            livenessWindow: LIVENESS_WINDOW,
+            succesionDelay: SUCCESSION_DELAY,
+            exitDelay: EXIT_DELAY,
+            delayedFeeMultiplier: DELAYED_FEE_MULTIPLIER,
+            provingDeadline: PROVING_DEADLINE,
+            livenessBond: LIVENESS_BOND,
+            evictorIncentivePercentage: EVICTOR_INCENTIVE_PERCENTAGE,
+            burnedStakePercentage: BURNED_STAKE_PERCENTAGE
+        });
+        
         // Deploy ProverManager with constructor funds.
         proverManager = new ProverManager{value: LIVENESS_BOND}(
-            MIN_UNDERCUT_PERCENTAGE,
-            LIVENESS_WINDOW,
-            SUCCESSION_DELAY,
-            EXIT_DELAY,
-            DELAYED_FEE_MULTIPLIER,
-            PROVING_DEADLINE,
-            LIVENESS_BOND,
-            EVICTOR_INCENTIVE_PERCENTAGE,
-            BURNED_STAKE_PERCENTAGE,
             inbox,
             address(checkpointTracker),
             address(publicationFeed),
             initialProver,
-            INITIAL_FEE
+            INITIAL_FEE,
+            config
         );
 
         // Fund test users.
@@ -452,7 +458,6 @@ contract ProverManagerTest is Test {
         );
 
         uint256 proverBalanceAfter = proverManager.balances(initialProver);
-        ProverManager.Period memory periodAfter = proverManager.getPeriod(provingPeriodId);
         assertEq(
             proverBalanceAfter,
             proverBalanceBefore + INITIAL_FEE * 2 + LIVENESS_BOND,

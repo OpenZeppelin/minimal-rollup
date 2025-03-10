@@ -16,6 +16,20 @@ contract ProverManager is IProposerFees, IProverManager {
         uint256 deadline; // the time by which the prover needs to submit a proof
     }
 
+    /// @dev This struct is necessary to pass it to the constructor and avoid stack too deep errors
+    /// When some values in the contract stop being immutable, we may change this to be more efficient
+    struct ProverManagerConfig {
+        uint256 minUndercutPercentage;
+        uint256 livenessWindow;
+        uint256 succesionDelay;
+        uint256 exitDelay;
+        uint256 delayedFeeMultiplier;
+        uint256 provingDeadline;
+        uint256 livenessBond;
+        uint256 evictorIncentivePercentage;
+        uint256 burnedStakePercentage;
+    }
+
     address public immutable inbox;
     ICheckpointTracker public immutable checkpointTracker;
     IPublicationFeed public immutable publicationFeed;
@@ -73,38 +87,30 @@ contract ProverManager is IProposerFees, IProverManager {
     event NewPeriod(uint256 period);
 
     constructor(
-        uint256 _minUndercutPercentage,
-        uint256 _livenessWindow,
-        uint256 _succesionDelay,
-        uint256 _exitDelay,
-        uint256 _delayedFeeMultiplier,
-        uint256 _provingDeadline,
-        uint256 _livenessBond,
-        uint256 _evictorIncentivePercentage,
-        uint256 _burnedStakePercentage,
         address _inbox,
         address _checkpointTracker,
         address _publicationFeed,
         address _initialProover,
-        uint256 _initialFee
+        uint256 _initialFee,
+        ProverManagerConfig memory _config
     ) payable {
-        minUndercutPercentage = _minUndercutPercentage;
-        livenessWindow = _livenessWindow;
-        succesionDelay = _succesionDelay;
-        exitDelay = _exitDelay;
-        delayedFeeMultiplier = _delayedFeeMultiplier;
-        provingDeadline = _provingDeadline;
-        livenessBond = _livenessBond;
-        evictorIncentivePercentage = _evictorIncentivePercentage;
-        burnedStakePercentage = _burnedStakePercentage;
+        minUndercutPercentage = _config.minUndercutPercentage;
+        livenessWindow = _config.livenessWindow;
+        succesionDelay = _config.succesionDelay;
+        exitDelay = _config.exitDelay;
+        delayedFeeMultiplier = _config.delayedFeeMultiplier;
+        provingDeadline = _config.provingDeadline;
+        livenessBond = _config.livenessBond;
+        evictorIncentivePercentage = _config.evictorIncentivePercentage;
+        burnedStakePercentage = _config.burnedStakePercentage;
         inbox = _inbox;
         checkpointTracker = ICheckpointTracker(_checkpointTracker);
         publicationFeed = IPublicationFeed(_publicationFeed);
 
         // Initialize the first period with a known prover and a set fee
-        require(msg.value >= _livenessBond, "Insufficient balance for liveness bond");
+        require(msg.value >= _config.livenessBond, "Insufficient balance for liveness bond");
         periods[0].prover = _initialProover;
-        periods[0].stake = _livenessBond;
+        periods[0].stake = _config.livenessBond;
         periods[0].fee = _initialFee;
     }
 
