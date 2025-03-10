@@ -44,7 +44,7 @@ contract ProverManagerTest is Test {
 
         // Fund the initial prover so the constructor can receive the required livenessBond.
         vm.deal(initialProver, 10 ether);
-        
+
         // Create the config struct for the constructor
         ProverManager.ProverManagerConfig memory config = ProverManager.ProverManagerConfig({
             minUndercutPercentage: MIN_UNDERCUT_PERCENTAGE,
@@ -57,15 +57,10 @@ contract ProverManagerTest is Test {
             evictorIncentivePercentage: EVICTOR_INCENTIVE_PERCENTAGE,
             burnedStakePercentage: BURNED_STAKE_PERCENTAGE
         });
-        
+
         // Deploy ProverManager with constructor funds.
         proverManager = new ProverManager{value: LIVENESS_BOND}(
-            inbox,
-            address(checkpointTracker),
-            address(publicationFeed),
-            initialProver,
-            INITIAL_FEE,
-            config
+            inbox, address(checkpointTracker), address(publicationFeed), initialProver, INITIAL_FEE, config
         );
 
         // Fund test users.
