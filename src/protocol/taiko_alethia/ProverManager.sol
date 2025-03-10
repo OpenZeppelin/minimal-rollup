@@ -116,6 +116,7 @@ contract ProverManager is IProposerFees, IProverManager {
     }
 
     /// @notice Withdraw available(unlocked) funds.
+    /// @param amount The amount to withdraw
     function withdraw(uint256 amount) external {
         balances[msg.sender] -= amount;
 
@@ -126,6 +127,7 @@ contract ProverManager is IProposerFees, IProverManager {
 
     /// @inheritdoc IProposerFees
     /// @dev This function advances to the next period if the current period has ended.
+    // TODO: deal with delayed publications
     function payPublicationFee(address proposer, bool isDelayed) external payable {
         require(msg.sender == inbox, "Only the Inbox contract can call this function");
 
@@ -146,10 +148,6 @@ contract ProverManager is IProposerFees, IProverManager {
         }
 
         uint256 requiredFee = periods[_currentPeriod].fee;
-        //TODO: I'm not sure this is the correct way to deal with this
-        if (isDelayed) {
-            requiredFee *= delayedFeeMultiplier;
-        }
 
         // Deduct fee from proposer's balance and add to accumulated fees
         balances[proposer] -= requiredFee;
