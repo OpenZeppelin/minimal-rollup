@@ -6,7 +6,7 @@ A signal is stored at a pseudorandom storage slot derived via [erc7201](https://
 
 ## Normal ‘slow’ Message Passing
 
-In our current protocol, signalling is performed by storing a message at a specific storage slot, then, once the L1 state root is accessible on the L2, executing a storage proof to verify that value exists. This proof can then trigger then certain logic, such as minting tokens.
+In our current protocol, signalling is performed by storing a message at a specific storage slot, then, once the L1 state root is accessible on the L2, executing a storage proof to verify that value exists. This proof can then trigger certain logic, such as minting tokens.
 
 Currently each application is responsible for their own signalling (i.e. there is no central storage of all signals). This means any potential relaying must be done on an app by app basis. We only provide a standard signalling library to store and verify signals on chain.
 
