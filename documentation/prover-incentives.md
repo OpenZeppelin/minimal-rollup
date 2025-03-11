@@ -24,7 +24,7 @@ This is a bit more flexible, but the incentives are basically the same - each pr
 Anyone that wants to be a prover can register as the designated prover by signaling how much they are willing to charge **on a per publication basis**. The prover that offers the lower amount gets monopoly rights to prove publications until someone else comes in and offers a lower cost per publication. This way proposers know exactly how much they will have to pay to get their publication proven, and are not required to put additional capital, making the system more capital efficient.  
 New participants that want to undercut the current prover need to offer a lower price per publication that **is at least a defined percentage lower** than the current prover or other participants. This is to avoid gas wars common in auctions where the new participant just offers one wei less than the current best offer.  
 
-*This system effectively behaves as a reserve english ahead of time auction.*
+*This system functions as a reverse English auction conducted ahead of time.*
 
 ![Prover auction](./images/prover-market.png)
 
