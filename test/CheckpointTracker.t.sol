@@ -29,7 +29,6 @@ contract CheckpointTrackerTest is Test {
         createSampleFeed();
 
         tracker = new CheckpointTracker(keccak256(abi.encode("genesis")), address(feed), address(verifier));
-        // createSampleCheckpoints();
         proof = abi.encode("proof");
     }
 
