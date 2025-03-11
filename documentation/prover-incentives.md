@@ -1,6 +1,6 @@
 # Efficient prover incentives
 
-This document describes an ahead of time auction mechanism that allows provers to bid for the right to prove multiple publications for a rollup. The mechanism is designed with the following principles in mind:
+This document describes an ahead of time auction mechanism that allows provers to bid for the right to prove multiple publications for a rollup. The mechanism is guided with the following principles in mind:
 
 - Decouple the roles of proposing and proving.
 - The right to prove is assignned to a single prover at a time, avoiding races to prove the same batches, which results in cheaper costs.
