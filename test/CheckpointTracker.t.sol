@@ -115,14 +115,4 @@ contract CheckpointTrackerTest is Test {
         checkpoint = ICheckpointTracker.Checkpoint({publicationId: pubId, commitment: commitment});
         hash = keccak256(abi.encode(checkpoint));
     }
-
-    // function createSampleCheckpoints() private {
-    //     ICheckpointTracker.Checkpoint memory memCheckpoint;
-    //     bytes32 checkpointHash;
-    //     for (uint256 i; i < NUM_PUBLICATIONS; ++i) {
-    //         (memCheckpoint, checkpointHash) = createCheckpoint(i, keccak256(abi.encode(i)));
-    //         checkpoints.push(memCheckpoint);
-    //         hashes.push(checkpointHash);
-    //     }
-    // }
 }
