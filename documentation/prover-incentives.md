@@ -3,32 +3,33 @@
 This document describes an ahead of time auction mechanism that allows provers to bid for the right to prove multiple publications for a rollup. The mechanism is guided with the following principles in mind:
 
 - Decouple the roles of proposing and proving.
-- The right to prove is assignned to a single prover at a time, avoiding races to prove the same batches, which results in cheaper costs.
-- Known cost for proposers when submitting a publication.
-- Simple and minimal L1 gas costs.
+- Assigning proving rights to one prover at a time to avoid redundant efforts, which results in cheaper costs.
+- Providing proposers with predictable costs when submitting publications.
+- Simple design and minimal L1 gas costs.
 
 *The specifics of the mechanism are still being discussed, and some of the details might change as we do more research on the incentives.*
 
 ## The problem
 
-Verifying proofs on the Ethereum L1 is a [costly operation](https://docs.alignedlayer.com/#why-are-we-building-aligned) in terms of gas. Groth16 proofs, which are some of the cheapest to verify cost around 250k gas, while STARKS cost over 1M gas. Because of this, most zk rollups call the verification function of their inbox contract only sporadically.  
+Verifying proofs on Ethereum L1 is a [gas-intensive operation](https://docs.alignedlayer.com/#why-are-we-building-aligned). For example, Groth16 proofs, among the cheapest, cost around 250k gas, while STARKS can exceed 1M gas. As a result, most zk-rollups call their inbox contract's verification function only sporadically.
 
-We would like to get a similar property for validity Based rollups - but that opens the question, who should verify the batches submitted to the L1 and how can we incentivize proposers to submit valid batches if they don’t get proven immediately? A common approach to this is to force proposers to deposit a bond when they submit a batch, and force them to provide a validity proof within a time window, otherwise they lose their stake and proving becomes permisionless. This is the approach deployed on [Taiko](https://docs.taiko.xyz/resources/terminology/#validity-bond) today.
+For based validity rollups, achieving a similar property raises the question: Who should verify batches submitted to L1, and how can proposers be incentivized to submit valid batches if proofs aren’t generated immediately? A common solution is to require proposers to deposit a bond when submitting a batch. If they fail to provide a validity proof within a set time window, they lose their stake, and proving becomes permissionless. This approach is currently used by [Taiko].
 
-- After the pacaya fork, there is now an option to prove multiple non consecutive batches(and anyone can do it), but if the batch is within its proving window(60 minutes as of this writing) the rewards goes to the proposer.
-This is a bit more flexible, but the incentives are basically the same - each proposer is incentivized to prove or get a prover for their batches only, which does not result in the most efficient proving costs. If the proposers are sophisticated enough, an off-chain market may develop, where different proposers pay the same prover to generate a proof for their batch, and the prover may aggregate those proofs in order to get a more efficient result. This is still uncertain, and it may even have a very centralizing effect, since provers are incentivized to make a deal with as many proposers as possible to ensure they can prove consecutive batches and get paid off-chain(if different batches have proposers that have chosen different provers then none of them will be incentivized to prove the entire set).
+After the Pacaya fork, proving multiple non-consecutive batches became possible (open to anyone). However, the rewards go to the proposer if a batch is within its proving window (currently 60 minutes). While this adds flexibility, the incentives remain largely the same: proposers are motivated to prove their batches or hire a prover, which doesn’t optimize proving costs.
+If proposers are sophisticated, an off-chain market might emerge where multiple proposers pay the same prover to generate proofs for their batches. The prover could then aggregate these proofs for greater efficiency. However, this scenario is uncertain and could lead to centralization, as provers would seek deals with as many proposers as possible to maximize consecutive batch proofs and off-chain payments. If different batches have different provers, none may be incentivized to prove the entire set.
+
 - This also has the downside that you have to store multiple checkpoints in the Inbox contract, because proving may happen out of order.
 
 ## Proposed design
 
-Anyone that wants to be a prover can register as the designated prover by signaling how much they are willing to charge **on a per publication basis**. The prover that offers the lower amount gets monopoly rights to prove publications until someone else comes in and offers a lower cost per publication. This way proposers know exactly how much they will have to pay to get their publication proven, and are not required to put additional capital, making the system more capital efficient.  
-New participants that want to undercut the current prover need to offer a lower price per publication that **is at least a defined percentage lower** than the current prover or other participants. This is to avoid gas wars common in auctions where the new participant just offers one wei less than the current best offer.  
+Anyone can register as a designated prover by specifying their fee **per publication**. The prover offering the lowest fee gains exclusive rights to prove publications until another prover undercuts them with a lower fee. This ensures proposers know the exact cost of proving their publications upfront, eliminating the need for additional capital and improving capital efficiency.
+To prevent bidding wars (i.e., new participants undercutting by just one wei) that can cause unnecesary gas spikes, new provers must offer a fee that is **at least a defined percentage lower** than the current lowest fee.
 
 *This system functions as a reverse English auction conducted ahead of time.*
 
 ![Prover auction](./images/prover-market.png)
 
-While publications will differ in proving cycles they require, the prover should account for this variation and since we don’t have a proper way to calculate this on the L1 they should choose this value on an average case basis.
+While publications vary in the proving cycles they require, provers should account for this variability. Since L1 lacks a way to calculate these differences, provers should base their bids on an average case.
 
 To deter malicious or inactive provers, they must stake funds when registering. This stake is slashed if they fail to fulfill their duties and can be used to reward the next prover (who may charge a higher fee, even though proposers have already paid the previous amount).
 
