@@ -30,7 +30,7 @@ New participants that want to undercut the current prover need to offer a lower 
 
 While publications will differ in proving cycles they require, the prover should account for this variation and since we don’t have a proper way to calculate this on the L1 they should choose this value on an average case basis.
 
-In order to prevent a malicious provers to opt in and be inactive, we require them to put stake when opting in. This stake is then slashed if they don’t comply and can be used to reward the next prover(since they might ask for a higher price for providing the service and proposers had already paid the previous amount).
+To deter malicious or inactive provers, they must stake funds when registering. This stake is slashed if they fail to fulfill their duties and can be used to reward the next prover (who may charge a higher fee, even though proposers have already paid the previous amount).
 
 *The amount that provers are required to stake is not yet defined, but should be enough to serve as an incentive for other provers to step in if the current prover becomes inactive.*
 
