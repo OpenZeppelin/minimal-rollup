@@ -7,7 +7,7 @@ import {IVerifier} from "./IVerifier.sol";
 
 contract CheckpointTracker is ICheckpointTracker {
     /// @notice The hash of the current proven checkpoint representing the latest verified state of the rollup
-    /// @dev Previous checkpoints are not stored here but are synchronized to the `SignalService`
+    /// @dev Previous checkpoints are not stored here but are synchronized to the `CommitmentSyncer`
     /// @dev A checkpoint commitment is any value (typically a state root) that uniquely identifies
     /// the state of the rollup at a specific point in time
     bytes32 public provenHash;
