@@ -12,19 +12,11 @@ contract CheckpointTracker is ICheckpointTracker {
     /// the state of the rollup at a specific point in time
     bytes32 public provenHash;
 
-    /// @notice Verified transitions between two checkpoints
-    /// @dev the start checkpoint is not necessarily valid, but the end checkpoint is correctly built on top of it.
-    mapping(bytes32 startHash => bytes32 endHash) public transitions;
-
     IPublicationFeed public immutable publicationFeed;
 
     // This would usually be retrieved dynamically as in the current Taiko implementation, but for simplicity we are
     // just setting it in the constructor
     IVerifier public immutable verifier;
-
-    /// @notice The maximum number of additional checkpoint transitions to apply in a single proof
-    /// @dev This limits the overhead required to submit a proof
-    uint256 private constant MAX_EXTRA_UPDATES = 10; // TODO: What is a reasonable number here?
 
     /// @param _genesis the checkpoint commitment describing the initial state of the rollup
     /// @param _publicationFeed the input data source that updates the state of this rollup
@@ -44,52 +36,25 @@ contract CheckpointTracker is ICheckpointTracker {
     /// @inheritdoc ICheckpointTracker
     function proveTransition(Checkpoint calldata start, Checkpoint calldata end, bytes calldata proof) external {
         require(end.commitment != 0, "Checkpoint commitment cannot be 0");
-        bytes32 startHash = keccak256(abi.encode(start));
+        
+        bytes32 startCheckpointHash = keccak256(abi.encode(start));
+        require(startCheckpointHash == provenHash, "Start checkpoint must be the latest proven checkpoint");
 
-        // TODO: once the proving incentive mechanism is in place we should reconsider this requirement because
-        // ideally we would use the proof that creates the longest chain of proven publications.
-        require(transitions[startHash] == 0, "Checkpoint already has valid transition");
-        require(start.publicationId < end.publicationId, "Start must be before end");
+        require(start.publicationId < end.publicationId, "End publication must be after the last proven publication");
 
+        bytes32 startPublicationHash = publicationFeed.getPublicationHash(start.publicationId);
         bytes32 endPublicationHash = publicationFeed.getPublicationHash(end.publicationId);
-        require(endPublicationHash != 0, "Publication does not exist");
+        require(endPublicationHash != 0, "End publication does not exist");
 
         verifier.verifyProof(
-            publicationFeed.getPublicationHash(start.publicationId),
+            startPublicationHash,
             endPublicationHash,
             start.commitment,
             end.commitment,
             proof
         );
 
+        provenHash = keccak256(abi.encode(end));
         emit TransitionProven(start, end);
-
-        bytes32 endHash = keccak256(abi.encode(end));
-        if (startHash == provenHash) {
-            provenHash = endHash;
-            emit CheckpointUpdated(endHash);
-        } else {
-            transitions[startHash] = endHash;
-        }
-
-        _updateProvenHash();
-    }
-
-    /// @dev To limit the overhead, we cannot require a proof to find the last proven checkpoint
-    /// Instead, each proof should advance the checkpoint by a manageable increment, regardless
-    /// of which transition it proves.
-    function _updateProvenHash() internal {
-        bytes32 newProvenHash = transitions[provenHash];
-        if (newProvenHash == 0) {
-            return;
-        }
-        // Use another variable to avoid extra storage loads
-        bytes32 nextRecord = newProvenHash;
-        for (uint256 i; i < MAX_EXTRA_UPDATES && nextRecord != 0; ++i) {
-            newProvenHash = nextRecord;
-            nextRecord = transitions[nextRecord];
-        }
-        provenHash = newProvenHash;
-        emit CheckpointUpdated(newProvenHash);
     }
 }
