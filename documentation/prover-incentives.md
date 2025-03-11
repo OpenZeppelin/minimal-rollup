@@ -37,34 +37,36 @@ To deter malicious or inactive provers, they must stake funds when registering. 
 
 ### Transition Periods
 
-The ideal system is one where a prover has the right for an extended period of time. This allows them to aggregate proofs for multiple publications and post them in a single L1 transaction, reducing the on-chain costs.  
-We want to avoid scenarios where provers are constantly changing, since this would result in less efficient proving costs and a lot of unpredictablity for provers. The good news is that this should happen naturally, as the price per publication they charge should converge to the cost of proving. But we still introduce a transition period when a prover is outbid or wants to exit.
+The ideal system grants a prover exclusive rights for an extended period, enabling them to aggregate proofs for multiple publications and submit them in a single L1 transaction, reducing on-chain costs.
 
-- `succesionDelay` is the time window between when the prover is outbid and when the new prover can start their period. During this time other interested provers or the existing one can come in and offer an even lower price.
-- `exitDelay` is the time window between when the prover wants to exit and when the new prover can start their period. It is also the time window between when an inactive prover is ejected and when the new prover can start.
+Frequent changes in provers should be avoided, as they lead to inefficiencies and unpredictability. Fortunately, this is naturally incentivized, as the per-publication fee charged by provers should converge to the actual proving cost. However, transition periods are introduced to manage scenarios where a prover is outbid or chooses to exit.
 
-**We call the proving window(the time and the publications that are assigned to a specific prover) a `period`.**
-Provers are only rewarded for the publications they proved within their period and returned their stake after their period is closed(all the publications have been proven).
+- `successionDelay`: The time between a prover being outbid and the new prover starting their period. During this window, other provers (or the existing one) can offer a lower fee.
+- `exitDelay`: The time between a prover’s request to exit (or ejection due to inactivity) and the new prover starting their period.
+
+**We refer to the proving window (the time and publications assigned to a specific prover) as a `period`.**
+Provers are rewarded only for publications proven within their period and regain their stake once the period concludes (i.e., all assigned publications are proven).
 
 ### Fallback Mechanism
 
-What happens if the prover does not deliver on their promise and does not prove anything after a certain period of time? We now need a new prover to step in. Anyone can calll `eject` to receive a portion of the prover's stake and mark them as inactive. This marks the current prover as ready to be slashed(we will discuss the details in a later section) and allows a new prover to step in(an auction occurs during the `exitDelay` window described in the section above).
+Whenever a registered prover fails to deliver a proof after a certain time threshold, anyone can call the `eject` function to claim a portion of the inactive prover’s stake and mark them as inactive. This flags the current prover for slashing (details will be discussed later) and initiates an auction during the `exitDelay` window (described in the previous section) to select a new prover.
 
-*In the case no independent prover is willing to step in for whatever reason, or the ones that are collude and decide to charge an insane amount, the system can still maintain liveness assuming the rollup operator is willing to run a prover and is assumed not to want to extract excessive value from their users.*
+*If no independent prover steps in, or if existing provers collude to charge excessively high fees, the system can still maintain liveness. This assumes the rollup operator is willing to run a prover and is expected not to exploit users by extracting excessive value.*
 
-At this point you may wonder what we do with the unproven publications from the offender prover? The way we deal with this currently is by **making proving those publications permisionless**, and rewarding the prover that proves them with a portion of the offender's stake while burning the rest(how much is burned or if it is actually sent to the treasury instead of burned is yet to be defined). The fees for the unproven publications are paid to the new prover, and the fees for the ones that were already proven by the offender are still paid to them.
+You might wonder how we handle unproven publications from the offending prover. Currently, we **make proving these publications permissionless**. The prover who proves them is rewarded with a portion of the offender’s stake, while the remainder is burned (or potentially sent to the treasury—this detail is yet to be finalized). Fees for unproven publications go to the new prover, while fees for publications already proven by the offender still go to them.
 
 ### Dealing with forced inclusions
 
 **How to deal with forced inclussions is still being discussed. This section describes our current thinking on the subject.**
 
-In our current design, forced transactions are still posted as blobs, but go to a separate queue and are picked when the next proposer calls publish on the Inbox to post their next publication. For now we have decided that they will be posted as a new publication inside the same function call(a new publication is cleaner, easier to price and avoids the risk of a single combined publication being too big to prove).
+In our current design, forced transactions are posted as blobs but are routed to a separate queue. They are picked up when the next proposer calls `publish` on the Inbox to submit their publication. For now, we’ve decided that forced transactions will be posted as a **new publication** within the same function call. This approach is cleaner, easier to price, and avoids the risk of a single combined publication becoming too large to prove.
 
-But we now have a problem to solve: how do we price these delayed publications? Should we charge the forced includer or allow them to free ride the next proposer?
-While we don’t always know exactly the proving cost when their transactions will be included(since the current prover turn might be over by the time this publication is included), allowing a free ride creates negative incentives, where actors are incentivized to batch as many transactions as they can and post them in a delayed publication, giving them a lower execution price as long as they are willing to wait that time for their inclusion. This penalizes the prover, who now has to prove a very big publication that he is not compensated for(or the proposer if we make him pay for the publication).
+However, this raises a question: **How should we price these delayed publications?** Should the forced includer pay, or should they free-ride on the next proposer? 
 
-The proposed solution is to ask the delayed proposer to also pay a proving fee, **but this should be higher than the regular proving fee** because of:
+While the exact proving cost at the time of inclusion may be uncertain (since the current prover’s term might have ended), allowing free-riding creates negative incentives. Actors could batch as many transactions as possible into delayed publications, securing a lower execution price by waiting for inclusion. This penalizes the prover (who must prove a large publication without adequate compensation) or the proposer (if they are forced to cover the cost).
 
-1. Their publication are potentially much larger than the regular proposer publication(since they can accumulate transactions for an arbitrarily large amount of time and are limited by DA only)
-2. Proving cost is not always known, so it might actually go up by the time it is time to prove their publication
-3. We want to disincentivize the formation of a market where an actor batches multiples transactions from people and include that with a delay just because it is cheaper. Unless you are getting censored you should go trough the regular flow.
+The proposed solution is to require the delayed proposer to pay a proving fee, **set higher than the regular fee** for the following reasons:
+
+1. **Size:** Delayed publications can accumulate transactions over an arbitrarily long time, making them potentially much larger than regular publications (limited only by data availability).
+2. **Uncertainty:** Proving costs may increase by the time the publication is included.
+3. **Incentives:** We want to discourage the formation of a market where actors batch transactions for delayed inclusion simply because it’s cheaper. Unless censored, users should follow the regular flow.
