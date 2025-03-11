@@ -32,7 +32,7 @@ While publications will differ in proving cycles they require, the prover should
 
 To deter malicious or inactive provers, they must stake funds when registering. This stake is slashed if they fail to fulfill their duties and can be used to reward the next prover (who may charge a higher fee, even though proposers have already paid the previous amount).
 
-*The amount that provers are required to stake is not yet defined, but should be enough to serve as an incentive for other provers to step in if the current prover becomes inactive.*
+*The required stake amount is yet to be defined but should be sufficient to incentivize other provers to step in if the current prover becomes inactive.*
 
 ### Transition Periods
 
