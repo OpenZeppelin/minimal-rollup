@@ -94,7 +94,7 @@ Assuming the publication header is valid, the rollup node will know which chunks
 
 The data identifier will indicate which kind of compression (eg. gzip, lz4, etc) was used. After decompression, the segment should use the same structure so that it can be further subdivided. For simplicity:
 
-- the segment header should be outside the compression. This means the expected contents can be identified (and potentially ignored) before retrieving the whole segment and decompressing it.
+- the segment header (which has the same format as the publication header) should be outside the compression. This means the expected contents can be identified (and potentially ignored) before retrieving the whole segment and decompressing it.
 - we should disallow nested compressed segments. I suspect they are unlikely to achieve much (you can always define the data identifier as multiple rounds of a compression algorithm) and we don't want the node to have to recurse indefinitely only to find the publication is poorly formed.
 
 ### Rollup segments
