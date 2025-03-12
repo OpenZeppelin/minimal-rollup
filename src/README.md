@@ -13,6 +13,5 @@ src/
 ├── libs/  --> Utility libraries used by other contracts in this repository or that applications may use
 ├── protocol/ --> Core contracts and interfaces
 │   ├── taiko_alethia/ --> Opinionated implementations for the Taiko Alethia rollup
-├── signal/ --> Signal service contracts
 ├── vendor/ --> Contracts and libraries from other projects that we use
 ```

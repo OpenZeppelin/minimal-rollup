@@ -5,10 +5,11 @@ import {IBlobRefRegistry} from "../../blobs/IBlobRefRegistry.sol";
 
 import {IPublicationFeed} from "../IPublicationFeed.sol";
 
-import {IDelayedInclusionStore} from "./IDelayedInclusionStore.sol";
-import {ILookahead} from "./ILookahead.sol";
+import {IDelayedInclusionStore} from "../IDelayedInclusionStore.sol";
+import {IInbox} from "../IInbox.sol";
+import {ILookahead} from "../ILookahead.sol";
 
-contract TaikoInbox {
+contract TaikoInbox is IInbox {
     struct Metadata {
         uint256 anchorBlockId;
         bytes32 anchorBlockHash;
