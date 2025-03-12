@@ -2,9 +2,7 @@
 
 ## Context
 
-In the [Overall Design document](./Overall%20Design.md) we noted that blobs can be shared between multiple rollups. Here we propose a possible supporting blob structure.
-
-The design goals are:
+Blobs can be shared between multiple rollups, as noted in the [Overall Design document](./Overall%20Design.md). The proposed blob structure is guided by the following design goals:
 
 - blob boundaries are not meaningful, but each publication should be contained within a transaction.
 - proposers can decide on a per-publication basis which rollups to include. This will depend on whether they happen to have proposal rights for multiple rollups in that slot and which transactions are available.
