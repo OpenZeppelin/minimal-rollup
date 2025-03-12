@@ -417,7 +417,7 @@ contract ProverManager is IProposerFees, IProverManager {
     /// @dev Checks if a period is already bidded
     /// @param prover The address of the prover
     /// @return True if someone has already bid for the period, false otherwise
-    function _isBidded(address prover) private view returns (bool) {
+    function _isBidded(address prover) private pure returns (bool) {
         return prover != address(0);
     }
 }
