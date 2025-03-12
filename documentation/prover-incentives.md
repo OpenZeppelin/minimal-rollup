@@ -49,7 +49,7 @@ Provers are rewarded only for publications proven within their period and regain
 
 ### Fallback Mechanism
 
-Whenever a registered prover fails to deliver a proof after a certain time threshold, anyone can call the `eject` function to claim a portion of the inactive prover’s stake and mark them as inactive. This flags the current prover for slashing (details will be discussed later) and initiates an auction during the `exitDelay` window (described in the previous section) to select a new prover.
+Whenever a registered prover fails to deliver a proof after a certain time threshold, anyone can call the `evictProver` function to claim a portion of the inactive prover’s stake and mark them as inactive. This flags the current prover for slashing (details will be discussed later) and initiates an auction during the `exitDelay` window (described in the previous section) to select a new prover.
 
 *If no independent prover steps in, or if existing provers collude to charge excessively high fees, the system can still maintain liveness. This assumes the rollup operator is willing to run a prover and is expected not to exploit users by extracting excessive value.*
 
