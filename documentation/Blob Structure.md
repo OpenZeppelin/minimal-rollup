@@ -30,7 +30,7 @@ It seems a flat structure (which is one of the options they mention) is both sim
 
 Their proposal also requires registering with the blob aggregation service so it knows which DA layer and compression mechanism to use. Moreover, the rollups are responsible for ensuring the blobs they retrieve out of the aggregation service match the ones that were passed in (using a signature).
 
- In our case we are only interested in Ethereum as the DA layer, and we would like to avoid introducing an additional off-chain service. Since the supported compression algorithms are unlikely to change often, we can let rollups register them on chain so individual L1 proposers can see the registrations.
+The minimal rollup scope only considers Ethereum as the DA layer, avoiding introducing an additional off-chain service. Since the supported compression algorithms are unlikely to change often, rollups may register them on chain so individual L1 proposers can choose their preferred algorithm.
 
 ### Dankrad's proposal
 
