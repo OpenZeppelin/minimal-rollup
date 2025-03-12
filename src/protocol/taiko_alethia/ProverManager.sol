@@ -36,7 +36,7 @@ contract ProverManager is IProposerFees, IProverManager {
 
     // -- Configuration parameters --
     /// @notice The minimum percentage by which the new bid has to be lower than the current best value
-    /// @dev This value needs to be expressed in basis points
+    /// @dev This value needs to be expressed in basis points (4 decimal places)
     /// @dev This is used to prevent gas wars where the new prover undercuts the current prover by just a few wei
     uint256 public immutable minUndercutPercentage;
     /// @notice The time window after which a publication is considered old enough and if the prover hasn't poven it yet
@@ -61,11 +61,11 @@ contract ProverManager is IProposerFees, IProverManager {
     /// @dev This should be enough to cover the cost of a new prover if the current prover becomes inactive
     uint256 public immutable livenessBond;
     /// @notice The percentage of the liveness bond that the evictor gets as an incentive
-    /// @dev This value needs to be expressed in basis points
+    /// @dev This value needs to be expressed in basis points (4 decimals)
     uint256 public immutable evictorIncentivePercentage;
     /// @notice The percentage of the liveness bond (at the moment of the slashing) that is burned when a prover is
     /// slashed
-    /// @dev This value needs to be expressed in basis points
+    /// @dev This value needs to be expressed in basis points (4 decimals)
     uint256 public immutable burnedStakePercentage;
 
     /// @notice Common balances for proposers and provers
@@ -115,9 +115,7 @@ contract ProverManager is IProposerFees, IProverManager {
 
     /// @notice Deposit ETH into the contract. The deposit can be used both for opting in as a prover or proposer
     function deposit() external payable {
-        balances[msg.sender] += msg.value;
-
-        emit Deposit(msg.sender, msg.value);
+        _deposit(msg.sender, msg.value);
     }
 
     /// @notice Withdraw available(unlocked) funds.
@@ -138,8 +136,7 @@ contract ProverManager is IProposerFees, IProverManager {
 
         // Accept additional deposit if sent
         if (msg.value > 0) {
-            balances[proposer] += msg.value;
-            emit Deposit(proposer, msg.value);
+            _deposit(proposer, msg.value);
         }
 
         uint256 _currentPeriod = currentPeriodId;
@@ -170,7 +167,7 @@ contract ProverManager is IProposerFees, IProverManager {
         Period storage _currentPeriod = _periods[currentPeriod];
         Period storage _nextPeriod = _periods[currentPeriod + 1];
         uint256 requiredMaxFee;
-        if (_currentPeriod.end == 0) {
+        if (_isPeriodActive(_currentPeriod.end)) {
             // If the period is still active the bid has to be lower
             uint256 currentFee = _currentPeriod.fee;
             requiredMaxFee = currentFee - calculatePercentage(currentFee, minUndercutPercentage);
@@ -335,6 +332,12 @@ contract ProverManager is IProposerFees, IProverManager {
         balances[msg.sender] += newProverFees + livenessBondReward;
     }
 
+    /// @dev Increases `user`'s balance by `amount`
+    function _deposit(address user, uint256 amount) private {
+        balances[user] += amount;
+        emit Deposit(user, amount);
+    }
+
     /// @notice Returns the period for a given period id
     /// @param periodId The id of the period
     /// @return _ The period
@@ -399,5 +402,12 @@ contract ProverManager is IProposerFees, IProverManager {
                 require(prevHash == headers[i].prevHash, "Previous publication hash does not match");
             }
         }
+    }
+
+    /// @dev Checks if a period is active based on its end timestamp
+    /// @param end The end timestamp of the period
+    /// @return True if the period is active, false otherwise
+    function _isPeriodActive(uint256 end) private pure returns (bool) {
+        return end == 0;
     }
 }
