@@ -69,7 +69,8 @@ contract TaikoInbox {
         attributes[LAST_PUBLICATION] = abi.encode(_lastPublicationId);
         attributes[BLOB_REFERENCE] = abi.encode(blobRefRegistry.getRef(_buildBlobIndices(nBlobs)));
 
-        proposerFees.payPublicationFee{value: msg.value}(msg.sender, false);
+        (uint256 publicationFee, uint256 delayedPublicationFee) = proposerFees.getCurrentFees();
+        proposerFees.payPublicationFee{value: publicationFee}(msg.sender, false);
         _lastPublicationId = publicationFeed.publish(attributes).id;
 
         // Publish each delayed inclusion as a separate publication
@@ -82,7 +83,7 @@ contract TaikoInbox {
             attributes[LAST_PUBLICATION] = abi.encode(_lastPublicationId);
             attributes[BLOB_REFERENCE] = abi.encode(inclusions[i]);
 
-            proposerFees.payPublicationFee{value: msg.value}(msg.sender, true);
+            proposerFees.payPublicationFee{value: delayedPublicationFee}(msg.sender, true);
             _lastPublicationId = publicationFeed.publish(attributes).id;
         }
 

@@ -23,7 +23,6 @@ contract ProverManager is IProposerFees, IProverManager {
         uint256 livenessWindow;
         uint256 successionDelay;
         uint256 exitDelay;
-        uint256 delayedFeeMultiplier;
         uint256 provingDeadline;
         uint256 livenessBond;
         uint256 evictorIncentivePercentage;
@@ -51,10 +50,6 @@ contract ProverManager is IProposerFees, IProverManager {
     /// @dev The reason we don't allow this to happen immediately is to allow enough time for other provers to bid
     /// and to prepare their hardware
     uint256 public immutable exitDelay;
-    /// @notice The multiplier for delayed publications
-    /// @dev Delayed publications are charged at a higher fee, since they can potentially be much larger than regular
-    /// publications
-    uint256 public immutable delayedFeeMultiplier;
     ///@notice The deadline for a prover to submit a valid proof after their period ends
     uint256 public immutable provingDeadline;
     /// @notice The minimum stake required to be a prover
@@ -97,7 +92,6 @@ contract ProverManager is IProposerFees, IProverManager {
         livenessWindow = _config.livenessWindow;
         successionDelay = _config.successionDelay;
         exitDelay = _config.exitDelay;
-        delayedFeeMultiplier = _config.delayedFeeMultiplier;
         provingDeadline = _config.provingDeadline;
         livenessBond = _config.livenessBond;
         evictorIncentivePercentage = _config.evictorIncentivePercentage;
@@ -330,6 +324,15 @@ contract ProverManager is IProposerFees, IProverManager {
         uint256 burnedStake = calculatePercentage(_livenessBond, burnedStakePercentage);
         uint256 livenessBondReward = _livenessBond - burnedStake;
         balances[msg.sender] += newProverFees + livenessBondReward;
+    }
+
+    /// @inheritdoc IProverManager
+    function getCurrentFees() external view returns (uint256 fee, uint256 delayedFee) {
+        uint256 currentPeriod = currentPeriodId;
+        uint256 publicationFee = _periods[currentPeriod].fee;
+
+        // TODO: implement delayed fee once we decide how to handle delayed publications
+        return (publicationFee, publicationFee);
     }
 
     /// @dev Increases `user`'s balance by `amount`

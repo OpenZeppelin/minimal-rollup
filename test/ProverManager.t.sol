@@ -30,7 +30,6 @@ contract ProverManagerTest is Test {
     uint256 constant LIVENESS_WINDOW = 60; // 60 seconds
     uint256 constant SUCCESSION_DELAY = 10;
     uint256 constant EXIT_DELAY = 10;
-    uint256 constant DELAYED_FEE_MULTIPLIER = 2;
     uint256 constant PROVING_DEADLINE = 30;
     uint256 constant LIVENESS_BOND = 1 ether;
     uint256 constant EVICTOR_INCENTIVE_PERCENTAGE = 500; // 5%
@@ -51,7 +50,6 @@ contract ProverManagerTest is Test {
             livenessWindow: LIVENESS_WINDOW,
             successionDelay: SUCCESSION_DELAY,
             exitDelay: EXIT_DELAY,
-            delayedFeeMultiplier: DELAYED_FEE_MULTIPLIER,
             provingDeadline: PROVING_DEADLINE,
             livenessBond: LIVENESS_BOND,
             evictorIncentivePercentage: EVICTOR_INCENTIVE_PERCENTAGE,
