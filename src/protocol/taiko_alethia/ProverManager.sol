@@ -117,8 +117,13 @@ contract ProverManager is IProposerFees, IProverManager {
     function withdraw(uint256 amount) external {
         balances[msg.sender] -= amount;
 
-        (bool ok,) = payable(msg.sender).call{value: amount}("");
-        require(ok, "Withdrawal failed");
+        address to = msg.sender;
+        bool ok;
+        // Using assembly to avoid memory allocation costs; only the call's success matters to ensure funds are sent.
+        assembly ("memory-safe") {
+            ok := call(gas(), to, amount, 0, 0, 0, 0)
+        }
+        
         emit Withdrawal(msg.sender, amount);
     }
 
