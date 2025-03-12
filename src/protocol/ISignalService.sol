@@ -8,8 +8,11 @@ interface ISignalService {
     error CallerNotAuthorised();
 
     event SignalsReceived(bytes32[] signalSlots);
+    event FastSignalSent(bytes32 signal);
+    event SignalSent(bytes32 signal);
 
     function sendSignal(bytes32 value) external returns (bytes32);
+    function sendFastSignal(bytes32 value) external returns (bytes32);
 
     function receiveSignals(bytes32[] calldata signalSlots) external;
 

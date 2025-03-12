@@ -44,7 +44,7 @@ contract ETHBridge is IETHBridge {
 
     /// @inheritdoc IETHBridge
     function createTicket(uint64 chainId, address to) external payable virtual {
-        emit ETHTicket(LibValueTicket.createTicket(chainId, msg.sender, to, msg.value));
+        emit ETHTicket(LibValueTicket.createTicket(chainId, msg.sender, to, msg.value, signalService));
     }
 
     /// @inheritdoc IETHBridge

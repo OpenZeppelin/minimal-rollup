@@ -26,8 +26,15 @@ contract SignalService is ISignalService {
     }
 
     /// @dev Only required to be called on L1
-    function sendSignal(bytes32 value) external returns (bytes32) {
-        return value.signal();
+    function sendSignal(bytes32 value) external returns (bytes32 signal) {
+        signal = value.signal();
+        emit SignalSent(signal);
+    }
+
+    /// @dev Only required to be called on L1
+    function sendFastSignal(bytes32 value) external returns (bytes32 signal) {
+        signal = value.signal();
+        emit FastSignalSent(signal);
     }
 
     /// @dev Only required to be called on L2

@@ -47,26 +47,19 @@ library LibValueTicket {
         bytes[] memory storageProof
     ) internal view returns (bool verified, bytes32 _id) {
         _id = id(ticket);
-        if (accountProof.length == 0) {
-            ISignalService(signalService).verifySignal(
-                address(this), root, ticket.chainId, _id, accountProof, storageProof
-            );
-            // true because call will revert otherwise
-            return (true, _id);
-        }
-        (verified,) = address(this).verifySignal(root, ticket.chainId, _id, accountProof, storageProof);
-        return (verified, _id);
+        ISignalService(signalService).verifySignal(address(this), root, ticket.chainId, _id, accountProof, storageProof);
+        // true because call will revert otherwise
+        return (true, _id);
     }
 
     /// @dev Creates a ticket with `msg.value` ETH for the receiver (`to`) to claim on the `destinationChainId`.
-    function createTicket(uint64 destinationChainId, address from, address to, uint256 value)
+    function createTicket(uint64 destinationChainId, address from, address to, uint256 value, address signalService)
         internal
-        returns (ValueTicket memory ticket)
+        returns (ValueTicket memory)
     {
         ticket = ValueTicket(destinationChainId, _useNonce(from).toUint64(), from, to, value);
         bytes32 _id = id(ticket);
-        _id.signal();
-        return ticket;
+        ISignalService(signalService).sendSignal(_id);
     }
 
     /// @dev Creates a ticket with `msg.value` ETH for the receiver (`to`) to claim on the `destinationChainId`.
@@ -78,8 +71,7 @@ library LibValueTicket {
     {
         ticket = ValueTicket(destinationChainId, _useNonce(from).toUint64(), from, to, value);
         bytes32 _id = id(ticket);
-        ISignalService(signalService).sendSignal(_id);
-        return ticket;
+        ISignalService(signalService).sendFastSignal(_id);
     }
 
     /// @dev Reverts if a ticket was not created by `from` with `nonce` on `chainId`. See `verifyTicket`.
