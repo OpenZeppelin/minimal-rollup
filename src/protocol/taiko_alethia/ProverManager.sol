@@ -123,7 +123,7 @@ contract ProverManager is IProposerFees, IProverManager {
         assembly ("memory-safe") {
             ok := call(gas(), to, amount, 0, 0, 0, 0)
         }
-        
+
         emit Withdrawal(msg.sender, amount);
     }
 
