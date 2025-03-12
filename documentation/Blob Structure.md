@@ -78,7 +78,7 @@ For each relevant hash, the publication is the concatenation of all the correspo
 
 If the header is larger than one chunk, retrieve and validate the remaining chunks. They should all be structured with the same data type records (up to 6 in a chunk) and padded with zeros.
 
-Although we are not using binary search, I still think it is useful to have a deterministic structure. Therefore, in addition to validating the header structure, the rollup nodes should ensure:
+Although the proposal doesn't rely on binary search, it is still useful to have a deterministic structure. Therefore, in addition to validating the header structure, the rollup nodes should ensure:
 
 - all data identifiers are listed in ascending order
 - the actual data segments are also in the same order (i.e. the segment offsets are strictly increasing)
