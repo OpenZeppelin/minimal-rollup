@@ -7,7 +7,6 @@ import {StorageSlot} from "@openzeppelin/contracts/utils/StorageSlot.sol";
 
 /// @title SignalService
 /// @notice A minimal implementation of a signal service using LibSignal.
-/// @dev This is for same slot signal passing.
 contract SignalService is ISignalService {
     using LibSignal for bytes32;
     using StorageSlot for bytes32;
