@@ -5,10 +5,10 @@ import {IBlobRefRegistry} from "../../blobs/IBlobRefRegistry.sol";
 
 import {IPublicationFeed} from "../IPublicationFeed.sol";
 
-import {IProposerFees} from "../IProposerFees.sol";
 import {IDelayedInclusionStore} from "../IDelayedInclusionStore.sol";
 import {IInbox} from "../IInbox.sol";
 import {ILookahead} from "../ILookahead.sol";
+import {IProposerFees} from "../IProposerFees.sol";
 
 contract TaikoInbox is IInbox {
     struct Metadata {
