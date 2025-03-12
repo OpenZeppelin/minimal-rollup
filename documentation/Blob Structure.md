@@ -6,7 +6,7 @@ Blobs can be shared between multiple rollups, as noted in the [Overall Design do
 
 - blob boundaries are not meaningful, but each publication should be contained within a transaction.
 - allow proposers to decide per-publication which rollups to include, based on proposal rights and available transactions.
-- rollups can support any form of compression (including no compression). When multiple rollups use the same compression algorithm, their transactions should be compressible together, which would produce better compression ratios.
+- support any compression algorithm, enabling shared compression for better ratios when multiple rollups use the same algorithm.
 - we should be minimally opinionated so rollups can update the structure as desired.
 
 
