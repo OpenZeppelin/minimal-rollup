@@ -55,7 +55,7 @@ library LibValueTicket {
     /// @dev Creates a ticket with `msg.value` ETH for the receiver (`to`) to claim on the `destinationChainId`.
     function createTicket(uint64 destinationChainId, address from, address to, uint256 value, address signalService)
         internal
-        returns (ValueTicket memory)
+        returns (ValueTicket memory ticket)
     {
         ticket = ValueTicket(destinationChainId, _useNonce(from).toUint64(), from, to, value);
         bytes32 _id = id(ticket);
@@ -67,7 +67,7 @@ library LibValueTicket {
     /// @dev This is only for L1->L2 bridging
     function createFastTicket(uint64 destinationChainId, address from, address to, uint256 value, address signalService)
         internal
-        returns (ValueTicket memory)
+        returns (ValueTicket memory ticket)
     {
         ticket = ValueTicket(destinationChainId, _useNonce(from).toUint64(), from, to, value);
         bytes32 _id = id(ticket);
