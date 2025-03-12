@@ -97,7 +97,7 @@ The data identifier will indicate which kind of compression (eg. gzip, lz4, etc)
 
 ### Rollup segments
 
-After finding and decompressing all relevant segments, the rollup node should process them. The data structure should be defined by the particular use case, but I would recommend
+After finding and decompressing all relevant segments, the rollup node should process them. The data structure should be defined by the particular use case, with the following recommendations:
 
 - avoid derivable information (such as block hashes or state roots)
 - instead, the segment should include the minimum information required to reconstruct the state, which would be something like raw L2 transactions interspersed with block timestamp delimiters.
