@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
-import {LibSignal} from "../libs/LibSignal.sol";
+import {ISignalService} from "../protocol/ISignalService.sol";
 import {SlotDerivation} from "@openzeppelin/contracts/utils/SlotDerivation.sol";
 import {StorageSlot} from "@openzeppelin/contracts/utils/StorageSlot.sol";
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
@@ -13,7 +13,6 @@ import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 library LibValueTicket {
     using SafeCast for uint256;
     using StorageSlot for bytes32;
-    using LibSignal for *;
     using SlotDerivation for *;
 
     struct ValueTicket {
@@ -36,34 +35,52 @@ library LibValueTicket {
     /// to claim `value` on this chain. It does so by performing an storage proof of `address(this)` on the source chain
     /// using `accountProof` and validating it against the network state `root` using `proof`.
     /// The `root` MUST be trusted.
-    function verifyTicket(ValueTicket memory ticket, bytes32 root, bytes[] memory accountProof, bytes[] memory proof)
-        internal
-        view
-        returns (bool verified, bytes32 _id)
-    {
+    /// @dev For L1->L2 same slot signalling this should be called with no accountProof. In this case the signal will be
+    /// verified against the receivedSignals mapping in the SignalService (filled by the proposer)
+    function verifyTicket(
+        ValueTicket memory ticket,
+        address signalService,
+        bytes32 root,
+        bytes[] memory accountProof,
+        bytes[] memory storageProof
+    ) internal view returns (bool verified, bytes32 _id) {
         _id = id(ticket);
-        (verified,) = address(this).verifySignal(root, ticket.chainId, _id, accountProof, proof);
-        return (verified, _id);
+        ISignalService(signalService).verifySignal(address(this), root, ticket.chainId, _id, accountProof, storageProof);
+        // true because call will revert otherwise
+        return (true, _id);
     }
 
     /// @dev Creates a ticket with `msg.value` ETH for the receiver (`to`) to claim on the `destinationChainId`.
-    function createTicket(uint64 destinationChainId, address from, address to, uint256 value)
+    function createTicket(uint64 destinationChainId, address from, address to, uint256 value, address signalService)
         internal
         returns (ValueTicket memory ticket)
     {
         ticket = ValueTicket(destinationChainId, _useNonce(from).toUint64(), from, to, value);
         bytes32 _id = id(ticket);
-        _id.signal();
-        return ticket;
+        ISignalService(signalService).sendSignal(_id);
+    }
+
+    /// @dev Creates a ticket with `msg.value` ETH for the receiver (`to`) to claim on the `destinationChainId`.
+    /// This redeamable within the same slot.
+    /// @dev This is only for L1->L2 bridging
+    function createFastTicket(uint64 destinationChainId, address from, address to, uint256 value, address signalService)
+        internal
+        returns (ValueTicket memory ticket)
+    {
+        ticket = ValueTicket(destinationChainId, _useNonce(from).toUint64(), from, to, value);
+        bytes32 _id = id(ticket);
+        ISignalService(signalService).sendFastSignal(_id);
     }
 
     /// @dev Reverts if a ticket was not created by `from` with `nonce` on `chainId`. See `verifyTicket`.
-    function checkTicket(ValueTicket memory ticket, bytes32 root, bytes[] memory accountProof, bytes[] memory proof)
-        internal
-        view
-        returns (bytes32)
-    {
-        (bool valid, bytes32 _id) = verifyTicket(ticket, root, accountProof, proof);
+    function checkTicket(
+        ValueTicket memory ticket,
+        address signalService,
+        bytes32 root,
+        bytes[] memory accountProof,
+        bytes[] memory proof
+    ) internal view returns (bytes32) {
+        (bool valid, bytes32 _id) = verifyTicket(ticket, signalService, root, accountProof, proof);
         require(valid, InvalidTicket());
         return _id;
     }

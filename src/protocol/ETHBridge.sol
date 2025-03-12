@@ -5,6 +5,7 @@ import {LibTrieProof} from "../libs/LibTrieProof.sol";
 
 import {LibValueTicket} from "../libs/LibValueTicket.sol";
 import {IETHBridge} from "./IETHBridge.sol";
+import {ISignalService} from "./ISignalService.sol";
 
 /// @dev Bridge implementation to send native ETH to other chains using storage proofs.
 ///
@@ -13,7 +14,13 @@ import {IETHBridge} from "./IETHBridge.sol";
 contract ETHBridge is IETHBridge {
     using LibValueTicket for LibValueTicket.ValueTicket;
 
+    address public immutable signalService;
+
     mapping(bytes32 id => bool) _claimed;
+
+    constructor(address _signalService) {
+        signalService = _signalService;
+    }
 
     /// @inheritdoc IETHBridge
     function claimed(bytes32 id) public view virtual returns (bool) {
@@ -32,12 +39,17 @@ contract ETHBridge is IETHBridge {
         bytes[] memory accountProof,
         bytes[] memory proof
     ) public view virtual returns (bool verified, bytes32 id) {
-        return ticket.verifyTicket(root, accountProof, proof);
+        return ticket.verifyTicket(signalService, root, accountProof, proof);
     }
 
     /// @inheritdoc IETHBridge
     function createTicket(uint64 chainId, address to) external payable virtual {
-        emit ETHTicket(LibValueTicket.createTicket(chainId, msg.sender, to, msg.value));
+        emit ETHTicket(LibValueTicket.createTicket(chainId, msg.sender, to, msg.value, signalService));
+    }
+
+    /// @inheritdoc IETHBridge
+    function createFastTicket(uint64 chainId, address to) external payable virtual {
+        emit FastETHTicket(LibValueTicket.createFastTicket(chainId, msg.sender, to, msg.value, signalService));
     }
 
     /// @inheritdoc IETHBridge
@@ -47,7 +59,7 @@ contract ETHBridge is IETHBridge {
         bytes[] memory accountProof,
         bytes[] memory proof
     ) external virtual {
-        bytes32 id_ = ticket.checkTicket(root, accountProof, proof);
+        bytes32 id_ = ticket.checkTicket(signalService, root, accountProof, proof);
         require(!claimed(id_), AlreadyClaimed());
         _claimed[id_] = true;
         _sendETH(ticket.to, ticket.value);
