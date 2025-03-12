@@ -5,7 +5,7 @@
 Blobs can be shared between multiple rollups, as noted in the [Overall Design document](./Overall%20Design.md). The proposed blob structure is guided by the following design goals:
 
 - blob boundaries are not meaningful, but each publication should be contained within a transaction.
-- proposers can decide on a per-publication basis which rollups to include. This will depend on whether they happen to have proposal rights for multiple rollups in that slot and which transactions are available.
+- allow proposers to decide per-publication which rollups to include, based on proposal rights and available transactions.
 - rollups can support any form of compression (including no compression). When multiple rollups use the same compression algorithm, their transactions should be compressible together, which would produce better compression ratios.
 - we should be minimally opinionated so rollups can update the structure as desired.
 
