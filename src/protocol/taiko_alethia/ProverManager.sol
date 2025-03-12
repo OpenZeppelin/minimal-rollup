@@ -21,7 +21,7 @@ contract ProverManager is IProposerFees, IProverManager {
     struct ProverManagerConfig {
         uint256 minUndercutPercentage;
         uint256 livenessWindow;
-        uint256 succesionDelay;
+        uint256 successionDelay;
         uint256 exitDelay;
         uint256 delayedFeeMultiplier;
         uint256 provingDeadline;
@@ -46,7 +46,7 @@ contract ProverManager is IProposerFees, IProverManager {
     /// @dev The reason we don't allow this to happen immediately is so that:
     /// 1. Other provers can bid for the role
     /// 2. Ensure the current prover window is not too short
-    uint256 public immutable succesionDelay;
+    uint256 public immutable successionDelay;
     /// @notice The delay after which the current prover can exit, or is removed if evicted because they are inactive
     /// @dev The reason we don't allow this to happen immediately is to allow enough time for other provers to bid
     /// and to prepare their hardware
@@ -74,14 +74,13 @@ contract ProverManager is IProposerFees, IProverManager {
     /// @dev Most of the time we are dealing with the current period or next period (bids for the next period),
     /// but we need periods in the past to track publications that still need to be proven after the prover is
     /// evicted or exits
-    mapping(uint256 periodId => Period period) private periods;
+    mapping(uint256 periodId => Period) private _periods;
     /// @notice The current period
     uint256 public currentPeriodId;
 
     event Deposit(address indexed user, uint256 amount);
     event Withdrawal(address indexed user, uint256 amount);
     event ProverOffer(address indexed proposer, uint256 period, uint256 fee, uint256 stake);
-    event ProverSlashed(address indexed prover, address indexed slasher, uint256 slashedAmount);
     event ProverEvicted(address indexed prover, address indexed evictor, uint256 periodEnd, uint256 livenessBond);
     event ProverExited(address indexed prover, uint256 periodEnd, uint256 provingDeadline);
     event NewPeriod(uint256 period);
@@ -90,13 +89,13 @@ contract ProverManager is IProposerFees, IProverManager {
         address _inbox,
         address _checkpointTracker,
         address _publicationFeed,
-        address _initialProover,
+        address _initialProver,
         uint256 _initialFee,
         ProverManagerConfig memory _config
     ) payable {
         minUndercutPercentage = _config.minUndercutPercentage;
         livenessWindow = _config.livenessWindow;
-        succesionDelay = _config.succesionDelay;
+        successionDelay = _config.successionDelay;
         exitDelay = _config.exitDelay;
         delayedFeeMultiplier = _config.delayedFeeMultiplier;
         provingDeadline = _config.provingDeadline;
@@ -109,9 +108,9 @@ contract ProverManager is IProposerFees, IProverManager {
 
         // Initialize the first period with a known prover and a set fee
         require(msg.value >= _config.livenessBond, "Insufficient balance for liveness bond");
-        periods[0].prover = _initialProover;
-        periods[0].stake = _config.livenessBond;
-        periods[0].fee = _initialFee;
+        _periods[0].prover = _initialProver;
+        _periods[0].stake = _config.livenessBond;
+        _periods[0].fee = _initialFee;
     }
 
     /// @notice Deposit ETH into the contract. The deposit can be used both for opting in as a prover or proposer
@@ -145,19 +144,18 @@ contract ProverManager is IProposerFees, IProverManager {
 
         uint256 _currentPeriod = currentPeriodId;
 
-        uint256 periodEnd = periods[_currentPeriod].end;
+        uint256 periodEnd = _periods[_currentPeriod].end;
         if (periodEnd != 0 && block.timestamp > periodEnd) {
             // Advance to the next period
-            currentPeriodId++;
-            _currentPeriod++;
+             currentPeriodId = ++_currentPeriod;
             emit NewPeriod(_currentPeriod);
         }
 
-        uint256 requiredFee = periods[_currentPeriod].fee;
+        uint256 requiredFee = _periods[_currentPeriod].fee;
 
         // Deduct fee from proposer's balance and add to accumulated fees
         balances[proposer] -= requiredFee;
-        periods[_currentPeriod].accumulatedFees += requiredFee;
+        _periods[_currentPeriod].accumulatedFees += requiredFee;
     }
 
     /// @inheritdoc IProverManager
@@ -169,8 +167,8 @@ contract ProverManager is IProposerFees, IProverManager {
         require(balances[msg.sender] >= _livenessBond, "Insufficient balance for liveness bond");
 
         uint256 currentPeriod = currentPeriodId;
-        Period storage _currentPeriod = periods[currentPeriod];
-        Period storage _nextPeriod = periods[currentPeriod + 1];
+        Period storage _currentPeriod = _periods[currentPeriod];
+        Period storage _nextPeriod = _periods[currentPeriod + 1];
         uint256 requiredMaxFee;
         if (_currentPeriod.end == 0) {
             // If the period is still active the bid has to be lower
@@ -178,7 +176,7 @@ contract ProverManager is IProposerFees, IProverManager {
             requiredMaxFee = currentFee - calculatePercentage(currentFee, minUndercutPercentage);
             require(offeredFee <= requiredMaxFee, "Offered fee not low enough");
 
-            uint256 periodEnd = block.timestamp + succesionDelay;
+            uint256 periodEnd = block.timestamp + successionDelay;
             _currentPeriod.end = periodEnd;
             _currentPeriod.deadline = periodEnd + provingDeadline;
         } else {
@@ -215,7 +213,7 @@ contract ProverManager is IProposerFees, IProverManager {
         require(publicationTimestamp + livenessWindow < block.timestamp, "Publication is not old enough");
 
         uint256 periodEnd = block.timestamp + exitDelay;
-        Period storage period = periods[currentPeriodId];
+        Period storage period = _periods[currentPeriodId];
         // We use this to mark the prover as evicted
         period.deadline = periodEnd;
         period.end = periodEnd;
@@ -232,7 +230,7 @@ contract ProverManager is IProposerFees, IProverManager {
     /// @dev The prover still has to wait for the `exitDelay` to allow other provers to bid for the role.
     /// @dev The liveness bond and the accumulated fees can only be withdrawn once the period has been fully proven.
     function exit() external {
-        Period storage period = periods[currentPeriodId];
+        Period storage period = _periods[currentPeriodId];
         address _prover = period.prover;
         require(msg.sender == _prover, "Not current prover");
         require(period.end == 0, "Prover already exited");
@@ -255,13 +253,13 @@ contract ProverManager is IProposerFees, IProverManager {
         bytes calldata proof,
         uint256 periodId
     ) external {
-        Period storage period = periods[periodId];
+        Period storage period = _periods[periodId];
         uint256 periodEnd = period.end;
         require(period.deadline == 0 || block.timestamp <= period.deadline, "Deadline has passed");
 
         uint256 previousPeriodEnd = 0;
         if (periodId > 0) {
-            Period storage previousPeriod = periods[periodId - 1];
+            Period storage previousPeriod = _periods[periodId - 1];
             previousPeriodEnd = previousPeriod.end;
         }
 
@@ -296,13 +294,13 @@ contract ProverManager is IProposerFees, IProverManager {
         bytes calldata proof,
         uint256 periodId
     ) external {
-        Period storage period = periods[periodId];
+        Period storage period = _periods[periodId];
         uint256 periodEnd = period.end;
         require(block.timestamp > period.deadline, "The period is still open");
 
         uint256 previousPeriodEnd = 0;
         if (periodId > 0) {
-            Period storage previousPeriod = periods[periodId - 1];
+            Period storage previousPeriod = _periods[periodId - 1];
             previousPeriodEnd = previousPeriod.end;
         }
         uint256 numPubs = publicationHeadersToProve.length;
@@ -328,7 +326,7 @@ contract ProverManager is IProposerFees, IProverManager {
         uint256 accumulatedFees = period.accumulatedFees;
         uint256 newProverFees = period.fee * numPubs;
 
-        // Pay the designed prover for the work they already did
+        // Pay the designated prover for the work they already did
         balances[period.prover] += accumulatedFees - newProverFees;
 
         // Compensate the new prover(fees for the set of publications + a portion of the liveness bond)
@@ -341,7 +339,7 @@ contract ProverManager is IProposerFees, IProverManager {
     /// @param periodId The id of the period
     /// @return _ The period
     function getPeriod(uint256 periodId) external view returns (Period memory) {
-        return periods[periodId];
+        return _periods[periodId];
     }
 
     /// @dev Calculates the percentage of a given numerator scaling up to avoid precision loss

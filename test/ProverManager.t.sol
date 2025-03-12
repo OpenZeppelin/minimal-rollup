@@ -49,7 +49,7 @@ contract ProverManagerTest is Test {
         ProverManager.ProverManagerConfig memory config = ProverManager.ProverManagerConfig({
             minUndercutPercentage: MIN_UNDERCUT_PERCENTAGE,
             livenessWindow: LIVENESS_WINDOW,
-            succesionDelay: SUCCESSION_DELAY,
+            successionDelay: SUCCESSION_DELAY,
             exitDelay: EXIT_DELAY,
             delayedFeeMultiplier: DELAYED_FEE_MULTIPLIER,
             provingDeadline: PROVING_DEADLINE,

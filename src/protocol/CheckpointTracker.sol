@@ -30,6 +30,7 @@ contract CheckpointTracker is ICheckpointTracker {
     /// @param _genesis the checkpoint commitment describing the initial state of the rollup
     /// @param _publicationFeed the input data source that updates the state of this rollup
     /// @param _verifier a contract that can verify the validity of a transition from one checkpoint to another
+    /// @param _proverManager contract responsible for managing the prover auction
     constructor(bytes32 _genesis, address _publicationFeed, address _verifier, address _proverManager) {
         // set the genesis checkpoint commitment of the rollup - genesis is trusted to be correct
         require(_genesis != 0, "genesis checkpoint commitment cannot be 0");
