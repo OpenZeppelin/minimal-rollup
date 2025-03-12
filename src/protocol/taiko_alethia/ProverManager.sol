@@ -138,7 +138,7 @@ contract ProverManager is IProposerFees, IProverManager {
         uint256 periodEnd = _periods[_currentPeriod].end;
         if (periodEnd != 0 && block.timestamp > periodEnd) {
             // Advance to the next period
-             currentPeriodId = ++_currentPeriod;
+            currentPeriodId = ++_currentPeriod;
             emit NewPeriod(_currentPeriod);
         }
 
@@ -172,7 +172,7 @@ contract ProverManager is IProposerFees, IProverManager {
             _currentPeriod.deadline = periodEnd + provingDeadline;
         } else {
             address _nextProverAddress = _nextPeriod.prover;
-            if (_nextProverAddress != address(0)) {
+            if (_isBidded(_nextProverAddress)) {
                 // If there's already a bid for the next period the bid has to be lower
                 uint256 nextFee = _nextPeriod.fee;
                 requiredMaxFee = nextFee - calculatePercentage(nextFee, minUndercutPercentage);
@@ -326,7 +326,7 @@ contract ProverManager is IProposerFees, IProverManager {
         balances[msg.sender] += newProverFees + livenessBondReward;
     }
 
-    /// @inheritdoc IProverManager
+    /// @inheritdoc IProposerFees
     function getCurrentFees() external view returns (uint256 fee, uint256 delayedFee) {
         uint256 currentPeriod = currentPeriodId;
         uint256 publicationFee = _periods[currentPeriod].fee;
@@ -412,5 +412,12 @@ contract ProverManager is IProposerFees, IProverManager {
     /// @return True if the period is active, false otherwise
     function _isPeriodActive(uint256 end) private pure returns (bool) {
         return end == 0;
+    }
+
+    /// @dev Checks if a period is already bidded
+    /// @param prover The address of the prover
+    /// @return True if someone has already bid for the period, false otherwise
+    function _isBidded(address prover) private view returns (bool) {
+        return prover != address(0);
     }
 }
