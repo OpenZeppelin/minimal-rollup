@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
-import {LibSignal} from "../libs/LibSignal.sol";
 import {ISignalService} from "../protocol/ISignalService.sol";
 import {SlotDerivation} from "@openzeppelin/contracts/utils/SlotDerivation.sol";
 import {StorageSlot} from "@openzeppelin/contracts/utils/StorageSlot.sol";
@@ -14,7 +13,6 @@ import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 library LibValueTicket {
     using SafeCast for uint256;
     using StorageSlot for bytes32;
-    using LibSignal for *;
     using SlotDerivation for *;
 
     struct ValueTicket {
