@@ -14,10 +14,10 @@ Blobs can be shared between multiple rollups, as noted in the [Overall Design do
 
 ### Nethermind's proposal
 
-Nethermind has created [this proposal](https://hackmd.io/@linoscope/blob-sharing-for-based-rollups). While I appreciate the simplicity, I believe it is not optimal in our case because:
+Nethermind's [proposal](https://hackmd.io/@linoscope/blob-sharing-for-based-rollups) is simple but suboptimal for a minimal rollup case because:
 
-- the segmentation information is published on L1, and we are attempting to minimize our L1 requirements.
-- rollups that share a compression algorithm should be able to decompress the publication before splitting it.
+- segmentation information is published on L1, increasing L1 requirements.
+- rollups sharing a compression algorithm should decompress the publication before splitting it.
 
 ### Spire's proposal
 
