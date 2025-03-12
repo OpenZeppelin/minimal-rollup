@@ -17,7 +17,7 @@ This approach works well, but has some latency since the latest L1 state root in
 The signal service (SS) is used for cases where the message is to be sent within the same slot. This [design](https://ethresear.ch/t/same-slot-l1-l2-message-passing/21186) is the one proposed by Nethermind. The basic idea is as follows:
 
 1. The proposer listens to any signals being stored on the L1 SS
-2. The proposer (during his allocated slot) can selectively inject L1 → L2 signals when proposing a batch in `publish` function.
+2. The proposer (during his allocated slot) can selectively inject L1 → L2 signals when proposing a batch in the `publish` function.
 3. The inbox contract will verify that the Signals exist in the SS’s storage.
 4. The proposer (owned by the rollup) will call `receiveSignal` on the L2 SS through the anchor transaction executed at the start of L2 blocks. This will fill a mapping of `_receivedSignals` to true (signal —> true)
 5. Any application that requires same slot signalling will just verify the signal is found in the `_receivedSignals` mapping i.e. they don’t need to provide a storage proof
@@ -42,7 +42,7 @@ Below is a diagram showing the 'slow' ETH bridging pathway. The L2 ETH bridge re
 
 #### Fast ETH deposits
 
-In contrast here is diagram showing the 'fast' signalling pathway. In this scenario the L2 ETH bridge can just verify that the signal is present in the L2 `receivedSignal` mapping instead of relying on a the L1 state root. This mapping would have already been filled when the block was proposed.
+In contrast here is diagram showing the 'fast' signalling pathway. In this scenario the L2 ETH bridge can just verify that the signal is present in the L2 `receivedSignal` mapping instead of relying on the L1 state root. This mapping would have already been filled when the block was proposed.
 
 ![Fast](Fast.png)
 
