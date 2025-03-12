@@ -21,7 +21,7 @@ Nethermind's [proposal](https://hackmd.io/@linoscope/blob-sharing-for-based-roll
 
 ### Spire's proposal
 
-Spire has created [this proposal](https://paragraph.xyz/@spire/shared-blob-compression). I am not convinced that the Merkle tree structure is useful because:
+Spire has created [this proposal](https://paragraph.xyz/@spire/shared-blob-compression). However, a Merkle tree structure may not be useful because:
 
 - the main advantage of a Merkle tree is to efficiently prove some leaves. In our case we will need each rollup to process the full list of transactions in the publication, so at the very least we should treat each rollup's transactions as one leaf.
 - if two rollups share a compression algorithm, both transaction lists will need to be decompressed together (if they want to take advantage of shared compression), so in that case they should also be a single leaf, and we will need an additional mechanism to describe the split within the compressed blob.
