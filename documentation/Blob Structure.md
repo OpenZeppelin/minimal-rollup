@@ -36,8 +36,8 @@ The minimal rollup scope only considers Ethereum as the DA layer, avoiding intro
 
 Dankrad has created [this proposal](https://ethresear.ch/t/suggested-format-for-shard-blob-header/9996), which is mostly suitable for a minimal rollup with the following modifications:
 
-- each supported compression algorithm could map to one of the "application ids" (so it's more of a data format identifier rather than an application identifier)
-    - in this way, multiple rollups can find and decompress the same compressed data. We will then need a way to split the decompressed data by rollups. I suggest using the same format inside the compressed segment.
+- identify each supported compression algorithm with an `application_id` as if it were a _format_ identifier
+    - Multiple rollups can find and decompress the same compressed data, and a way to split the decompressed data will be required. The suggested approach is using the same segmenting scheme inside the compressed segment
 - his post allows for up to 1535 applications per blob. This has some cascading effects:
     - the header is expected to be sorted by application ID, and each application will look for their record (which tells them where to find the actual data) using a binary search
     - applications must use this search mechanism precisely. If the header is not sorted correctly or the binary search fails for whatever reason, the data should be considered missing (or junk). We do not want a scenario where different clients reach different conclusions about what data is stored for a given application ID
