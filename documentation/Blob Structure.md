@@ -34,7 +34,7 @@ The minimal rollup scope only considers Ethereum as the DA layer, avoiding intro
 
 ### Dankrad's proposal
 
-Dankrad has create [this proposal](https://ethresear.ch/t/suggested-format-for-shard-blob-header/9996). This seems suitable for our purposes, except I would make the modifications:
+Dankrad has created [this proposal](https://ethresear.ch/t/suggested-format-for-shard-blob-header/9996), which is mostly suitable for a minimal rollup with the following modifications:
 
 - each supported compression algorithm could map to one of the "application ids" (so it's more of a data format identifier rather than an application identifier)
     - in this way, multiple rollups can find and decompress the same compressed data. We will then need a way to split the decompressed data by rollups. I suggest using the same format inside the compressed segment.
