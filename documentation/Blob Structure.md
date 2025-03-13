@@ -46,7 +46,7 @@ Dankrad has created [this proposal](https://ethresear.ch/t/suggested-format-for-
 
 ## The proposal
 
-With these modifications to Dankrad's proposal, here is a complete description of my suggestion. I will describe what an L2 rollup node shoud do to update it state. The corresponding protocol for proposers and provers should follow pretty naturally.
+With these modifications to Dankrad's proposal, here is a complete description of the suggested design. The description is for how an L2 rollup node must update its state. The corresponding protocol for proposers and provers should follow naturally.
 
 ### Preparation
 
