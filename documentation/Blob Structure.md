@@ -67,7 +67,7 @@ For each relevant hash, the publication is the concatenation of all the correspo
 
 - the version (set to zero) (1 byte)
 - header length in chunks, excluding this one (1 byte)
-    - I expect this to be zero most of the time, because this chunk can identify 5 segments, which I suspect is sufficient for most publications.
+    - Most of the times, this field is expected to be `0` since this chunk accommodates 5 segments already; likely enough for most publications.
 - multiplier (1 byte)
     - the log base 2 of a scaling factor for data offsets
     - i.e. if this value is $x$ and an offset is specified as $y$, the relevant data starts at chunk $2^x \cdot y$
