@@ -47,7 +47,7 @@ A corner case is that where an L2 proposer decides not to receive one of the sig
 
 In the context of an L2 proposer who also issues preconfirmations (either by delegation or any other mechanism), then the inclusion of the signal in the L2 block is guaranteed. Otherwise, the verification at step 4 will fail, reverting the whole L2 batch.
 
-Considering that _[relying on same-slot L1 messages for L2 execution creates a tight coupling between L1 and L2_](http://ethresear.ch/t/same-slot-l1-l2-message-passing/21186#p-51604-are-shared-sequencersbuilders-needed-here-7) as they would _reorg_ together, it's recommended for applications developers to build mechanisms that are resilient to reorgs. However, the ability to create atomic L1 <> L2 execution remains, as they can always write applications that enforce atomicity (e.g. [fast (and slow) L2 -> L1 withdrawals](https://ethresear.ch/t/fast-and-slow-l2-l1-withdrawals/21161)).
+Considering that [_relying on same-slot L1 messages for L2 execution creates a tight coupling between L1 and L2_](http://ethresear.ch/t/same-slot-l1-l2-message-passing/21186#p-51604-are-shared-sequencersbuilders-needed-here-7) as they would _reorg_ together, it's recommended for applications developers to build mechanisms that are resilient to reorgs. However, the ability to create atomic L1 <> L2 execution remains, as they can always write applications that enforce atomicity (e.g. [fast (and slow) L2 -> L1 withdrawals](https://ethresear.ch/t/fast-and-slow-l2-l1-withdrawals/21161)).
 
 ---
 
