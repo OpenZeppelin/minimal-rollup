@@ -39,8 +39,8 @@ Dankrad has created [this proposal](https://ethresear.ch/t/suggested-format-for-
 - identify each supported compression algorithm with an `application_id` as if it were a _format_ identifier
     - Multiple rollups can find and decompress the same compressed data, and a way to split the decompressed data will be required. The suggested approach is using the same segmenting scheme inside the compressed segment
 - his post allows for up to 1535 applications per blob. This has some cascading effects:
-    - the header is expected to be sorted by application ID, and each application will look for their record (which tells them where to find the actual data) using a binary search
-    - applications must use this search mechanism precisely. If the header is not sorted correctly or the binary search fails for whatever reason, the data should be considered missing (or junk). We do not want a scenario where different clients reach different conclusions about what data is stored for a given application ID
+    - the header is expected to be sorted by application ID, enabling each application to binary search the pointer to the start of the compressed data in the blob
+    - if the search fails, either as a result of unsorted data or any other reason, the data is considered unusable. Applications must not reach different conclusions about what data is stored for a given application ID
     - even though each of our publications can span several blobs, I expect there will only be a handful of rollups per publication (and they may even be grouped under the same compression id). Instead of doing a binary search, I recommend applications do a linear search through the whole header to ensure it has the expected structure (ie. sorted application IDs)
 
 
