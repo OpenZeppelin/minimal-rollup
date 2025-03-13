@@ -67,6 +67,8 @@ Bridging assets over to L2 requires an application that signals the value and as
 
 The L2 ETH bridge is presumed to have unlimited ETH, functioning as the canonical bridge for transferring assets to Taiko rollups. The ETH bridge makes use of both 'fast' and 'slow' signalling pathways as described above, allowing users to choose between immediate transfers with potential higher costs and slower transfers with lower fees, depending on their specific needs.
 
+If isolated, the bridge can act as a cross-chain call application, allowing users to pass arbitrary calldata along with the value. This can be used to interact with other applications on the L2 or L1. This approach require applications to consider that the bridge can't hold permissions or tokens.
+
 **Slow ETH deposits**
 
 Below is a diagram showing the 'slow' ETH bridging pathway. The L2 ETH bridge requires the latest L1 state root (containing the L1 signal) to verify the L1 storage proof.
