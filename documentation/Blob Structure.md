@@ -41,7 +41,7 @@ Dankrad has created [this proposal](https://ethresear.ch/t/suggested-format-for-
 - his post allows for up to 1535 applications per blob. This has some cascading effects:
     - the header is expected to be sorted by application ID, enabling each application to binary search the pointer to the start of the compressed data in the blob
     - if the search fails, either as a result of unsorted data or any other reason, the data is considered unusable. Applications must not reach different conclusions about what data is stored for a given application ID
-    - even though each of our publications can span several blobs, I expect there will only be a handful of rollups per publication (and they may even be grouped under the same compression id). Instead of doing a binary search, I recommend applications do a linear search through the whole header to ensure it has the expected structure (ie. sorted application IDs)
+    - even though publications can span several blobs, it's expected that only a handful of rollups will publish together, perhaps grouped under the same _compression id_ (i.e. `application_id`). Instead of a binary search, a linear search through the whole header can be used to ensure ids are sorted.
 
 
 ## The proposal
