@@ -37,24 +37,6 @@ contract DelayedInclusionStore is IDelayedInclusionStore {
         ++inclusionId;
     }
 
-    /// @dev Returns all publications that are due for processing.
-    function getDuePublications() external view returns (Inclusion[] memory) {
-        Inclusion[] memory _inclusions;
-        uint256 i = 0;
-        uint256 _latestInclusionIndex = latestInclusionIndex;
-        uint256 _inclusionDelay = inclusionDelay;
-        uint256 blockTimestamp = block.timestamp;
-
-        while (blockTimestamp >= delayedInclusions[_latestInclusionIndex].timestamp + _inclusionDelay) {
-            _inclusions[i] = delayedInclusions[_latestInclusionIndex];
-            unchecked {
-                ++_latestInclusionIndex;
-                ++i;
-            }
-        }
-        return _inclusions;
-    }
-
     /// @inheritdoc IDelayedInclusionStore
     /// @dev Only returns inclusions if the delay period has passed
     /// otherwise returns an empty array.
