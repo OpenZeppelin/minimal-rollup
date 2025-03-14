@@ -6,9 +6,12 @@ import {IDelayedInclusionStore} from "../IDelayedInclusionStore.sol";
 
 contract DelayedInclusionStore is IDelayedInclusionStore {
     // Stores all delayed inclusion requests
-    Inclusion[] private delayedInclusions;
+    mapping(uint256 inclusionIndex => Inclusion) private delayedInclusions;
 
-    uint256 private lastInclusionRequestTime;
+    // TODO: could pack these
+    uint256 private latestInclusionIndex;
+
+    uint256 private inclusionId;
 
     uint256 public immutable inclusionDelay;
 
@@ -30,7 +33,26 @@ contract DelayedInclusionStore is IDelayedInclusionStore {
     /// @param blobIndices An array of blob indices to be registered.
     function publishDelayed(uint256[] calldata blobIndices) external {
         bytes32 refHash = keccak256(abi.encode(blobRefRegistry.getRef(blobIndices)));
-        delayedInclusions.push(Inclusion(refHash));
+        delayedInclusions[inclusionId] = Inclusion(refHash, block.timestamp);
+        ++inclusionId;
+    }
+
+    /// @dev Returns all publications that are due for processing.
+    function getDuePublications() external view returns (Inclusion[] memory) {
+        Inclusion[] memory _inclusions;
+        uint256 i = 0;
+        uint256 _latestInclusionIndex = latestInclusionIndex;
+        uint256 _inclusionDelay = inclusionDelay;
+        uint256 blockTimestamp = block.timestamp;
+
+        while (blockTimestamp >= delayedInclusions[_latestInclusionIndex].timestamp + _inclusionDelay) {
+            _inclusions[i] = delayedInclusions[_latestInclusionIndex];
+            unchecked {
+                ++_latestInclusionIndex;
+                ++i;
+            }
+        }
+        return _inclusions;
     }
 
     /// @inheritdoc IDelayedInclusionStore
@@ -41,13 +63,21 @@ contract DelayedInclusionStore is IDelayedInclusionStore {
         require(msg.sender == inbox, "Only inbox can process inclusions");
 
         Inclusion[] memory _inclusions;
-        if (block.timestamp - lastInclusionRequestTime < inclusionDelay) {
-            return _inclusions;
-        }
+        uint256 i = 0;
+        uint256 _latestInclusionIndex = latestInclusionIndex;
+        uint256 _inclusionDelay = inclusionDelay;
+        uint256 blockTimestamp = block.timestamp;
 
-        lastInclusionRequestTime = block.timestamp;
-        _inclusions = delayedInclusions;
-        delete delayedInclusions;
+        while (blockTimestamp >= delayedInclusions[_latestInclusionIndex].timestamp + _inclusionDelay) {
+            _inclusions[i] = delayedInclusions[_latestInclusionIndex];
+            delete delayedInclusions[_latestInclusionIndex];
+            unchecked {
+                ++_latestInclusionIndex;
+                ++i;
+            }
+        }
+        latestInclusionIndex = _latestInclusionIndex;
+
         return _inclusions;
     }
 }
