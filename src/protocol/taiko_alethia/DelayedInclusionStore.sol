@@ -10,7 +10,7 @@ contract DelayedInclusionStore is IDelayedInclusionStore {
 
     uint256 private lastInclusionRequestTime;
 
-    uint256 public inclusionDelay;
+    uint256 public immutable inclusionDelay;
 
     address public immutable inbox;
 
@@ -25,11 +25,11 @@ contract DelayedInclusionStore is IDelayedInclusionStore {
         blobRefRegistry = IBlobRefRegistry(_blobRefRegistry);
     }
 
-    /// @dev Registers a blob reference in the blob reference registry
+    /// @dev Retrieves a blob reference from the blob reference registry
     /// and stores the hash (Inclusion) in the delayed inclusion queue.
     /// @param blobIndices An array of blob indices to be registered.
     function publishDelayed(uint256[] calldata blobIndices) external {
-        (bytes32 refHash,) = blobRefRegistry.registerRef(blobIndices);
+        bytes32 refHash = keccak256(abi.encode(blobRefRegistry.getRef(blobIndices)));
         delayedInclusions.push(Inclusion(refHash));
     }
 
