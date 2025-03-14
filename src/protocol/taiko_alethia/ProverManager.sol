@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
-import {ICheckpointTracker} from "../ICheckpointTracker.sol";
-import {IProposerFees} from "../IProposerFees.sol";
-import {IProverManager} from "../IProverManager.sol";
-import {IPublicationFeed} from "../IPublicationFeed.sol";
+import {ICheckpointTracker} from "../interfaces/ICheckpointTracker.sol";
+import {IProposerFees} from "../interfaces/IProposerFees.sol";
+import {IProverManager} from "../interfaces/IProverManager.sol";
+import {IPublicationFeed} from "../interfaces/IPublicationFeed.sol";
 
 contract ProverManager is IProposerFees, IProverManager {
     struct Period {
