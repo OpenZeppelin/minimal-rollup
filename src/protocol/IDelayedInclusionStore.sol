@@ -6,6 +6,6 @@ interface IDelayedInclusionStore {
         bytes32 blobRefHash;
     }
 
-    /// @notice Returns a list of inclusions that will be processed by the inbox
+    /// @notice Returns a list of publications that should be processed by the Inbox
     function processDueInclusions() external returns (Inclusion[] memory inclusions);
 }
