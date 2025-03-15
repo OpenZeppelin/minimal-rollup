@@ -169,7 +169,7 @@ contract ProverManager is IProposerFees, IProverManager {
         if (_isPeriodActive(_currentPeriod.end)) {
             // If the period is still active the bid has to be lower
             uint256 currentFee = _currentPeriod.fee;
-            requiredMaxFee = currentFee - calculatePercentage(currentFee, minUndercutPercentage);
+            requiredMaxFee = currentFee - _calculatePercentage(currentFee, minUndercutPercentage);
             require(offeredFee <= requiredMaxFee, "Offered fee not low enough");
 
             uint256 periodEnd = block.timestamp + successionDelay;
@@ -180,7 +180,7 @@ contract ProverManager is IProposerFees, IProverManager {
             if (_isBidded(_nextProverAddress)) {
                 // If there's already a bid for the next period the bid has to be lower
                 uint256 nextFee = _nextPeriod.fee;
-                requiredMaxFee = nextFee - calculatePercentage(nextFee, minUndercutPercentage);
+                requiredMaxFee = nextFee - _calculatePercentage(nextFee, minUndercutPercentage);
                 require(offeredFee <= requiredMaxFee, "Offered fee not low enough");
 
                 // Refund the liveness bond to the losing bid
@@ -215,7 +215,7 @@ contract ProverManager is IProposerFees, IProverManager {
         period.end = periodEnd;
 
         // Reward the evictor and slash the prover
-        uint256 evictorIncentive = calculatePercentage(period.stake, evictorIncentivePercentage);
+        uint256 evictorIncentive = _calculatePercentage(period.stake, evictorIncentivePercentage);
         balances[msg.sender] += evictorIncentive;
         period.stake -= evictorIncentive;
 
@@ -318,17 +318,14 @@ contract ProverManager is IProposerFees, IProverManager {
         checkpointTracker.proveTransition(start, end, proof);
 
         // Distribute the funds
-        uint256 _livenessBond = period.stake;
         uint256 accumulatedFees = period.accumulatedFees;
         uint256 newProverFees = period.fee * numPubs;
 
         // Pay the designated prover for the work they already did
         balances[period.prover] += accumulatedFees - newProverFees;
 
-        // Compensate the new prover(fees for the set of publications + a portion of the liveness bond)
-        uint256 burnedStake = calculatePercentage(_livenessBond, burnedStakePercentage);
-        uint256 livenessBondReward = _livenessBond - burnedStake;
-        balances[msg.sender] += newProverFees + livenessBondReward;
+        // Compensate the new prover with fees and a portion of the stake
+        _distributeStakeAndFees(period.stake, newProverFees, msg.sender);
     }
 
     /// @inheritdoc IProposerFees
@@ -340,12 +337,6 @@ contract ProverManager is IProposerFees, IProverManager {
         return (publicationFee, publicationFee);
     }
 
-    /// @dev Increases `user`'s balance by `amount`
-    function _deposit(address user, uint256 amount) private {
-        balances[user] += amount;
-        emit Deposit(user, amount);
-    }
-
     /// @notice Returns the period for a given period id
     /// @param periodId The id of the period
     /// @return _ The period
@@ -353,11 +344,17 @@ contract ProverManager is IProposerFees, IProverManager {
         return _periods[periodId];
     }
 
+    /// @dev Increases `user`'s balance by `amount`
+    function _deposit(address user, uint256 amount) private {
+        balances[user] += amount;
+        emit Deposit(user, amount);
+    }
+
     /// @dev Calculates the percentage of a given numerator scaling up to avoid precision loss
     /// @param amount The number to calculate the percentage of
     /// @param bps The percentage expressed in basis points(https://muens.io/solidity-percentages)
     /// @return _ The calculated percentage of the given numerator
-    function calculatePercentage(uint256 amount, uint256 bps) private pure returns (uint256) {
+    function _calculatePercentage(uint256 amount, uint256 bps) private pure returns (uint256) {
         require((amount * bps) >= 10_000);
         return amount * bps / 10_000;
     }
@@ -424,5 +421,16 @@ contract ProverManager is IProposerFees, IProverManager {
     /// @return True if someone has already bid for the period, false otherwise
     function _isBidded(address prover) private pure returns (bool) {
         return prover != address(0);
+    }
+
+    /// @dev Distributes the stake and fees to the new prover
+    /// @dev This implementation effectively "burns" a portion of the stake by locking it in the contract forever
+    /// @param stake The stake amount to distribute
+    /// @param fees The fees to add to the prover's balance
+    /// @param prover The address of the prover to compensate
+    function _distributeStakeAndFees(uint256 stake, uint256 fees, address prover) private {
+        uint256 burnedStake = _calculatePercentage(stake, burnedStakePercentage);
+        uint256 livenessBondReward = stake - burnedStake;
+        balances[prover] += fees + livenessBondReward;
     }
 }
