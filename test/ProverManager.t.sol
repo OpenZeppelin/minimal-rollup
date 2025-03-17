@@ -30,7 +30,7 @@ contract ProverManagerTest is Test {
     uint256 constant LIVENESS_WINDOW = 60; // 60 seconds
     uint256 constant SUCCESSION_DELAY = 10;
     uint256 constant EXIT_DELAY = 10;
-    uint256 constant PROVING_DEADLINE = 30;
+    uint256 constant PROVING_WINDOW = 30;
     uint256 constant LIVENESS_BOND = 1 ether;
     uint256 constant EVICTOR_INCENTIVE_PERCENTAGE = 500; // 5%
     uint256 constant BURNED_STAKE_PERCENTAGE = 1000; // 10%
@@ -50,7 +50,7 @@ contract ProverManagerTest is Test {
             livenessWindow: LIVENESS_WINDOW,
             successionDelay: SUCCESSION_DELAY,
             exitDelay: EXIT_DELAY,
-            provingDeadline: PROVING_DEADLINE,
+            provingWindow: PROVING_WINDOW,
             livenessBond: LIVENESS_BOND,
             evictorIncentivePercentage: EVICTOR_INCENTIVE_PERCENTAGE,
             burnedStakePercentage: BURNED_STAKE_PERCENTAGE
@@ -267,7 +267,7 @@ contract ProverManagerTest is Test {
             "Period end should be set to current time + succession delay"
         );
         assertEq(
-            period.deadline, timestampBefore + SUCCESSION_DELAY + PROVING_DEADLINE, "Deadline should be set correctly"
+            period.deadline, timestampBefore + SUCCESSION_DELAY + PROVING_WINDOW, "Deadline should be set correctly"
         );
     }
 
@@ -363,14 +363,14 @@ contract ProverManagerTest is Test {
         vm.prank(initialProver);
         vm.expectEmit();
         emit ProverManager.ProverExited(
-            initialProver, block.timestamp + EXIT_DELAY, block.timestamp + EXIT_DELAY + PROVING_DEADLINE
+            initialProver, block.timestamp + EXIT_DELAY, block.timestamp + EXIT_DELAY + PROVING_WINDOW
         );
         proverManager.exit();
 
         // Check that period 0 now has an end time and deadline set
         ProverManager.Period memory period = proverManager.getPeriod(0);
         assertEq(period.end, block.timestamp + EXIT_DELAY, "Exit did not set period end correctly");
-        assertEq(period.deadline, block.timestamp + EXIT_DELAY + PROVING_DEADLINE, "Proving deadline not set correctly");
+        assertEq(period.deadline, block.timestamp + EXIT_DELAY + PROVING_WINDOW, "Proving deadline not set correctly");
     }
 
     function test_exit_RevertWhen_NotCurrentProver() public {
@@ -532,7 +532,7 @@ contract ProverManagerTest is Test {
         });
 
         // Warp past the deadline
-        vm.warp(block.timestamp + PROVING_DEADLINE + 1);
+        vm.warp(block.timestamp + PROVING_WINDOW + 1);
 
         // Attempt to prove the period after deadline
         vm.expectRevert("Deadline has passed");
@@ -661,7 +661,7 @@ contract ProverManagerTest is Test {
         uint256 initialProverBalanceBefore = proverManager.balances(initialProver);
 
         // Have prover1 prove the closed period
-        vm.warp(block.timestamp + PROVING_DEADLINE + 1);
+        vm.warp(block.timestamp + PROVING_WINDOW + 1);
         vm.prank(prover1);
         proverManager.proveClosedPeriod(
             startCheckpoint,

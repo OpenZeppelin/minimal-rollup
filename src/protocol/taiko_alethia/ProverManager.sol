@@ -23,7 +23,7 @@ contract ProverManager is IProposerFees, IProverManager {
         uint256 livenessWindow;
         uint256 successionDelay;
         uint256 exitDelay;
-        uint256 provingDeadline;
+        uint256 provingWindow;
         uint256 livenessBond;
         uint256 evictorIncentivePercentage;
         uint256 burnedStakePercentage;
@@ -51,8 +51,8 @@ contract ProverManager is IProposerFees, IProverManager {
     /// @dev The reason we don't allow this to happen immediately is to allow enough time for other provers to bid
     /// and to prepare their hardware
     uint256 public immutable exitDelay;
-    ///@notice The deadline for a prover to submit a valid proof after their period ends
-    uint256 public immutable provingDeadline;
+    ///@notice The time window for a prover to submit a valid proof after their period ends
+    uint256 public immutable provingWindow;
     /// @notice The minimum stake required to be a prover
     /// @dev This should be enough to cover the cost of a new prover if the current prover becomes inactive
     uint256 public immutable livenessBond;
@@ -93,7 +93,7 @@ contract ProverManager is IProposerFees, IProverManager {
         livenessWindow = _config.livenessWindow;
         successionDelay = _config.successionDelay;
         exitDelay = _config.exitDelay;
-        provingDeadline = _config.provingDeadline;
+        provingWindow = _config.provingWindow;
         livenessBond = _config.livenessBond;
         evictorIncentivePercentage = _config.evictorIncentivePercentage;
         burnedStakePercentage = _config.burnedStakePercentage;
@@ -176,7 +176,7 @@ contract ProverManager is IProposerFees, IProverManager {
 
             uint256 periodEnd = block.timestamp + successionDelay;
             _currentPeriod.end = periodEnd;
-            _currentPeriod.deadline = periodEnd + provingDeadline;
+            _currentPeriod.deadline = periodEnd + provingWindow;
         } else {
             address _nextProverAddress = _nextPeriod.prover;
             if (_isBidded(_nextProverAddress)) {
@@ -242,7 +242,7 @@ contract ProverManager is IProposerFees, IProverManager {
         require(period.end == 0, "Prover already exited");
 
         uint256 periodEnd = block.timestamp + exitDelay;
-        uint256 _provingDeadline = periodEnd + provingDeadline;
+        uint256 _provingDeadline = periodEnd + provingWindow;
         period.end = periodEnd;
         period.deadline = _provingDeadline;
 
