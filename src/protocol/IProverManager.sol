@@ -15,8 +15,13 @@ interface IProverManager {
     /// @notice Evicts a prover that has been inactive, marking the prover for slashing
     /// @param publicationId The publication id that the caller is claiming is too old and hasn't been proven
     /// @param publicationHeader The publication header that the caller is claiming is too old and hasn't been proven
-    function evictProver(uint256 publicationId, IPublicationFeed.PublicationHeader calldata publicationHeader)
-        external;
+    /// @param lastProven The last proven checkpoint, which is used to should the publicationHeader is not proven
+    /// TODO: we should save the actual checkpoint (not the hash) in CheckpointTracker so we can query it directly
+    function evictProver(
+        uint256 publicationId,
+        IPublicationFeed.PublicationHeader calldata publicationHeader,
+        ICheckpointTracker.Checkpoint calldata lastProven
+    ) external;
 
     /// @notice Submits a proof for an open period
     /// @dev An open period is not necessarily the current period, it just means that the prover is within their

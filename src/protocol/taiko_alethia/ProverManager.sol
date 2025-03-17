@@ -38,7 +38,8 @@ contract ProverManager is IProposerFees, IProverManager {
     /// @dev This value needs to be expressed in basis points (4 decimal places)
     /// @dev This is used to prevent gas wars where the new prover undercuts the current prover by just a few wei
     uint256 public immutable minUndercutPercentage;
-    /// @notice The time window after which a publication is considered old enough and if the prover hasn't proven it yet
+    /// @notice The time window after which a publication is considered old enough and if the prover hasn't proven it
+    /// yet
     /// can be evicted
     uint256 public immutable livenessWindow;
     /// @notice The delay after which the next prover becomes active
@@ -201,9 +202,11 @@ contract ProverManager is IProposerFees, IProverManager {
     /// @inheritdoc IProverManager
     /// @dev This can be called by anyone, and they get `evictorIncentivePercentage` of the liveness bond as an
     /// incentive.
-    function evictProver(uint256 publicationId, IPublicationFeed.PublicationHeader calldata publicationHeader)
-        external
-    {
+    function evictProver(
+        uint256 publicationId,
+        IPublicationFeed.PublicationHeader calldata publicationHeader,
+        ICheckpointTracker.Checkpoint calldata lastProven
+    ) external {
         require(publicationFeed.validateHeader(publicationHeader, publicationId), "Publication hash does not match");
 
         uint256 publicationTimestamp = publicationHeader.timestamp;
@@ -211,6 +214,10 @@ contract ProverManager is IProposerFees, IProverManager {
 
         Period storage period = _periods[currentPeriodId];
         require(period.end == 0, "Proving period is already ending");
+
+        bytes32 lastProvenHash = keccak256(abi.encode(lastProven));
+        require(lastProvenHash == checkpointTracker.provenHash(), "Incorrect lastProven checkpoint");
+        require(publicationHeader.id > lastProven.publicationId, "Publication has been proven");
 
         uint256 periodEnd = block.timestamp + exitDelay;
         // We use this to mark the prover as evicted
