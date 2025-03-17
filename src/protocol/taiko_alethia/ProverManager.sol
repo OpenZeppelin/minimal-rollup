@@ -140,20 +140,20 @@ contract ProverManager is IProposerFees, IProverManager {
             _deposit(proposer, msg.value);
         }
 
-        uint256 _currentPeriod = currentPeriodId;
+        uint256 periodId = currentPeriodId;
 
-        uint256 periodEnd = _periods[_currentPeriod].end;
+        uint256 periodEnd = _periods[periodId].end;
         if (periodEnd != 0 && block.timestamp > periodEnd) {
             // Advance to the next period
-            currentPeriodId = ++_currentPeriod;
-            emit NewPeriod(_currentPeriod);
+            currentPeriodId = ++periodId;
+            emit NewPeriod(periodId);
         }
 
-        uint256 requiredFee = _periods[_currentPeriod].fee;
+        uint256 requiredFee = _periods[periodId].fee;
 
         // Deduct fee from proposer's balance and add to accumulated fees
         balances[proposer] -= requiredFee;
-        _periods[_currentPeriod].accumulatedFees += requiredFee;
+        _periods[periodId].accumulatedFees += requiredFee;
     }
 
     /// @inheritdoc IProverManager
@@ -161,8 +161,6 @@ contract ProverManager is IProposerFees, IProverManager {
     /// @dev The current best price may be the current prover's fee or the fee of the next bid, depending on a few
     /// conditions.
     function bid(uint256 offeredFee) external {
-        uint256 _livenessBond = livenessBond;
-        require(balances[msg.sender] >= _livenessBond, "Insufficient balance for liveness bond");
 
         uint256 currentPeriod = currentPeriodId;
         Period storage _currentPeriod = _periods[currentPeriod];
@@ -191,10 +189,8 @@ contract ProverManager is IProposerFees, IProverManager {
         }
 
         // Record the next period info
-        _nextPeriod.prover = msg.sender;
-        _nextPeriod.fee = offeredFee;
-        _nextPeriod.stake = _livenessBond;
-        balances[msg.sender] -= _livenessBond;
+        uint256 _livenessBond = livenessBond;
+        _updatePeriod(_nextPeriod, msg.sender, offeredFee, _livenessBond);
 
         emit ProverOffer(msg.sender, currentPeriod + 1, offeredFee, _livenessBond);
     }
@@ -251,20 +247,16 @@ contract ProverManager is IProposerFees, IProverManager {
 
     /// @inheritdoc IProverManager
     function claimProvingVacancy(uint256 fee) external {
-        uint256 _currentPeriod = currentPeriodId;
-        Period storage period = _periods[_currentPeriod];
+        uint256 periodId = currentPeriodId;
+        Period storage period = _periods[periodId];
         require(period.prover == address(0) && period.end == 0, "No proving vacancy");
 
         // Advance to the next period
-        currentPeriodId = ++_currentPeriod;
-        emit NewPeriod(_currentPeriod);
+        currentPeriodId = ++periodId;
+        emit NewPeriod(periodId);
 
-        uint256 _livenessBond = livenessBond;
-        period = _periods[_currentPeriod];
-        period.prover = msg.sender;
-        period.fee = fee;
-        period.stake = _livenessBond;
-        balances[msg.sender] -= _livenessBond;
+        period = _periods[periodId];
+        _updatePeriod(period, msg.sender, fee, livenessBond);
     }
 
     /// @inheritdoc IProverManager
@@ -502,5 +494,16 @@ contract ProverManager is IProposerFees, IProverManager {
         // notably, we do not handle the scenario where the first unproven publication is after the period
         // that publication will eventually be proven and then Case 2 will apply
         return false;
+    }
+
+    /// @dev Updates a period with prover information and transfers the liveness bond
+    /// @param period The period to update
+    /// @param prover The address of the prover
+    /// @param fee The fee offered by the prover
+    function _updatePeriod(Period storage period, address prover, uint256 fee, uint256 stake) private {
+        period.prover = prover;
+        period.fee = fee;
+        period.stake = stake;
+        balances[prover] -= stake;
     }
 }
