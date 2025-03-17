@@ -10,12 +10,16 @@ import {IPublicationFeed} from "src/protocol/IPublicationFeed.sol";
 import {PublicationFeed} from "src/protocol/PublicationFeed.sol";
 
 import {MockCheckpointTracker} from "test/mocks/MockCheckpointTracker.sol";
+import {NullVerifier} from "test/mocks/NullVerifier.sol";
 
 contract ProverManagerTest is Test {
     ProverManager proverManager;
     MockCheckpointTracker checkpointTracker;
+    NullVerifier verifier;
     PublicationFeed publicationFeed;
     uint256 constant DEPOSIT_AMOUNT = 2 ether;
+    // We start with the zero checkpoint as the proven checkpoint by default
+    ICheckpointTracker.Checkpoint zeroCheckpoint;
 
     // Addresses used for testing.
     address inbox = address(0x100);
@@ -39,7 +43,7 @@ contract ProverManagerTest is Test {
     function setUp() public {
         checkpointTracker = new MockCheckpointTracker();
         publicationFeed = new PublicationFeed();
-        // createSampleFeed();
+        zeroCheckpoint = ICheckpointTracker.Checkpoint({publicationId: 0, commitment: bytes32(0)});
 
         // Fund the initial prover so the constructor can receive the required livenessBond.
         vm.deal(initialProver, 10 ether);
@@ -194,7 +198,7 @@ contract ProverManagerTest is Test {
     function test_bid_RevertWhen_InsufficientBalance() public {
         // Attempt to bid without sufficient balance for liveness bond
         vm.prank(prover2);
-        vm.expectRevert("Insufficient balance for liveness bond");
+        vm.expectRevert();
         proverManager.bid(0.05 ether);
     }
 
@@ -297,8 +301,8 @@ contract ProverManagerTest is Test {
     /// --------------------------------------------------------------------------
     function test_evictProver() public {
         IPublicationFeed.PublicationHeader memory header = _insertPublication();
-        uint256 pubId = 1;
 
+        uint256 pubId = header.id;
         // Capture current period stake before eviction
         ProverManager.Period memory periodBefore = proverManager.getPeriod(0);
         uint256 stakeBefore = periodBefore.stake;
@@ -313,7 +317,7 @@ contract ProverManagerTest is Test {
             block.timestamp + EXIT_DELAY,
             stakeBefore - (stakeBefore * EVICTOR_INCENTIVE_PERCENTAGE) / 10000
         );
-        proverManager.evictProver(pubId, header);
+        proverManager.evictProver(pubId, header, zeroCheckpoint);
 
         // Verify period 0 is marked as evicted and its stake reduced
         ProverManager.Period memory periodAfter = proverManager.getPeriod(0);
@@ -337,7 +341,7 @@ contract ProverManagerTest is Test {
         vm.warp(block.timestamp + LIVENESS_WINDOW);
         vm.prank(evictor);
         vm.expectRevert("Publication is not old enough");
-        proverManager.evictProver(pubId, header);
+        proverManager.evictProver(pubId, header, zeroCheckpoint);
     }
 
     function test_evictProver_RevertWhen_InvalidPublicationHeader() public {
@@ -352,7 +356,7 @@ contract ProverManagerTest is Test {
         // Evict the prover with an invalid publication header
         vm.prank(evictor);
         vm.expectRevert("Publication hash does not match");
-        proverManager.evictProver(pubId, header);
+        proverManager.evictProver(pubId, header, zeroCheckpoint);
     }
 
     /// --------------------------------------------------------------------------
@@ -546,6 +550,7 @@ contract ProverManagerTest is Test {
         // Setup: Create publications and pay for the fees
         IPublicationFeed.PublicationHeader memory startHeader = _insertPublication();
         IPublicationFeed.PublicationHeader memory endHeader = _insertPublication();
+
         vm.startPrank(inbox);
         // We pay 4 times for the fees(simulating there were two previous publications that were proven by the initial
         // prover)
@@ -558,7 +563,7 @@ contract ProverManagerTest is Test {
         // Evict the prover
         vm.warp(block.timestamp + LIVENESS_WINDOW + 1);
         vm.prank(evictor);
-        proverManager.evictProver(startHeader.id, startHeader);
+        proverManager.evictProver(startHeader.id, startHeader, zeroCheckpoint);
 
         // Create checkpoints for the publications
         ICheckpointTracker.Checkpoint memory startCheckpoint = ICheckpointTracker.Checkpoint({

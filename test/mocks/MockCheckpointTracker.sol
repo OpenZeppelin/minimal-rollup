@@ -8,7 +8,9 @@ contract MockCheckpointTracker is ICheckpointTracker {
     function proveTransition(Checkpoint calldata start, Checkpoint calldata end, bytes calldata proof) external {}
 
     /// @notice Return an empty hash
-    function provenHash() external view returns (bytes32) {
-        return bytes32(0);
+    function provenHash() external pure returns (bytes32) {
+        Checkpoint memory zeroCheckpoint = Checkpoint({publicationId: 0, commitment: bytes32(0)});
+
+        return keccak256(abi.encode(zeroCheckpoint));
     }
 }

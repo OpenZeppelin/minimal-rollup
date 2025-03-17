@@ -471,7 +471,8 @@ contract ProverManager is IProposerFees, IProverManager {
     }
 
     function _isClosed(uint256 periodEnd, ICheckpointTracker.Checkpoint calldata lastProven, bytes calldata headerBytes)
-        private view
+        private
+        view
         returns (bool)
     {
         bytes32 lastProvenHash = keccak256(abi.encode(lastProven));
