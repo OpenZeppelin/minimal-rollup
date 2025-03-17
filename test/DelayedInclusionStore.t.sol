@@ -34,19 +34,19 @@ contract DelayedInclusionStoreTest is Test {
         }
     }
 
-    function readInclusionArray(uint256 index) public view returns (IDelayedInclusionStore.Inclusion memory) {
+    function readInclusionArray(uint256 index) public view returns (DelayedInclusionStore.DueInclusion memory) {
         uint256 slot = 0;
         uint256 baseSlot = uint256(keccak256(abi.encode(slot))) + (index * 2);
         bytes32 blobRefHash = vm.load(address(inclusionStore), bytes32(baseSlot));
         uint256 due = uint256(vm.load(address(inclusionStore), bytes32(baseSlot + 1)));
 
-        return IDelayedInclusionStore.Inclusion(blobRefHash, due);
+        return DelayedInclusionStore.DueInclusion(blobRefHash, due);
     }
 
     function test_processFirstHalfDueInclusions() public {
         vm.prank(inbox);
         vm.warp(inclusionDelay + 1);
-        IDelayedInclusionStore.Inclusion[] memory inclusions = inclusionStore.processDueInclusions();
+        DelayedInclusionStore.Inclusion[] memory inclusions = inclusionStore.processDueInclusions();
         assertEq(inclusions.length, 25);
         assertEq(inclusions[0].blobRefHash, readInclusionArray(0).blobRefHash);
         assertEq(inclusions[24].blobRefHash, readInclusionArray(24).blobRefHash);
@@ -57,7 +57,7 @@ contract DelayedInclusionStoreTest is Test {
         vm.warp(inclusionDelay + 1);
         inclusionStore.processDueInclusions();
         vm.warp(5 hours);
-        IDelayedInclusionStore.Inclusion[] memory inclusions = inclusionStore.processDueInclusions();
+        DelayedInclusionStore.Inclusion[] memory inclusions = inclusionStore.processDueInclusions();
         assertEq(inclusions.length, 25);
         assertEq(inclusions[0].blobRefHash, readInclusionArray(25).blobRefHash);
         assertEq(inclusions[24].blobRefHash, readInclusionArray(49).blobRefHash);
@@ -67,7 +67,7 @@ contract DelayedInclusionStoreTest is Test {
     function test_processAllDueInclusions() public {
         vm.prank(inbox);
         vm.warp(10 hours);
-        IDelayedInclusionStore.Inclusion[] memory inclusions = inclusionStore.processDueInclusions();
+        DelayedInclusionStore.Inclusion[] memory inclusions = inclusionStore.processDueInclusions();
         assertEq(inclusions.length, 50);
         assertEq(inclusions[0].blobRefHash, readInclusionArray(0).blobRefHash);
         assertEq(inclusions[49].blobRefHash, readInclusionArray(49).blobRefHash);

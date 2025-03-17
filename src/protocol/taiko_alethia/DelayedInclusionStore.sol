@@ -5,8 +5,13 @@ import {IBlobRefRegistry} from "../../blobs/IBlobRefRegistry.sol";
 import {IDelayedInclusionStore} from "../IDelayedInclusionStore.sol";
 
 contract DelayedInclusionStore is IDelayedInclusionStore {
+    struct DueInclusion {
+        bytes32 blobRefHash;
+        uint256 due;
+    }
+
     // Append-only queue for delayed inclusions
-    Inclusion[] private delayedInclusions;
+    DueInclusion[] private delayedInclusions;
     // Pointer to the first unprocessed element
     uint256 private head;
 
@@ -30,7 +35,7 @@ contract DelayedInclusionStore is IDelayedInclusionStore {
     /// @param blobIndices An array of blob indices to be registered.
     function publishDelayed(uint256[] calldata blobIndices) external {
         bytes32 refHash = keccak256(abi.encode(blobRefRegistry.getRef(blobIndices)));
-        delayedInclusions.push(Inclusion(refHash, block.timestamp + inclusionDelay));
+        delayedInclusions.push(DueInclusion(refHash, block.timestamp + inclusionDelay));
     }
 
     /// @inheritdoc IDelayedInclusionStore
@@ -40,7 +45,6 @@ contract DelayedInclusionStore is IDelayedInclusionStore {
     function processDueInclusions() external returns (Inclusion[] memory) {
         uint256 len = delayedInclusions.length;
         if (head >= len) {
-            // No inclusions to process
             return new Inclusion[](0);
         }
 
@@ -67,7 +71,7 @@ contract DelayedInclusionStore is IDelayedInclusionStore {
 
         Inclusion[] memory inclusions = new Inclusion[](count);
         for (uint256 i = 0; i < count; ++i) {
-            inclusions[i] = delayedInclusions[head + i];
+            inclusions[i] = Inclusion(delayedInclusions[head + i].blobRefHash);
         }
 
         // Move the head pointer forward.
