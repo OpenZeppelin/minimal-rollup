@@ -209,8 +209,10 @@ contract ProverManager is IProposerFees, IProverManager {
         uint256 publicationTimestamp = publicationHeader.timestamp;
         require(publicationTimestamp + livenessWindow < block.timestamp, "Publication is not old enough");
 
-        uint256 periodEnd = block.timestamp + exitDelay;
         Period storage period = _periods[currentPeriodId];
+        require(period.end == 0, "Proving period is already ending");
+
+        uint256 periodEnd = block.timestamp + exitDelay;
         // We use this to mark the prover as evicted
         period.deadline = periodEnd;
         period.end = periodEnd;
