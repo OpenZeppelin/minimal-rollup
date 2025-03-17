@@ -27,7 +27,7 @@ interface IProverManager {
     /// @notice Evicts a prover that has been inactive, marking the prover for slashing
     /// @param publicationId The publication id that the caller is claiming is too old and hasn't been proven
     /// @param publicationHeader The publication header that the caller is claiming is too old and hasn't been proven
-    /// @param lastProven The last proven checkpoint, which is used to should the publicationHeader is not proven
+    /// @param lastProven The last proven checkpoint, which is used to show the publicationHeader is not proven
     /// TODO: we should save the actual checkpoint (not the hash) in CheckpointTracker so we can query it directly
     function evictProver(
         uint256 publicationId,
@@ -73,5 +73,20 @@ interface IProverManager {
         IPublicationFeed.PublicationHeader calldata nextPublicationHeader,
         bytes calldata proof,
         uint256 periodId
+    ) external;
+
+    /// @notice Returns the stake for a closed period to the prover
+    /// @dev Only needed if the period was not finalized during its last proof.
+    /// @dev This could occur if the prover did not specify a later publication (possibly because it did not exist at
+    /// the time)
+    /// @param periodId The id of the period to finalize
+    /// @param lastProven The last proven checkpoint. TODO: we should save the actual checkpoint (not the hash) in
+    /// CheckpointTracker so we can query it directly
+    /// @param provenPublicationHeaderBytes Optional parameter if needed to demonstrate there is a proven publication
+    /// after the period
+    function finalizeClosedPeriod(
+        uint256 periodId,
+        ICheckpointTracker.Checkpoint calldata lastProven,
+        bytes calldata provenPublicationHeaderBytes
     ) external;
 }

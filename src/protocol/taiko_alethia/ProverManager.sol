@@ -300,9 +300,8 @@ contract ProverManager is IProposerFees, IProverManager {
             _validateNextPublicationHeader(nextPub, end.publicationId + 1, periodEnd);
 
             // Finalize the period: transfer accumulated fees and stake.
-            uint256 accumulatedFees = period.accumulatedFees;
-            uint256 stake = period.stake;
-            balances[period.prover] += accumulatedFees + stake;
+            balances[period.prover] += period.accumulatedFees + period.stake;
+            period.accumulatedFees = period.stake = 0;
         }
     }
 
@@ -346,14 +345,28 @@ contract ProverManager is IProposerFees, IProverManager {
         checkpointTracker.proveTransition(start, end, proof);
 
         // Distribute the funds
-        uint256 accumulatedFees = period.accumulatedFees;
         uint256 newProverFees = period.fee * numPubs;
 
         // Pay the designated prover for the work they already did
-        balances[period.prover] += accumulatedFees - newProverFees;
+        balances[period.prover] += period.accumulatedFees - newProverFees;
 
         // Compensate the new prover with fees and a portion of the stake
         _distributeStakeAndFees(period.stake, newProverFees, msg.sender);
+
+        period.accumulatedFees = period.stake = 0;
+    }
+
+    /// @inheritdoc IProverManager
+    function finalizeClosedPeriod(
+        uint256 periodId,
+        ICheckpointTracker.Checkpoint calldata lastProven,
+        bytes calldata provenPublicationHeaderBytes
+    ) external {
+        Period storage period = _periods[periodId];
+        require(_isClosed(period.end, lastProven, provenPublicationHeaderBytes), "Period not closed");
+
+        balances[period.prover] += period.accumulatedFees + period.stake;
+        period.accumulatedFees = period.stake = 0;
     }
 
     /// @inheritdoc IProposerFees
@@ -464,5 +477,30 @@ contract ProverManager is IProposerFees, IProverManager {
         uint256 burnedStake = _calculatePercentage(stake, burnedStakePercentage);
         uint256 livenessBondReward = stake - burnedStake;
         balances[prover] += fees + livenessBondReward;
+    }
+
+    function _isClosed(uint256 periodEnd, ICheckpointTracker.Checkpoint calldata lastProven, bytes calldata headerBytes)
+        private
+        returns (bool)
+    {
+        bytes32 lastProvenHash = keccak256(abi.encode(lastProven));
+        require(lastProvenHash == checkpointTracker.provenHash(), "Incorrect lastProven checkpoint");
+
+        // Case 1: all publications are proven and the period is over
+        if (publicationFeed.getNextPublicationId() == lastProven.publicationId + 1 && block.timestamp > periodEnd) {
+            return true;
+        }
+
+        // Case 2: there is a proven publication that occurs after the period
+        IPublicationFeed.PublicationHeader memory header = abi.decode(headerBytes, (IPublicationFeed.PublicationHeader));
+        require(publicationFeed.validateHeader(header, header.id), "Invalid publication header");
+        if (lastProven.publicationId >= header.id && header.timestamp > periodEnd) {
+            return true;
+        }
+
+        // this does not necessarily imply the period is open, merely that we have not proven it to be closed
+        // notably, we do not handle the scenario where the first unproven publication is after the period
+        // that publication will eventually be proven and then Case 2 will apply
+        return false;
     }
 }
