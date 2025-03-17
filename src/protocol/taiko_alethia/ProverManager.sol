@@ -250,6 +250,24 @@ contract ProverManager is IProposerFees, IProverManager {
     }
 
     /// @inheritdoc IProverManager
+    function claimProvingVacancy(uint256 fee) external {
+        uint256 _currentPeriod = currentPeriodId;
+        Period storage period = _periods[_currentPeriod];
+        require(period.prover == address(0) && period.end == 0, "No proving vacancy");
+
+        // Advance to the next period
+        currentPeriodId = ++_currentPeriod;
+        emit NewPeriod(_currentPeriod);
+
+        uint256 _livenessBond = livenessBond;
+        period = _periods[_currentPeriod];
+        period.prover = msg.sender;
+        period.fee = fee;
+        period.stake = _livenessBond;
+        balances[msg.sender] -= _livenessBond;
+    }
+
+    /// @inheritdoc IProverManager
     function proveOpenPeriod(
         ICheckpointTracker.Checkpoint calldata start,
         ICheckpointTracker.Checkpoint calldata end,
