@@ -38,7 +38,7 @@ contract ProverManager is IProposerFees, IProverManager {
     /// @dev This value needs to be expressed in basis points (4 decimal places)
     /// @dev This is used to prevent gas wars where the new prover undercuts the current prover by just a few wei
     uint256 public immutable minUndercutPercentage;
-    /// @notice The time window after which a publication is considered old enough and if the prover hasn't poven it yet
+    /// @notice The time window after which a publication is considered old enough and if the prover hasn't proven it yet
     /// can be evicted
     uint256 public immutable livenessWindow;
     /// @notice The delay after which the next prover becomes active
