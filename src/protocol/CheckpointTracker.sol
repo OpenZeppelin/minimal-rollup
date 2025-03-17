@@ -45,9 +45,7 @@ contract CheckpointTracker is ICheckpointTracker {
 
     /// @inheritdoc ICheckpointTracker
     function proveTransition(Checkpoint calldata start, Checkpoint calldata end, bytes calldata proof) external {
-        if (proverManager != address(0)) {
-            require(msg.sender == proverManager, "Only the prover manager can call this function");
-        }
+        require(proverManager == address(0) || msg.sender == proverManager, "Only the prover manager can call this function");
 
         require(end.commitment != 0, "Checkpoint commitment cannot be 0");
         bytes32 startHash = keccak256(abi.encode(start));
