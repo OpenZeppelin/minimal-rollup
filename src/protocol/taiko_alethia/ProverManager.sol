@@ -341,8 +341,12 @@ contract ProverManager is IProposerFees, IProverManager {
     /// @inheritdoc IProposerFees
     function getCurrentFees() external view returns (uint256 fee, uint256 delayedFee) {
         uint256 currentPeriod = currentPeriodId;
-        uint256 publicationFee = _periods[currentPeriod].fee;
+        uint256 periodEnd = _periods[currentPeriod].end;
+        if (periodEnd != 0 && block.timestamp > periodEnd) {
+            currentPeriod++;
+        }
 
+        uint256 publicationFee = _periods[currentPeriod].fee;
         // TODO: implement delayed fee once we decide how to handle delayed publications
         return (publicationFee, publicationFee);
     }
