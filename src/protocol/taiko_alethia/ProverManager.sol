@@ -208,7 +208,7 @@ contract ProverManager is IProposerFees, IProverManager {
         require(publicationTimestamp + livenessWindow < block.timestamp, "Publication is not old enough");
 
         Period storage period = _periods[currentPeriodId];
-        require(period.end == 0, "Proving period is already ending");
+        require(period.end == 0, "Proving period is not active");
 
         bytes32 lastProvenHash = keccak256(abi.encode(lastProven));
         require(lastProvenHash == checkpointTracker.provenHash(), "Incorrect lastProven checkpoint");

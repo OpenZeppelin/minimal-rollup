@@ -359,6 +359,39 @@ contract ProverManagerTest is Test {
         proverManager.evictProver(pubId, header, zeroCheckpoint);
     }
 
+    function test_evictProver_RevertWhen_PeriodNotActive() public {
+        IPublicationFeed.PublicationHeader memory header = _insertPublication();
+        uint256 pubId = header.id;
+
+        // Exit the period, setting and end to the period
+        vm.prank(initialProver);
+        proverManager.exit();
+
+        // Evict the prover
+        vm.warp(block.timestamp + LIVENESS_WINDOW + 1);
+        vm.prank(evictor);
+        vm.expectRevert("Proving period is not active");
+        proverManager.evictProver(pubId, header, zeroCheckpoint);
+    }
+
+    function test_evictProver_RevertWhen_ProvenCheckpoint() public {
+        IPublicationFeed.PublicationHeader memory header = _insertPublication();
+        uint256 pubId = header.id;
+
+        // Advance the proven checkpoint on the mock checkpoint tracker
+        ICheckpointTracker.Checkpoint memory provenCheckpoint = ICheckpointTracker.Checkpoint({
+            publicationId: header.id + 1,
+            commitment: keccak256(abi.encode("commitment"))
+        });
+        checkpointTracker.setProvenHash(provenCheckpoint);
+
+        // Evict the prover
+        vm.warp(block.timestamp + LIVENESS_WINDOW + 1);
+        vm.prank(evictor);
+        vm.expectRevert("Publication has been proven");
+        proverManager.evictProver(pubId, header, provenCheckpoint);
+    }
+
     /// --------------------------------------------------------------------------
     /// exit()
     /// --------------------------------------------------------------------------
@@ -737,6 +770,35 @@ contract ProverManagerTest is Test {
             "0x", // any proof
             0
         );
+    }
+
+    /// --------------------------------------------------------------------------
+    /// getCurrentFees()
+    /// --------------------------------------------------------------------------
+
+    function test_getCurrentFees_SamePeriod() public view {
+        (uint256 fee, uint256 delayedFee) = proverManager.getCurrentFees();
+        assertEq(fee, INITIAL_FEE, "Fee should be the initial fee");
+        assertEq(delayedFee, INITIAL_FEE, "Delayed fee should be the initial fee");
+    }
+
+    function test_geCurrentFees_WhenPeriodEnded() public {
+        // Exit as a prover.
+        vm.prank(initialProver);
+        proverManager.exit();
+
+        // Bid as a new prover
+        vm.prank(prover1);
+        proverManager.deposit{value: DEPOSIT_AMOUNT}();
+        uint256 bidFee = INITIAL_FEE * 2;
+        vm.prank(prover1);
+        proverManager.bid(bidFee);
+
+        // Warp to a time after the period has ended.
+        vm.warp(block.timestamp + EXIT_DELAY + 1);
+        (uint256 fee, uint256 delayedFee) = proverManager.getCurrentFees();
+        assertEq(fee, bidFee, "Fee should be the bid fee");
+        assertEq(delayedFee, bidFee, "Delayed fee should be the bid fee");
     }
 
     // -- HELPERS --
