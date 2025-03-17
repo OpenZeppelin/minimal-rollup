@@ -42,11 +42,15 @@ contract DelayedInclusionStore is IDelayedInclusionStore {
     /// otherwise returns an empty array.
     /// @dev Can only be called by the inbox contract.
     function processDueInclusions() external returns (Inclusion[] memory) {
-        require(msg.sender == inbox, "Only inbox can process inclusions");
-
-        Inclusion[] memory _inclusions;
-        uint256 i = 0;
         uint256 _latestInclusionIndex = latestInclusionIndex;
+        uint256 maxCount = inclusionId - _latestInclusionIndex;
+        if (maxCount == 0) {
+            return new Inclusion[](0);
+        }
+
+        require(msg.sender == inbox, "Only inbox can process inclusions");
+        Inclusion[] memory _inclusions = new Inclusion[](maxCount);
+        uint256 i = 0;
         uint256 blockTimestamp = block.timestamp;
 
         while (blockTimestamp >= delayedInclusions[_latestInclusionIndex].due) {
