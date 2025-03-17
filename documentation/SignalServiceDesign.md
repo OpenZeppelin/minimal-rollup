@@ -34,7 +34,7 @@ In the 'fast' signalling pathway, the L2 proposer can assist an application to b
 
 Using the signal requires the following steps:
 
-1. An application on the L1 stores a signal in the SS.
+1. An application on the L1 stores a signal in the Signal Service (SS).
 2. The L2 proposer listens to any signals being stored on the L1 SS.
 3. After building a block and obtaining a commitment, the L2 proposer submits a transaction batch to their L1 inbox contract. This batch includes an anchor transaction where the proposer injects the L1 state root and the signals that were stored on the L1 SS.
 4. The inbox contract verifies that the signals exist in the L1 SS using a storage proof with the L1 state root that was just injected.
