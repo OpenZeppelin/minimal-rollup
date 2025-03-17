@@ -22,8 +22,9 @@ contract DelayedInclusionStoreTest is Test {
         blobReg = new MockBlobRefRegistry();
         store = new DelayedInclusionStore(inclusionDelay, address(blobReg), inbox);
         storeDelayedInclusions(25);
-        vm.warp(20 minutes);
+        vm.warp(2 hours);
         storeDelayedInclusions(25);
+        vm.warp(1);
     }
 
     function storeDelayedInclusions(uint256 numInclusions) public {
@@ -34,9 +35,24 @@ contract DelayedInclusionStoreTest is Test {
         }
     }
 
-    function test_processDueInclusions() public {
+    function test_processHalfDueInclusions() public {
         vm.prank(inbox);
-        vm.warp(50 minutes);
+        vm.warp(inclusionDelay + 1);
+        uint256 returnLen = store.processDueInclusions().length;
+        assertEq(returnLen, 25);
+    }
+
+    function test_processAllDueInclusions() public {
+        vm.prank(inbox);
+        vm.warp(inclusionDelay + 2 hours + 1);
         store.processDueInclusions();
+        uint256 returnLen = store.processDueInclusions().length;
+        assertEq(returnLen, 50);
+    }
+
+    function test_processDueInclusions_noInclusions() public {
+        vm.prank(inbox);
+        uint256 returnLen = store.processDueInclusions().length;
+        assertEq(returnLen, 0);
     }
 }
