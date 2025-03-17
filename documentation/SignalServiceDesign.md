@@ -43,7 +43,7 @@ Using the signal requires the following steps:
 
 ![Fast Signaling](./fast_signaling.svg)
 
-A corner case is that where an L2 proposer decides not to receive one of the signals stored in the L1 SS within the anchor transaction, making any application using the signal (as in step 6) revert. In those cases, the application can always fallback to the 'slow' signalling pathway given the signal can't be deleted and the user can always wait for the next L1 state root. Applications can build mechanisms to incentivize proposers to include their signals in the L2 anchor transaction.
+A corner case arises when an L2 proposer chooses not to include one of the signals stored in the L1 SS within the anchor transaction. This omission can cause any application relying on that signal (as in step 6) to revert. In those cases, the application can always fallback to the 'slow' signalling pathway given the signal can't be deleted and the user can always wait for the next L1 state root. Applications can build mechanisms to incentivize proposers to include their signals in the L2 anchor transaction.
 
 In the context of an L2 proposer who also issues preconfirmations (either by delegation or any other mechanism), then the inclusion of the signal in the L2 block is guaranteed. Otherwise, the verification at step 4 will fail, reverting the whole L2 batch.
 
