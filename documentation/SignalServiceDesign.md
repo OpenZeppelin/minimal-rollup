@@ -55,7 +55,7 @@ Considering that [_relying on same-slot L1 messages for L2 execution creates a t
 
 ### State root fast-tracking
 
-An application that requires immediate access to the latest L1 state root can use the fast signalling to fast-track it into the L2 in a permissioned way. The mechanics to deal with invalid or untrusted state roots are left to the application.
+An application that requires immediate access to the latest L1 state root can use the fast signalling to fast-track it into the L2 in a permissioned way. The mechanisms to deal with an invalid or untrusted state roots are left to the application.
 
 For example, enabling the anchor transaction can be implemented as an application of a signal itself.
 
