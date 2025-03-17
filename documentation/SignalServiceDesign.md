@@ -26,7 +26,7 @@ Using the signal requires the following steps:
 2. Wait for the next L2 batch to be proposed on the L1.
 3. Verify the signal in your L2 application using the latest L1 root to trigger some logic.
 
-However, the waiting period forbids immediate communication between the two chains since users need to wait for the next L1. This is where the 'fast' signalling pathway comes in.
+However, the waiting period forbids immediate communication between the two chains since users need to wait for the next L1 state root to be available. This is where the 'fast' signalling pathway comes in.
 
 #### Same Slot L1 → L2 ('fast') Signalling
 
