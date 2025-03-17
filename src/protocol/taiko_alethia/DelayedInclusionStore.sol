@@ -5,7 +5,6 @@ import {IBlobRefRegistry} from "../../blobs/IBlobRefRegistry.sol";
 import {IDelayedInclusionStore} from "../IDelayedInclusionStore.sol";
 
 contract DelayedInclusionStore is IDelayedInclusionStore {
-    
     // Append-only queue for delayed inclusions
     Inclusion[] private delayedInclusions;
     // Pointer to the first unprocessed element
@@ -69,10 +68,11 @@ contract DelayedInclusionStore is IDelayedInclusionStore {
 
         // Allocate a new array for due inclusions.
         Inclusion[] memory inclusions = new Inclusion[](count);
-        for (uint256 i = 0; i < count; ++i ) {
-            inclusions[i] = Inclusion({ blobRefHash: delayedInclusions[head + i].blobRefHash, due: delayedInclusions[head + i].due });
+        for (uint256 i = 0; i < count; ++i) {
+            inclusions[i] =
+                Inclusion({blobRefHash: delayedInclusions[head + i].blobRefHash, due: delayedInclusions[head + i].due});
         }
-        
+
         // Move the head pointer forward.
         head = l;
 
