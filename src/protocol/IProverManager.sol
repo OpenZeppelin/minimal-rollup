@@ -13,6 +13,7 @@ interface IProverManager {
     function exit() external;
 
     /// @notice If there is no active prover, start a new period and become the new prover immediately
+    /// @param fee The per-publication fee for the new period
     /// @dev Consider the scenario:
     ///   - a prover has exited or been evicted
     ///   - no prover has bid on the next period
@@ -21,7 +22,7 @@ interface IProverManager {
     /// This function allows anyone to start a new period with a new fee. Note that the new prover will still need to
     // ensure the previous publications are proven before proving their own. Nevertheless, we start a new period so
     // they cannot be evicted based on publications that occurred before they agreed to prove
-    function claimProvingVacancy() external;
+    function claimProvingVacancy(uint256 fee) external;
 
     /// @notice Evicts a prover that has been inactive, marking the prover for slashing
     /// @param publicationId The publication id that the caller is claiming is too old and hasn't been proven
