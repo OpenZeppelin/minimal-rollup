@@ -5,13 +5,11 @@ import {IBlobRefRegistry} from "../../blobs/IBlobRefRegistry.sol";
 import {IDelayedInclusionStore} from "../IDelayedInclusionStore.sol";
 
 contract DelayedInclusionStore is IDelayedInclusionStore {
-    // Stores all delayed inclusion requests
-    mapping(uint256 inclusionIndex => Inclusion) private delayedInclusions;
-
-    // TODO: could pack these
-    uint256 private latestInclusionIndex;
-
-    uint256 private inclusionId;
+    
+    // Append-only queue for delayed inclusions
+    Inclusion[] private delayedInclusions;
+    // Pointer to the first unprocessed element
+    uint256 private head;
 
     uint256 public immutable inclusionDelay;
 
@@ -33,8 +31,7 @@ contract DelayedInclusionStore is IDelayedInclusionStore {
     /// @param blobIndices An array of blob indices to be registered.
     function publishDelayed(uint256[] calldata blobIndices) external {
         bytes32 refHash = keccak256(abi.encode(blobRefRegistry.getRef(blobIndices)));
-        delayedInclusions[inclusionId] = Inclusion(refHash, block.timestamp);
-        ++inclusionId;
+        delayedInclusions.push(Inclusion(refHash, block.timestamp + inclusionDelay));
     }
 
     /// @inheritdoc IDelayedInclusionStore
@@ -42,24 +39,43 @@ contract DelayedInclusionStore is IDelayedInclusionStore {
     /// otherwise returns an empty array.
     /// @dev Can only be called by the inbox contract.
     function processDueInclusions() external returns (Inclusion[] memory) {
-        require(msg.sender == inbox, "Only inbox can process inclusions");
+        uint256 len = delayedInclusions.length;
+        if (head >= len) {
+            // No inclusions to process
+            return new Inclusion[](0);
+        }
 
-        Inclusion[] memory _inclusions;
-        uint256 i = 0;
-        uint256 _latestInclusionIndex = latestInclusionIndex;
-        uint256 _inclusionDelay = inclusionDelay;
-        uint256 blockTimestamp = block.timestamp;
-
-        while (blockTimestamp >= delayedInclusions[_latestInclusionIndex].timestamp + _inclusionDelay) {
-            _inclusions[i] = delayedInclusions[_latestInclusionIndex];
-            delete delayedInclusions[_latestInclusionIndex];
-            unchecked {
-                ++_latestInclusionIndex;
-                ++i;
+        uint256 l = head;
+        uint256 r = len;
+        uint256 timestamp = block.timestamp;
+        while (l < r) {
+            uint256 mid = (l + r) >> 1;
+            if (delayedInclusions[mid].due <= timestamp) {
+                // If inclusion at mid is due, search to the right.
+                l = mid + 1;
+            } else {
+                r = mid;
             }
         }
-        latestInclusionIndex = _latestInclusionIndex;
 
-        return _inclusions;
+        // l now is the first index where the inclusion is not yet due.
+        uint256 count = l - head;
+        if (count == 0) {
+            return new Inclusion[](0);
+        }
+
+        // Now we now we will process delayed inclusion, require that only the inbox can call this function
+        require(msg.sender == inbox, "Only inbox can process inclusions");
+
+        // Allocate a new array for due inclusions.
+        Inclusion[] memory inclusions = new Inclusion[](count);
+        for (uint256 i = 0; i < count; ++i ) {
+            inclusions[i] = Inclusion({ blobRefHash: delayedInclusions[head + i].blobRefHash, due: delayedInclusions[head + i].due });
+        }
+        
+        // Move the head pointer forward.
+        head = l;
+
+        return inclusions;
     }
 }
