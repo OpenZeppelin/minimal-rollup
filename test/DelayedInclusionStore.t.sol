@@ -2,7 +2,6 @@
 pragma solidity ^0.8.28;
 
 import "forge-std/Test.sol";
-import {StdStorage, stdStorage} from "forge-std/Test.sol";
 
 import {IDelayedInclusionStore} from "src/protocol/IDelayedInclusionStore.sol";
 import {DelayedInclusionStore} from "src/protocol/taiko_alethia/DelayedInclusionStore.sol";
@@ -11,7 +10,7 @@ import {MockBlobRefRegistry} from "test/mocks/MockBlobRefRegistry.sol";
 contract DelayedInclusionStoreTest is Test {
     using stdStorage for StdStorage;
 
-    DelayedInclusionStore store;
+    DelayedInclusionStore inclusionStore;
     MockBlobRefRegistry blobReg;
     // Addresses used for testing.
     address inbox = address(0x100);
@@ -20,7 +19,7 @@ contract DelayedInclusionStoreTest is Test {
 
     function setUp() public {
         blobReg = new MockBlobRefRegistry();
-        store = new DelayedInclusionStore(inclusionDelay, address(blobReg), inbox);
+        inclusionStore = new DelayedInclusionStore(inclusionDelay, address(blobReg), inbox);
         storeDelayedInclusions(25);
         vm.warp(2 hours);
         storeDelayedInclusions(25);
@@ -31,28 +30,46 @@ contract DelayedInclusionStoreTest is Test {
         for (uint256 i; i < numInclusions; ++i) {
             uint256[] memory blobIndices = new uint256[](1);
             blobIndices[0] = i;
-            store.publishDelayed(blobIndices);
+            inclusionStore.publishDelayed(blobIndices);
         }
     }
 
-    function test_processHalfDueInclusions() public {
+    function readInclusionArray(uint256 index) public view returns (IDelayedInclusionStore.Inclusion memory) {
+        uint256 slot = 0;
+        uint256 baseSlot = uint256(keccak256(abi.encode(slot))) + (index * 2);
+        bytes32 blobRefHash = vm.load(address(inclusionStore), bytes32(baseSlot));
+        uint256 due = uint256(vm.load(address(inclusionStore), bytes32(baseSlot + 1)));
+
+        return IDelayedInclusionStore.Inclusion(blobRefHash, due);
+    }
+
+    function test_processFirstHalfDueInclusions() public {
         vm.prank(inbox);
         vm.warp(inclusionDelay + 1);
-        uint256 returnLen = store.processDueInclusions().length;
-        assertEq(returnLen, 25);
+        IDelayedInclusionStore.Inclusion[] memory inclusions = inclusionStore.processDueInclusions();
+        assertEq(inclusions.length, 25);
+        assertEq(inclusions[0].blobRefHash, readInclusionArray(0).blobRefHash);
+        assertEq(inclusions[24].blobRefHash, readInclusionArray(24).blobRefHash);
+    }
+
+    function test_processSecondHalfDueInclusions() public {
+        vm.startPrank(inbox);
+        vm.warp(inclusionDelay + 1);
+        inclusionStore.processDueInclusions();
+        vm.warp(5 hours);
+        IDelayedInclusionStore.Inclusion[] memory inclusions = inclusionStore.processDueInclusions();
+        assertEq(inclusions.length, 25);
+        assertEq(inclusions[0].blobRefHash, readInclusionArray(25).blobRefHash);
+        assertEq(inclusions[24].blobRefHash, readInclusionArray(49).blobRefHash);
+        vm.stopPrank();
     }
 
     function test_processAllDueInclusions() public {
         vm.prank(inbox);
-        vm.warp(inclusionDelay + 2 hours + 1);
-        store.processDueInclusions();
-        uint256 returnLen = store.processDueInclusions().length;
-        assertEq(returnLen, 50);
-    }
-
-    function test_processDueInclusions_noInclusions() public {
-        vm.prank(inbox);
-        uint256 returnLen = store.processDueInclusions().length;
-        assertEq(returnLen, 0);
+        vm.warp(10 hours);
+        IDelayedInclusionStore.Inclusion[] memory inclusions = inclusionStore.processDueInclusions();
+        assertEq(inclusions.length, 50);
+        assertEq(inclusions[0].blobRefHash, readInclusionArray(0).blobRefHash);
+        assertEq(inclusions[49].blobRefHash, readInclusionArray(49).blobRefHash);
     }
 }

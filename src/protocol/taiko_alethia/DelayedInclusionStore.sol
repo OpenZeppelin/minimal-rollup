@@ -63,14 +63,11 @@ contract DelayedInclusionStore is IDelayedInclusionStore {
             return new Inclusion[](0);
         }
 
-        // Now we now we will process delayed inclusion, require that only the inbox can call this function
         require(msg.sender == inbox, "Only inbox can process inclusions");
 
-        // Allocate a new array for due inclusions.
         Inclusion[] memory inclusions = new Inclusion[](count);
         for (uint256 i = 0; i < count; ++i) {
-            inclusions[i] =
-                Inclusion({blobRefHash: delayedInclusions[head + i].blobRefHash, due: delayedInclusions[head + i].due});
+            inclusions[i] = delayedInclusions[head + i];
         }
 
         // Move the head pointer forward.
