@@ -33,7 +33,7 @@ contract DelayedInclusionStore is IDelayedInclusionStore {
     /// @param blobIndices An array of blob indices to be registered.
     function publishDelayed(uint256[] calldata blobIndices) external {
         bytes32 refHash = keccak256(abi.encode(blobRefRegistry.getRef(blobIndices)));
-        delayedInclusions[inclusionId] = Inclusion(refHash, block.timestamp);
+        delayedInclusions[inclusionId] = Inclusion(refHash, block.timestamp + inclusionDelay);
         ++inclusionId;
     }
 
@@ -47,10 +47,9 @@ contract DelayedInclusionStore is IDelayedInclusionStore {
         Inclusion[] memory _inclusions;
         uint256 i = 0;
         uint256 _latestInclusionIndex = latestInclusionIndex;
-        uint256 _inclusionDelay = inclusionDelay;
         uint256 blockTimestamp = block.timestamp;
 
-        while (blockTimestamp >= delayedInclusions[_latestInclusionIndex].timestamp + _inclusionDelay) {
+        while (blockTimestamp >= delayedInclusions[_latestInclusionIndex].due) {
             _inclusions[i] = delayedInclusions[_latestInclusionIndex];
             delete delayedInclusions[_latestInclusionIndex];
             unchecked {
