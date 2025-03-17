@@ -316,7 +316,7 @@ contract ProverManager is IProposerFees, IProverManager {
         _validatePublicationChain(publicationHeadersToProve);
 
         // Ensure that publications are inside the period
-        require(endPub.timestamp < periodEnd, "End publication is not within the period");
+        require(endPub.timestamp <= periodEnd, "End publication is not within the period");
         require(startPub.timestamp > previousPeriodEnd, "Start publication is not within the period");
 
         // Ensure that checkpoints actually match the publications
@@ -385,7 +385,7 @@ contract ProverManager is IProposerFees, IProverManager {
         uint256 previousPeriodEnd
     ) private view {
         require(publicationFeed.validateHeader(endPub, end.publicationId), "End publication hash does not match");
-        require(periodEnd == 0 || endPub.timestamp < periodEnd, "End publication is not within the period");
+        require(periodEnd == 0 || endPub.timestamp <= periodEnd, "End publication is not within the period");
 
         require(publicationFeed.validateHeader(startPub, start.publicationId), "Start publication hash does not match");
         require(startPub.timestamp > previousPeriodEnd, "Start publication is not within the period");
