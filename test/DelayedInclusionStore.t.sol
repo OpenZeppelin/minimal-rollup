@@ -34,7 +34,7 @@ contract DelayedInclusionStoreTest is Test {
         }
     }
 
-    function test_procesDueInclusions() public {
+    function test_processDueInclusions() public {
         vm.prank(inbox);
         vm.warp(50 minutes);
         store.processDueInclusions();
