@@ -14,7 +14,7 @@ For the purpose of deriving the storage slot for a signal, we use the [ERC-7201]
 
 ### L1 -> L2 Same-slot signalling
 
-Nethermind's [proposal on same-slot L1 -> L2 message passing](https://ethresear.ch/t/same-slot-l1-l2-message-passing/21186) outlines the concept of signals injected by the L2 proposer into the L2, allowing to bypass the wait for the next L1 state root. The following describes the approach to implement both 'slow' and 'fast' signalling pathways using this minimal rollup stack.
+Nethermind's [proposal on same-slot L1 -> L2 message passing](https://ethresear.ch/t/same-slot-l1-l2-message-passing/21186) describes a process for passing messages (aka. signals) from the L1 to the L2 by using storage proofs. However, it also outlines the concept of signals injected by the L2 proposer into the L2 in the same slot, allowing to bypass the wait for the next L1 state root. The following describes the approach to implement both 'slow' and 'fast' signalling pathways using this minimal rollup stack.
 
 #### Normal ('slow') Signalling
 
@@ -23,7 +23,7 @@ The simplest form of signalling requires waiting for the next **source chain** s
 Using the signal requires the following steps:
 
 1. Store a signal on the L1.
-2. Wait for the next L2 batch to be proposed on the L1.
+2. Wait for the next L2 publication to be proposed on the L1.
 3. Verify the signal in your L2 application using the latest L1 root to trigger some logic.
 
 However, the waiting period forbids immediate communication between the two chains since users need to wait for the next L1 state root to be available. This is where the 'fast' signalling pathway comes in.
@@ -45,7 +45,7 @@ Using the signal requires the following steps:
 
 A corner case arises when an L2 proposer chooses not to include one of the signals stored in the L1 SS within the anchor transaction. This omission can cause any application relying on that signal (as in step 6) to revert. In those cases, the application can always fallback to the 'slow' signalling pathway given the signal can't be deleted and the user can always wait for the next L1 state root. Applications can build mechanisms to incentivize proposers to include their signals in the L2 anchor transaction.
 
-In the context of an L2 proposer who also issues preconfirmations (either by delegation or any other mechanism), then the inclusion of the signal in the L2 block is guaranteed. Otherwise, the verification at step 4 will fail, reverting the whole L2 batch.
+In the context of a deterministic L2 proposer mechanism, then the inclusion of the signal in the L2 block is guaranteed. Otherwise, the verification at step 4 will fail, reverting the whole L2 batch. For based rollups, the L2 proposer might issue preconfirmations to guarantee the inclusion of the L2 transaction that depends on the signal.
 
 Considering that [_relying on same-slot L1 messages for L2 execution creates a tight coupling between L1 and L2_](http://ethresear.ch/t/same-slot-l1-l2-message-passing/21186#p-51604-are-shared-sequencersbuilders-needed-here-7) as they would _reorg_ together, it's recommended for applications developers to build mechanisms that are resilient to reorgs. However, the ability to create atomic L1 <> L2 execution remains, as they can always write applications that enforce atomicity (e.g. [fast (and slow) L2 -> L1 withdrawals](https://ethresear.ch/t/fast-and-slow-l2-l1-withdrawals/21161)).
 
