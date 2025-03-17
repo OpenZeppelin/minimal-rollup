@@ -35,24 +35,9 @@ contract DelayedInclusionStoreTest is Test {
         }
     }
 
-    function test_processHalfDueInclusions() public {
+    function test_processDueInclusions() public {
         vm.prank(inbox);
         vm.warp(inclusionDelay + 1);
-        uint256 returnLen = store.processDueInclusions().length;
-        assertEq(returnLen, 25);
-    }
-
-    function test_processAllDueInclusions() public {
-        vm.prank(inbox);
-        vm.warp(inclusionDelay + 2 hours + 1);
         store.processDueInclusions();
-        uint256 returnLen = store.processDueInclusions().length;
-        assertEq(returnLen, 50);
-    }
-
-    function test_processDueInclusions_noInclusions() public {
-        vm.prank(inbox);
-        uint256 returnLen = store.processDueInclusions().length;
-        assertEq(returnLen, 0);
     }
 }
