@@ -161,7 +161,6 @@ contract ProverManager is IProposerFees, IProverManager {
     /// @dev The current best price may be the current prover's fee or the fee of the next bid, depending on a few
     /// conditions.
     function bid(uint256 offeredFee) external {
-
         uint256 currentPeriod = currentPeriodId;
         Period storage _currentPeriod = _periods[currentPeriod];
         Period storage _nextPeriod = _periods[currentPeriod + 1];
@@ -472,7 +471,7 @@ contract ProverManager is IProposerFees, IProverManager {
     }
 
     function _isClosed(uint256 periodEnd, ICheckpointTracker.Checkpoint calldata lastProven, bytes calldata headerBytes)
-        private
+        private view
         returns (bool)
     {
         bytes32 lastProvenHash = keccak256(abi.encode(lastProven));

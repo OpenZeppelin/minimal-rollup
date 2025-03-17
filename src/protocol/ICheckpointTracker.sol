@@ -17,7 +17,7 @@ interface ICheckpointTracker {
     event TransitionProven(Checkpoint start, Checkpoint end);
 
     /// @return _ The hash of the last proven checkpoint
-    function provenHash() external returns (bytes32);
+    function provenHash() external view returns (bytes32);
 
     /// @notice Verifies a transition between two checkpoints. Update the latest `provenCheckpoint` if possible
     /// @param start The initial checkpoint before the transition
