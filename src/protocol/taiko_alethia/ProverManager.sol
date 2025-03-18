@@ -305,13 +305,9 @@ contract ProverManager is IProposerFees, IProverManager {
             previousPeriodEnd = previousPeriod.end;
         }
 
-        // Ensure that publications are inside the period
-        require(endPublicationHeader.timestamp <= periodEnd, "End publication is not within the period");
-        require(startPublicationHeader.timestamp > previousPeriodEnd, "Start publication is not within the period");
-
-        // Ensure that checkpoints actually match the publications
-        require(start.publicationId == startPublicationHeader.id, "Start checkpoint publication ID mismatch");
-        require(end.publicationId == endPublicationHeader.id, "End checkpoint publication ID mismatch");
+        _validateBasePublications(
+            start, end, startPublicationHeader, endPublicationHeader, periodEnd, previousPeriodEnd
+        );
 
         checkpointTracker.proveTransition(start, end, numPublications, proof);
         balances[msg.sender] += period.fee * numPublications;
