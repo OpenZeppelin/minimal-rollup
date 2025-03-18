@@ -299,7 +299,6 @@ contract ProverManagerTest is Test {
     function test_evictProver() public {
         IPublicationFeed.PublicationHeader memory header = _insertPublication();
 
-        uint256 pubId = header.id;
         // Capture current period stake before eviction
         ProverManager.Period memory periodBefore = proverManager.getPeriod(1);
         uint256 stakeBefore = periodBefore.stake;
@@ -314,7 +313,7 @@ contract ProverManagerTest is Test {
             block.timestamp + EXIT_DELAY,
             stakeBefore - (stakeBefore * EVICTOR_INCENTIVE_PERCENTAGE) / 10000
         );
-        proverManager.evictProver(pubId, header, zeroCheckpoint);
+        proverManager.evictProver(header, zeroCheckpoint);
 
         // Verify period 1 is marked as evicted and its stake reduced
         ProverManager.Period memory periodAfter = proverManager.getPeriod(1);
@@ -332,13 +331,12 @@ contract ProverManagerTest is Test {
 
     function test_evictProver_RevertWhen_PublicationNotOldEnough() public {
         IPublicationFeed.PublicationHeader memory header = _insertPublication();
-        uint256 pubId = 1;
 
         // Evict the prover with a publication that is not old enough
         vm.warp(block.timestamp + LIVENESS_WINDOW);
         vm.prank(evictor);
         vm.expectRevert("Publication is not old enough");
-        proverManager.evictProver(pubId, header, zeroCheckpoint);
+        proverManager.evictProver(header, zeroCheckpoint);
     }
 
     function test_evictProver_RevertWhen_InvalidPublicationHeader() public {
@@ -346,19 +344,17 @@ contract ProverManagerTest is Test {
         vm.warp(initialTimestamp + LIVENESS_WINDOW + 1);
 
         IPublicationFeed.PublicationHeader memory header = _insertPublication();
-        uint256 pubId = 1;
         // Tamper with the header
         header.timestamp = initialTimestamp;
 
         // Evict the prover with an invalid publication header
         vm.prank(evictor);
         vm.expectRevert("Publication hash does not match");
-        proverManager.evictProver(pubId, header, zeroCheckpoint);
+        proverManager.evictProver(header, zeroCheckpoint);
     }
 
     function test_evictProver_RevertWhen_PeriodNotActive() public {
         IPublicationFeed.PublicationHeader memory header = _insertPublication();
-        uint256 pubId = header.id;
 
         // Exit the period, setting and end to the period
         vm.prank(initialProver);
@@ -368,12 +364,11 @@ contract ProverManagerTest is Test {
         vm.warp(block.timestamp + LIVENESS_WINDOW + 1);
         vm.prank(evictor);
         vm.expectRevert("Proving period is not active");
-        proverManager.evictProver(pubId, header, zeroCheckpoint);
+        proverManager.evictProver(header, zeroCheckpoint);
     }
 
     function test_evictProver_RevertWhen_ProvenCheckpoint() public {
         IPublicationFeed.PublicationHeader memory header = _insertPublication();
-        uint256 pubId = header.id;
 
         // Advance the proven checkpoint on the mock checkpoint tracker
         ICheckpointTracker.Checkpoint memory provenCheckpoint = ICheckpointTracker.Checkpoint({
@@ -386,7 +381,7 @@ contract ProverManagerTest is Test {
         vm.warp(block.timestamp + LIVENESS_WINDOW + 1);
         vm.prank(evictor);
         vm.expectRevert("Publication has been proven");
-        proverManager.evictProver(pubId, header, provenCheckpoint);
+        proverManager.evictProver(header, provenCheckpoint);
     }
 
     /// --------------------------------------------------------------------------
@@ -597,7 +592,7 @@ contract ProverManagerTest is Test {
         // Evict the prover
         vm.warp(block.timestamp + LIVENESS_WINDOW + 1);
         vm.prank(evictor);
-        proverManager.evictProver(startHeader.id, startHeader, zeroCheckpoint);
+        proverManager.evictProver(startHeader, zeroCheckpoint);
 
         // Create checkpoints for the publications
         ICheckpointTracker.Checkpoint memory startCheckpoint = ICheckpointTracker.Checkpoint({

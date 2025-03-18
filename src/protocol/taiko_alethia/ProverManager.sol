@@ -204,11 +204,10 @@ contract ProverManager is IProposerFees, IProverManager {
     /// @dev This can be called by anyone, and they get `evictorIncentivePercentage` of the liveness bond as an
     /// incentive.
     function evictProver(
-        uint256 publicationId,
         IPublicationFeed.PublicationHeader calldata publicationHeader,
         ICheckpointTracker.Checkpoint calldata lastProven
     ) external {
-        require(publicationFeed.validateHeader(publicationHeader, publicationId), "Publication hash does not match");
+        require(publicationFeed.validateHeader(publicationHeader), "Publication hash does not match");
 
         uint256 publicationTimestamp = publicationHeader.timestamp;
         require(publicationTimestamp + livenessWindow < block.timestamp, "Publication is not old enough");
@@ -273,9 +272,12 @@ contract ProverManager is IProposerFees, IProverManager {
         Period storage period = _periods[periodId];
         uint256 previousPeriodEnd = _periods[periodId - 1].end;
 
-        require(publicationFeed.validateHeader(endPub, end.publicationId), "End publication hash does not match");
+        require(end.publicationId == endPub.id, "End publication does not match checkpoint");
+        require(publicationFeed.validateHeader(endPub), "End publication hash does not match");
         require(period.end == 0 || endPub.timestamp <= period.end, "End publication is not within the period");
-        require(publicationFeed.validateHeader(startPub, start.publicationId), "Start publication hash does not match");
+
+        require(start.publicationId == startPub.id, "Start publication does not match checkpoint");
+        require(publicationFeed.validateHeader(startPub), "Start publication hash does not match");
         require(startPub.timestamp > previousPeriodEnd, "Start publication is not within the period");
 
         checkpointTracker.proveTransition(start, end, numPublications, proof);
@@ -298,7 +300,7 @@ contract ProverManager is IProposerFees, IProverManager {
         IPublicationFeed.PublicationHeader calldata provenPublication
     ) external {
         _confirmLastProvenCheckpoint(lastProven);
-        require(publicationFeed.validateHeader(provenPublication, provenPublication.id), "Invalid publication header");
+        require(publicationFeed.validateHeader(provenPublication), "Invalid publication header");
         require(lastProven.publicationId >= provenPublication.id, "Publication must be proven");
 
         Period storage period = _periods[periodId];
