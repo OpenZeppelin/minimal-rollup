@@ -171,7 +171,7 @@ contract ProverManager is IProposerFees, IProverManager {
         Period storage _currentPeriod = _periods[currentPeriod];
         Period storage _nextPeriod = _periods[currentPeriod + 1];
         uint256 requiredMaxFee;
-        if (_isPeriodActive(_currentPeriod.end)) {
+        if (_currentPeriod.end == 0) {
             // If the period is still active the bid has to be lower
             uint256 currentFee = _currentPeriod.fee;
             requiredMaxFee = _calculatePercentage(currentFee, maxBidPercentage);
@@ -182,7 +182,7 @@ contract ProverManager is IProposerFees, IProverManager {
             _currentPeriod.deadline = periodEnd + provingWindow;
         } else {
             address _nextProverAddress = _nextPeriod.prover;
-            if (_isBidded(_nextProverAddress)) {
+            if (_nextProverAddress != address(0)) {
                 // If there's already a bid for the next period the bid has to be lower
                 uint256 nextFee = _nextPeriod.fee;
                 requiredMaxFee = _calculatePercentage(nextFee, maxBidPercentage);
@@ -337,20 +337,6 @@ contract ProverManager is IProposerFees, IProverManager {
     /// @return _ The calculated percentage of the given numerator
     function _calculatePercentage(uint256 amount, uint256 bps) private pure returns (uint256) {
         return (amount * bps) / 10_000;
-    }
-
-    /// @dev Checks if a period is active based on its end timestamp
-    /// @param end The end timestamp of the period
-    /// @return True if the period is active, false otherwise
-    function _isPeriodActive(uint256 end) private pure returns (bool) {
-        return end == 0;
-    }
-
-    /// @dev Checks if a period is already bidded
-    /// @param prover The address of the prover
-    /// @return True if someone has already bid for the period, false otherwise
-    function _isBidded(address prover) private pure returns (bool) {
-        return prover != address(0);
     }
 
     function _isClosed(uint256 periodEnd, ICheckpointTracker.Checkpoint calldata lastProven, bytes calldata headerBytes)
