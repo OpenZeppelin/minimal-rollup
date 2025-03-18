@@ -30,7 +30,7 @@ contract ProverManagerTest is Test {
     address evictor = address(0x203);
 
     // Configuration parameters.
-    uint256 constant MIN_UNDERCUT_PERCENTAGE = 500; // 5%
+    uint256 constant MAX_BID_PERCENTAGE = 9500; // 95%
     uint256 constant LIVENESS_WINDOW = 60; // 60 seconds
     uint256 constant SUCCESSION_DELAY = 10;
     uint256 constant EXIT_DELAY = 10;
@@ -50,7 +50,7 @@ contract ProverManagerTest is Test {
 
         // Create the config struct for the constructor
         ProverManager.ProverManagerConfig memory config = ProverManager.ProverManagerConfig({
-            minUndercutPercentage: MIN_UNDERCUT_PERCENTAGE,
+            maxBidPercentage: MAX_BID_PERCENTAGE,
             livenessWindow: LIVENESS_WINDOW,
             successionDelay: SUCCESSION_DELAY,
             exitDelay: EXIT_DELAY,
@@ -171,9 +171,7 @@ contract ProverManagerTest is Test {
         vm.prank(prover1);
         proverManager.deposit{value: DEPOSIT_AMOUNT}();
 
-        // Calculate the minimum required undercut
-        uint256 minUndercut = (INITIAL_FEE * MIN_UNDERCUT_PERCENTAGE) / 10000;
-        uint256 maxAllowedFee = INITIAL_FEE - minUndercut;
+        uint256 maxAllowedFee = INITIAL_FEE * MAX_BID_PERCENTAGE / 10000;
 
         vm.prank(prover1);
         vm.expectEmit();
@@ -206,9 +204,9 @@ contract ProverManagerTest is Test {
         vm.prank(prover1);
         proverManager.deposit{value: DEPOSIT_AMOUNT}();
 
-        // Calculate a fee that's not low enough (only 0.5% lower)
-        uint256 minUndercut = (INITIAL_FEE * MIN_UNDERCUT_PERCENTAGE) / 10000;
-        uint256 insufficientlyReducedFee = INITIAL_FEE - minUndercut + 1;
+        // Calculate a fee that's not low enough
+        uint256 maxFee = INITIAL_FEE * MAX_BID_PERCENTAGE / 10000;
+        uint256 insufficientlyReducedFee = maxFee + 1;
 
         vm.prank(prover1);
         vm.expectRevert("Offered fee not low enough");
@@ -220,7 +218,7 @@ contract ProverManagerTest is Test {
         vm.prank(prover1);
         proverManager.deposit{value: DEPOSIT_AMOUNT}();
 
-        uint256 firstBidFee = INITIAL_FEE - (INITIAL_FEE * MIN_UNDERCUT_PERCENTAGE) / 10000;
+        uint256 firstBidFee = INITIAL_FEE * MAX_BID_PERCENTAGE / 10000;
         vm.prank(prover1);
         proverManager.bid(firstBidFee);
 
@@ -229,7 +227,7 @@ contract ProverManagerTest is Test {
         proverManager.deposit{value: DEPOSIT_AMOUNT}();
 
         // Calculate required fee for second bid
-        uint256 secondBidFee = firstBidFee - (firstBidFee * MIN_UNDERCUT_PERCENTAGE) / 10000;
+        uint256 secondBidFee = firstBidFee * MAX_BID_PERCENTAGE / 10000;
 
         vm.prank(prover2);
         vm.expectEmit();
@@ -258,7 +256,7 @@ contract ProverManagerTest is Test {
         uint256 timestampBefore = block.timestamp;
 
         // Make a bid that will outbid the current prover
-        uint256 bidFee = INITIAL_FEE - (INITIAL_FEE * MIN_UNDERCUT_PERCENTAGE) / 10000;
+        uint256 bidFee = INITIAL_FEE * MAX_BID_PERCENTAGE / 10000;
         vm.prank(prover1);
         proverManager.bid(bidFee);
 
@@ -279,7 +277,7 @@ contract ProverManagerTest is Test {
         vm.prank(prover1);
         proverManager.deposit{value: DEPOSIT_AMOUNT}();
 
-        uint256 firstBidFee = INITIAL_FEE - (INITIAL_FEE * MIN_UNDERCUT_PERCENTAGE) / 10000;
+        uint256 firstBidFee = INITIAL_FEE * MAX_BID_PERCENTAGE / 10000;
         vm.prank(prover1);
         proverManager.bid(firstBidFee);
 
@@ -287,8 +285,8 @@ contract ProverManagerTest is Test {
         vm.prank(prover2);
         proverManager.deposit{value: DEPOSIT_AMOUNT}();
 
-        uint256 minUndercut = (firstBidFee * MIN_UNDERCUT_PERCENTAGE) / 10000;
-        uint256 insufficientlyReducedFee = firstBidFee - minUndercut + 1;
+        uint256 maxFee = firstBidFee * MAX_BID_PERCENTAGE / 10000;
+        uint256 insufficientlyReducedFee = maxFee + 1;
 
         vm.prank(prover2);
         vm.expectRevert("Offered fee not low enough");
@@ -449,7 +447,7 @@ contract ProverManagerTest is Test {
         // Have prover1 bid for next period
         vm.prank(prover1);
         proverManager.deposit{value: DEPOSIT_AMOUNT}();
-        uint256 bidFee = INITIAL_FEE - (INITIAL_FEE * MIN_UNDERCUT_PERCENTAGE) / 10000;
+        uint256 bidFee = INITIAL_FEE * MAX_BID_PERCENTAGE / 10000;
         vm.prank(prover1);
         proverManager.bid(bidFee);
 
@@ -551,7 +549,7 @@ contract ProverManagerTest is Test {
         // Have prover1 bid for next period
         vm.prank(prover1);
         proverManager.deposit{value: DEPOSIT_AMOUNT}();
-        uint256 bidFee = INITIAL_FEE - (INITIAL_FEE * MIN_UNDERCUT_PERCENTAGE) / 10000;
+        uint256 bidFee = INITIAL_FEE * MAX_BID_PERCENTAGE / 10000;
         vm.prank(prover1);
         proverManager.bid(bidFee);
 

@@ -18,7 +18,7 @@ contract ProverManager is IProposerFees, IProverManager {
     /// @dev This struct is necessary to pass it to the constructor and avoid stack too deep errors
     /// When some values in the contract stop being immutable, we may change this to be more efficient
     struct ProverManagerConfig {
-        uint256 minUndercutPercentage;
+        uint256 maxBidPercentage;
         uint256 livenessWindow;
         uint256 successionDelay;
         uint256 exitDelay;
@@ -33,10 +33,10 @@ contract ProverManager is IProposerFees, IProverManager {
     IPublicationFeed public immutable publicationFeed;
 
     // -- Configuration parameters --
-    /// @notice The minimum percentage by which the new bid has to be lower than the current best value
+    /// @notice The maximum percentage of the previous bid
     /// @dev This value needs to be expressed in basis points (4 decimal places)
     /// @dev This is used to prevent gas wars where the new prover undercuts the current prover by just a few wei
-    uint256 public immutable minUndercutPercentage;
+    uint256 public immutable maxBidPercentage;
     /// @notice The time window after which a publication is considered old enough and if the prover hasn't proven it
     /// yet
     /// can be evicted
@@ -88,7 +88,7 @@ contract ProverManager is IProposerFees, IProverManager {
         uint256 _initialFee,
         ProverManagerConfig memory _config
     ) payable {
-        minUndercutPercentage = _config.minUndercutPercentage;
+        maxBidPercentage = _config.maxBidPercentage;
         livenessWindow = _config.livenessWindow;
         successionDelay = _config.successionDelay;
         exitDelay = _config.exitDelay;
@@ -164,7 +164,7 @@ contract ProverManager is IProposerFees, IProverManager {
         if (_isPeriodActive(_currentPeriod.end)) {
             // If the period is still active the bid has to be lower
             uint256 currentFee = _currentPeriod.fee;
-            requiredMaxFee = currentFee - _calculatePercentage(currentFee, minUndercutPercentage);
+            requiredMaxFee = _calculatePercentage(currentFee, maxBidPercentage);
             require(offeredFee <= requiredMaxFee, "Offered fee not low enough");
 
             uint256 periodEnd = block.timestamp + successionDelay;
@@ -175,7 +175,7 @@ contract ProverManager is IProposerFees, IProverManager {
             if (_isBidded(_nextProverAddress)) {
                 // If there's already a bid for the next period the bid has to be lower
                 uint256 nextFee = _nextPeriod.fee;
-                requiredMaxFee = nextFee - _calculatePercentage(nextFee, minUndercutPercentage);
+                requiredMaxFee = _calculatePercentage(nextFee, maxBidPercentage);
                 require(offeredFee <= requiredMaxFee, "Offered fee not low enough");
 
                 // Refund the liveness bond to the losing bid
@@ -367,7 +367,6 @@ contract ProverManager is IProposerFees, IProverManager {
     /// @param bps The percentage expressed in basis points(https://muens.io/solidity-percentages)
     /// @return _ The calculated percentage of the given numerator
     function _calculatePercentage(uint256 amount, uint256 bps) private pure returns (uint256) {
-        require((amount * bps) >= 10_000);
         return amount * bps / 10_000;
     }
 
