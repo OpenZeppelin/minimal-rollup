@@ -216,8 +216,7 @@ contract ProverManager is IProposerFees, IProverManager {
         Period storage period = _periods[currentPeriodId];
         require(period.end == 0, "Proving period is not active");
 
-        bytes32 lastProvenHash = keccak256(abi.encode(lastProven));
-        require(lastProvenHash == checkpointTracker.provenHash(), "Incorrect lastProven checkpoint");
+        _confirmLastProvenCheckpoint(lastProven);
         require(publicationHeader.id > lastProven.publicationId, "Publication has been proven");
 
         uint256 periodEnd = block.timestamp + exitDelay;
@@ -298,12 +297,12 @@ contract ProverManager is IProposerFees, IProverManager {
         ICheckpointTracker.Checkpoint calldata lastProven,
         IPublicationFeed.PublicationHeader calldata provenPublication
     ) external {
-        Period storage period = _periods[periodId];
-        bytes32 lastProvenHash = keccak256(abi.encode(lastProven));
-        require(lastProvenHash == checkpointTracker.provenHash(), "Incorrect lastProven checkpoint");
+        _confirmLastProvenCheckpoint(lastProven);
         require(publicationFeed.validateHeader(provenPublication, provenPublication.id), "Invalid publication header");
-        bool isClosed = lastProven.publicationId >= provenPublication.id && provenPublication.timestamp > period.end;
-        require(isClosed, "Period not closed");
+        require(lastProven.publicationId >= provenPublication.id, "Publication must be proven");
+
+        Period storage period = _periods[periodId];
+        require(provenPublication.timestamp > period.end, "Publication must be after period");
         balances[period.prover] += period.stake;
         period.stake = 0;
     }
@@ -352,5 +351,10 @@ contract ProverManager is IProposerFees, IProverManager {
         period.fee = fee;
         period.stake = stake; // overwrite previous value. We assume the previous value is zero or already returned
         balances[prover] -= stake;
+    }
+
+    function _confirmLastProvenCheckpoint(ICheckpointTracker.Checkpoint calldata lastProven) private view {
+        bytes32 lastProvenHash = keccak256(abi.encode(lastProven));
+        require(lastProvenHash == checkpointTracker.provenHash(), "Incorrect lastProven checkpoint");
     }
 }
