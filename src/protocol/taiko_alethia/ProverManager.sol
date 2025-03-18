@@ -261,7 +261,6 @@ contract ProverManager is IProposerFees, IProverManager {
         IPublicationFeed.PublicationHeader calldata startPublicationHeader,
         IPublicationFeed.PublicationHeader calldata endPublicationHeader,
         uint256 numPublications,
-        bytes calldata nextPublicationHeaderBytes,
         bytes calldata proof,
         uint256 periodId
     ) external {
@@ -281,17 +280,6 @@ contract ProverManager is IProposerFees, IProverManager {
 
         checkpointTracker.proveTransition(start, end, numPublications, proof);
         balances[period.prover] += numPublications * period.fee;
-
-        if (nextPublicationHeaderBytes.length > 0) {
-            // This means that the prover is claiming that they have finished all their publications for the period
-            IPublicationFeed.PublicationHeader memory nextPub =
-                abi.decode(nextPublicationHeaderBytes, (IPublicationFeed.PublicationHeader));
-            _validateNextPublicationHeader(nextPub, end.publicationId + 1, periodEnd);
-
-            // Finalize the period: transfer stake.
-            balances[period.prover] += period.stake;
-            period.stake = 0;
-        }
     }
 
     /// @inheritdoc IProverManager
