@@ -35,11 +35,10 @@ interface IProverManager {
         ICheckpointTracker.Checkpoint calldata lastProven
     ) external;
 
-    /// @notice Submits a proof for an open period
-    /// @dev An open period is not necessarily the current period, it just means that the prover is within their
-    /// deadline.
-    /// @dev If the prover has finished all their publications for the period, they can also claim the fees and their
-    /// liveness bond.
+    /// @notice Submits a proof.
+    /// @dev If called after the proof deadline, the caller becomes the new prover and some of the original prover's
+    /// stake is burned
+    /// @dev In either case the (possibly new) prover gets the fee for all proven publications
     /// @param start The initial checkpoint before the transition
     /// @param end The final checkpoint after the transition
     /// @param startPublicationHeader The start publication header
@@ -48,27 +47,7 @@ interface IProverManager {
     /// ids because there could be irrelevant publications.
     /// @param proof Arbitrary data passed to the `verifier` contract to confirm the transition validity
     /// @param periodId The id of the period for which the proof is submitted
-    function proveOpenPeriod(
-        ICheckpointTracker.Checkpoint calldata start,
-        ICheckpointTracker.Checkpoint calldata end,
-        IPublicationFeed.PublicationHeader calldata startPublicationHeader,
-        IPublicationFeed.PublicationHeader calldata endPublicationHeader,
-        uint256 numPublications,
-        bytes calldata proof,
-        uint256 periodId
-    ) external;
-
-    /// @notice Called by a prover when the originally assigned prover is passed its deadline
-    /// @dev This function should slash the prover and distribute their stake to compensate the new prover
-    /// @param start The initial checkpoint before the transition
-    /// @param end The final checkpoint after the transition
-    /// @param startPublicationHeader The start publication header
-    /// @param endPublicationHeader The end publication header
-    /// @param numPublications The number of publications to process. This is not implied by the start/end publication
-    /// ids because there could be irrelevant publications.
-    /// @param proof Arbitrary data passed to the `verifier` contract to confirm the transition validity
-    /// @param periodId The id of the period for which the proof is submitted
-    function proveClosedPeriod(
+    function prove(
         ICheckpointTracker.Checkpoint calldata start,
         ICheckpointTracker.Checkpoint calldata end,
         IPublicationFeed.PublicationHeader calldata startPublicationHeader,

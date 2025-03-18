@@ -474,7 +474,7 @@ contract ProverManagerTest is Test {
         // // Prove the period
         uint256 proverBalanceBefore = proverManager.balances(initialProver);
 
-        proverManager.proveOpenPeriod(
+        proverManager.prove(
             startCheckpoint,
             endCheckpoint,
             startHeader,
@@ -517,7 +517,7 @@ contract ProverManagerTest is Test {
         // // Prove the period
         uint256 proverBalanceBefore = proverManager.balances(initialProver);
 
-        proverManager.proveOpenPeriod(
+        proverManager.prove(
             startCheckpoint,
             endCheckpoint,
             startHeader,
@@ -574,9 +574,7 @@ contract ProverManagerTest is Test {
 
         // Attempt to prove the period after deadline
         vm.expectRevert("Deadline has passed");
-        proverManager.proveOpenPeriod(
-            startCheckpoint, endCheckpoint, startHeader, endHeader, numRelevantPublications, "0x", 0
-        );
+        proverManager.prove(startCheckpoint, endCheckpoint, startHeader, endHeader, numRelevantPublications, "0x", 0);
     }
 
     /// --------------------------------------------------------------------------
@@ -621,7 +619,7 @@ contract ProverManagerTest is Test {
 
         // Have prover1 prove the closed period
         vm.prank(prover1);
-        proverManager.proveClosedPeriod(
+        proverManager.prove(
             startCheckpoint,
             endCheckpoint,
             startHeader,
@@ -695,7 +693,7 @@ contract ProverManagerTest is Test {
         // Have prover1 prove the closed period
         vm.warp(block.timestamp + PROVING_WINDOW + 1);
         vm.prank(prover1);
-        proverManager.proveClosedPeriod(
+        proverManager.prove(
             startCheckpoint,
             endCheckpoint,
             startHeader,
@@ -752,7 +750,7 @@ contract ProverManagerTest is Test {
         vm.warp(block.timestamp + EXIT_DELAY + 1);
         vm.prank(prover1);
         vm.expectRevert("The period is still open");
-        proverManager.proveClosedPeriod(
+        proverManager.prove(
             startCheckpoint,
             endCheckpoint,
             startHeader,

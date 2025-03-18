@@ -255,7 +255,7 @@ contract ProverManager is IProposerFees, IProverManager {
     }
 
     /// @inheritdoc IProverManager
-    function proveOpenPeriod(
+    function prove(
         ICheckpointTracker.Checkpoint calldata start,
         ICheckpointTracker.Checkpoint calldata end,
         IPublicationFeed.PublicationHeader calldata startPublicationHeader,
@@ -265,58 +265,22 @@ contract ProverManager is IProposerFees, IProverManager {
         uint256 periodId
     ) external {
         Period storage period = _periods[periodId];
-        uint256 periodEnd = period.end;
-        require(period.deadline == 0 || block.timestamp <= period.deadline, "Deadline has passed");
-
-        uint256 previousPeriodEnd = 0;
-        if (periodId > 0) {
-            Period storage previousPeriod = _periods[periodId - 1];
-            previousPeriodEnd = previousPeriod.end;
-        }
+        uint256 previousPeriodEnd = periodId > 0 ? _periods[periodId - 1].end : 0;
 
         _validateBasePublications(
-            start, end, startPublicationHeader, endPublicationHeader, periodEnd, previousPeriodEnd
+            start, end, startPublicationHeader, endPublicationHeader, period.end, previousPeriodEnd
         );
-
         checkpointTracker.proveTransition(start, end, numPublications, proof);
+
+        bool isClosed = block.timestamp > period.deadline && period.deadline != 0;
+        if (isClosed) {
+            // Apply a burn percentage on every call to this function. Whoever proves the final publication in this
+            // period can (eventually) call `finalizeClosedPeriod` to claim the remaining stake. In practice, a single
+            // prover will likely close the whole period with one proof.
+            period.stake -= _calculatePercentage(period.stake, burnedStakePercentage);
+            period.prover = msg.sender;
+        }
         balances[period.prover] += numPublications * period.fee;
-    }
-
-    /// @inheritdoc IProverManager
-    /// @dev This function pays the offender prover for the work they already did, and distributes remaining fees and a
-    /// portion of the liveness bond to the new prover.
-    /// @dev A portion of the liveness bond is burned by locking it in the contract forever.
-    function proveClosedPeriod(
-        ICheckpointTracker.Checkpoint calldata start,
-        ICheckpointTracker.Checkpoint calldata end,
-        IPublicationFeed.PublicationHeader calldata startPublicationHeader,
-        IPublicationFeed.PublicationHeader calldata endPublicationHeader,
-        uint256 numPublications,
-        bytes calldata proof,
-        uint256 periodId
-    ) external {
-        Period storage period = _periods[periodId];
-        uint256 periodEnd = period.end;
-        require(period.deadline != 0 && block.timestamp > period.deadline, "The period is still open");
-
-        uint256 previousPeriodEnd = 0;
-        if (periodId > 0) {
-            Period storage previousPeriod = _periods[periodId - 1];
-            previousPeriodEnd = previousPeriod.end;
-        }
-
-        _validateBasePublications(
-            start, end, startPublicationHeader, endPublicationHeader, periodEnd, previousPeriodEnd
-        );
-
-        checkpointTracker.proveTransition(start, end, numPublications, proof);
-        balances[msg.sender] += period.fee * numPublications;
-
-        // Apply a burn percentage on every call to this function. Whoever proves the final publication in this period
-        // can (eventually) call `finalizeClosedPeriod` to claim the remaining stake. In practice, a single prover will
-        // likely close the whole period with one proof.
-        period.stake -= _calculatePercentage(period.stake, burnedStakePercentage);
-        period.prover = msg.sender;
     }
 
     /// @inheritdoc IProverManager
@@ -363,7 +327,7 @@ contract ProverManager is IProposerFees, IProverManager {
     /// @param bps The percentage expressed in basis points(https://muens.io/solidity-percentages)
     /// @return _ The calculated percentage of the given numerator
     function _calculatePercentage(uint256 amount, uint256 bps) private pure returns (uint256) {
-        return amount * bps / 10_000;
+        return (amount * bps) / 10_000;
     }
 
     /// @dev Validates the start and end publication headers and ensures that they are within the period.
