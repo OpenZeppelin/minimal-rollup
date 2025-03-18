@@ -16,12 +16,13 @@ contract DelayedInclusionStoreTest is Test {
     address inbox = address(0x100);
 
     uint256 public inclusionDelay = 10 minutes;
+    uint256 public constant waitTime = 2 hours;
 
     function setUp() public {
         blobReg = new MockBlobRefRegistry();
         inclusionStore = new DelayedInclusionStore(inclusionDelay, address(blobReg), inbox);
         storeDelayedInclusions(25);
-        vm.warp(2 hours);
+        vm.warp(waitTime);
         storeDelayedInclusions(25);
         vm.warp(1);
     }
@@ -43,7 +44,13 @@ contract DelayedInclusionStoreTest is Test {
         return DelayedInclusionStore.DueInclusion(blobRefHash, due);
     }
 
-    function test_processFirstHalfDueInclusions() public {
+    function test_processDueInclusions_NoneDue() public {
+        vm.prank(inbox);
+        DelayedInclusionStore.Inclusion[] memory inclusions = inclusionStore.processDueInclusions();
+        assertEq(inclusions.length, 0);
+    }
+
+    function test_processDueInclusions_FirstHalfDue() public {
         vm.prank(inbox);
         vm.warp(inclusionDelay + 1);
         DelayedInclusionStore.Inclusion[] memory inclusions = inclusionStore.processDueInclusions();
@@ -52,11 +59,11 @@ contract DelayedInclusionStoreTest is Test {
         assertEq(inclusions[24].blobRefHash, readInclusionArray(24).blobRefHash);
     }
 
-    function test_processSecondHalfDueInclusions() public {
+    function test_processDueInclusions_SecondHalfDue() public {
         vm.startPrank(inbox);
         vm.warp(inclusionDelay + 1);
         inclusionStore.processDueInclusions();
-        vm.warp(5 hours);
+        vm.warp(waitTime + inclusionDelay + 1);
         DelayedInclusionStore.Inclusion[] memory inclusions = inclusionStore.processDueInclusions();
         assertEq(inclusions.length, 25);
         assertEq(inclusions[0].blobRefHash, readInclusionArray(25).blobRefHash);
@@ -64,12 +71,18 @@ contract DelayedInclusionStoreTest is Test {
         vm.stopPrank();
     }
 
-    function test_processAllDueInclusions() public {
+    function test_processDueInclusions_AllDue() public {
         vm.prank(inbox);
-        vm.warp(10 hours);
+        vm.warp(waitTime + inclusionDelay + 1);
         DelayedInclusionStore.Inclusion[] memory inclusions = inclusionStore.processDueInclusions();
         assertEq(inclusions.length, 50);
         assertEq(inclusions[0].blobRefHash, readInclusionArray(0).blobRefHash);
         assertEq(inclusions[49].blobRefHash, readInclusionArray(49).blobRefHash);
+    }
+
+    function test_processDueInclusions_RevertWhen_NotInbox() public {
+        vm.warp(inclusionDelay + 1);
+        vm.expectRevert("Only inbox can process inclusions");
+        inclusionStore.processDueInclusions();
     }
 }
