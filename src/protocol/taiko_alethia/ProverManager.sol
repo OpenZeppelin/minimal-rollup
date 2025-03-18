@@ -263,8 +263,8 @@ contract ProverManager is IProposerFees, IProverManager {
     function prove(
         ICheckpointTracker.Checkpoint calldata start,
         ICheckpointTracker.Checkpoint calldata end,
-        IPublicationFeed.PublicationHeader calldata startPub,
-        IPublicationFeed.PublicationHeader calldata endPub,
+        IPublicationFeed.PublicationHeader calldata firstPub,
+        IPublicationFeed.PublicationHeader calldata lastPub,
         uint256 numPublications,
         bytes calldata proof,
         uint256 periodId
@@ -272,13 +272,13 @@ contract ProverManager is IProposerFees, IProverManager {
         Period storage period = _periods[periodId];
         uint256 previousPeriodEnd = _periods[periodId - 1].end;
 
-        require(end.publicationId == endPub.id, "End publication does not match checkpoint");
-        require(publicationFeed.validateHeader(endPub), "End publication hash does not match");
-        require(period.end == 0 || endPub.timestamp <= period.end, "End publication is not within the period");
+        require(publicationFeed.validateHeader(lastPub), "Last publication does not exist");
+        require(end.publicationId == lastPub.id, "Last publication does not match end checkpoint");
+        require(period.end == 0 || lastPub.timestamp <= period.end, "Last publication is after the period");
 
-        require(start.publicationId == startPub.id, "Start publication does not match checkpoint");
-        require(publicationFeed.validateHeader(startPub), "Start publication hash does not match");
-        require(startPub.timestamp > previousPeriodEnd, "Start publication is not within the period");
+        require(publicationFeed.validateHeader(firstPub), "First publication does not exist");
+        require(start.publicationId + 1 == firstPub.id, "First publication not immediately after start checkpoint");
+        require(firstPub.timestamp > previousPeriodEnd, "First publication is before the period");
 
         checkpointTracker.proveTransition(start, end, numPublications, proof);
 

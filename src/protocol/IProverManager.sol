@@ -39,8 +39,9 @@ interface IProverManager {
     /// @dev In either case the (possibly new) prover gets the fee for all proven publications
     /// @param start The initial checkpoint before the transition
     /// @param end The final checkpoint after the transition
-    /// @param startPublicationHeader The start publication header
-    /// @param endPublicationHeader The end publication header
+    /// @param firstPub The first publication header in the transition. Note that since checkpoints refer to the
+    /// publication they follow, this should have an id `start.publicationId + 1`
+    /// @param lastPub The last publication header in the transition
     /// @param numPublications The number of publications to process. This is not implied by the start/end publication
     /// ids because there could be irrelevant publications.
     /// @param proof Arbitrary data passed to the `verifier` contract to confirm the transition validity
@@ -48,8 +49,8 @@ interface IProverManager {
     function prove(
         ICheckpointTracker.Checkpoint calldata start,
         ICheckpointTracker.Checkpoint calldata end,
-        IPublicationFeed.PublicationHeader calldata startPublicationHeader,
-        IPublicationFeed.PublicationHeader calldata endPublicationHeader,
+        IPublicationFeed.PublicationHeader calldata firstPub,
+        IPublicationFeed.PublicationHeader calldata lastPub,
         uint256 numPublications,
         bytes calldata proof,
         uint256 periodId
