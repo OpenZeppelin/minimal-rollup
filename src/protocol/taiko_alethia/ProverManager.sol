@@ -484,10 +484,11 @@ contract ProverManager is IProposerFees, IProverManager {
     /// @param period The period to update
     /// @param prover The address of the prover
     /// @param fee The fee offered by the prover
+    /// @param stake The liveness bond to be staked
     function _updatePeriod(Period storage period, address prover, uint256 fee, uint256 stake) private {
         period.prover = prover;
         period.fee = fee;
-        period.stake = stake;
+        period.stake = stake; // overwrite previous value. We assume the previous value is zero or already returned
         balances[prover] -= stake;
     }
 }
