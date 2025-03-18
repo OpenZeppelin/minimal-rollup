@@ -304,7 +304,9 @@ contract ProverManager is IProposerFees, IProverManager {
     function proveClosedPeriod(
         ICheckpointTracker.Checkpoint calldata start,
         ICheckpointTracker.Checkpoint calldata end,
-        IPublicationFeed.PublicationHeader[] calldata publicationHeadersToProve,
+        IPublicationFeed.PublicationHeader calldata startPublicationHeader,
+        IPublicationFeed.PublicationHeader calldata endPublicationHeader,
+        uint256 numPublications,
         IPublicationFeed.PublicationHeader calldata nextPublicationHeader,
         bytes calldata proof,
         uint256 periodId
@@ -318,26 +320,21 @@ contract ProverManager is IProposerFees, IProverManager {
             Period storage previousPeriod = _periods[periodId - 1];
             previousPeriodEnd = previousPeriod.end;
         }
-        uint256 numPubs = publicationHeadersToProve.length;
-        IPublicationFeed.PublicationHeader memory startPub = publicationHeadersToProve[0];
-        IPublicationFeed.PublicationHeader memory endPub = publicationHeadersToProve[numPubs - 1];
-
-        _validatePublicationChain(publicationHeadersToProve);
 
         // Ensure that publications are inside the period
-        require(endPub.timestamp <= periodEnd, "End publication is not within the period");
-        require(startPub.timestamp > previousPeriodEnd, "Start publication is not within the period");
+        require(endPublicationHeader.timestamp <= periodEnd, "End publication is not within the period");
+        require(startPublicationHeader.timestamp > previousPeriodEnd, "Start publication is not within the period");
 
         // Ensure that checkpoints actually match the publications
-        require(start.publicationId == startPub.id, "Start checkpoint publication ID mismatch");
-        require(end.publicationId == endPub.id, "End checkpoint publication ID mismatch");
+        require(start.publicationId == startPublicationHeader.id, "Start checkpoint publication ID mismatch");
+        require(end.publicationId == endPublicationHeader.id, "End checkpoint publication ID mismatch");
 
         _validateNextPublicationHeader(nextPublicationHeader, end.publicationId + 1, periodEnd);
 
-        checkpointTracker.proveTransition(start, end, numPubs, proof);
+        checkpointTracker.proveTransition(start, end, numPublications, proof);
 
         // Distribute the funds
-        uint256 newProverFees = period.fee * numPubs;
+        uint256 newProverFees = period.fee * numPublications;
 
         // Pay the designated prover for the work they already did
         balances[period.prover] += period.accumulatedFees - newProverFees;
@@ -430,20 +427,6 @@ contract ProverManager is IProposerFees, IProverManager {
         require(nextPub.id == expectedId, "This is not the next publication");
         require(nextPub.timestamp > periodEnd, "Next publication is not after the period end");
         require(publicationFeed.validateHeader(nextPub, nextPub.id), "Publication hash does not match");
-    }
-
-    /// @dev Validates a chain of publication headers.
-    /// @param headers The chain of publication headers to validate
-    function _validatePublicationChain(IPublicationFeed.PublicationHeader[] memory headers) private view {
-        uint256 numPubs = headers.length;
-        //Verify that all the publications are correct and linked together(they belong to this rollup)
-        for (uint256 i = 1; i < numPubs; ++i) {
-            require(publicationFeed.validateHeader(headers[i], headers[i].id), "Publication hash does not match");
-            if (i > 0) {
-                bytes32 prevHash = keccak256(abi.encode(headers[i - 1]));
-                require(prevHash == headers[i].prevHash, "Previous publication hash does not match");
-            }
-        }
     }
 
     /// @dev Checks if a period is active based on its end timestamp

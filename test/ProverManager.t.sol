@@ -618,11 +618,6 @@ contract ProverManagerTest is Test {
         vm.warp(block.timestamp + EXIT_DELAY + 1);
         IPublicationFeed.PublicationHeader memory nextHeader = _insertPublication();
 
-        // Create an array of publication headers to prove
-        IPublicationFeed.PublicationHeader[] memory pubHeaders = new IPublicationFeed.PublicationHeader[](2);
-        pubHeaders[0] = startHeader;
-        pubHeaders[1] = endHeader;
-
         // Capture balances before proving
         uint256 prover1BalanceBefore = proverManager.balances(prover1);
         uint256 initialProverBalanceBefore = proverManager.balances(initialProver);
@@ -632,7 +627,9 @@ contract ProverManagerTest is Test {
         proverManager.proveClosedPeriod(
             startCheckpoint,
             endCheckpoint,
-            pubHeaders,
+            startHeader,
+            endHeader,
+            2,
             nextHeader,
             "0x", // any proof
             0
@@ -695,11 +692,6 @@ contract ProverManagerTest is Test {
         vm.warp(block.timestamp + EXIT_DELAY + 1);
         IPublicationFeed.PublicationHeader memory nextHeader = _insertPublication();
 
-        // Create an array of publication headers to prove
-        IPublicationFeed.PublicationHeader[] memory pubHeaders = new IPublicationFeed.PublicationHeader[](2);
-        pubHeaders[0] = startHeader;
-        pubHeaders[1] = endHeader;
-
         // Capture balances before proving
         uint256 prover1BalanceBefore = proverManager.balances(prover1);
         uint256 initialProverBalanceBefore = proverManager.balances(initialProver);
@@ -710,7 +702,9 @@ contract ProverManagerTest is Test {
         proverManager.proveClosedPeriod(
             startCheckpoint,
             endCheckpoint,
-            pubHeaders,
+            startHeader,
+            endHeader,
+            2,
             nextHeader,
             "0x", // any proof
             0
@@ -755,11 +749,6 @@ contract ProverManagerTest is Test {
         // Create a next publication header
         IPublicationFeed.PublicationHeader memory nextHeader = _insertPublication();
 
-        // Create an array of publication headers to prove
-        IPublicationFeed.PublicationHeader[] memory pubHeaders = new IPublicationFeed.PublicationHeader[](2);
-        pubHeaders[0] = startHeader;
-        pubHeaders[1] = endHeader;
-
         // Exit as the initial prover to set period end
         vm.prank(initialProver);
         proverManager.exit();
@@ -771,7 +760,9 @@ contract ProverManagerTest is Test {
         proverManager.proveClosedPeriod(
             startCheckpoint,
             endCheckpoint,
-            pubHeaders,
+            startHeader,
+            endHeader,
+            2,
             nextHeader,
             "0x", // any proof
             0
