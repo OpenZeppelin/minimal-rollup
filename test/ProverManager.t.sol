@@ -433,7 +433,6 @@ contract ProverManagerTest is Test {
     /// --------------------------------------------------------------------------
     function test_proveOpenPeriod_CompletesPeriod() public {
         // Setup: Create publications and pay for the fees
-        uint256 provingPeriodId = 0;
         IPublicationFeed.PublicationHeader memory startHeader = _insertPublication();
         IPublicationFeed.PublicationHeader memory endHeader = _insertPublication();
         vm.startPrank(inbox);
@@ -468,6 +467,7 @@ contract ProverManagerTest is Test {
             publicationId: endHeader.id,
             commitment: keccak256(abi.encode("commitment2"))
         });
+        uint256 numRelevantPublications = 2;
 
         // Create a next publication header that's after the period end
         vm.warp(block.timestamp + EXIT_DELAY + 1);
@@ -482,9 +482,10 @@ contract ProverManagerTest is Test {
             endCheckpoint,
             startHeader,
             endHeader,
+            numRelevantPublications,
             nextHeaderBytes,
             "0x", // any proof
-            provingPeriodId
+            0 // provingPeriodId. Hardcode the value to avoid stack-too-deep error
         );
 
         uint256 proverBalanceAfter = proverManager.balances(initialProver);
@@ -514,6 +515,7 @@ contract ProverManagerTest is Test {
             publicationId: endHeader.id,
             commitment: keccak256(abi.encode("commitment2"))
         });
+        uint256 numRelevantPublications = 2;
 
         // // Prove the period
         uint256 proverBalanceBefore = proverManager.balances(initialProver);
@@ -523,6 +525,7 @@ contract ProverManagerTest is Test {
             endCheckpoint,
             startHeader,
             endHeader,
+            numRelevantPublications,
             "", // empty next publication header
             "0x", // any proof
             provingPeriodId
@@ -567,13 +570,16 @@ contract ProverManagerTest is Test {
             publicationId: endHeader.id,
             commitment: keccak256(abi.encode("commitment2"))
         });
+        uint256 numRelevantPublications = 2;
 
         // Warp past the deadline
         vm.warp(block.timestamp + PROVING_WINDOW + 1);
 
         // Attempt to prove the period after deadline
         vm.expectRevert("Deadline has passed");
-        proverManager.proveOpenPeriod(startCheckpoint, endCheckpoint, startHeader, endHeader, "", "0x", 0);
+        proverManager.proveOpenPeriod(
+            startCheckpoint, endCheckpoint, startHeader, endHeader, numRelevantPublications, "", "0x", 0
+        );
     }
 
     /// --------------------------------------------------------------------------

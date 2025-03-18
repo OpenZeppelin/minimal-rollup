@@ -264,6 +264,7 @@ contract ProverManager is IProposerFees, IProverManager {
         ICheckpointTracker.Checkpoint calldata end,
         IPublicationFeed.PublicationHeader calldata startPublicationHeader,
         IPublicationFeed.PublicationHeader calldata endPublicationHeader,
+        uint256 numPublications,
         bytes calldata nextPublicationHeaderBytes,
         bytes calldata proof,
         uint256 periodId
@@ -282,7 +283,7 @@ contract ProverManager is IProposerFees, IProverManager {
             start, end, startPublicationHeader, endPublicationHeader, periodEnd, previousPeriodEnd
         );
 
-        checkpointTracker.proveTransition(start, end, proof);
+        checkpointTracker.proveTransition(start, end, numPublications, proof);
 
         if (nextPublicationHeaderBytes.length > 0) {
             // This means that the prover is claiming that they have finished all their publications for the period
@@ -333,7 +334,7 @@ contract ProverManager is IProposerFees, IProverManager {
 
         _validateNextPublicationHeader(nextPublicationHeader, end.publicationId + 1, periodEnd);
 
-        checkpointTracker.proveTransition(start, end, proof);
+        checkpointTracker.proveTransition(start, end, numPubs, proof);
 
         // Distribute the funds
         uint256 newProverFees = period.fee * numPubs;

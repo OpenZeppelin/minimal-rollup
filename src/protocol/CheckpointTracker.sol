@@ -35,7 +35,12 @@ contract CheckpointTracker is ICheckpointTracker {
     }
 
     /// @inheritdoc ICheckpointTracker
-    function proveTransition(Checkpoint calldata start, Checkpoint calldata end, bytes calldata proof) external {
+    function proveTransition(
+        Checkpoint calldata start,
+        Checkpoint calldata end,
+        uint256 numPublications,
+        bytes calldata proof
+    ) external {
         require(
             proverManager == address(0) || msg.sender == proverManager, "Only the prover manager can call this function"
         );
@@ -51,7 +56,9 @@ contract CheckpointTracker is ICheckpointTracker {
         bytes32 endPublicationHash = publicationFeed.getPublicationHash(end.publicationId);
         require(endPublicationHash != 0, "End publication does not exist");
 
-        verifier.verifyProof(startPublicationHash, endPublicationHash, start.commitment, end.commitment, proof);
+        verifier.verifyProof(
+            startPublicationHash, endPublicationHash, start.commitment, end.commitment, numPublications, proof
+        );
 
         provenHash = keccak256(abi.encode(end));
         emit TransitionProven(start, end);
