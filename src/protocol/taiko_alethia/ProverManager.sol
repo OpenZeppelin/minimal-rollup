@@ -265,8 +265,8 @@ contract ProverManager is IProposerFees, IProverManager {
     function prove(
         ICheckpointTracker.Checkpoint calldata start,
         ICheckpointTracker.Checkpoint calldata end,
-        IPublicationFeed.PublicationHeader calldata startPublicationHeader,
-        IPublicationFeed.PublicationHeader calldata endPublicationHeader,
+        IPublicationFeed.PublicationHeader calldata startPub,
+        IPublicationFeed.PublicationHeader calldata endPub,
         uint256 numPublications,
         bytes calldata proof,
         uint256 periodId
@@ -274,9 +274,11 @@ contract ProverManager is IProposerFees, IProverManager {
         Period storage period = _periods[periodId];
         uint256 previousPeriodEnd = _periods[periodId - 1].end;
 
-        _validateBasePublications(
-            start, end, startPublicationHeader, endPublicationHeader, period.end, previousPeriodEnd
-        );
+        require(publicationFeed.validateHeader(endPub, end.publicationId), "End publication hash does not match");
+        require(period.end == 0 || endPub.timestamp <= period.end, "End publication is not within the period");
+        require(publicationFeed.validateHeader(startPub, start.publicationId), "Start publication hash does not match");
+        require(startPub.timestamp > previousPeriodEnd, "Start publication is not within the period");
+
         checkpointTracker.proveTransition(start, end, numPublications, proof);
 
         bool isClosed = block.timestamp > period.deadline && period.deadline != 0;
@@ -335,28 +337,6 @@ contract ProverManager is IProposerFees, IProverManager {
     /// @return _ The calculated percentage of the given numerator
     function _calculatePercentage(uint256 amount, uint256 bps) private pure returns (uint256) {
         return (amount * bps) / 10_000;
-    }
-
-    /// @dev Validates the start and end publication headers and ensures that they are within the period.
-    /// @param start The initial checkpoint before the transition
-    /// @param end The final checkpoint after the transition
-    /// @param startPub The start publication header
-    /// @param endPub The end publication header
-    /// @param periodEnd The end of the period. If 0, the period is still active
-    /// @param previousPeriodEnd The end of the previous period
-    function _validateBasePublications(
-        ICheckpointTracker.Checkpoint memory start,
-        ICheckpointTracker.Checkpoint memory end,
-        IPublicationFeed.PublicationHeader memory startPub,
-        IPublicationFeed.PublicationHeader memory endPub,
-        uint256 periodEnd,
-        uint256 previousPeriodEnd
-    ) private view {
-        require(publicationFeed.validateHeader(endPub, end.publicationId), "End publication hash does not match");
-        require(periodEnd == 0 || endPub.timestamp <= periodEnd, "End publication is not within the period");
-
-        require(publicationFeed.validateHeader(startPub, start.publicationId), "Start publication hash does not match");
-        require(startPub.timestamp > previousPeriodEnd, "Start publication is not within the period");
     }
 
     /// @dev Checks if a period is active based on its end timestamp
