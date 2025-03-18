@@ -66,7 +66,6 @@ interface IProverManager {
     /// @param endPublicationHeader The end publication header
     /// @param numPublications The number of publications to process. This is not implied by the start/end publication
     /// ids because there could be irrelevant publications.
-    /// @param nextPublicationHeader The next publication header. It should be after the period end
     /// @param proof Arbitrary data passed to the `verifier` contract to confirm the transition validity
     /// @param periodId The id of the period for which the proof is submitted
     function proveClosedPeriod(
@@ -75,7 +74,6 @@ interface IProverManager {
         IPublicationFeed.PublicationHeader calldata startPublicationHeader,
         IPublicationFeed.PublicationHeader calldata endPublicationHeader,
         uint256 numPublications,
-        IPublicationFeed.PublicationHeader calldata nextPublicationHeader,
         bytes calldata proof,
         uint256 periodId
     ) external;

@@ -292,7 +292,6 @@ contract ProverManager is IProposerFees, IProverManager {
         IPublicationFeed.PublicationHeader calldata startPublicationHeader,
         IPublicationFeed.PublicationHeader calldata endPublicationHeader,
         uint256 numPublications,
-        IPublicationFeed.PublicationHeader calldata nextPublicationHeader,
         bytes calldata proof,
         uint256 periodId
     ) external {
@@ -314,15 +313,14 @@ contract ProverManager is IProposerFees, IProverManager {
         require(start.publicationId == startPublicationHeader.id, "Start checkpoint publication ID mismatch");
         require(end.publicationId == endPublicationHeader.id, "End checkpoint publication ID mismatch");
 
-        _validateNextPublicationHeader(nextPublicationHeader, end.publicationId + 1, periodEnd);
-
         checkpointTracker.proveTransition(start, end, numPublications, proof);
+        balances[msg.sender] += period.fee * numPublications;
 
-        // Distribute the funds
-        uint256 newProverFees = period.fee * numPublications;
-        uint256 livenessBondReward = period.stake - _calculatePercentage(period.stake, burnedStakePercentage);
-        period.stake = 0; // the burned stake is trapped in the contract
-        balances[msg.sender] += newProverFees + livenessBondReward;
+        // Apply a burn percentage on every call to this function. Whoever proves the final publication in this period
+        // can (eventually) call `finalizeClosedPeriod` to claim the remaining stake. In practice, a single prover will
+        // likely close the whole period with one proof.
+        period.stake -= _calculatePercentage(period.stake, burnedStakePercentage);
+        period.prover = msg.sender;
     }
 
     /// @inheritdoc IProverManager
@@ -393,20 +391,6 @@ contract ProverManager is IProposerFees, IProverManager {
 
         require(publicationFeed.validateHeader(startPub, start.publicationId), "Start publication hash does not match");
         require(startPub.timestamp > previousPeriodEnd, "Start publication is not within the period");
-    }
-
-    /// @dev Validates the next publication header and ensures that it is after the period end.
-    /// @param nextPub The next publication header
-    /// @param expectedId The expected id of the next publication
-    /// @param periodEnd The end of the period
-    function _validateNextPublicationHeader(
-        IPublicationFeed.PublicationHeader memory nextPub,
-        uint256 expectedId,
-        uint256 periodEnd
-    ) private view {
-        require(nextPub.id == expectedId, "This is not the next publication");
-        require(nextPub.timestamp > periodEnd, "Next publication is not after the period end");
-        require(publicationFeed.validateHeader(nextPub, nextPub.id), "Publication hash does not match");
     }
 
     /// @dev Checks if a period is active based on its end timestamp
