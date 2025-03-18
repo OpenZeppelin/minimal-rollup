@@ -144,7 +144,7 @@ contract ProverManagerTest is Test {
         assertEq(balanceAfter, DEPOSIT_AMOUNT - INITIAL_FEE, "Publication fee not deducted properly");
     }
 
-    function test_payPublicationFee_AdvacesPeriod() public {
+    function test_payPublicationFee_AdvancesPeriod() public {
         // Deposit funds for proposer.
         vm.prank(proposer);
         proverManager.deposit{value: DEPOSIT_AMOUNT}();
@@ -159,7 +159,7 @@ contract ProverManagerTest is Test {
         // Call payPublicationFee from the inbox and check that the period has been advanced.
         vm.prank(inbox);
         vm.expectEmit();
-        emit ProverManager.NewPeriod(1);
+        emit ProverManager.NewPeriod(2);
         proverManager.payPublicationFee{value: INITIAL_FEE}(proposer, false);
     }
 
@@ -175,11 +175,11 @@ contract ProverManagerTest is Test {
 
         vm.prank(prover1);
         vm.expectEmit();
-        emit ProverManager.ProverOffer(prover1, 1, maxAllowedFee, LIVENESS_BOND);
+        emit ProverManager.ProverOffer(prover1, 2, maxAllowedFee, LIVENESS_BOND);
         proverManager.bid(maxAllowedFee);
 
-        // Check that period 1 has been created
-        ProverManager.Period memory period = proverManager.getPeriod(1);
+        // Check that period 2 has been created
+        ProverManager.Period memory period = proverManager.getPeriod(2);
 
         assertEq(period.prover, prover1, "Bid not recorded for new period");
         assertEq(period.fee, maxAllowedFee, "Offered fee not set correctly");
@@ -231,11 +231,11 @@ contract ProverManagerTest is Test {
 
         vm.prank(prover2);
         vm.expectEmit();
-        emit ProverManager.ProverOffer(prover2, 1, secondBidFee, LIVENESS_BOND);
+        emit ProverManager.ProverOffer(prover2, 2, secondBidFee, LIVENESS_BOND);
         proverManager.bid(secondBidFee);
 
         // Check that period 1 now has prover2 as the prover
-        ProverManager.Period memory period = proverManager.getPeriod(1);
+        ProverManager.Period memory period = proverManager.getPeriod(2);
         assertEq(period.prover, prover2, "Prover2 should now be the next prover");
         assertEq(period.fee, secondBidFee, "Fee should be updated to prover2's bid");
 
@@ -261,7 +261,7 @@ contract ProverManagerTest is Test {
         proverManager.bid(bidFee);
 
         // Check that period 0 now has an end time set
-        ProverManager.Period memory period = proverManager.getPeriod(0);
+        ProverManager.Period memory period = proverManager.getPeriod(1);
         assertEq(
             period.end,
             timestampBefore + SUCCESSION_DELAY,
@@ -301,7 +301,7 @@ contract ProverManagerTest is Test {
 
         uint256 pubId = header.id;
         // Capture current period stake before eviction
-        ProverManager.Period memory periodBefore = proverManager.getPeriod(0);
+        ProverManager.Period memory periodBefore = proverManager.getPeriod(1);
         uint256 stakeBefore = periodBefore.stake;
 
         // Evict the prover
@@ -316,8 +316,8 @@ contract ProverManagerTest is Test {
         );
         proverManager.evictProver(pubId, header, zeroCheckpoint);
 
-        // Verify period 0 is marked as evicted and its stake reduced
-        ProverManager.Period memory periodAfter = proverManager.getPeriod(0);
+        // Verify period 1 is marked as evicted and its stake reduced
+        ProverManager.Period memory periodAfter = proverManager.getPeriod(1);
         assertEq(periodAfter.deadline, block.timestamp + EXIT_DELAY, "Prover should be evicted");
 
         // Calculate expected incentive for the evictor
@@ -401,8 +401,8 @@ contract ProverManagerTest is Test {
         );
         proverManager.exit();
 
-        // Check that period 0 now has an end time and deadline set
-        ProverManager.Period memory period = proverManager.getPeriod(0);
+        // Check that period 1 now has an end time and deadline set
+        ProverManager.Period memory period = proverManager.getPeriod(1);
         assertEq(period.end, block.timestamp + EXIT_DELAY, "Exit did not set period end correctly");
         assertEq(period.deadline, block.timestamp + EXIT_DELAY + PROVING_WINDOW, "Proving deadline not set correctly");
     }

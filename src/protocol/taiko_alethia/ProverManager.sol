@@ -101,10 +101,20 @@ contract ProverManager is IProposerFees, IProverManager {
         publicationFeed = IPublicationFeed(_publicationFeed);
 
         // Initialize the first period with a known prover and a set fee
+        // Start at period 1 so every period has a previous one (and an implicit start timestamp)
+        // use block.timestamp - 1 as period 0's end timestamp so publications in this block are
+        // part of period 1. We assume no relevant publications occur before this contract is deployed.
+        Period storage p0 = _periods[0];
+        p0.end = p0.deadline = block.timestamp - 1;
+
+        currentPeriodId = 1;
+        emit NewPeriod(1);
+
         require(msg.value >= _config.livenessBond, "Insufficient balance for liveness bond");
-        _periods[0].prover = _initialProver;
-        _periods[0].stake = _config.livenessBond;
-        _periods[0].fee = _initialFee;
+        Period storage p1 = _periods[1];
+        p1.prover = _initialProver;
+        p1.fee = _initialFee;
+        p1.stake = _config.livenessBond;
     }
 
     /// @notice Deposit ETH into the contract. The deposit can be used both for opting in as a prover or proposer
@@ -262,7 +272,7 @@ contract ProverManager is IProposerFees, IProverManager {
         uint256 periodId
     ) external {
         Period storage period = _periods[periodId];
-        uint256 previousPeriodEnd = periodId > 0 ? _periods[periodId - 1].end : 0;
+        uint256 previousPeriodEnd = _periods[periodId - 1].end;
 
         _validateBasePublications(
             start, end, startPublicationHeader, endPublicationHeader, period.end, previousPeriodEnd
