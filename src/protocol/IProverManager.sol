@@ -12,7 +12,7 @@ interface IProverManager {
     /// @notice The current prover can signal exit to eventually pull out their liveness bond.
     function exit() external;
 
-    /// @notice If there is no active prover, start a new period and become the new prover immediately
+    /// @notice If there is no active prover, start a new period and become the new prover in the next block
     /// @param fee The per-publication fee for the new period
     /// @dev Consider the scenario:
     ///   - a prover has exited or been evicted

@@ -245,13 +245,10 @@ contract ProverManager is IProposerFees, IProverManager {
         uint256 periodId = currentPeriodId;
         Period storage period = _periods[periodId];
         require(period.prover == address(0) && period.end == 0, "No proving vacancy");
+        period.end = period.deadline = block.timestamp;
 
-        // Advance to the next period
-        currentPeriodId = ++periodId;
-        emit NewPeriod(periodId);
-
-        period = _periods[periodId];
-        _updatePeriod(period, msg.sender, fee, livenessBond);
+        Period storage nextPeriod = _periods[periodId + 1];
+        _updatePeriod(nextPeriod, msg.sender, fee, livenessBond);
     }
 
     /// @inheritdoc IProverManager
