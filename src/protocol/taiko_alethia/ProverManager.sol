@@ -297,7 +297,7 @@ contract ProverManager is IProposerFees, IProverManager {
     ) external {
         Period storage period = _periods[periodId];
         uint256 periodEnd = period.end;
-        require(block.timestamp > period.deadline, "The period is still open");
+        require(period.deadline != 0 && block.timestamp > period.deadline, "The period is still open");
 
         uint256 previousPeriodEnd = 0;
         if (periodId > 0) {
