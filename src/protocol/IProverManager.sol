@@ -58,17 +58,15 @@ interface IProverManager {
     ) external;
 
     /// @notice Returns the stake for a closed period to the prover
-    /// @dev Only needed if the period was not finalized during its last proof.
-    /// @dev This could occur if the prover did not specify a later publication (possibly because it did not exist at
-    /// the time)
     /// @param periodId The id of the period to finalize
     /// @param lastProven The last proven checkpoint. TODO: we should save the actual checkpoint (not the hash) in
     /// CheckpointTracker so we can query it directly
-    /// @param provenPublicationHeaderBytes Optional parameter if needed to demonstrate there is a proven publication
-    /// after the period
+    /// @param provenPublication A publication after the period that has been proven
+    /// @dev If there is a proven publication after the period, it implies the whole period has been proven.
+    /// @dev We assume there will always be a suitable (and timely) proven publication.
     function finalizeClosedPeriod(
         uint256 periodId,
         ICheckpointTracker.Checkpoint calldata lastProven,
-        bytes calldata provenPublicationHeaderBytes
+        IPublicationFeed.PublicationHeader calldata provenPublication
     ) external;
 }

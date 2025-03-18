@@ -296,11 +296,14 @@ contract ProverManager is IProposerFees, IProverManager {
     function finalizeClosedPeriod(
         uint256 periodId,
         ICheckpointTracker.Checkpoint calldata lastProven,
-        bytes calldata provenPublicationHeaderBytes
+        IPublicationFeed.PublicationHeader calldata provenPublication
     ) external {
         Period storage period = _periods[periodId];
-        require(_isClosed(period.end, lastProven, provenPublicationHeaderBytes), "Period not closed");
-
+        bytes32 lastProvenHash = keccak256(abi.encode(lastProven));
+        require(lastProvenHash == checkpointTracker.provenHash(), "Incorrect lastProven checkpoint");
+        require(publicationFeed.validateHeader(provenPublication, provenPublication.id), "Invalid publication header");
+        bool isClosed = lastProven.publicationId >= provenPublication.id && provenPublication.timestamp > period.end;
+        require(isClosed, "Period not closed");
         balances[period.prover] += period.stake;
         period.stake = 0;
     }
@@ -337,32 +340,6 @@ contract ProverManager is IProposerFees, IProverManager {
     /// @return _ The calculated percentage of the given numerator
     function _calculatePercentage(uint256 amount, uint256 bps) private pure returns (uint256) {
         return (amount * bps) / 10_000;
-    }
-
-    function _isClosed(uint256 periodEnd, ICheckpointTracker.Checkpoint calldata lastProven, bytes calldata headerBytes)
-        private
-        view
-        returns (bool)
-    {
-        bytes32 lastProvenHash = keccak256(abi.encode(lastProven));
-        require(lastProvenHash == checkpointTracker.provenHash(), "Incorrect lastProven checkpoint");
-
-        // Case 1: all publications are proven and the period is over
-        if (publicationFeed.getNextPublicationId() == lastProven.publicationId + 1 && block.timestamp > periodEnd) {
-            return true;
-        }
-
-        // Case 2: there is a proven publication that occurs after the period
-        IPublicationFeed.PublicationHeader memory header = abi.decode(headerBytes, (IPublicationFeed.PublicationHeader));
-        require(publicationFeed.validateHeader(header, header.id), "Invalid publication header");
-        if (lastProven.publicationId >= header.id && header.timestamp > periodEnd) {
-            return true;
-        }
-
-        // this does not necessarily imply the period is open, merely that we have not proven it to be closed
-        // notably, we do not handle the scenario where the first unproven publication is after the period
-        // that publication will eventually be proven and then Case 2 will apply
-        return false;
     }
 
     /// @dev Updates a period with prover information and transfers the liveness bond
