@@ -10,7 +10,6 @@ contract ProverManager is IProposerFees, IProverManager {
     struct Period {
         address prover;
         uint256 stake; // stake the prover locked to register
-        uint256 accumulatedFees; // the fees accumulated by proposers' publications for this period
         uint256 fee; // per-publication fee (in wei)
         uint256 end; // the end of the period(this may happen because the prover exits, is evicted or outbid)
         uint256 deadline; // the time by which the prover needs to submit a proof
@@ -149,11 +148,8 @@ contract ProverManager is IProposerFees, IProverManager {
             emit NewPeriod(periodId);
         }
 
-        uint256 requiredFee = _periods[periodId].fee;
-
-        // Deduct fee from proposer's balance and add to accumulated fees
-        balances[proposer] -= requiredFee;
-        _periods[periodId].accumulatedFees += requiredFee;
+        // Deduct fee from proposer's balance
+        balances[proposer] -= _periods[periodId].fee;
     }
 
     /// @inheritdoc IProverManager
@@ -229,7 +225,7 @@ contract ProverManager is IProposerFees, IProverManager {
 
     /// @inheritdoc IProverManager
     /// @dev The prover still has to wait for the `exitDelay` to allow other provers to bid for the role.
-    /// @dev The liveness bond and the accumulated fees can only be withdrawn once the period has been fully proven.
+    /// @dev The liveness bond can only be withdrawn once the period has been fully proven.
     function exit() external {
         Period storage period = _periods[currentPeriodId];
         address _prover = period.prover;
@@ -284,6 +280,7 @@ contract ProverManager is IProposerFees, IProverManager {
         );
 
         checkpointTracker.proveTransition(start, end, numPublications, proof);
+        balances[period.prover] += numPublications * period.fee;
 
         if (nextPublicationHeaderBytes.length > 0) {
             // This means that the prover is claiming that they have finished all their publications for the period
@@ -291,9 +288,9 @@ contract ProverManager is IProposerFees, IProverManager {
                 abi.decode(nextPublicationHeaderBytes, (IPublicationFeed.PublicationHeader));
             _validateNextPublicationHeader(nextPub, end.publicationId + 1, periodEnd);
 
-            // Finalize the period: transfer accumulated fees and stake.
-            balances[period.prover] += period.accumulatedFees + period.stake;
-            period.accumulatedFees = period.stake = 0;
+            // Finalize the period: transfer stake.
+            balances[period.prover] += period.stake;
+            period.stake = 0;
         }
     }
 
@@ -335,14 +332,9 @@ contract ProverManager is IProposerFees, IProverManager {
 
         // Distribute the funds
         uint256 newProverFees = period.fee * numPublications;
-
-        // Pay the designated prover for the work they already did
-        balances[period.prover] += period.accumulatedFees - newProverFees;
-
-        // Compensate the new prover with fees and a portion of the stake
-        _distributeStakeAndFees(period.stake, newProverFees, msg.sender);
-
-        period.accumulatedFees = period.stake = 0;
+        uint256 livenessBondReward = period.stake - _calculatePercentage(period.stake, burnedStakePercentage);
+        period.stake = 0; // the burned stake is trapped in the contract
+        balances[msg.sender] += newProverFees + livenessBondReward;
     }
 
     /// @inheritdoc IProverManager
@@ -354,8 +346,8 @@ contract ProverManager is IProposerFees, IProverManager {
         Period storage period = _periods[periodId];
         require(_isClosed(period.end, lastProven, provenPublicationHeaderBytes), "Period not closed");
 
-        balances[period.prover] += period.accumulatedFees + period.stake;
-        period.accumulatedFees = period.stake = 0;
+        balances[period.prover] += period.stake;
+        period.stake = 0;
     }
 
     /// @inheritdoc IProposerFees
@@ -441,17 +433,6 @@ contract ProverManager is IProposerFees, IProverManager {
     /// @return True if someone has already bid for the period, false otherwise
     function _isBidded(address prover) private pure returns (bool) {
         return prover != address(0);
-    }
-
-    /// @dev Distributes the stake and fees to the new prover
-    /// @dev This implementation effectively "burns" a portion of the stake by locking it in the contract forever
-    /// @param stake The stake amount to distribute
-    /// @param fees The fees to add to the prover's balance
-    /// @param prover The address of the prover to compensate
-    function _distributeStakeAndFees(uint256 stake, uint256 fees, address prover) private {
-        uint256 burnedStake = _calculatePercentage(stake, burnedStakePercentage);
-        uint256 livenessBondReward = stake - burnedStake;
-        balances[prover] += fees + livenessBondReward;
     }
 
     function _isClosed(uint256 periodEnd, ICheckpointTracker.Checkpoint calldata lastProven, bytes calldata headerBytes)
