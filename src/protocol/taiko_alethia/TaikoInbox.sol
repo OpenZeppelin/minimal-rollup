@@ -9,7 +9,7 @@ import {IDelayedInclusionStore} from "../IDelayedInclusionStore.sol";
 import {IInbox} from "../IInbox.sol";
 import {ILookahead} from "../ILookahead.sol";
 
-import {L1Query} from "./L1QueriesPublicationTime.sol";
+import {L1Query} from "./preemptive_assertions/L1QueriesPublicationTime.sol";
 
 contract TaikoInbox is IInbox {
     struct Metadata {
