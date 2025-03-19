@@ -21,7 +21,7 @@ import {LibSignal} from "../libs/LibSignal.sol";
 ///
 /// Naturally, both can develop independent markets. One as an auction for provers to bid for a period to post proofs,
 /// and the other as a market for proposers to bid for the right to propose a publication (allowing them to extract
-/// MEV).
+/// MEV or issue preconfirmations).
 abstract contract L1Rollup is IL1Rollup {
     using LibSignal for bytes32;
 
@@ -89,35 +89,29 @@ abstract contract L1Rollup is IL1Rollup {
     }
 
     /// @notice Internal version of {propose} that receives a commitment.
-    function _propose(bytes32 commitment) internal {
+    function _propose(bytes32 commitment) internal virtual {
         commitment.signal();
         emit Proposed(commitment, publication);
     }
 
     /// @inheritdoc IL1Rollup
+    ///
+    /// Consider restricting the right to prove a transition by overriding this function.
+    /// Perhaps by calling an {IProverManager} contract:
+    ///
+    /// ```solidity
+    /// function prove(bytes32 from, bytes32 target, bytes memory proof) external override {
+    ///     require(proverManager.isCurrentProver(msg.sender), "Cannot prove");
+    ///     super.prove(from, target, proof);
+    /// }
+    /// ```
     function prove(bytes32 from, bytes32 target, bytes memory proof) external virtual {
         require(isValidTransition(from, target, proof), InvalidProof());
         require(proposed(target), UnknownCommitment());
-        require(proven(from), UnprovenCommitment());
+        require(!proven(from), ProvenCommitment());
 
         _proven[toCommitment(publication)] = true;
         _latestCommitment = target;
         emit Proven(target);
-    }
-
-    /// @notice The maximum number of additional checkpoint transitions to apply in a single proof
-    /// @dev This limits the overhead required to submit a proof
-    function _maxExtraUpdates() internal pure virtual returns (uint256) {
-        return 10; // TODO: What is a reasonable number here?
-    }
-
-    function _findLastProvenCommitment(bytes32 from) private view returns (bytes32) {
-        bytes32 nextCommitment = nextCommitment(from);
-        uint256 i;
-        while (nextCommitment != 0 && _maxExtraUpdates() <= ++i) {
-            from = nextCommitment;
-            nextCommitment = nextCommitment(from);
-        }
-        return from;
     }
 }

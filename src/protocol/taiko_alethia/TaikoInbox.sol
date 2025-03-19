@@ -3,12 +3,12 @@ pragma solidity ^0.8.28;
 
 import {IBlobRefRegistry} from "../../blobs/IBlobRefRegistry.sol";
 
-import {IPublicationFeed} from "../IPublicationFeed.sol";
+import {IPublicationFeed} from "../interfaces/IPublicationFeed.sol";
 
-import {IDelayedInclusionStore} from "../IDelayedInclusionStore.sol";
-import {IInbox} from "../IInbox.sol";
-import {ILookahead} from "../ILookahead.sol";
-import {IProposerFees} from "../IProposerFees.sol";
+import {IDelayedInclusionStore} from "../interfaces/IDelayedInclusionStore.sol";
+import {IInbox} from "../interfaces/IInbox.sol";
+import {ILookahead} from "../interfaces/ILookahead.sol";
+import {IProposerFees} from "../interfaces/IProposerFees.sol";
 
 contract TaikoInbox is IInbox {
     struct Metadata {

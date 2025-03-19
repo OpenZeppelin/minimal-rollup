@@ -26,7 +26,7 @@ interface IL1Rollup {
 
     error InvalidProof();
     error UnknownCommitment();
-    error UnprovenCommitment();
+    error ProvenCommitment();
 
     /// @notice Last proven commitment. Defines the current state of the chain.
     function latestCommitment() external view returns (bytes32);

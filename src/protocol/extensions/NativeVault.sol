@@ -1,10 +1,15 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
-import {L1Rollup} from "../L1Rollup.sol";
-
-/// @dev An {L1Rollup} with support for internal ETH accounting.
-abstract contract L1RollupDepositable is L1Rollup {
+/// @dev A contract that handles accounting for native tokens.
+///
+/// Offers an simple interface to handle internal accounting of deposited native tokens.
+/// Native tokens are deposited calling the `deposit` function, and can be withdrawn using the `withdraw` function.
+///
+/// It is recommended to use this contract as a base for applications that require isolated accounting of native tokens.
+/// Example use cases include stake, liveness bonds, or any other economic mechanism that require native tokens.
+/// to be deposited and withdrawn.
+abstract contract NativeVault {
     event IncreaseBalance(address indexed user, uint256 amount);
     event ReduceBalance(address indexed user, uint256 amount);
 
@@ -12,12 +17,12 @@ abstract contract L1RollupDepositable is L1Rollup {
 
     mapping(address user => uint256 balance) private _balances;
 
-    /// @notice Deposit ETH into the contract. The deposit can be used both for opting in as a prover.
+    /// @notice Deposit native currency (i.e. msg.value) into the contract.
     function deposit() external payable virtual {
         _increaseBalance(msg.sender, msg.value);
     }
 
-    /// @notice Withdraw available (unlocked) funds.
+    /// @notice Withdraw native currency from the contract.
     function withdraw(uint256 amount) external virtual {
         _reduceBalance(msg.sender, amount);
 
@@ -27,16 +32,14 @@ abstract contract L1RollupDepositable is L1Rollup {
         assembly ("memory-safe") {
             ok := call(gas(), to, amount, 0, 0, 0, 0)
         }
-
-        emit Withdrawal(msg.sender, amount);
     }
 
-    /// @notice Common balances for proposers and provers
+    /// @notice Returns the balance of a user.
     function balances(address user) external view virtual returns (uint256) {
         return _balances[user];
     }
 
-    /// @notice Withdraw ETH from the contract
+    /// @notice Reduce the balance of a user.
     function _reduceBalance(address user, uint256 amount) internal virtual {
         if (_balances[user] < amount) {
             revert InsufficientBalance();
@@ -45,7 +48,7 @@ abstract contract L1RollupDepositable is L1Rollup {
         emit ReduceBalance(user, amount);
     }
 
-    /// @notice Increase the balance of a user
+    /// @notice Increase the balance of a user.
     function _increaseBalance(address user, uint256 amount) internal virtual {
         _balances[user] += amount;
         emit IncreaseBalance(user, amount);

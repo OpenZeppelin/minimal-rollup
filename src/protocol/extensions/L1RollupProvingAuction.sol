@@ -4,20 +4,22 @@ pragma solidity ^0.8.28;
 import {IPublicationFeed} from "../interfaces/IPublicationFeed.sol";
 
 import {LibBiddedPeriod} from "../../libs/LibBiddedPeriod.sol";
-import {L1Rollup} from "../L1Rollup.sol";
-import {L1RollupDepositable} from "./L1RollupDepositable.sol";
+import {NativeVault} from "./NativeVault.sol";
 
-/// @dev Extension that enables a proving market for state transitions of an L1 rollup.
+/// @dev Extension of {L1Rollup} that implements an Ahead of Time (AOT) Auction for proving markets.
 ///
-/// A proving market is a mechanism to allow anyone to bid for a period in which they can post proofs for state
-/// transitions. This is achieved by restricting who can call the `prove` function only to the winning bidder.
+/// Smart Contracts systems that defer the proof generation of a state transition to a later time (e.g. L2s),
+/// require a mechanism to incentivize generating and submitting these proofs. This is necessary to ensure the
+/// chain's liveness (i.e. the chain finalizes blocks in a timely manner).
 ///
-/// The market is designed as an Inverse English Auction, where provers can {bid} for the next period and the lowest
-/// bid wins. The winning prover can then post proofs for state transitions within the period, ending after either
-/// a) a deadline without submitting a proof is reached, or b) a delay after the prover calls `exit`.
+/// This contract proposes a design for a proving market that incentivizes the generation of proofs for state
+/// transitions by letting provers to bid for a _period_ in which they can post proofs. Proposers can bid for the
+/// next period, and the lowest bid wins. The winning prover can then post proofs for state transitions within the
+/// period, ending after a `exitDelay` following either
 ///
-/// Provers can be evicted after a) by calling `evictProver`.
-contract L1RollupProvingMarket is L1Rollup, L1RollupDepositable {
+/// a) a call to `exit` by the prover, or
+/// b) a call to `evictProver` after `provingDeadline` has passed.
+contract L1RollupProvingAuction is NativeVault {
     using LibBiddedPeriod for LibBiddedPeriod.BiddedPeriod;
 
     event ProverOffer(address indexed proposer, uint256 periodStart, uint256 fee);
@@ -30,8 +32,8 @@ contract L1RollupProvingMarket is L1Rollup, L1RollupDepositable {
     error PeriodEnded();
     error RecentPublication();
 
-    Period[] private _periods;
-    mapping(bytes32 commitment => uint256) private _publishedAt;
+    LibBiddedPeriod.BiddedPeriod[] private _periods;
+    mapping(bytes32 commitment => uint256) private _proposedAt;
 
     /// @notice Current proving period. Defines who can post proofs.
     function currentPeriodId() public view virtual returns (uint256) {
@@ -80,7 +82,7 @@ contract L1RollupProvingMarket is L1Rollup, L1RollupDepositable {
     function feeEvictionSlashingPercentage(uint256 amount) public view virtual returns (uint256) {
         uint256 bp = evictionSlashingPercentage(amount, bps);
         require((amount * bps) >= 10_000);
-        return amount * bps / 10_000;
+        return (amount * bps) / 10_000;
     }
 
     function propose(bytes memory publication) external virtual override {
@@ -103,7 +105,7 @@ contract L1RollupProvingMarket is L1Rollup, L1RollupDepositable {
     }
 
     function _propose(bytes32 commitment) internal virtual override {
-        _publishedAt[commitment] = block.timestamp;
+        _proposedAt[commitment] = block.timestamp;
         super._propose(commitment);
     }
 
@@ -122,16 +124,16 @@ contract L1RollupProvingMarket is L1Rollup, L1RollupDepositable {
     }
 
     function bid(uint256 offeredFee) external {
-        uint256 currentPeriod = currentPeriodId();
-        LibBiddedPeriod.BiddedPeriod storage currentPeriod = _periods[currentPeriod];
+        uint256 _currentPeriodId = currentPeriodId();
+        LibBiddedPeriod.BiddedPeriod storage _currentPeriod = _periods[_currentPeriodId];
         LibBiddedPeriod.BiddedPeriod storage nextPeriod =
-            _commitLivenessBondForNextPeriod(_periods[currentPeriod + 1], msg.sender);
+            _commitLivenessBondForNextPeriod(_periods[_currentPeriodId + 1], msg.sender);
         uint256 requiredMaxFee;
 
-        if (currentPeriod.isActive()) {
+        if (_currentPeriod.isActive()) {
             // If the period is still active the bid has to be lower
-            _validateOfferedFee(currentPeriod, offeredFee);
-            currentPeriod.scheduleStartAfterDelayWithDeadline(successionDelay(), provingDeadline());
+            _validateOfferedFee(_currentPeriod, offeredFee);
+            _currentPeriod.scheduleStartAfterDelayWithDeadline(successionDelay(), provingDeadline());
         } else if (nextPeriod.isBidded()) {
             // If there's already a bid for the next period the bid has to be lower
             _validateOfferedFee(nextPeriod, offeredFee);
@@ -143,10 +145,10 @@ contract L1RollupProvingMarket is L1Rollup, L1RollupDepositable {
         nextPeriod.prover = msg.sender;
         nextPeriod.fee = offeredFee;
 
-        emit ProverOffer(msg.sender, currentPeriod + 1, offeredFee);
+        emit ProverOffer(msg.sender, _currentPeriodId + 1, offeredFee);
     }
 
-    function _validateOfferedFee(LibBiddedPeriod.BiddedPeriod storage period, offeredFee)
+    function _validateOfferedFee(LibBiddedPeriod.BiddedPeriod storage period, uint256 offeredFee)
         internal
         view
         override
@@ -168,17 +170,14 @@ contract L1RollupProvingMarket is L1Rollup, L1RollupDepositable {
 
     function evictProver(uint256 publicationId, bytes memory publication) external {
         bytes32 commitment = toCommitment(publication);
-        uint256 publicationTimestamp = _publishedAt[commitment];
-        require(publicationTimestamp + livenessWindow() < block.timestamp, RecentPublication());
+        require(_proposedAt[commitment] + livenessWindow() < block.timestamp, RecentPublication());
 
         // Reward the evictor and slash the prover
         uint256 evictorIncentive = feeEvictionSlashingPercentage(period.stake);
         balances[msg.sender] += evictorIncentive;
         period.stake -= evictorIncentive;
 
-        emit ProverEvicted(
-            period.prover, msg.sender, period.scheduleEndAfterDelayWithDeadline(exitDelay(), 0)
-        );
+        emit ProverEvicted(period.prover, msg.sender, period.scheduleEndAfterDelayWithDeadline(exitDelay(), 0));
     }
 
     /// @dev Commits the liveness bond for the next period from the prover's balance.
