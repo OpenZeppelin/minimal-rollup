@@ -24,7 +24,7 @@ struct L1Query {
 /// mechanism.
 /// @dev The queries will be called from the TaikoInbox contract, which will save a hash of the queries and results as a
 /// publication attribute.
-contract L1QueriesPublicationTime is PreemptiveProvableAssertionsBase {
+abstract contract L1QueriesPublicationTime is PreemptiveProvableAssertionsBase {
     bytes32 constant DOMAIN_SEPARATOR = keccak256("L1L1QueriesPublicationTime");
 
     function assertL1QueryResults(L1Query[] calldata queries, uint256[] calldata results) public onlyAnchor {

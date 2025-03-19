@@ -21,6 +21,10 @@ abstract contract PreemptiveProvableAssertionsBase {
 
     address immutable TAIKO_ANCHOR;
 
+    constructor(address taikoAnchor) {
+        TAIKO_ANCHOR = taikoAnchor;
+    }
+
     /// @notice Can only be called by the TaikoAnchor contract
     /// @dev The Taiko state-transition function guarantees that the TaikoAnchor.anchor function is called as the first
     /// transaction (in the first L2 block) at the start of every publication.
