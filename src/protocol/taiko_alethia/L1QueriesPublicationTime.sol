@@ -42,8 +42,7 @@ contract L1QueriesPublicationTime is PreemptiveProvableAssertionsBase {
     function proveL1QueryResults(bytes32 inboxAttribute, bytes calldata proof) public onlyAnchor {
         require(inboxAttribute == keccak256(proof), "Proof does not correspond to executed queries");
         (L1Query[] memory queries, uint256[] memory results) = abi.decode(proof, (L1Query[], uint256[]));
-        uint256 nQueries = queries.length; // We know this matches results.length because we validated the
-            // inboxAttribute
+        uint256 nQueries = queries.length; // We know this matches results.length because we validated inboxAttribute
         bytes32 assertionId;
         for (uint256 i = 0; i < nQueries; i++) {
             assertionId = keccak256(abi.encode(DOMAIN_SEPARATOR, queries[i]));
