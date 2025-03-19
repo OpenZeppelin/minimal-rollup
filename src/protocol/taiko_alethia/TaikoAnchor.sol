@@ -1,11 +1,14 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
+import {PreemptiveProvableAssertions} from "./preemptive_assertions/PreemptiveProvableAssertions.sol";
+
 contract TaikoAnchor {
     event Anchor(uint256 publicationId, uint256 anchorBlockId, bytes32 anchorBlockHash, bytes32 parentGasUsed);
 
     uint256 public immutable fixedBaseFee;
     address public immutable permittedSender; // 0x0000777735367b36bC9B61C50022d9D0700dB4Ec
+    PreemptiveProvableAssertions public immutable preemptiveAssertions;
 
     uint256 public lastAnchorBlockId;
     uint256 public lastPublicationId;
@@ -19,10 +22,11 @@ contract TaikoAnchor {
     }
 
     // This constructor is only used in test as the contract will be pre-deployed in the L2 genesis
-    constructor(uint256 _fixedBaseFee, address _permittedSender) {
+    constructor(uint256 _fixedBaseFee, address _permittedSender, PreemptiveProvableAssertions _preemptiveAssertions) {
         require(_fixedBaseFee > 0, "fixedBaseFee must be greater than 0");
         fixedBaseFee = _fixedBaseFee;
         permittedSender = _permittedSender;
+        preemptiveAssertions = _preemptiveAssertions;
 
         uint256 parentId = block.number - 1;
         blockHashes[parentId] = blockhash(parentId);
@@ -38,10 +42,14 @@ contract TaikoAnchor {
     /// @param _anchorBlockId The latest L1 block known to the L2 blocks in this publication
     /// @param _anchorBlockHash The block hash of the L1 anchor block
     /// @param _parentGasUsed The gas used in the parent block
-    function anchor(uint256 _publicationId, uint256 _anchorBlockId, bytes32 _anchorBlockHash, bytes32 _parentGasUsed)
-        external
-        onlyFromPermittedSender
-    {
+    /// @param _assertions Any data that should be passed to the preemptiveAssertions contract
+    function anchor(
+        uint256 _publicationId,
+        uint256 _anchorBlockId,
+        bytes32 _anchorBlockHash,
+        bytes32 _parentGasUsed,
+        bytes calldata _assertions
+    ) external onlyFromPermittedSender {
         // Make sure this function can only succeed once per publication
         require(_publicationId > lastPublicationId, "publicationId too small");
         lastPublicationId = _publicationId;
@@ -66,6 +74,8 @@ contract TaikoAnchor {
         circularBlocksHash = newHash;
 
         _verifyBaseFee(_parentGasUsed);
+
+        preemptiveAssertions.registerAssertions(_assertions);
 
         emit Anchor(_publicationId, _anchorBlockId, _anchorBlockHash, _parentGasUsed);
     }

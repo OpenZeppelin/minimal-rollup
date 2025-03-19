@@ -27,7 +27,15 @@ struct L1Query {
 abstract contract L1QueriesPublicationTime is PreemptiveProvableAssertionsBase {
     bytes32 constant DOMAIN_SEPARATOR = keccak256("L1L1QueriesPublicationTime");
 
-    function assertL1QueryResults(L1Query[] calldata queries, uint256[] calldata results) public onlyAnchor {
+    /// @notice Can be called by any L2 contract to get the result of a preemptive L1 Query
+    /// that will eventually be proven at publication time
+    function getL1QueryResult(L1Query calldata query) public view returns (uint256) {
+        bytes32 assertionId = keccak256(abi.encode(DOMAIN_SEPARATOR, query));
+        require(exists[assertionId], "Query result has not been asserted");
+        return value[assertionId];
+    }
+
+    function _assertL1QueryResults(L1Query[] memory queries, uint256[] memory results) internal {
         uint256 nQueries = queries.length;
         require(nQueries == results.length, "Inconsistent array lengths");
         bytes32 assertionId;
@@ -39,7 +47,7 @@ abstract contract L1QueriesPublicationTime is PreemptiveProvableAssertionsBase {
 
     /// @param inboxAttribute the attribute computed in TaikoInbox (on L1). It indicates which queries were actually
     /// executed and their results
-    function proveL1QueryResults(bytes32 inboxAttribute, bytes calldata proof) public onlyAnchor {
+    function _proveL1QueryResults(bytes32 inboxAttribute, bytes calldata proof) internal {
         require(inboxAttribute == keccak256(proof), "Proof does not correspond to executed queries");
         (L1Query[] memory queries, uint256[] memory results) = abi.decode(proof, (L1Query[], uint256[]));
         uint256 nQueries = queries.length; // We know this matches results.length because we validated inboxAttribute
@@ -49,13 +57,5 @@ abstract contract L1QueriesPublicationTime is PreemptiveProvableAssertionsBase {
             require(value[assertionId] == results[i], "Result does not match assertion");
             _resolve(assertionId);
         }
-    }
-
-    /// @notice Can be called by any L2 contract to get the result of a preemptive L1 Query
-    /// that will eventually be proven at publication time
-    function getL1QueryResult(L1Query calldata query) public view returns (uint256) {
-        bytes32 assertionId = keccak256(abi.encode(DOMAIN_SEPARATOR, query));
-        require(exists[assertionId], "Query result has not been asserted");
-        return value[assertionId];
     }
 }
