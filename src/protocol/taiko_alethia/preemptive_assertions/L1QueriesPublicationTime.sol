@@ -35,12 +35,8 @@ abstract contract L1QueriesPublicationTime is PreemptiveProvableAssertionsBase {
         return value[assertionId];
     }
 
-    function _assertL1QueryResults(L1Query[] memory queries, uint256[] memory results) internal {
-        uint256 nQueries = queries.length;
-        require(nQueries == results.length, "Inconsistent array lengths");
-        for (uint256 i = 0; i < nQueries; i++) {
-            _assert(_assertionId(queries[i]), results[i]);
-        }
+    function assertL1QueryResult(L1Query memory query, uint256 result) public onlyAsserter {
+        _assert(_assertionId(query), result);
     }
 
     function _proveL1QueryResults(L1Query[] memory queries, uint256[] memory results) internal {

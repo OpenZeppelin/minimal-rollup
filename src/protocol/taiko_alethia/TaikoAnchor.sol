@@ -42,13 +42,14 @@ contract TaikoAnchor {
     /// @param _anchorBlockId The latest L1 block known to the L2 blocks in this publication
     /// @param _anchorBlockHash The block hash of the L1 anchor block
     /// @param _parentGasUsed The gas used in the parent block
-    /// @param _assertions Any data that should be passed to the preemptiveAssertions contract
+    /// @param _asserter An address that can make preemptive assertions during this publication that the proposer will
+    /// need to prove at publication time
     function anchor(
         uint256 _publicationId,
         uint256 _anchorBlockId,
         bytes32 _anchorBlockHash,
         bytes32 _parentGasUsed,
-        bytes calldata _assertions
+        address _asserter
     ) external onlyFromPermittedSender {
         // Make sure this function can only succeed once per publication
         require(_publicationId > lastPublicationId, "publicationId too small");
@@ -75,20 +76,20 @@ contract TaikoAnchor {
 
         _verifyBaseFee(_parentGasUsed);
 
-        preemptiveAssertions.registerAssertions(_assertions);
+        preemptiveAssertions.setAsserter(_asserter);
 
         emit Anchor(_publicationId, _anchorBlockId, _anchorBlockHash, _parentGasUsed);
     }
 
     /// @dev The node software will guarantee and the prover will verify the following:
     /// 1. This function is transacted as the last transaction in the last L2 block derived from the same publication;
-    /// 2. This function will not revert
-    /// 3. The attributesHash parameter matches the corresponding field in the publication header
+    /// 2. This function's gas limit is a fixed value;
+    /// 3. This function will not revert
+    /// 4. The attributesHash parameter matches the corresponding field in the publication header
     /// @param attributesHash the field in the publication header that represents all the attributes
     /// @param proofs Any data that should be passed to the preemptiveAssertions contract
     function endPublication(bytes32 attributesHash, bytes calldata proofs) external onlyFromPermittedSender {
         preemptiveAssertions.resolveAssertions(attributesHash, proofs);
-        require(preemptiveAssertions.isResolved(), "Some assertions were not resolved");
     }
 
     /// @dev Calculates the aggregated ancestor block hash for the given block ID
