@@ -25,6 +25,7 @@ contract DelayedInclusionStore is IDelayedInclusionStore {
     // Pointer to the first unprocessed element
     uint256 private head;
 
+    /// @notice The minimum amount of time a delayed publication needs to wait in the queue to be included expressed in seconds
     uint256 public immutable inclusionDelay;
 
     address public immutable inbox;
