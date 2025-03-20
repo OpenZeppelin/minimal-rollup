@@ -25,6 +25,8 @@ import {LibSignal} from "../libs/LibSignal.sol";
 abstract contract Rollup is IRollup {
     using LibSignal for bytes32;
 
+    event SignalSent(bytes32 indexed value);
+
     mapping(bytes checkpoint => bool) private _proven;
     bytes32 private _latestCheckpoint;
 
@@ -39,12 +41,12 @@ abstract contract Rollup is IRollup {
     }
 
     /// @inheritdoc IRollup
-    function proposed(bytes calldata publication) external view override returns (bool) {
+    function proposed(bytes calldata publication) public view override returns (bool) {
         return signalSent(toCheckpoint(publication));
     }
 
     /// @inheritdoc IRollup
-    function proven(bytes calldata publication) external view returns (bool) {
+    function proven(bytes calldata publication) public view returns (bool) {
         return _proven[toCheckpoint(publication)];
     }
 
@@ -59,7 +61,7 @@ abstract contract Rollup is IRollup {
     /// @inheritdoc IRollup
     function toCheckpoint(bytes memory publication) public view virtual returns (bytes32);
 
-    /// @inheritdoc IRollup
+    /// @dev See {IRollup-propose}.
     ///
     /// Consider restricting the right to propose a publication by overriding this function.
     /// Perhaps by calling an {ILookahead} contract:
@@ -73,7 +75,7 @@ abstract contract Rollup is IRollup {
     function propose(bytes memory publication) external virtual {
         bytes32 checkpoint = toCheckpoint(publication);
         // TODO: Is it really convenient to send the publication to another contract? e.g. PublicationFeed
-        _propose(checkpoint);
+        _propose(checkpoint, publication);
     }
 
     /// @inheritdoc IRollup
@@ -84,12 +86,12 @@ abstract contract Rollup is IRollup {
     }
 
     /// @notice Internal version of {propose} that receives a checkpoint.
-    function _propose(bytes32 checkpoint) internal virtual {
+    function _propose(bytes32 checkpoint, bytes memory publication) internal virtual {
         checkpoint.signal();
         emit Proposed(checkpoint, publication);
     }
 
-    /// @inheritdoc IRollup
+    /// @dev See {IRollup-prove}.
     ///
     /// Consider restricting the right to prove a transition by overriding this function.
     function prove(bytes32 from, bytes32 target, bytes memory proof) external virtual {
@@ -97,7 +99,7 @@ abstract contract Rollup is IRollup {
         require(proposed(target), UnknownCheckpoint());
         require(!proven(from), ProvenCheckpoint());
 
-        _proven[toCheckpoint(publication)] = true;
+        _proven[target] = true;
         _latestCheckpoint = target;
         emit Proven(target);
     }

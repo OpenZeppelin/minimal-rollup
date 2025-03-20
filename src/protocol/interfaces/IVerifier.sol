@@ -1,15 +1,14 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.28;
+pragma solidity ^0.8.24;
 
-/// @dev Interface for a verifier contract that handles proof verification.
 interface IVerifier {
-    error InvalidProof();
-
+    /// @notice Verifies a proof of a checkpoint between two publication hashes
     function verifyProof(
-        bytes32, /* startPublicationHash */
-        bytes32, /* endPublicationHash */
-        bytes32, /* startCheckPoint */
-        bytes32, /* endCheckPoint */
-        bytes calldata /* proof */
+        bytes32 startPublicationHash,
+        bytes32 endPublicationHash,
+        bytes32 startCheckPoint,
+        bytes32 endCheckPoint,
+        uint256 numPublications,
+        bytes calldata proof
     ) external;
 }

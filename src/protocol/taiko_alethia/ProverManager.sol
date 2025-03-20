@@ -10,20 +10,21 @@ contract ProverManager is IProposerFees, IProverManager {
     struct Period {
         address prover;
         uint256 stake; // stake the prover locked to register
-        uint256 accumulatedFees; // the fees accumulated by proposers' publications for this period
         uint256 fee; // per-publication fee (in wei)
         uint256 end; // the end of the period(this may happen because the prover exits, is evicted or outbid)
         uint256 deadline; // the time by which the prover needs to submit a proof
+        bool pastDeadline; // wheter the proof came after the deadline, we set this to true when burning the stake of
+            // the original prover
     }
 
     /// @dev This struct is necessary to pass it to the constructor and avoid stack too deep errors
     /// When some values in the contract stop being immutable, we may change this to be more efficient
     struct ProverManagerConfig {
-        uint256 minUndercutPercentage;
+        uint256 maxBidPercentage;
         uint256 livenessWindow;
         uint256 successionDelay;
         uint256 exitDelay;
-        uint256 provingDeadline;
+        uint256 provingWindow;
         uint256 livenessBond;
         uint256 evictorIncentivePercentage;
         uint256 burnedStakePercentage;
@@ -34,11 +35,12 @@ contract ProverManager is IProposerFees, IProverManager {
     IPublicationFeed public immutable publicationFeed;
 
     // -- Configuration parameters --
-    /// @notice The minimum percentage by which the new bid has to be lower than the current best value
+    /// @notice The maximum percentage of the previous bid a prover can offer and still have a successful bid
     /// @dev This value needs to be expressed in basis points (4 decimal places)
     /// @dev This is used to prevent gas wars where the new prover undercuts the current prover by just a few wei
-    uint256 public immutable minUndercutPercentage;
-    /// @notice The time window after which a publication is considered old enough and if the prover hasn't poven it yet
+    uint256 public immutable maxBidPercentage;
+    /// @notice The time window after which a publication is considered old enough and if the prover hasn't proven it
+    /// yet
     /// can be evicted
     uint256 public immutable livenessWindow;
     /// @notice The delay after which the next prover becomes active
@@ -50,8 +52,8 @@ contract ProverManager is IProposerFees, IProverManager {
     /// @dev The reason we don't allow this to happen immediately is to allow enough time for other provers to bid
     /// and to prepare their hardware
     uint256 public immutable exitDelay;
-    ///@notice The deadline for a prover to submit a valid proof after their period ends
-    uint256 public immutable provingDeadline;
+    ///@notice The time window for a prover to submit a valid proof after their period ends
+    uint256 public immutable provingWindow;
     /// @notice The minimum stake required to be a prover
     /// @dev This should be enough to cover the cost of a new prover if the current prover becomes inactive
     uint256 public immutable livenessBond;
@@ -88,11 +90,11 @@ contract ProverManager is IProposerFees, IProverManager {
         uint256 _initialFee,
         ProverManagerConfig memory _config
     ) payable {
-        minUndercutPercentage = _config.minUndercutPercentage;
+        maxBidPercentage = _config.maxBidPercentage;
         livenessWindow = _config.livenessWindow;
         successionDelay = _config.successionDelay;
         exitDelay = _config.exitDelay;
-        provingDeadline = _config.provingDeadline;
+        provingWindow = _config.provingWindow;
         livenessBond = _config.livenessBond;
         evictorIncentivePercentage = _config.evictorIncentivePercentage;
         burnedStakePercentage = _config.burnedStakePercentage;
@@ -101,10 +103,20 @@ contract ProverManager is IProposerFees, IProverManager {
         publicationFeed = IPublicationFeed(_publicationFeed);
 
         // Initialize the first period with a known prover and a set fee
+        // Start at period 1 so every period has a previous one (and an implicit start timestamp)
+        // use block.timestamp - 1 as period 0's end timestamp so publications in this block are
+        // part of period 1. We assume no relevant publications occur before this contract is deployed.
+        Period storage p0 = _periods[0];
+        p0.end = p0.deadline = block.timestamp - 1;
+
+        currentPeriodId = 1;
+        emit NewPeriod(1);
+
         require(msg.value >= _config.livenessBond, "Insufficient balance for liveness bond");
-        _periods[0].prover = _initialProver;
-        _periods[0].stake = _config.livenessBond;
-        _periods[0].fee = _initialFee;
+        Period storage p1 = _periods[1];
+        p1.prover = _initialProver;
+        p1.fee = _initialFee;
+        p1.stake = _config.livenessBond;
     }
 
     /// @notice Deposit ETH into the contract. The deposit can be used both for opting in as a prover or proposer
@@ -123,6 +135,7 @@ contract ProverManager is IProposerFees, IProverManager {
         assembly ("memory-safe") {
             ok := call(gas(), to, amount, 0, 0, 0, 0)
         }
+        require(ok, "Withdraw failed");
 
         emit Withdrawal(msg.sender, amount);
     }
@@ -138,20 +151,17 @@ contract ProverManager is IProposerFees, IProverManager {
             _deposit(proposer, msg.value);
         }
 
-        uint256 _currentPeriod = currentPeriodId;
+        uint256 periodId = currentPeriodId;
 
-        uint256 periodEnd = _periods[_currentPeriod].end;
+        uint256 periodEnd = _periods[periodId].end;
         if (periodEnd != 0 && block.timestamp > periodEnd) {
             // Advance to the next period
-            currentPeriodId = ++_currentPeriod;
-            emit NewPeriod(_currentPeriod);
+            currentPeriodId = ++periodId;
+            emit NewPeriod(periodId);
         }
 
-        uint256 requiredFee = _periods[_currentPeriod].fee;
-
-        // Deduct fee from proposer's balance and add to accumulated fees
-        balances[proposer] -= requiredFee;
-        _periods[_currentPeriod].accumulatedFees += requiredFee;
+        // Deduct fee from proposer's balance
+        balances[proposer] -= _periods[periodId].fee;
     }
 
     /// @inheritdoc IProverManager
@@ -159,28 +169,25 @@ contract ProverManager is IProposerFees, IProverManager {
     /// @dev The current best price may be the current prover's fee or the fee of the next bid, depending on a few
     /// conditions.
     function bid(uint256 offeredFee) external {
-        uint256 _livenessBond = livenessBond;
-        require(balances[msg.sender] >= _livenessBond, "Insufficient balance for liveness bond");
-
         uint256 currentPeriod = currentPeriodId;
         Period storage _currentPeriod = _periods[currentPeriod];
         Period storage _nextPeriod = _periods[currentPeriod + 1];
         uint256 requiredMaxFee;
-        if (_isPeriodActive(_currentPeriod.end)) {
+        if (_currentPeriod.end == 0) {
             // If the period is still active the bid has to be lower
             uint256 currentFee = _currentPeriod.fee;
-            requiredMaxFee = currentFee - _calculatePercentage(currentFee, minUndercutPercentage);
+            requiredMaxFee = _calculatePercentage(currentFee, maxBidPercentage);
             require(offeredFee <= requiredMaxFee, "Offered fee not low enough");
 
             uint256 periodEnd = block.timestamp + successionDelay;
             _currentPeriod.end = periodEnd;
-            _currentPeriod.deadline = periodEnd + provingDeadline;
+            _currentPeriod.deadline = periodEnd + provingWindow;
         } else {
             address _nextProverAddress = _nextPeriod.prover;
-            if (_isBidded(_nextProverAddress)) {
+            if (_nextProverAddress != address(0)) {
                 // If there's already a bid for the next period the bid has to be lower
                 uint256 nextFee = _nextPeriod.fee;
-                requiredMaxFee = nextFee - _calculatePercentage(nextFee, minUndercutPercentage);
+                requiredMaxFee = _calculatePercentage(nextFee, maxBidPercentage);
                 require(offeredFee <= requiredMaxFee, "Offered fee not low enough");
 
                 // Refund the liveness bond to the losing bid
@@ -189,10 +196,8 @@ contract ProverManager is IProposerFees, IProverManager {
         }
 
         // Record the next period info
-        _nextPeriod.prover = msg.sender;
-        _nextPeriod.fee = offeredFee;
-        _nextPeriod.stake = _livenessBond;
-        balances[msg.sender] -= _livenessBond;
+        uint256 _livenessBond = livenessBond;
+        _updatePeriod(_nextPeriod, msg.sender, offeredFee, _livenessBond);
 
         emit ProverOffer(msg.sender, currentPeriod + 1, offeredFee, _livenessBond);
     }
@@ -200,16 +205,22 @@ contract ProverManager is IProposerFees, IProverManager {
     /// @inheritdoc IProverManager
     /// @dev This can be called by anyone, and they get `evictorIncentivePercentage` of the liveness bond as an
     /// incentive.
-    function evictProver(uint256 publicationId, IPublicationFeed.PublicationHeader calldata publicationHeader)
-        external
-    {
-        require(publicationFeed.validateHeader(publicationHeader, publicationId), "Publication hash does not match");
+    function evictProver(
+        IPublicationFeed.PublicationHeader calldata publicationHeader,
+        ICheckpointTracker.Checkpoint calldata lastProven
+    ) external {
+        require(publicationFeed.validateHeader(publicationHeader), "Publication hash does not match");
 
         uint256 publicationTimestamp = publicationHeader.timestamp;
         require(publicationTimestamp + livenessWindow < block.timestamp, "Publication is not old enough");
 
-        uint256 periodEnd = block.timestamp + exitDelay;
         Period storage period = _periods[currentPeriodId];
+        require(period.end == 0, "Proving period is not active");
+
+        _confirmLastProvenCheckpoint(lastProven);
+        require(publicationHeader.id > lastProven.publicationId, "Publication has been proven");
+
+        uint256 periodEnd = block.timestamp + exitDelay;
         // We use this to mark the prover as evicted
         period.deadline = periodEnd;
         period.end = periodEnd;
@@ -224,7 +235,7 @@ contract ProverManager is IProposerFees, IProverManager {
 
     /// @inheritdoc IProverManager
     /// @dev The prover still has to wait for the `exitDelay` to allow other provers to bid for the role.
-    /// @dev The liveness bond and the accumulated fees can only be withdrawn once the period has been fully proven.
+    /// @dev The liveness bond can only be withdrawn once the period has been fully proven.
     function exit() external {
         Period storage period = _periods[currentPeriodId];
         address _prover = period.prover;
@@ -232,7 +243,7 @@ contract ProverManager is IProposerFees, IProverManager {
         require(period.end == 0, "Prover already exited");
 
         uint256 periodEnd = block.timestamp + exitDelay;
-        uint256 _provingDeadline = periodEnd + provingDeadline;
+        uint256 _provingDeadline = periodEnd + provingWindow;
         period.end = periodEnd;
         period.deadline = _provingDeadline;
 
@@ -240,99 +251,79 @@ contract ProverManager is IProposerFees, IProverManager {
     }
 
     /// @inheritdoc IProverManager
-    function proveOpenPeriod(
-        ICheckpointTracker.Checkpoint calldata start,
-        ICheckpointTracker.Checkpoint calldata end,
-        IPublicationFeed.PublicationHeader calldata startPublicationHeader,
-        IPublicationFeed.PublicationHeader calldata endPublicationHeader,
-        bytes calldata nextPublicationHeaderBytes,
-        bytes calldata proof,
-        uint256 periodId
-    ) external {
+    function claimProvingVacancy(uint256 fee) external {
+        uint256 periodId = currentPeriodId;
         Period storage period = _periods[periodId];
-        uint256 periodEnd = period.end;
-        require(period.deadline == 0 || block.timestamp <= period.deadline, "Deadline has passed");
+        require(period.prover == address(0) && period.end == 0, "No proving vacancy");
+        period.end = period.deadline = block.timestamp;
 
-        uint256 previousPeriodEnd = 0;
-        if (periodId > 0) {
-            Period storage previousPeriod = _periods[periodId - 1];
-            previousPeriodEnd = previousPeriod.end;
-        }
-
-        _validateBasePublications(
-            start, end, startPublicationHeader, endPublicationHeader, periodEnd, previousPeriodEnd
-        );
-
-        checkpointTracker.proveTransition(start, end, proof);
-
-        if (nextPublicationHeaderBytes.length > 0) {
-            // This means that the prover is claiming that they have finished all their publications for the period
-            IPublicationFeed.PublicationHeader memory nextPub =
-                abi.decode(nextPublicationHeaderBytes, (IPublicationFeed.PublicationHeader));
-            _validateNextPublicationHeader(nextPub, end.publicationId + 1, periodEnd);
-
-            // Finalize the period: transfer accumulated fees and stake.
-            uint256 accumulatedFees = period.accumulatedFees;
-            uint256 stake = period.stake;
-            balances[period.prover] += accumulatedFees + stake;
-        }
+        Period storage nextPeriod = _periods[periodId + 1];
+        _updatePeriod(nextPeriod, msg.sender, fee, livenessBond);
     }
 
     /// @inheritdoc IProverManager
-    /// @dev This function pays the offender prover for the work they already did, and distributes remaining fees and a
-    /// portion of the liveness bond to the new prover.
-    /// @dev A portion of the liveness bond is burned by locking it in the contract forever.
-    function proveClosedPeriod(
+    function prove(
         ICheckpointTracker.Checkpoint calldata start,
         ICheckpointTracker.Checkpoint calldata end,
-        IPublicationFeed.PublicationHeader[] calldata publicationHeadersToProve,
-        IPublicationFeed.PublicationHeader calldata nextPublicationHeader,
+        IPublicationFeed.PublicationHeader calldata firstPub,
+        IPublicationFeed.PublicationHeader calldata lastPub,
+        uint256 numPublications,
         bytes calldata proof,
         uint256 periodId
     ) external {
         Period storage period = _periods[periodId];
-        uint256 periodEnd = period.end;
-        require(block.timestamp > period.deadline, "The period is still open");
+        uint256 previousPeriodEnd = _periods[periodId - 1].end;
 
-        uint256 previousPeriodEnd = 0;
-        if (periodId > 0) {
-            Period storage previousPeriod = _periods[periodId - 1];
-            previousPeriodEnd = previousPeriod.end;
+        require(publicationFeed.validateHeader(lastPub), "Last publication does not exist");
+        require(end.publicationId == lastPub.id, "Last publication does not match end checkpoint");
+        require(period.end == 0 || lastPub.timestamp <= period.end, "Last publication is after the period");
+
+        require(publicationFeed.validateHeader(firstPub), "First publication does not exist");
+        require(start.publicationId + 1 == firstPub.id, "First publication not immediately after start checkpoint");
+        require(firstPub.timestamp > previousPeriodEnd, "First publication is before the period");
+
+        checkpointTracker.proveTransition(start, end, numPublications, proof);
+
+        bool isClosed = block.timestamp > period.deadline && period.deadline != 0;
+        if (isClosed) {
+            period.prover = msg.sender;
+            if (!period.pastDeadline) {
+                // The first time this is called burn a % of the stake. Whoever proves the final publication in this
+                // period can (eventually) call `finalizeClosedPeriod` to claim the remaining stake. In practice, a
+                // single
+                // prover will likely close the whole period with one proof.
+                period.stake -= _calculatePercentage(period.stake, burnedStakePercentage);
+                period.pastDeadline = true;
+            }
         }
-        uint256 numPubs = publicationHeadersToProve.length;
-        IPublicationFeed.PublicationHeader memory startPub = publicationHeadersToProve[0];
-        IPublicationFeed.PublicationHeader memory endPub = publicationHeadersToProve[numPubs - 1];
+        balances[period.prover] += numPublications * period.fee;
+    }
 
-        _validatePublicationChain(publicationHeadersToProve);
+    /// @inheritdoc IProverManager
+    function finalizeClosedPeriod(
+        uint256 periodId,
+        ICheckpointTracker.Checkpoint calldata lastProven,
+        IPublicationFeed.PublicationHeader calldata provenPublication
+    ) external {
+        _confirmLastProvenCheckpoint(lastProven);
+        require(publicationFeed.validateHeader(provenPublication), "Invalid publication header");
+        require(lastProven.publicationId >= provenPublication.id, "Publication must be proven");
 
-        // Ensure that publications are inside the period
-        require(endPub.timestamp < periodEnd, "End publication is not within the period");
-        require(startPub.timestamp > previousPeriodEnd, "Start publication is not within the period");
-
-        // Ensure that checkpoints actually match the publications
-        require(start.publicationId == startPub.id, "Start checkpoint publication ID mismatch");
-        require(end.publicationId == endPub.id, "End checkpoint publication ID mismatch");
-
-        _validateNextPublicationHeader(nextPublicationHeader, end.publicationId + 1, periodEnd);
-
-        checkpointTracker.proveTransition(start, end, proof);
-
-        // Distribute the funds
-        uint256 accumulatedFees = period.accumulatedFees;
-        uint256 newProverFees = period.fee * numPubs;
-
-        // Pay the designated prover for the work they already did
-        balances[period.prover] += accumulatedFees - newProverFees;
-
-        // Compensate the new prover with fees and a portion of the stake
-        _distributeStakeAndFees(period.stake, newProverFees, msg.sender);
+        Period storage period = _periods[periodId];
+        require(provenPublication.timestamp > period.end, "Publication must be after period");
+        balances[period.prover] += period.stake;
+        period.stake = 0;
     }
 
     /// @inheritdoc IProposerFees
     function getCurrentFees() external view returns (uint256 fee, uint256 delayedFee) {
         uint256 currentPeriod = currentPeriodId;
-        uint256 publicationFee = _periods[currentPeriod].fee;
+        uint256 periodEnd = _periods[currentPeriod].end;
+        if (periodEnd != 0 && block.timestamp > periodEnd) {
+            currentPeriod++;
+        }
 
+        uint256 publicationFee = _periods[currentPeriod].fee;
         // TODO: implement delayed fee once we decide how to handle delayed publications
         return (publicationFee, publicationFee);
     }
@@ -355,82 +346,23 @@ contract ProverManager is IProposerFees, IProverManager {
     /// @param bps The percentage expressed in basis points(https://muens.io/solidity-percentages)
     /// @return _ The calculated percentage of the given numerator
     function _calculatePercentage(uint256 amount, uint256 bps) private pure returns (uint256) {
-        require((amount * bps) >= 10_000);
-        return amount * bps / 10_000;
+        return (amount * bps) / 10_000;
     }
 
-    /// @dev Validates the start and end publication headers and ensures that they are within the period.
-    /// @param start The initial checkpoint before the transition
-    /// @param end The final checkpoint after the transition
-    /// @param startPub The start publication header
-    /// @param endPub The end publication header
-    /// @param periodEnd The end of the period. If 0, the period is still active
-    /// @param previousPeriodEnd The end of the previous period
-    function _validateBasePublications(
-        ICheckpointTracker.Checkpoint memory start,
-        ICheckpointTracker.Checkpoint memory end,
-        IPublicationFeed.PublicationHeader memory startPub,
-        IPublicationFeed.PublicationHeader memory endPub,
-        uint256 periodEnd,
-        uint256 previousPeriodEnd
-    ) private view {
-        require(publicationFeed.validateHeader(endPub, end.publicationId), "End publication hash does not match");
-        require(periodEnd == 0 || endPub.timestamp < periodEnd, "End publication is not within the period");
-
-        require(publicationFeed.validateHeader(startPub, start.publicationId), "Start publication hash does not match");
-        require(startPub.timestamp > previousPeriodEnd, "Start publication is not within the period");
-    }
-
-    /// @dev Validates the next publication header and ensures that it is after the period end.
-    /// @param nextPub The next publication header
-    /// @param expectedId The expected id of the next publication
-    /// @param periodEnd The end of the period
-    function _validateNextPublicationHeader(
-        IPublicationFeed.PublicationHeader memory nextPub,
-        uint256 expectedId,
-        uint256 periodEnd
-    ) private view {
-        require(nextPub.id == expectedId, "This is not the next publication");
-        require(nextPub.timestamp > periodEnd, "Next publication is not after the period end");
-        require(publicationFeed.validateHeader(nextPub, nextPub.id), "Publication hash does not match");
-    }
-
-    /// @dev Validates a chain of publication headers.
-    /// @param headers The chain of publication headers to validate
-    function _validatePublicationChain(IPublicationFeed.PublicationHeader[] memory headers) private view {
-        uint256 numPubs = headers.length;
-        //Verify that all the publications are correct and linked together(they belong to this rollup)
-        for (uint256 i = 1; i < numPubs; ++i) {
-            require(publicationFeed.validateHeader(headers[i], headers[i].id), "Publication hash does not match");
-            if (i > 0) {
-                bytes32 prevHash = keccak256(abi.encode(headers[i - 1]));
-                require(prevHash == headers[i].prevHash, "Previous publication hash does not match");
-            }
-        }
-    }
-
-    /// @dev Checks if a period is active based on its end timestamp
-    /// @param end The end timestamp of the period
-    /// @return True if the period is active, false otherwise
-    function _isPeriodActive(uint256 end) private pure returns (bool) {
-        return end == 0;
-    }
-
-    /// @dev Checks if a period is already bidded
+    /// @dev Updates a period with prover information and transfers the liveness bond
+    /// @param period The period to update
     /// @param prover The address of the prover
-    /// @return True if someone has already bid for the period, false otherwise
-    function _isBidded(address prover) private pure returns (bool) {
-        return prover != address(0);
+    /// @param fee The fee offered by the prover
+    /// @param stake The liveness bond to be staked
+    function _updatePeriod(Period storage period, address prover, uint256 fee, uint256 stake) private {
+        period.prover = prover;
+        period.fee = fee;
+        period.stake = stake; // overwrite previous value. We assume the previous value is zero or already returned
+        balances[prover] -= stake;
     }
 
-    /// @dev Distributes the stake and fees to the new prover
-    /// @dev This implementation effectively "burns" a portion of the stake by locking it in the contract forever
-    /// @param stake The stake amount to distribute
-    /// @param fees The fees to add to the prover's balance
-    /// @param prover The address of the prover to compensate
-    function _distributeStakeAndFees(uint256 stake, uint256 fees, address prover) private {
-        uint256 burnedStake = _calculatePercentage(stake, burnedStakePercentage);
-        uint256 livenessBondReward = stake - burnedStake;
-        balances[prover] += fees + livenessBondReward;
+    function _confirmLastProvenCheckpoint(ICheckpointTracker.Checkpoint memory lastProven) private view {
+        bytes32 lastProvenHash = keccak256(abi.encode(lastProven));
+        require(lastProvenHash == checkpointTracker.provenHash(), "Incorrect lastProven checkpoint");
     }
 }
