@@ -285,13 +285,16 @@ contract ProverManager is IProposerFees, IProverManager {
         checkpointTracker.proveTransition(start, end, numPublications, proof);
 
         bool isClosed = block.timestamp > period.deadline && period.deadline != 0;
-        if (isClosed && !period.pastDeadline) {
-            // The first time this is called burn a % of the stake. Whoever proves the final publication in this
-            // period can (eventually) call `finalizeClosedPeriod` to claim the remaining stake. In practice, a single
-            // prover will likely close the whole period with one proof.
-            period.stake -= _calculatePercentage(period.stake, burnedStakePercentage);
+        if (isClosed) {
             period.prover = msg.sender;
-            period.pastDeadline = true;
+            if (!period.pastDeadline) {
+                // The first time this is called burn a % of the stake. Whoever proves the final publication in this
+                // period can (eventually) call `finalizeClosedPeriod` to claim the remaining stake. In practice, a
+                // single
+                // prover will likely close the whole period with one proof.
+                period.stake -= _calculatePercentage(period.stake, burnedStakePercentage);
+                period.pastDeadline = true;
+            }
         }
         balances[period.prover] += numPublications * period.fee;
     }
