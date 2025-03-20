@@ -14,7 +14,7 @@ struct L1StorageRef {
 /// This can be used for realtime L1 storage reads.
 /// It can also be used to retrieve L1 storage that only existed between anchor blocks
 ///
-/// Use the terminology from `PreemptiveProvableAssertionsBase`:
+/// Using the terminology from `PreemptiveProvableAssertionsBase`:
 /// - an L1 block is posted at time Y (between two publications)
 /// - this is public information but it is not reflected anywhere in L2 state
 /// - the proposer asserts the value so L2 contracts can respond immediately
