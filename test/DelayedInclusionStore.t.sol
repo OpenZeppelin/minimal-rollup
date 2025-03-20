@@ -7,7 +7,8 @@ import {IDelayedInclusionStore} from "src/protocol/IDelayedInclusionStore.sol";
 import {DelayedInclusionStore} from "src/protocol/taiko_alethia/DelayedInclusionStore.sol";
 import {MockBlobRefRegistry} from "test/mocks/MockBlobRefRegistry.sol";
 
-contract DelayedInclusionStoreTest is Test {
+/// State where there are no delayed inclusions.
+contract BaseState is Test {
     using stdStorage for StdStorage;
 
     DelayedInclusionStore inclusionStore;
@@ -16,23 +17,10 @@ contract DelayedInclusionStoreTest is Test {
     address inbox = address(0x100);
 
     uint256 public inclusionDelay = 10 minutes;
-    uint256 public constant waitTime = 2 hours;
 
-    function setUp() public {
+    function setUp() public virtual {
         blobReg = new MockBlobRefRegistry();
         inclusionStore = new DelayedInclusionStore(inclusionDelay, address(blobReg), inbox);
-        storeDelayedInclusions(25);
-        vm.warp(waitTime);
-        storeDelayedInclusions(25);
-        vm.warp(1);
-    }
-
-    function storeDelayedInclusions(uint256 numInclusions) public {
-        for (uint256 i; i < numInclusions; ++i) {
-            uint256[] memory blobIndices = new uint256[](1);
-            blobIndices[0] = i;
-            inclusionStore.publishDelayed(blobIndices);
-        }
     }
 
     function readInclusionArray(uint256 index) public view returns (DelayedInclusionStore.DueInclusion memory) {
@@ -43,7 +31,26 @@ contract DelayedInclusionStoreTest is Test {
 
         return DelayedInclusionStore.DueInclusion(blobRefHash, due);
     }
+}
 
+/// State when some (25) inclusions have been added
+contract InclusionAddedState is BaseState {
+    function setUp() public virtual override {
+        super.setUp();
+        storeDelayedInclusions(25);
+    }
+
+    function storeDelayedInclusions(uint256 numInclusions) public {
+        for (uint256 i; i < numInclusions; ++i) {
+            uint256[] memory blobIndices = new uint256[](1);
+            // simulate a blob index
+            blobIndices[0] = vm.randomUint(256);
+            inclusionStore.publishDelayed(blobIndices);
+        }
+    }
+}
+
+contract InclusionAddedStateTest is InclusionAddedState {
     function test_processDueInclusions_NoneDue() public {
         vm.prank(inbox);
         DelayedInclusionStore.Inclusion[] memory inclusions = inclusionStore.processDueInclusions();
@@ -59,6 +66,25 @@ contract DelayedInclusionStoreTest is Test {
         assertEq(inclusions[24].blobRefHash, readInclusionArray(24).blobRefHash);
     }
 
+    function test_processDueInclusions_RevertWhen_NotInbox() public {
+        vm.warp(inclusionDelay + 1);
+        vm.expectRevert("Only inbox can process inclusions");
+        inclusionStore.processDueInclusions();
+    }
+}
+
+/// State when only half of the inclusions are due
+contract StaggeredInclusionState is InclusionAddedState {
+    uint256 public constant waitTime = 2 hours;
+
+    function setUp() public virtual override {
+        super.setUp();
+        vm.warp(waitTime);
+        storeDelayedInclusions(25);
+    }
+}
+
+contract StaggeredInclusionStateTest is StaggeredInclusionState {
     function test_processDueInclusions_SecondHalfDue() public {
         vm.startPrank(inbox);
         vm.warp(inclusionDelay + 1);
@@ -78,11 +104,5 @@ contract DelayedInclusionStoreTest is Test {
         assertEq(inclusions.length, 50);
         assertEq(inclusions[0].blobRefHash, readInclusionArray(0).blobRefHash);
         assertEq(inclusions[49].blobRefHash, readInclusionArray(49).blobRefHash);
-    }
-
-    function test_processDueInclusions_RevertWhen_NotInbox() public {
-        vm.warp(inclusionDelay + 1);
-        vm.expectRevert("Only inbox can process inclusions");
-        inclusionStore.processDueInclusions();
     }
 }
