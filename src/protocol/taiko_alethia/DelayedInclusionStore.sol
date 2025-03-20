@@ -25,7 +25,8 @@ contract DelayedInclusionStore is IDelayedInclusionStore {
     // Pointer to the first unprocessed element
     uint256 private head;
 
-    /// @notice The minimum amount of time a delayed publication needs to wait in the queue to be included expressed in seconds
+    /// @notice The minimum amount of time a delayed publication needs to
+    /// wait in the queue to be included expressed in seconds
     uint256 public immutable inclusionDelay;
 
     address public immutable inbox;
@@ -41,9 +42,8 @@ contract DelayedInclusionStore is IDelayedInclusionStore {
         blobRefRegistry = IBlobRefRegistry(_blobRefRegistry);
     }
 
-    /// @dev Retrieves a blob reference from the blob reference registry
-    /// and stores the hash (Inclusion) in the delayed inclusion queue.
-    /// @param blobIndices An array of blob indices to be registered.
+    /// @inheritdoc IDelayedInclusionStore
+    /// @dev Stores the blob reference as a DueInclusion
     function publishDelayed(uint256[] calldata blobIndices) external {
         bytes32 refHash = keccak256(abi.encode(blobRefRegistry.getRef(blobIndices)));
         DueInclusion memory dueInclusion = DueInclusion(refHash, block.timestamp + inclusionDelay);
@@ -80,6 +80,8 @@ contract DelayedInclusionStore is IDelayedInclusionStore {
             return new Inclusion[](0);
         }
 
+        // We only check msg.sender here to avoid the gas cost when the
+        // return is empty and don't modify state
         require(msg.sender == inbox, "Only inbox can process inclusions");
 
         Inclusion[] memory inclusions = new Inclusion[](count);
