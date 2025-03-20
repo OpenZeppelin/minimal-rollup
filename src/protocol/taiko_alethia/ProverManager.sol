@@ -13,6 +13,7 @@ contract ProverManager is IProposerFees, IProverManager {
         uint256 fee; // per-publication fee (in wei)
         uint256 end; // the end of the period(this may happen because the prover exits, is evicted or outbid)
         uint256 deadline; // the time by which the prover needs to submit a proof
+        bool pastDeadline; // wheter the proof came after the deadline, we set this to true when burning the stake of the original prover
     }
 
     /// @dev This struct is necessary to pass it to the constructor and avoid stack too deep errors
@@ -33,7 +34,7 @@ contract ProverManager is IProposerFees, IProverManager {
     IPublicationFeed public immutable publicationFeed;
 
     // -- Configuration parameters --
-    /// @notice The maximum percentage of the previous bid
+    /// @notice The maximum percentage of the previous bid a prover can offer and still have a successful bid
     /// @dev This value needs to be expressed in basis points (4 decimal places)
     /// @dev This is used to prevent gas wars where the new prover undercuts the current prover by just a few wei
     uint256 public immutable maxBidPercentage;
@@ -283,12 +284,13 @@ contract ProverManager is IProposerFees, IProverManager {
         checkpointTracker.proveTransition(start, end, numPublications, proof);
 
         bool isClosed = block.timestamp > period.deadline && period.deadline != 0;
-        if (isClosed) {
-            // Apply a burn percentage on every call to this function. Whoever proves the final publication in this
+        if (isClosed && !period.pastDeadline) {
+            // The first time this is called burn a % of the stake. Whoever proves the final publication in this
             // period can (eventually) call `finalizeClosedPeriod` to claim the remaining stake. In practice, a single
             // prover will likely close the whole period with one proof.
             period.stake -= _calculatePercentage(period.stake, burnedStakePercentage);
             period.prover = msg.sender;
+            period.pastDeadline = true;
         }
         balances[period.prover] += numPublications * period.fee;
     }
@@ -355,7 +357,7 @@ contract ProverManager is IProposerFees, IProverManager {
         balances[prover] -= stake;
     }
 
-    function _confirmLastProvenCheckpoint(ICheckpointTracker.Checkpoint calldata lastProven) private view {
+    function _confirmLastProvenCheckpoint(ICheckpointTracker.Checkpoint memory lastProven) private view {
         bytes32 lastProvenHash = keccak256(abi.encode(lastProven));
         require(lastProvenHash == checkpointTracker.provenHash(), "Incorrect lastProven checkpoint");
     }

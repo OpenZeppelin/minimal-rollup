@@ -34,7 +34,7 @@ interface IProverManager {
     ) external;
 
     /// @notice Submits a proof.
-    /// @dev If called after the proof deadline, the caller becomes the new prover and some of the original prover's
+    /// @dev If called after the proof deadline, the caller becomes the prover for the period and some of the original prover's
     /// stake is burned
     /// @dev In either case the (possibly new) prover gets the fee for all proven publications
     /// @param start The initial checkpoint before the transition
@@ -43,7 +43,7 @@ interface IProverManager {
     /// publication they follow, this should have an id `start.publicationId + 1`
     /// @param lastPub The last publication header in the transition
     /// @param numPublications The number of publications to process. This is not implied by the start/end publication
-    /// ids because there could be irrelevant publications.
+    /// ids because the `PublicationFeed` is shared and may contain publications not relevant for this rollup
     /// @param proof Arbitrary data passed to the `verifier` contract to confirm the transition validity
     /// @param periodId The id of the period for which the proof is submitted
     function prove(
@@ -60,9 +60,9 @@ interface IProverManager {
     /// @param periodId The id of the period to finalize
     /// @param lastProven The last proven checkpoint. TODO: we should save the actual checkpoint (not the hash) in
     /// CheckpointTracker so we can query it directly
-    /// @param provenPublication A publication after the period that has been proven
+    /// @param provenPublication A publication that the caller is claiming has been proven and is after the period end
     /// @dev If there is a proven publication after the period, it implies the whole period has been proven.
-    /// @dev We assume there will always be a suitable (and timely) proven publication.
+    /// @dev We assume there will always be a suitable proven publication.
     function finalizeClosedPeriod(
         uint256 periodId,
         ICheckpointTracker.Checkpoint calldata lastProven,
