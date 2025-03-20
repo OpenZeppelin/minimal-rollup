@@ -3,8 +3,9 @@ pragma solidity ^0.8.28;
 
 import {Test, console} from "forge-std/Test.sol";
 import {CheckpointTracker} from "src/protocol/CheckpointTracker.sol";
-import {ICheckpointTracker} from "src/protocol/interfaces/ICheckpointTracker.sol";
+
 import {PublicationFeed} from "src/protocol/PublicationFeed.sol";
+import {ICheckpointTracker} from "src/protocol/interfaces/ICheckpointTracker.sol";
 import {NullVerifier} from "test/mocks/NullVerifier.sol";
 
 contract CheckpointTrackerTest is Test {

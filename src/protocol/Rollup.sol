@@ -7,17 +7,20 @@ import {LibSignal} from "../libs/LibSignal.sol";
 
 /// @dev Implementation of {IRollup}.
 ///
+/// Given every rollup often requires a mechanism for L1 <> L2 communication, this rollup contract provides
+/// an interface to emit signals, which are namespaced values written permanently to the contract storage (see
+/// {LibSignal}). These signals are a simple primitive other contracts can use to build cross-chain applications.
+///
+/// For convenience, checkpoints are signalled when proposed and proven (see {toProvenSignal}). This allows
+/// off-chain clients to monitor the rollup's state by watching the {IRollup-Proven} event. To avoid duplicate events,
+/// the {SignalSent} event is skipped when calling `propose`.
+///
 /// An implementation of the {isValidTransition} and the {toCheckpoint} functions must be provided by a derived
-/// contract, which define the proving scheme and how to produce a checkpoint from a publication.
+/// contract, which define the proving scheme and how to produce a checkpoint from a publication. Also, consider the
+/// following for a production-ready rollup:
 ///
-/// The checkpoints are also signalled when proposed, allowing to provide them on the L2 in the same-slot as
-/// the publication by monitoring the {IRollup-Proposed} event. To avoid duplicated events, the {SignalSent}
-/// event is skipped when calling `propose`.
-///
-/// A production-ready implementation should consider the following:
-///
-/// - Incentivize provers to compute off-chain proofs and post them to the contract.
-/// - Restrict the right to propose a publication.
+/// - Restrict the right to post a prove for a publication. (i.e. override the {prove} function).
+/// - Restrict the right to propose a publication (i.e. override the {propose} function).
 ///
 /// Naturally, both can develop independent markets. One as an auction for provers to bid for a period to post proofs,
 /// and the other as a market for proposers to bid for the right to propose a publication (allowing them to extract
@@ -27,12 +30,16 @@ abstract contract Rollup is IRollup {
 
     event SignalSent(bytes32 indexed value);
 
-    mapping(bytes checkpoint => bool) private _proven;
     bytes32 private _latestCheckpoint;
 
     /// @dev Initializes the rollup with a genesis checkpoint describing the initial state of the rollup.
     constructor(bytes32 genesisCheckpoint) {
         _latestCheckpoint = genesisCheckpoint;
+    }
+
+    /// @dev Given a checkpoint is signaled when proposed, this function returns the signal id for a proven checkpoint.
+    function toProvenSignal(bytes32 checkpoint) public view virtual returns (bytes32) {
+        return checkpoint.deriveSlot();
     }
 
     /// @inheritdoc IRollup
@@ -47,7 +54,7 @@ abstract contract Rollup is IRollup {
 
     /// @inheritdoc IRollup
     function proven(bytes calldata publication) public view returns (bool) {
-        return _proven[toCheckpoint(publication)];
+        return signalSent(toProvenSignal(toCheckpoint(publication)));
     }
 
     /// @inheritdoc IRollup
@@ -99,7 +106,7 @@ abstract contract Rollup is IRollup {
         require(proposed(target), UnknownCheckpoint());
         require(!proven(from), ProvenCheckpoint());
 
-        _proven[target] = true;
+        toProvenSignal(target).signal();
         _latestCheckpoint = target;
         emit Proven(target);
     }

@@ -5,9 +5,9 @@ import "forge-std/Test.sol";
 
 import {ProverManager} from "../src/protocol/taiko_alethia/ProverManager.sol";
 
+import {PublicationFeed} from "src/protocol/PublicationFeed.sol";
 import {ICheckpointTracker} from "src/protocol/interfaces/ICheckpointTracker.sol";
 import {IPublicationFeed} from "src/protocol/interfaces/IPublicationFeed.sol";
-import {PublicationFeed} from "src/protocol/PublicationFeed.sol";
 
 import {MockCheckpointTracker} from "test/mocks/MockCheckpointTracker.sol";
 import {NullVerifier} from "test/mocks/NullVerifier.sol";
