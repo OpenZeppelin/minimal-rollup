@@ -3,14 +3,16 @@ pragma solidity ^0.8.28;
 
 import {IPublicationFeed} from "../interfaces/IPublicationFeed.sol";
 
-import {LibBiddedPeriod} from "../../libs/LibBiddedPeriod.sol";
-import {NativeVault} from "./NativeVault.sol";
+import {ProvingPeriods} from "../../libs/ProvingPeriods.sol";
 
-/// @dev Extension of {L1Rollup} that implements an Ahead of Time (AOT) Auction for proving markets.
+import {NativeVault} from "../NativeVault.sol";
+import {Rollup} from "../Rollup.sol";
+
+/// @dev Extension of {Rollup} that implements an Ahead of Time (AOT) Auction for proving markets.
 ///
-/// Smart Contracts systems that defer the proof generation of a state transition to a later time (e.g. L2s),
-/// require a mechanism to incentivize generating and submitting these proofs. This is necessary to ensure the
-/// chain's liveness (i.e. the chain finalizes blocks in a timely manner).
+/// L2s that defer the proof generation of a state transition to a later time require a mechanism to incentivize
+/// generating and submitting these proofs. This is necessary to ensure the chain's liveness (i.e. the chain finalizes
+/// blocks in a timely manner).
 ///
 /// This contract proposes a design for a proving market that incentivizes the generation of proofs for state
 /// transitions by letting provers to bid for a _period_ in which they can post proofs. Proposers can bid for the
@@ -19,8 +21,8 @@ import {NativeVault} from "./NativeVault.sol";
 ///
 /// a) a call to `exit` by the prover, or
 /// b) a call to `evictProver` after `provingDeadline` has passed.
-contract L1RollupProvingAuction is NativeVault {
-    using LibBiddedPeriod for LibBiddedPeriod.BiddedPeriod;
+contract RollupProvingAuction is Rollup, NativeVault {
+    using ProvingPeriods for ProvingPeriods.Period;
 
     event ProverOffer(address indexed proposer, uint256 periodStart, uint256 fee);
     event ProverEvicted(address indexed prover, address indexed evictor, uint256 periodEnd);
@@ -32,7 +34,7 @@ contract L1RollupProvingAuction is NativeVault {
     error PeriodEnded();
     error RecentPublication();
 
-    LibBiddedPeriod.BiddedPeriod[] private _periods;
+    ProvingPeriods.Period[] private _periods;
     mapping(bytes32 commitment => uint256) private _proposedAt;
 
     /// @notice Current proving period. Defines who can post proofs.
@@ -40,7 +42,7 @@ contract L1RollupProvingAuction is NativeVault {
         return _periods.length - 1;
     }
 
-    function currentPeriod() public view virtual returns (LibBiddedPeriod.BiddedPeriod memory) {
+    function currentPeriod() public view virtual returns (ProvingPeriods.Period memory) {
         return _periods[currentPeriodId()];
     }
 
@@ -74,6 +76,7 @@ contract L1RollupProvingAuction is NativeVault {
         return 1 days; // TODO: set a reasonable value?
     }
 
+    /// @notice Percentage of the stake to slash from the prover when evicted
     function evictionSlashingPercentage() public view virtual returns (uint256) {
         return 10_000; // 10% in bps
     }
@@ -87,9 +90,7 @@ contract L1RollupProvingAuction is NativeVault {
 
     function propose(bytes memory publication) external virtual override {
         // Hook the creation of a new period in case the current one has ended
-        uint256 currentPeriod = currentPeriodId();
-
-        if (_periods[currentPeriod].hasEnded()) {
+        if (currentPeriod().hasEnded()) {
             // Create a new period by increasing the length of the periods array
             nextPeriod = ++currentPeriod;
             assembly ("memory-safe") {
@@ -110,23 +111,24 @@ contract L1RollupProvingAuction is NativeVault {
     }
 
     /// @dev Prove a state transition for an open period. Restricted to the current prover.
-    function prove(bytes32 from, bytes32 target, bytes memory proof) external virtual {
-        require(msg.sender == _periods[currentPeriodId()].prover, OnlyProver());
+    function prove(bytes32 from, bytes32 target, bytes memory proof) external virtual override {
+        require(msg.sender == currentPeriod().prover, OnlyProver());
         super.prove(from, target, proof);
     }
 
     function _payPublicationFee(address proposer) internal virtual {
-        uint256 requiredFee = _periods[currentPeriod].fee;
+        ProvingPeriods.Period storage _currentPeriod = _periods[_currentPeriodId];
+        uint256 requiredFee = _currentPeriod.fee;
 
         // Deduct fee from proposer's balance and add to accumulated fees
         _reduceBalance(proposer, requiredFee);
-        _periods[currentPeriod].accumulatedFees += requiredFee;
+        _currentPeriod.accumulatedFees += requiredFee;
     }
 
     function bid(uint256 offeredFee) external {
         uint256 _currentPeriodId = currentPeriodId();
-        LibBiddedPeriod.BiddedPeriod storage _currentPeriod = _periods[_currentPeriodId];
-        LibBiddedPeriod.BiddedPeriod storage nextPeriod =
+        ProvingPeriods.Period storage _currentPeriod = _periods[_currentPeriodId];
+        ProvingPeriods.Period storage nextPeriod =
             _commitLivenessBondForNextPeriod(_periods[_currentPeriodId + 1], msg.sender);
         uint256 requiredMaxFee;
 
@@ -148,7 +150,7 @@ contract L1RollupProvingAuction is NativeVault {
         emit ProverOffer(msg.sender, _currentPeriodId + 1, offeredFee);
     }
 
-    function _validateOfferedFee(LibBiddedPeriod.BiddedPeriod storage period, uint256 offeredFee)
+    function _validateOfferedFee(ProvingPeriods.Period storage period, uint256 offeredFee)
         internal
         view
         override
@@ -160,12 +162,12 @@ contract L1RollupProvingAuction is NativeVault {
     }
 
     function exit() external {
-        LibBiddedPeriod.BiddedPeriod storage period = _periods[currentPeriodId()];
+        ProvingPeriods.Period storage period = currentPeriod();
         address _prover = period.prover;
         require(msg.sender == _prover, OnlyProver());
         require(!period.isEnded(), PeriodEnded());
 
-        emit ProverExited(_prover, period.scheduleEndAfterDelayWithDeadline(exitDelay(), provingDeadline()));
+        emit ProverExited(_prover, period.AfterDelay(exitDelay()));
     }
 
     function evictProver(uint256 publicationId, bytes memory publication) external {
@@ -177,17 +179,18 @@ contract L1RollupProvingAuction is NativeVault {
         balances[msg.sender] += evictorIncentive;
         period.stake -= evictorIncentive;
 
-        emit ProverEvicted(period.prover, msg.sender, period.scheduleEndAfterDelayWithDeadline(exitDelay(), 0));
+        emit ProverEvicted(period.prover, msg.sender, period.AfterDelay(exitDelay()));
     }
 
     /// @dev Commits the liveness bond for the next period from the prover's balance.
-    function _commitLivenessBondForNextPeriod(LibBiddedPeriod.BiddedPeriod storage nextPeriod, address prover)
+    function _commitLivenessBondForNextPeriod(ProvingPeriods.Period storage nextPeriod, address prover)
         internal
-        returns (Period storage)
+        returns (ProvingPeriods.Period storage)
     {
         uint256 livenessBond = minLivenessBond();
         require(balances(prover) >= livenessBond, InsufficientBalance());
         _reduceBalance(address(this), livenessBond);
         nextPeriod.stake = livenessBond;
+        return nextPeriod;
     }
 }
