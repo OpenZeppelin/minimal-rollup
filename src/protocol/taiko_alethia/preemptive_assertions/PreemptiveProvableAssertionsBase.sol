@@ -37,7 +37,8 @@ abstract contract PreemptiveProvableAssertionsBase {
 
     /// @notice Can only be called by an asserter address, set by the proposer at the start of the publication.
     /// This could be an EOA controlled by the proposer, but they would pay the gas costs of making assertions
-    /// Alternatively, it could be a contract that allows L2 users to make assertions (likely signed by the proposer)
+    /// Alternatively, it could be a contract that allows L2 users to make assertions (likely signed by the proposer),
+    /// which also assures them that the relevant assertions will be registered.
     /// In either case, the proposer should ensure all preemptive assertions are proven at publication time
     modifier onlyAsserter() {
         require(msg.sender == asserter, "Unauthorized");
