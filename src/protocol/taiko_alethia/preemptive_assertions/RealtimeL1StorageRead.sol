@@ -68,7 +68,11 @@ abstract contract RealtimeL1StorageRead is PreemptiveProvableAssertionsBase, L1Q
     ) internal {
         // TODO: Use the proof to validate
         // - all of the claimed L1 block hashes are in the root
-        // - the values are in the correct slots for each of the L1 block hashes
+        // - the correct values are in the slots for each of the L1 block hashes
+
+        for (uint256 i = 0; i < refs.length; i++) {
+            _resolve(_assertionId(refs[i]));
+        }
     }
 
     function _assertionId(L1StorageRef memory ref) private pure returns (bytes32) {
