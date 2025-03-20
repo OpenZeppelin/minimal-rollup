@@ -92,9 +92,19 @@ contract InclusionAddedStateTest is InclusionAddedState {
     }
 
     function test_processDueInclusions_FirstHalfDue() public {
-        vm.prank(inbox);
+        vm.startPrank(inbox);
         vm.warp(inclusionDelay + 1);
+
+        vm.expectEmit(false, false, false, true);
+        uint256 count = 25;
+        DelayedInclusionStore.Inclusion[] memory expectedInclusions = new DelayedInclusionStore.Inclusion[](count);
+        for (uint256 i = 0; i < count; i++) {
+            expectedInclusions[i] = IDelayedInclusionStore.Inclusion(readInclusionArray(i).blobRefHash);
+        }
+        emit DelayedInclusionStore.DelayedInclusionProcessed(expectedInclusions);
+
         DelayedInclusionStore.Inclusion[] memory inclusions = inclusionStore.processDueInclusions();
+
         assertEq(inclusions.length, 25);
         assertEq(inclusions[0].blobRefHash, readInclusionArray(0).blobRefHash);
         assertEq(inclusions[24].blobRefHash, readInclusionArray(24).blobRefHash);
