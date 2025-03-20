@@ -61,10 +61,11 @@ contract CheckpointTrackerTest is Test {
             ICheckpointTracker.Checkpoint({publicationId: 0, commitment: keccak256(abi.encode("genesis"))});
         ICheckpointTracker.Checkpoint memory end =
             ICheckpointTracker.Checkpoint({publicationId: 3, commitment: keccak256(abi.encode("end"))});
+        uint256 numRelevantPublications = 2;
 
         vm.expectEmit();
         emit ICheckpointTracker.TransitionProven(start, end);
-        tracker.proveTransition(start, end, proof);
+        tracker.proveTransition(start, end, numRelevantPublications, proof);
 
         assertEq(tracker.provenHash(), keccak256(abi.encode(end)));
     }
@@ -74,9 +75,10 @@ contract CheckpointTrackerTest is Test {
             ICheckpointTracker.Checkpoint({publicationId: 0, commitment: keccak256(abi.encode("genesis"))});
         ICheckpointTracker.Checkpoint memory end =
             ICheckpointTracker.Checkpoint({publicationId: 3, commitment: bytes32(0)});
+        uint256 numRelevantPublications = 2;
 
         vm.expectRevert("Checkpoint commitment cannot be 0");
-        tracker.proveTransition(start, end, proof);
+        tracker.proveTransition(start, end, numRelevantPublications, proof);
     }
 
     function test_proveTransition_RevertWhenStartCheckpointNotLatestProven() public {
@@ -84,9 +86,10 @@ contract CheckpointTrackerTest is Test {
             ICheckpointTracker.Checkpoint({publicationId: 1, commitment: keccak256(abi.encode("wrong"))});
         ICheckpointTracker.Checkpoint memory end =
             ICheckpointTracker.Checkpoint({publicationId: 3, commitment: keccak256(abi.encode("end"))});
+        uint256 numRelevantPublications = 2;
 
         vm.expectRevert("Start checkpoint must be the latest proven checkpoint");
-        tracker.proveTransition(start, end, proof);
+        tracker.proveTransition(start, end, numRelevantPublications, proof);
     }
 
     function test_proveTransition_RevertWhenEndPublicationNotAfterStart() public {
@@ -94,9 +97,12 @@ contract CheckpointTrackerTest is Test {
             ICheckpointTracker.Checkpoint({publicationId: 0, commitment: keccak256(abi.encode("genesis"))});
         ICheckpointTracker.Checkpoint memory end =
             ICheckpointTracker.Checkpoint({publicationId: 0, commitment: keccak256(abi.encode("end"))});
+        // this is nonsensical, but we're testing the publicationId check so I think it makes sense for the other
+        // parameters to match previous tests.
+        uint256 numRelevantPublications = 2;
 
         vm.expectRevert("End publication must be after the last proven publication");
-        tracker.proveTransition(start, end, proof);
+        tracker.proveTransition(start, end, numRelevantPublications, proof);
     }
 
     function createSampleFeed() private {

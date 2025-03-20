@@ -35,7 +35,6 @@ interface IPublicationFeed {
 
     /// @notice Validate a publication header against the hash stored in the feed
     /// @param header The header to validate
-    /// @param idx The index of the publication hash
     /// @return _ True if the header is valid, false otherwise
-    function validateHeader(PublicationHeader calldata header, uint256 idx) external view returns (bool);
+    function validateHeader(PublicationHeader calldata header) external view returns (bool);
 }

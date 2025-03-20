@@ -12,7 +12,7 @@ interface IProverManager {
     /// @notice The current prover can signal exit to eventually pull out their liveness bond.
     function exit() external;
 
-    /// @notice If there is no active prover, start a new period and become the new prover immediately
+    /// @notice If there is no active prover, start a new period and become the new prover in the next block
     /// @param fee The per-publication fee for the new period
     /// @dev Consider the scenario:
     ///   - a prover has exited or been evicted
@@ -25,68 +25,48 @@ interface IProverManager {
     function claimProvingVacancy(uint256 fee) external;
 
     /// @notice Evicts a prover that has been inactive, marking the prover for slashing
-    /// @param publicationId The publication id that the caller is claiming is too old and hasn't been proven
     /// @param publicationHeader The publication header that the caller is claiming is too old and hasn't been proven
     /// @param lastProven The last proven checkpoint, which is used to show the publicationHeader is not proven
     /// TODO: we should save the actual checkpoint (not the hash) in CheckpointTracker so we can query it directly
     function evictProver(
-        uint256 publicationId,
         IPublicationFeed.PublicationHeader calldata publicationHeader,
         ICheckpointTracker.Checkpoint calldata lastProven
     ) external;
 
-    /// @notice Submits a proof for an open period
-    /// @dev An open period is not necessarily the current period, it just means that the prover is within their
-    /// deadline.
-    /// @dev If the prover has finished all their publications for the period, they can also claim the fees and their
-    /// liveness bond.
+    /// @notice Submits a proof.
+    /// @dev If called after the proof deadline, the caller becomes the prover for the period and some of the original
+    /// prover's
+    /// stake is burned
+    /// @dev In either case the (possibly new) prover gets the fee for all proven publications
     /// @param start The initial checkpoint before the transition
     /// @param end The final checkpoint after the transition
-    /// @param startPublicationHeader The start publication header
-    /// @param endPublicationHeader The end publication header
-    /// @param nextPublicationHeaderBytes Optional parameter that should only be sent when the prover has finished all
-    /// their publications for the period.
+    /// @param firstPub The first publication header in the transition. Note that since checkpoints refer to the
+    /// publication they follow, this should have an id `start.publicationId + 1`
+    /// @param lastPub The last publication header in the transition
+    /// @param numPublications The number of publications to process. This is not implied by the start/end publication
+    /// ids because the `PublicationFeed` is shared and may contain publications not relevant for this rollup
     /// @param proof Arbitrary data passed to the `verifier` contract to confirm the transition validity
     /// @param periodId The id of the period for which the proof is submitted
-    function proveOpenPeriod(
+    function prove(
         ICheckpointTracker.Checkpoint calldata start,
         ICheckpointTracker.Checkpoint calldata end,
-        IPublicationFeed.PublicationHeader calldata startPublicationHeader,
-        IPublicationFeed.PublicationHeader calldata endPublicationHeader,
-        bytes calldata nextPublicationHeaderBytes,
-        bytes calldata proof,
-        uint256 periodId
-    ) external;
-
-    /// @notice Called by a prover when the originally assigned prover is passed its deadline
-    /// @dev This function should slash the prover and distribute their stake to compensate the new prover
-    /// @param start The initial checkpoint before the transition
-    /// @param end The final checkpoint after the transition
-    /// @param publicationHeadersToProve The chain of publication headers to prove
-    /// @param nextPublicationHeader The next publication header. It should be after the period end
-    /// @param proof Arbitrary data passed to the `verifier` contract to confirm the transition validity
-    /// @param periodId The id of the period for which the proof is submitted
-    function proveClosedPeriod(
-        ICheckpointTracker.Checkpoint calldata start,
-        ICheckpointTracker.Checkpoint calldata end,
-        IPublicationFeed.PublicationHeader[] calldata publicationHeadersToProve,
-        IPublicationFeed.PublicationHeader calldata nextPublicationHeader,
+        IPublicationFeed.PublicationHeader calldata firstPub,
+        IPublicationFeed.PublicationHeader calldata lastPub,
+        uint256 numPublications,
         bytes calldata proof,
         uint256 periodId
     ) external;
 
     /// @notice Returns the stake for a closed period to the prover
-    /// @dev Only needed if the period was not finalized during its last proof.
-    /// @dev This could occur if the prover did not specify a later publication (possibly because it did not exist at
-    /// the time)
     /// @param periodId The id of the period to finalize
     /// @param lastProven The last proven checkpoint. TODO: we should save the actual checkpoint (not the hash) in
     /// CheckpointTracker so we can query it directly
-    /// @param provenPublicationHeaderBytes Optional parameter if needed to demonstrate there is a proven publication
-    /// after the period
+    /// @param provenPublication A publication that the caller is claiming has been proven and is after the period end
+    /// @dev If there is a proven publication after the period, it implies the whole period has been proven.
+    /// @dev We assume there will always be a suitable proven publication.
     function finalizeClosedPeriod(
         uint256 periodId,
         ICheckpointTracker.Checkpoint calldata lastProven,
-        bytes calldata provenPublicationHeaderBytes
+        IPublicationFeed.PublicationHeader calldata provenPublication
     ) external;
 }
