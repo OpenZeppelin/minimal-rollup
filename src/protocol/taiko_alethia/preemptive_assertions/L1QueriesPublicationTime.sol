@@ -25,11 +25,11 @@ struct L1Query {
 /// @dev The queries will be called from the TaikoInbox contract, which will save a hash of the queries and results as a
 /// publication attribute.
 abstract contract L1QueriesPublicationTime is PreemptiveProvableAssertionsBase {
-    bytes32 constant DOMAIN_SEPARATOR = keccak256("L1L1QueriesPublicationTime");
+    bytes32 constant QUERY_DOMAIN_SEPARATOR = keccak256("L1L1QueriesPublicationTime");
 
     /// @notice Can be called by any L2 contract to get the result of a preemptive L1 Query
     /// that will eventually be proven at publication time
-    function getL1QueryResult(L1Query calldata query) public view returns (uint256) {
+    function getL1QueryResult(L1Query memory query) public view returns (uint256) {
         bytes32 assertionId = _assertionId(query);
         require(exists[assertionId], "Query result has not been asserted");
         return value[assertionId];
@@ -50,6 +50,6 @@ abstract contract L1QueriesPublicationTime is PreemptiveProvableAssertionsBase {
     }
 
     function _assertionId(L1Query memory query) private pure returns (bytes32) {
-        return keccak256(abi.encode(DOMAIN_SEPARATOR, query));
+        return keccak256(abi.encode(QUERY_DOMAIN_SEPARATOR, query));
     }
 }
