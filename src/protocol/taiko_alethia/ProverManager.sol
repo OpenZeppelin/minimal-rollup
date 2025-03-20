@@ -13,7 +13,8 @@ contract ProverManager is IProposerFees, IProverManager {
         uint256 fee; // per-publication fee (in wei)
         uint256 end; // the end of the period(this may happen because the prover exits, is evicted or outbid)
         uint256 deadline; // the time by which the prover needs to submit a proof
-        bool pastDeadline; // wheter the proof came after the deadline, we set this to true when burning the stake of the original prover
+        bool pastDeadline; // wheter the proof came after the deadline, we set this to true when burning the stake of
+            // the original prover
     }
 
     /// @dev This struct is necessary to pass it to the constructor and avoid stack too deep errors

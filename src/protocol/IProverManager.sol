@@ -34,7 +34,8 @@ interface IProverManager {
     ) external;
 
     /// @notice Submits a proof.
-    /// @dev If called after the proof deadline, the caller becomes the prover for the period and some of the original prover's
+    /// @dev If called after the proof deadline, the caller becomes the prover for the period and some of the original
+    /// prover's
     /// stake is burned
     /// @dev In either case the (possibly new) prover gets the fee for all proven publications
     /// @param start The initial checkpoint before the transition
