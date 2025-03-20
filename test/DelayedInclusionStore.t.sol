@@ -33,6 +33,40 @@ contract BaseState is Test {
     }
 }
 
+contract BaseStateTest is BaseState {
+    function test_initialState() public {
+        assertEq(readInclusionArray(0).blobRefHash, bytes32(0));
+    }
+
+    function test_addOneInclusionOneBlob() public {
+        address sender = address(0x200);
+        uint256[] memory blobIndices = new uint256[](1);
+        // simulate a blob index
+        blobIndices[0] = 1;
+
+        bytes32 expectedRefHash = keccak256((abi.encode(blobReg.getRef(blobIndices))));
+        vm.expectEmit(true, true, false, true);
+        emit DelayedInclusionStore.DelayedInclusionStored(
+            sender, DelayedInclusionStore.DueInclusion(expectedRefHash, vm.getBlockTimestamp() + inclusionDelay)
+        );
+        vm.prank(sender);
+        inclusionStore.publishDelayed(blobIndices);
+        assertEq(readInclusionArray(0).blobRefHash, expectedRefHash);
+        assertEq(readInclusionArray(0).due, vm.getBlockTimestamp() + inclusionDelay);
+    }
+
+    function test_addOneInclusionMultipleBlobs() public {
+        uint256[] memory blobIndices = new uint256[](2);
+        // simulate blob indices
+        blobIndices[0] = 1;
+        blobIndices[1] = 2;
+
+        bytes32 expectedRefHash = keccak256((abi.encode(blobReg.getRef(blobIndices))));
+        inclusionStore.publishDelayed(blobIndices);
+        assertEq(readInclusionArray(0).blobRefHash, expectedRefHash);
+    }
+}
+
 /// State when some (25) inclusions have been added
 contract InclusionAddedState is BaseState {
     function setUp() public virtual override {
