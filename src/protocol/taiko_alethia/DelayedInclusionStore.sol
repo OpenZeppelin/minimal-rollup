@@ -13,7 +13,8 @@ contract DelayedInclusionStore is IDelayedInclusionStore {
     /// @notice Emitted when a delayed publication is stored
     /// @param dueInclusion The delayed publication including
     /// the blob reference hash and due timestamp
-    event DelayedInclusionStored(DueInclusion dueInclusion);
+    /// @param sender The address that stored the delayed publication
+    event DelayedInclusionStored(address indexed sender, DueInclusion dueInclusion);
 
     /// @notice Emitted when a list of delayed inclusions are processed by the inbox
     /// @param inclusionsList list of inclusions
@@ -48,7 +49,7 @@ contract DelayedInclusionStore is IDelayedInclusionStore {
         bytes32 refHash = keccak256(abi.encode(blobRefRegistry.getRef(blobIndices)));
         DueInclusion memory dueInclusion = DueInclusion(refHash, block.timestamp + inclusionDelay);
         delayedInclusions.push(dueInclusion);
-        emit DelayedInclusionStored(dueInclusion);
+        emit DelayedInclusionStored(msg.sender, dueInclusion);
     }
 
     /// @inheritdoc IDelayedInclusionStore
@@ -81,7 +82,7 @@ contract DelayedInclusionStore is IDelayedInclusionStore {
         }
 
         // We only check msg.sender here to avoid the gas cost when the
-        // return is empty and don't modify state
+        // return is empty and there are no state changes
         require(msg.sender == inbox, "Only inbox can process inclusions");
 
         Inclusion[] memory inclusions = new Inclusion[](count);
