@@ -77,6 +77,14 @@ abstract contract CrossRollupStorageRead is PreemptiveProvableAssertionsBase {
         bytes memory proof
     ) internal {
         // TODO: Use the proof to validate all the asserted refs/values correspond to the blockHashClaims
+        // There is a subtlety here. Each block hash (and therefore the attribute that contains the block hashes)
+        // represents all transactions in the publication, including endPublication. This means the attribute hash
+        // passed to this call is derived after this call. I suspect that this is fine because we know endPublication
+        // simply deletes the assertions, so we can predict its final state anyway. I do not know if that logic extends
+        // to the gas accounting, partly because I'm not sure if the anchor transaction / end publication transactions
+        // actually update the gas used, and even if they did, the actual operations that the call will take are known
+        // even though the particular input hash is not. If this proves to be unworkable, we can require the claim to be
+        // the state root before endPublication rather than the block hash after it.
         for (uint256 i = 0; i < refs.length; i++) {
             _resolve(_assertionId(refs[i]));
         }
