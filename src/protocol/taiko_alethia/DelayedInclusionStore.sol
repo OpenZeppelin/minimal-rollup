@@ -21,7 +21,7 @@ contract DelayedInclusionStore is IDelayedInclusionStore {
     event DelayedInclusionProcessed(Inclusion[] inclusionsList);
 
     // Append-only queue for delayed inclusions
-    DueInclusion[] private delayedInclusions;
+    DueInclusion[] private _delayedInclusions;
 
     // Pointer to the first unprocessed element
     uint256 private _head;
@@ -45,10 +45,10 @@ contract DelayedInclusionStore is IDelayedInclusionStore {
 
     /// @inheritdoc IDelayedInclusionStore
     /// @dev Stores the blob reference as a DueInclusion
-    function publishDelayed(uint256[] calldata blobIndices) external {
+    function publishDelayed(uint256[] memory blobIndices) external {
         bytes32 refHash = keccak256(abi.encode(blobRefRegistry.getRef(blobIndices)));
         DueInclusion memory dueInclusion = DueInclusion(refHash, block.timestamp + inclusionDelay);
-        delayedInclusions.push(dueInclusion);
+        _delayedInclusions.push(dueInclusion);
         emit DelayedInclusionStored(msg.sender, dueInclusion);
     }
 
@@ -57,7 +57,7 @@ contract DelayedInclusionStore is IDelayedInclusionStore {
     /// otherwise returns an empty array.
     /// @dev Can only be called by the inbox contract.
     function processDueInclusions() external returns (Inclusion[] memory) {
-        uint256 len = delayedInclusions.length;
+        uint256 len = _delayedInclusions.length;
         uint256 cachedHead = _head;
         if (cachedHead >= len) {
             return new Inclusion[](0);
@@ -68,7 +68,7 @@ contract DelayedInclusionStore is IDelayedInclusionStore {
         uint256 timestamp = block.timestamp;
         while (l < r) {
             uint256 mid = (l + r) >> 1;
-            if (delayedInclusions[mid].due <= timestamp) {
+            if (_delayedInclusions[mid].due <= timestamp) {
                 // If inclusion at mid is due, search to the right.
                 l = mid + 1;
             } else {
@@ -88,7 +88,7 @@ contract DelayedInclusionStore is IDelayedInclusionStore {
 
         Inclusion[] memory inclusions = new Inclusion[](count);
         for (uint256 i = 0; i < count; ++i) {
-            inclusions[i] = Inclusion(delayedInclusions[cachedHead + i].blobRefHash);
+            inclusions[i] = Inclusion(_delayedInclusions[cachedHead + i].blobRefHash);
         }
 
         emit DelayedInclusionProcessed(inclusions);

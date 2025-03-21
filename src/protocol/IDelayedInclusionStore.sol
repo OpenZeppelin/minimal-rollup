@@ -8,7 +8,7 @@ interface IDelayedInclusionStore {
 
     /// @notice Register a delayed publication for later inclusion
     /// @param blobIndices An array of blob indices to be registered where the delayed publications are included
-    function publishDelayed(uint256[] calldata blobIndices) external;
+    function publishDelayed(uint256[] memory blobIndices) external;
 
     /// @notice Returns a list of publications that should be processed by the Inbox
     function processDueInclusions() external returns (Inclusion[] memory inclusions);
