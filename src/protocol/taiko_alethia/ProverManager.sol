@@ -41,10 +41,9 @@ contract ProverManager is IProposerFees, IProverManager {
     /// @notice The time window after which a publication is considered old enough and if the prover hasn't proven it
     /// yet can be evicted
     uint256 public immutable livenessWindow;
-    /// @notice The delay after which the next prover becomes active
-    /// @dev The reason we don't allow this to happen immediately is so that:
-    /// 1. Other provers can bid for the role
-    /// 2. Ensure the current prover window is not too short
+    /// @notice Time delay before a new prover takes over after a successful bid
+    /// @dev The reason we don't allow this to happen immediately is to allow enough time for other provers to bid,
+    /// prepare their hardware and to ensure no prover's window is too short
     uint256 public immutable successionDelay;
     /// @notice The delay after which the current prover can exit, or is removed if evicted because they are inactive
     /// @dev The reason we don't allow this to happen immediately is to allow enough time for other provers to bid
@@ -63,10 +62,7 @@ contract ProverManager is IProposerFees, IProverManager {
 
     /// @notice Common balances for proposers and provers
     mapping(address user => uint256 balance) public balances;
-    /// @notice Periods represent proving windows
-    /// @dev Most of the time we are dealing with the current period or next period (bids for the next period),
-    /// but we need periods in the past to track publications that still need to be proven after the prover is
-    /// evicted or exits
+    /// @dev Periods represent proving windows
     mapping(uint256 periodId => Period) private _periods;
     /// @notice The current period
     uint256 public currentPeriodId;
