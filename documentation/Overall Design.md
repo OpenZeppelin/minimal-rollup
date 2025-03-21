@@ -75,6 +75,7 @@ These properties seem like they should be useful for composability. However:
 
 - we have not yet designed any features that rely on them.
 - the shared feed undermines the ability to recognise when a publication is no longer required, so  <span style="color: orange;">it prevents the use of a ring buffer</span>.
+- we cannot compute the number of relevant publications between two publication ids, so we need to pass this as a separate parameter to the proof.
 
 If we do not implement any composability features, we should restore the different publication feeds per rollup so the implementation can be optimised.
 

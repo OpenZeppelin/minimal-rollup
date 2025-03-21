@@ -10,6 +10,7 @@ contract NullVerifier is IVerifier {
         bytes32, /* endPublicationHash */
         bytes32, /* startCheckPoint */
         bytes32, /* endCheckPoint */
+        uint256, /* numPublications */
         bytes calldata /* proof */
     ) external {}
 }

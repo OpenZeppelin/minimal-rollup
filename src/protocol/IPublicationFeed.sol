@@ -32,4 +32,9 @@ interface IPublicationFeed {
     /// @notice Returns the next publication's ID.
     /// @return _ The next publication ID.
     function getNextPublicationId() external view returns (uint256);
+
+    /// @notice Validate a publication header against the hash stored in the feed
+    /// @param header The header to validate
+    /// @return _ True if the header is valid, false otherwise
+    function validateHeader(PublicationHeader calldata header) external view returns (bool);
 }

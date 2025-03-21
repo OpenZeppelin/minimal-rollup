@@ -11,6 +11,8 @@ contract CheckpointTrackerTest is Test {
     CheckpointTracker tracker;
     NullVerifier verifier;
     PublicationFeed feed;
+    // For the unit tests, we do it without a prover manager
+    address proverManager = address(0);
 
     // Sample data
     bytes32[] pubHashes;
@@ -28,7 +30,8 @@ contract CheckpointTrackerTest is Test {
         feed = new PublicationFeed();
         createSampleFeed();
 
-        tracker = new CheckpointTracker(keccak256(abi.encode("genesis")), address(feed), address(verifier));
+        tracker =
+            new CheckpointTracker(keccak256(abi.encode("genesis")), address(feed), address(verifier), proverManager);
         proof = abi.encode("proof");
     }
 
@@ -40,7 +43,7 @@ contract CheckpointTrackerTest is Test {
 
     function test_constructor_RevertWhenGenesisIsZero() public {
         vm.expectRevert("genesis checkpoint commitment cannot be 0");
-        new CheckpointTracker(bytes32(0), address(feed), address(verifier));
+        new CheckpointTracker(bytes32(0), address(feed), address(verifier), proverManager);
     }
 
     function test_constructor_EmitsEvent() public {
@@ -50,7 +53,7 @@ contract CheckpointTrackerTest is Test {
 
         vm.expectEmit();
         emit ICheckpointTracker.CheckpointUpdated(genesisHash);
-        new CheckpointTracker(keccak256(abi.encode("genesis")), address(feed), address(verifier));
+        new CheckpointTracker(keccak256(abi.encode("genesis")), address(feed), address(verifier), proverManager);
     }
 
     function test_proveTransition_SuccessfulTransition() public {
@@ -58,10 +61,11 @@ contract CheckpointTrackerTest is Test {
             ICheckpointTracker.Checkpoint({publicationId: 0, commitment: keccak256(abi.encode("genesis"))});
         ICheckpointTracker.Checkpoint memory end =
             ICheckpointTracker.Checkpoint({publicationId: 3, commitment: keccak256(abi.encode("end"))});
+        uint256 numRelevantPublications = 2;
 
         vm.expectEmit();
         emit ICheckpointTracker.TransitionProven(start, end);
-        tracker.proveTransition(start, end, proof);
+        tracker.proveTransition(start, end, numRelevantPublications, proof);
 
         assertEq(tracker.provenHash(), keccak256(abi.encode(end)));
     }
@@ -71,9 +75,10 @@ contract CheckpointTrackerTest is Test {
             ICheckpointTracker.Checkpoint({publicationId: 0, commitment: keccak256(abi.encode("genesis"))});
         ICheckpointTracker.Checkpoint memory end =
             ICheckpointTracker.Checkpoint({publicationId: 3, commitment: bytes32(0)});
+        uint256 numRelevantPublications = 2;
 
         vm.expectRevert("Checkpoint commitment cannot be 0");
-        tracker.proveTransition(start, end, proof);
+        tracker.proveTransition(start, end, numRelevantPublications, proof);
     }
 
     function test_proveTransition_RevertWhenStartCheckpointNotLatestProven() public {
@@ -81,9 +86,10 @@ contract CheckpointTrackerTest is Test {
             ICheckpointTracker.Checkpoint({publicationId: 1, commitment: keccak256(abi.encode("wrong"))});
         ICheckpointTracker.Checkpoint memory end =
             ICheckpointTracker.Checkpoint({publicationId: 3, commitment: keccak256(abi.encode("end"))});
+        uint256 numRelevantPublications = 2;
 
         vm.expectRevert("Start checkpoint must be the latest proven checkpoint");
-        tracker.proveTransition(start, end, proof);
+        tracker.proveTransition(start, end, numRelevantPublications, proof);
     }
 
     function test_proveTransition_RevertWhenEndPublicationNotAfterStart() public {
@@ -91,9 +97,12 @@ contract CheckpointTrackerTest is Test {
             ICheckpointTracker.Checkpoint({publicationId: 0, commitment: keccak256(abi.encode("genesis"))});
         ICheckpointTracker.Checkpoint memory end =
             ICheckpointTracker.Checkpoint({publicationId: 0, commitment: keccak256(abi.encode("end"))});
+        // this is nonsensical, but we're testing the publicationId check so I think it makes sense for the other
+        // parameters to match previous tests.
+        uint256 numRelevantPublications = 2;
 
         vm.expectRevert("End publication must be after the last proven publication");
-        tracker.proveTransition(start, end, proof);
+        tracker.proveTransition(start, end, numRelevantPublications, proof);
     }
 
     function createSampleFeed() private {
