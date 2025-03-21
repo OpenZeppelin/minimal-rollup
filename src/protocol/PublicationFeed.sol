@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
-import {IPublicationFeed} from "./IPublicationFeed.sol";
+import {IPublicationFeed} from "./interfaces/IPublicationFeed.sol";
 
 contract PublicationFeed is IPublicationFeed {
     /// @dev a list of hashes identifying all data accompanying calls to the `publish` function.

@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
-import {ICheckpointTracker} from "./ICheckpointTracker.sol";
-import {IPublicationFeed} from "./IPublicationFeed.sol";
-import {IVerifier} from "./IVerifier.sol";
+import {ICheckpointTracker} from "./interfaces/ICheckpointTracker.sol";
+import {IPublicationFeed} from "./interfaces/IPublicationFeed.sol";
+import {IVerifier} from "./interfaces/IVerifier.sol";
 
 contract CheckpointTracker is ICheckpointTracker {
     /// @notice The hash of the current proven checkpoint representing the latest verified state of the rollup

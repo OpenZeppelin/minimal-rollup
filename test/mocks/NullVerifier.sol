@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
-import {IVerifier} from "src/protocol/IVerifier.sol";
+import {IVerifier} from "src/protocol/interfaces/IVerifier.sol";
 
 contract NullVerifier is IVerifier {
     /// @notice Do nothing. All proofs are accepted.

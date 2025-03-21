@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
-import {ICheckpointTracker} from "src/protocol/ICheckpointTracker.sol";
+import {ICheckpointTracker} from "src/protocol/interfaces/ICheckpointTracker.sol";
 
 contract MockCheckpointTracker is ICheckpointTracker {
     bytes32 public provenHash;
