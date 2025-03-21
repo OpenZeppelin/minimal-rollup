@@ -142,7 +142,7 @@ contract StaggeredInclusionStateTest is StaggeredInclusionState {
         for (uint256 i = 0; i < numInclusionsA; i++) {
             expectedInclusions[i] = IDelayedInclusionStore.Inclusion(readInclusionArray(i).blobRefHash);
         }
-        emit DelayedInclusionStore.DelayedInclusionProcessed(expectedInclusions);
+        emit IDelayedInclusionStore.DelayedInclusionProcessed(expectedInclusions);
 
         DelayedInclusionStore.Inclusion[] memory inclusions = inclusionStore.processDueInclusions();
 

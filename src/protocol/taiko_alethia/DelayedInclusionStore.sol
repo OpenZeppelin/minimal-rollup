@@ -16,10 +16,6 @@ contract DelayedInclusionStore is IDelayedInclusionStore {
     /// @param sender The address that stored the delayed publication
     event DelayedInclusionStored(address indexed sender, DueInclusion dueInclusion);
 
-    /// @notice Emitted when a list of delayed inclusions are processed by the inbox
-    /// @param inclusionsList list of inclusions
-    event DelayedInclusionProcessed(Inclusion[] inclusionsList);
-
     // Append-only queue for delayed inclusions
     DueInclusion[] private _delayedInclusions;
 
