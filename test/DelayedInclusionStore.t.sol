@@ -136,7 +136,7 @@ contract StaggeredInclusionStateTest is StaggeredInclusionState {
     }
 
     function test_processDueInclusions_SecondPartDue() public {
-        vm.startPrank(inbox);
+        vm.prank(inbox);
         vm.warp(timeB + inclusionDelay);
 
         DelayedInclusionStore.Inclusion[] memory inclusions = inclusionStore.processDueInclusions();
@@ -145,11 +145,10 @@ contract StaggeredInclusionStateTest is StaggeredInclusionState {
         assertEq(inclusions.length, totalInclusions);
         assertEq(inclusions[0].blobRefHash, readInclusionArray(0).blobRefHash);
         assertEq(inclusions[totalInclusions - 1].blobRefHash, readInclusionArray(totalInclusions - 1).blobRefHash);
-        vm.stopPrank();
     }
 
     function test_processDueInclusions_ThirdPartDue() public {
-        vm.startPrank(inbox);
+        vm.prank(inbox);
         vm.warp(timeC + inclusionDelay);
 
         DelayedInclusionStore.Inclusion[] memory inclusions = inclusionStore.processDueInclusions();
@@ -158,7 +157,6 @@ contract StaggeredInclusionStateTest is StaggeredInclusionState {
         assertEq(inclusions.length, totalInclusions);
         assertEq(inclusions[0].blobRefHash, readInclusionArray(0).blobRefHash);
         assertEq(inclusions[totalInclusions - 1].blobRefHash, readInclusionArray(totalInclusions).blobRefHash);
-        vm.stopPrank();
     }
 
     function test_processDueInclusions_AllDue() public {
