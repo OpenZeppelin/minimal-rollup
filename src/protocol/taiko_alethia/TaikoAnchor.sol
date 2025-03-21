@@ -82,7 +82,8 @@ contract TaikoAnchor {
     }
 
     /// @dev The node software will guarantee and the prover will verify the following:
-    /// 1. This function is transacted as the last transaction in the last L2 block derived from the same publication;
+    /// 1. This function can only be transacted as the last transaction in the last L2 block derived from the same
+    /// publication. It does not have to exist if it is not required;
     /// 2. This function's gas limit is a fixed value;
     /// 3. This function will not revert
     /// 4. The attributesHash parameter matches the corresponding field in the publication header
