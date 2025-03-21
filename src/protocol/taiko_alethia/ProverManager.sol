@@ -35,13 +35,11 @@ contract ProverManager is IProposerFees, IProverManager {
     IPublicationFeed public immutable publicationFeed;
 
     // -- Configuration parameters --
-    /// @notice The maximum percentage of the previous bid a prover can offer and still have a successful bid
-    /// @dev This value needs to be expressed in basis points (4 decimal places)
+    /// @notice The maximum percentage (in bps) of the previous bid a prover can offer and still have a successful bid
     /// @dev This is used to prevent gas wars where the new prover undercuts the current prover by just a few wei
     uint256 public immutable maxBidPercentage;
     /// @notice The time window after which a publication is considered old enough and if the prover hasn't proven it
-    /// yet
-    /// can be evicted
+    /// yet can be evicted
     uint256 public immutable livenessWindow;
     /// @notice The delay after which the next prover becomes active
     /// @dev The reason we don't allow this to happen immediately is so that:
@@ -57,12 +55,10 @@ contract ProverManager is IProposerFees, IProverManager {
     /// @notice The minimum stake required to be a prover
     /// @dev This should be enough to cover the cost of a new prover if the current prover becomes inactive
     uint256 public immutable livenessBond;
-    /// @notice The percentage of the liveness bond that the evictor gets as an incentive
-    /// @dev This value needs to be expressed in basis points (4 decimals)
+    /// @notice The percentage(in bps) of the liveness bond that the evictor gets as an incentive
     uint256 public immutable evictorIncentivePercentage;
-    /// @notice The percentage of the liveness bond (at the moment of the slashing) that is burned when a prover is
-    /// slashed
-    /// @dev This value needs to be expressed in basis points (4 decimals)
+    /// @notice The percentage(in bps) of the liveness bond (at the moment of the slashing) that is burned when a
+    /// prover is slashed
     uint256 public immutable burnedStakePercentage;
 
     /// @notice Common balances for proposers and provers
