@@ -159,6 +159,27 @@ contract StaggeredInclusionStateTest is StaggeredInclusionState {
         assertEq(inclusions[totalInclusions - 1].blobRefHash, readInclusionArray(totalInclusions).blobRefHash);
     }
 
+    function test_processDueInclusions_HeadOfQueueUpdates() public {
+        vm.startPrank(inbox);
+        vm.warp(timeB + inclusionDelay);
+
+        DelayedInclusionStore.Inclusion[] memory inclusionsB = inclusionStore.processDueInclusions();
+
+        uint256 totalInclusionsB = numInclusionsA + numInclusionsB;
+        assertEq(inclusionsB.length, totalInclusionsB);
+        assertEq(inclusionsB[0].blobRefHash, readInclusionArray(0).blobRefHash);
+        assertEq(inclusionsB[totalInclusionsB - 1].blobRefHash, readInclusionArray(totalInclusionsB - 1).blobRefHash);
+
+        vm.warp(timeC + inclusionDelay);
+
+        DelayedInclusionStore.Inclusion[] memory inclusionsC = inclusionStore.processDueInclusions();
+
+        uint256 firstElement = numInclusionsA + numInclusionsB;
+        assertEq(inclusionsC.length, numInclusionsC);
+        assertEq(inclusionsC[0].blobRefHash, readInclusionArray(firstElement).blobRefHash);
+        assertEq(inclusionsC[numInclusionsC - 1].blobRefHash, readInclusionArray(numInclusionsC).blobRefHash);
+    }
+
     function test_processDueInclusions_AllDue() public {
         vm.prank(inbox);
         vm.warp(timeD + inclusionDelay);
