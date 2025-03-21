@@ -34,18 +34,18 @@ contract BaseState is Test {
 }
 
 contract BaseStateTest is BaseState {
-    function test_initialState() public {
+    function test_SetupState() public view {
         assertEq(readInclusionArray(0).blobRefHash, bytes32(0));
     }
 
-    function test_addOneInclusionOneBlob() public {
+    function test_publishDelayed_OneInclusionOneBlob() public {
         address sender = address(0x200);
         uint256[] memory blobIndices = new uint256[](1);
         // simulate a blob index
         blobIndices[0] = 1;
 
         bytes32 expectedRefHash = keccak256((abi.encode(blobReg.getRef(blobIndices))));
-        vm.expectEmit(true, true, false, true);
+        vm.expectEmit();
         emit DelayedInclusionStore.DelayedInclusionStored(
             sender, DelayedInclusionStore.DueInclusion(expectedRefHash, vm.getBlockTimestamp() + inclusionDelay)
         );
@@ -55,7 +55,7 @@ contract BaseStateTest is BaseState {
         assertEq(readInclusionArray(0).due, vm.getBlockTimestamp() + inclusionDelay);
     }
 
-    function test_addOneInclusionMultipleBlobs() public {
+    function test_publish_delayed_OneInclusionMultipleBlobs() public {
         uint256[] memory blobIndices = new uint256[](2);
         // simulate blob indices
         blobIndices[0] = 1;
@@ -67,11 +67,29 @@ contract BaseStateTest is BaseState {
     }
 }
 
-/// State when some (25) inclusions have been added
-contract InclusionAddedState is BaseState {
+/// State when there a multiple inclusions have been added with a staggered delay
+contract StaggeredInclusionState is BaseState {
+    uint256 public staggerTime = inclusionDelay + 2 hours;
+    uint256 public timeA = 1000;
+    uint256 public timeB = timeA + staggerTime;
+    uint256 public timeC = timeB + staggerTime;
+    uint256 public timeD = timeC + staggerTime;
+
+    uint256 public constant numInclusionsA = 25;
+    uint256 public constant numInclusionsB = 10;
+    uint256 public constant numInclusionsC = 15;
+    uint256 public constant numInclusionsD = 1;
+
     function setUp() public virtual override {
         super.setUp();
-        storeDelayedInclusions(25);
+        vm.warp(timeA);
+        storeDelayedInclusions(numInclusionsA);
+        vm.warp(timeB);
+        storeDelayedInclusions(numInclusionsB);
+        vm.warp(timeC);
+        storeDelayedInclusions(numInclusionsC);
+        vm.warp(timeD);
+        storeDelayedInclusions(numInclusionsD);
     }
 
     function storeDelayedInclusions(uint256 numInclusions) public {
@@ -84,69 +102,74 @@ contract InclusionAddedState is BaseState {
     }
 }
 
-contract InclusionAddedStateTest is InclusionAddedState {
-    function test_processDueInclusions_NoneDue() public {
+contract StaggeredInclusionStateTest is StaggeredInclusionState {
+    function test_processDueInclusions_NotDue() public {
         vm.prank(inbox);
+        vm.warp(timeA);
         DelayedInclusionStore.Inclusion[] memory inclusions = inclusionStore.processDueInclusions();
         assertEq(inclusions.length, 0);
     }
 
-    function test_processDueInclusions_FirstHalfDue() public {
-        vm.startPrank(inbox);
-        vm.warp(inclusionDelay + 1);
+    function test_processDueInclusions_RevertWhen_NotInbox() public {
+        vm.warp(timeA + inclusionDelay);
+        vm.expectRevert("Only inbox can process inclusions");
+        inclusionStore.processDueInclusions();
+    }
 
-        vm.expectEmit(false, false, false, true);
-        uint256 count = 25;
-        DelayedInclusionStore.Inclusion[] memory expectedInclusions = new DelayedInclusionStore.Inclusion[](count);
-        for (uint256 i = 0; i < count; i++) {
+    function test_processDueInclusions_FirstPartDue() public {
+        vm.startPrank(inbox);
+        vm.warp(timeA + inclusionDelay);
+
+        DelayedInclusionStore.Inclusion[] memory expectedInclusions =
+            new DelayedInclusionStore.Inclusion[](numInclusionsA);
+        for (uint256 i = 0; i < numInclusionsA; i++) {
             expectedInclusions[i] = IDelayedInclusionStore.Inclusion(readInclusionArray(i).blobRefHash);
         }
         emit DelayedInclusionStore.DelayedInclusionProcessed(expectedInclusions);
 
         DelayedInclusionStore.Inclusion[] memory inclusions = inclusionStore.processDueInclusions();
 
-        assertEq(inclusions.length, 25);
+        assertEq(inclusions.length, numInclusionsA);
         assertEq(inclusions[0].blobRefHash, readInclusionArray(0).blobRefHash);
-        assertEq(inclusions[24].blobRefHash, readInclusionArray(24).blobRefHash);
+        assertEq(inclusions[numInclusionsA - 1].blobRefHash, readInclusionArray(numInclusionsA - 1).blobRefHash);
+        vm.stopPrank();
     }
 
-    function test_processDueInclusions_RevertWhen_NotInbox() public {
-        vm.warp(inclusionDelay + 1);
-        vm.expectRevert("Only inbox can process inclusions");
-        inclusionStore.processDueInclusions();
-    }
-}
-
-/// State when only half of the inclusions are due
-contract StaggeredInclusionState is InclusionAddedState {
-    uint256 public constant waitTime = 2 hours;
-
-    function setUp() public virtual override {
-        super.setUp();
-        vm.warp(waitTime);
-        storeDelayedInclusions(25);
-    }
-}
-
-contract StaggeredInclusionStateTest is StaggeredInclusionState {
-    function test_processDueInclusions_SecondHalfDue() public {
+    function test_processDueInclusions_SecondPartDue() public {
         vm.startPrank(inbox);
-        vm.warp(inclusionDelay + 1);
-        inclusionStore.processDueInclusions();
-        vm.warp(waitTime + inclusionDelay + 1);
+        vm.warp(timeB + inclusionDelay);
+
         DelayedInclusionStore.Inclusion[] memory inclusions = inclusionStore.processDueInclusions();
-        assertEq(inclusions.length, 25);
-        assertEq(inclusions[0].blobRefHash, readInclusionArray(25).blobRefHash);
-        assertEq(inclusions[24].blobRefHash, readInclusionArray(49).blobRefHash);
+
+        uint256 totalInclusions = numInclusionsA + numInclusionsB;
+        assertEq(inclusions.length, totalInclusions);
+        assertEq(inclusions[0].blobRefHash, readInclusionArray(0).blobRefHash);
+        assertEq(inclusions[totalInclusions - 1].blobRefHash, readInclusionArray(totalInclusions - 1).blobRefHash);
+        vm.stopPrank();
+    }
+
+    function test_processDueInclusions_ThirdPartDue() public {
+        vm.startPrank(inbox);
+        vm.warp(timeC + inclusionDelay);
+
+        DelayedInclusionStore.Inclusion[] memory inclusions = inclusionStore.processDueInclusions();
+
+        uint256 totalInclusions = numInclusionsA + numInclusionsB + numInclusionsC;
+        assertEq(inclusions.length, totalInclusions);
+        assertEq(inclusions[0].blobRefHash, readInclusionArray(0).blobRefHash);
+        assertEq(inclusions[totalInclusions - 1].blobRefHash, readInclusionArray(totalInclusions).blobRefHash);
         vm.stopPrank();
     }
 
     function test_processDueInclusions_AllDue() public {
         vm.prank(inbox);
-        vm.warp(waitTime + inclusionDelay + 1);
+        vm.warp(timeD + inclusionDelay);
+
         DelayedInclusionStore.Inclusion[] memory inclusions = inclusionStore.processDueInclusions();
-        assertEq(inclusions.length, 50);
+
+        uint256 totalInclusions = numInclusionsA + numInclusionsB + numInclusionsC + numInclusionsD;
+        assertEq(inclusions.length, totalInclusions);
         assertEq(inclusions[0].blobRefHash, readInclusionArray(0).blobRefHash);
-        assertEq(inclusions[49].blobRefHash, readInclusionArray(49).blobRefHash);
+        assertEq(inclusions[totalInclusions - 1].blobRefHash, readInclusionArray(totalInclusions - 1).blobRefHash);
     }
 }
