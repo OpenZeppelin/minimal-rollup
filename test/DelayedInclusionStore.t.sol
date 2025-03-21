@@ -3,23 +3,23 @@ pragma solidity ^0.8.28;
 
 import "forge-std/Test.sol";
 
+import {BlobRefRegistry} from "src/blobs/BlobRefRegistry.sol";
 import {IDelayedInclusionStore} from "src/protocol/IDelayedInclusionStore.sol";
 import {DelayedInclusionStore} from "src/protocol/taiko_alethia/DelayedInclusionStore.sol";
-import {MockBlobRefRegistry} from "test/mocks/MockBlobRefRegistry.sol";
 
 /// State where there are no delayed inclusions.
 contract BaseState is Test {
     using stdStorage for StdStorage;
 
     DelayedInclusionStore inclusionStore;
-    MockBlobRefRegistry blobReg;
+    BlobRefRegistry blobReg;
     // Addresses used for testing.
     address inbox = address(0x100);
 
     uint256 public inclusionDelay = 10 minutes;
 
     function setUp() public virtual {
-        blobReg = new MockBlobRefRegistry();
+        blobReg = new BlobRefRegistry();
         inclusionStore = new DelayedInclusionStore(inclusionDelay, address(blobReg), inbox);
     }
 
@@ -42,14 +42,20 @@ contract BaseStateTest is BaseState {
         address sender = address(0x200);
         uint256[] memory blobIndices = new uint256[](1);
         // simulate a blob index
-        blobIndices[0] = 1;
+        blobIndices[0] = 0;
 
+        bytes32[] memory blobHashes = new bytes32[](1);
+        blobHashes[0] = keccak256(abi.encode(0));
+
+        vm.blobhashes(blobHashes);
         bytes32 expectedRefHash = keccak256((abi.encode(blobReg.getRef(blobIndices))));
         vm.expectEmit();
         emit DelayedInclusionStore.DelayedInclusionStored(
             sender, DelayedInclusionStore.DueInclusion(expectedRefHash, vm.getBlockTimestamp() + inclusionDelay)
         );
         vm.prank(sender);
+
+        vm.blobhashes(blobHashes);
         inclusionStore.publishDelayed(blobIndices);
         assertEq(readInclusionArray(0).blobRefHash, expectedRefHash);
         assertEq(readInclusionArray(0).due, vm.getBlockTimestamp() + inclusionDelay);
@@ -58,8 +64,13 @@ contract BaseStateTest is BaseState {
     function test_publish_delayed_OneInclusionMultipleBlobs() public {
         uint256[] memory blobIndices = new uint256[](2);
         // simulate blob indices
-        blobIndices[0] = 1;
-        blobIndices[1] = 2;
+        blobIndices[0] = 0;
+        blobIndices[1] = 1;
+
+        bytes32[] memory blobHashes = new bytes32[](2);
+        blobHashes[0] = keccak256(abi.encode(0));
+        blobHashes[1] = keccak256(abi.encode(1));
+        vm.blobhashes(blobHashes);
 
         bytes32 expectedRefHash = keccak256((abi.encode(blobReg.getRef(blobIndices))));
         inclusionStore.publishDelayed(blobIndices);
@@ -93,10 +104,16 @@ contract StaggeredInclusionState is BaseState {
     }
 
     function storeDelayedInclusions(uint256 numInclusions) public {
-        for (uint256 i; i < numInclusions; ++i) {
-            uint256[] memory blobIndices = new uint256[](1);
-            // simulate a blob index
-            blobIndices[0] = vm.randomUint(256);
+        bytes32[] memory blobHashes = new bytes32[](numInclusions);
+        for (uint256 i = 0; i < numInclusions; i++) {
+            blobHashes[i] = keccak256(abi.encode(vm.randomUint(256)));
+        }
+
+        vm.blobhashes(blobHashes);
+
+        uint256[] memory blobIndices = new uint256[](numInclusions);
+        for (uint256 i = 0; i < numInclusions; i++) {
+            blobIndices[i] = i;
             inclusionStore.publishDelayed(blobIndices);
         }
     }
@@ -156,7 +173,7 @@ contract StaggeredInclusionStateTest is StaggeredInclusionState {
         uint256 totalInclusions = numInclusionsA + numInclusionsB + numInclusionsC;
         assertEq(inclusions.length, totalInclusions);
         assertEq(inclusions[0].blobRefHash, readInclusionArray(0).blobRefHash);
-        assertEq(inclusions[totalInclusions - 1].blobRefHash, readInclusionArray(totalInclusions).blobRefHash);
+        assertEq(inclusions[totalInclusions - 1].blobRefHash, readInclusionArray(totalInclusions - 1).blobRefHash);
     }
 
     function test_processDueInclusions_HeadOfQueueUpdates() public {
@@ -174,10 +191,12 @@ contract StaggeredInclusionStateTest is StaggeredInclusionState {
 
         DelayedInclusionStore.Inclusion[] memory inclusionsC = inclusionStore.processDueInclusions();
 
-        uint256 firstElement = numInclusionsA + numInclusionsB;
         assertEq(inclusionsC.length, numInclusionsC);
-        assertEq(inclusionsC[0].blobRefHash, readInclusionArray(firstElement).blobRefHash);
-        assertEq(inclusionsC[numInclusionsC - 1].blobRefHash, readInclusionArray(numInclusionsC).blobRefHash);
+        assertEq(inclusionsC[0].blobRefHash, readInclusionArray(numInclusionsA + numInclusionsB).blobRefHash);
+        assertEq(
+            inclusionsC[numInclusionsC - 1].blobRefHash,
+            readInclusionArray(numInclusionsA + numInclusionsB + numInclusionsC - 1).blobRefHash
+        );
     }
 
     function test_processDueInclusions_AllDue() public {
