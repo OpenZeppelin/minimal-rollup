@@ -62,10 +62,10 @@ contract ProverManager is IProposerFees, IProverManager {
 
     /// @notice Common balances for proposers and provers
     mapping(address user => uint256 balance) public balances;
-    /// @dev Periods represent proving windows
-    mapping(uint256 periodId => Period) private _periods;
     /// @notice The current period
     uint256 public currentPeriodId;
+    /// @dev Periods represent proving windows
+    mapping(uint256 periodId => Period) private _periods;
 
     event Deposit(address indexed user, uint256 amount);
     event Withdrawal(address indexed user, uint256 amount);
@@ -158,8 +158,9 @@ contract ProverManager is IProposerFees, IProverManager {
 
     /// @inheritdoc IProverManager
     /// @dev The offered fee has to be at least `minUndercutPercentage` lower than the current best price.
-    /// @dev The current best price may be the current prover's fee or the fee of the next bid, depending on a few
-    /// conditions.
+    /// @dev The current best price may be the current prover's fee or the fee of the next bid, depending on whether the
+    /// period is active or not.
+    /// An active period is one that doesn't have an `end` timestamp yet.
     function bid(uint256 offeredFee) external {
         uint256 currentPeriod = currentPeriodId;
         Period storage _currentPeriod = _periods[currentPeriod];
@@ -172,8 +173,7 @@ contract ProverManager is IProposerFees, IProverManager {
             require(offeredFee <= requiredMaxFee, "Offered fee not low enough");
 
             uint256 periodEnd = block.timestamp + successionDelay;
-            _currentPeriod.end = periodEnd;
-            _currentPeriod.deadline = periodEnd + provingWindow;
+            _finalizePeriod(_currentPeriod, periodEnd, periodEnd + provingWindow);
         } else {
             address _nextProverAddress = _nextPeriod.prover;
             if (_nextProverAddress != address(0)) {
@@ -214,8 +214,7 @@ contract ProverManager is IProposerFees, IProverManager {
 
         uint256 periodEnd = block.timestamp + exitDelay;
         // We use this to mark the prover as evicted
-        period.deadline = periodEnd;
-        period.end = periodEnd;
+        _finalizePeriod(period, periodEnd, periodEnd);
 
         // Reward the evictor and slash the prover
         uint256 evictorIncentive = _calculatePercentage(period.stake, evictorIncentivePercentage);
@@ -236,8 +235,7 @@ contract ProverManager is IProposerFees, IProverManager {
 
         uint256 periodEnd = block.timestamp + exitDelay;
         uint256 _provingDeadline = periodEnd + provingWindow;
-        period.end = periodEnd;
-        period.deadline = _provingDeadline;
+        _finalizePeriod(period, periodEnd, _provingDeadline);
 
         emit ProverExited(_prover, periodEnd, _provingDeadline);
     }
@@ -247,7 +245,7 @@ contract ProverManager is IProposerFees, IProverManager {
         uint256 periodId = currentPeriodId;
         Period storage period = _periods[periodId];
         require(period.prover == address(0) && period.end == 0, "No proving vacancy");
-        period.end = period.deadline = block.timestamp;
+        _finalizePeriod(period, block.timestamp, block.timestamp);
 
         Period storage nextPeriod = _periods[periodId + 1];
         _updatePeriod(nextPeriod, msg.sender, fee, livenessBond);
@@ -353,8 +351,19 @@ contract ProverManager is IProposerFees, IProverManager {
         balances[prover] -= stake;
     }
 
+    /// @dev Confirms that the checkpoint is correct
+    /// @param lastProven The last proven checkpoint to confirm
     function _confirmLastProvenCheckpoint(ICheckpointTracker.Checkpoint memory lastProven) private view {
         bytes32 lastProvenHash = keccak256(abi.encode(lastProven));
         require(lastProvenHash == checkpointTracker.provenHash(), "Incorrect lastProven checkpoint");
+    }
+
+    /// @dev Sets a period's end and deadline timestamps
+    /// @param period The period to finalize
+    /// @param endTimestamp The timestamp when the period ends
+    /// @param deadlineTimestamp The timestamp by which proofs must be submitted
+    function _finalizePeriod(Period storage period, uint256 endTimestamp, uint256 deadlineTimestamp) private {
+        period.end = endTimestamp;
+        period.deadline = deadlineTimestamp;
     }
 }
