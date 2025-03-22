@@ -197,10 +197,7 @@ contract ProverManager is IProposerFees, IProverManager {
     /// @inheritdoc IProverManager
     /// @dev This can be called by anyone, and they get `evictorIncentivePercentage` of the liveness bond as an
     /// incentive.
-    function evictProver(
-        IPublicationFeed.PublicationHeader calldata publicationHeader,
-        ICheckpointTracker.Checkpoint calldata lastProven
-    ) external {
+    function evictProver(IPublicationFeed.PublicationHeader calldata publicationHeader) external {
         require(publicationFeed.validateHeader(publicationHeader), "Publication hash does not match");
 
         uint256 publicationTimestamp = publicationHeader.timestamp;
@@ -209,7 +206,7 @@ contract ProverManager is IProposerFees, IProverManager {
         Period storage period = _periods[currentPeriodId];
         require(period.end == 0, "Proving period is not active");
 
-        _confirmLastProvenCheckpoint(lastProven);
+        ICheckpointTracker.Checkpoint memory lastProven = checkpointTracker.getProvenCheckpoint();
         require(publicationHeader.id > lastProven.publicationId, "Publication has been proven");
 
         uint256 periodEnd = block.timestamp + exitDelay;
@@ -290,12 +287,10 @@ contract ProverManager is IProposerFees, IProverManager {
     }
 
     /// @inheritdoc IProverManager
-    function finalizeClosedPeriod(
-        uint256 periodId,
-        ICheckpointTracker.Checkpoint calldata lastProven,
-        IPublicationFeed.PublicationHeader calldata provenPublication
-    ) external {
-        _confirmLastProvenCheckpoint(lastProven);
+    function finalizeClosedPeriod(uint256 periodId, IPublicationFeed.PublicationHeader calldata provenPublication)
+        external
+    {
+        ICheckpointTracker.Checkpoint memory lastProven = checkpointTracker.getProvenCheckpoint();
         require(publicationFeed.validateHeader(provenPublication), "Invalid publication header");
         require(lastProven.publicationId >= provenPublication.id, "Publication must be proven");
 
@@ -349,13 +344,6 @@ contract ProverManager is IProposerFees, IProverManager {
         period.fee = fee;
         period.stake = stake; // overwrite previous value. We assume the previous value is zero or already returned
         balances[prover] -= stake;
-    }
-
-    /// @dev Confirms that the checkpoint is correct
-    /// @param lastProven The last proven checkpoint to confirm
-    function _confirmLastProvenCheckpoint(ICheckpointTracker.Checkpoint memory lastProven) private view {
-        bytes32 lastProvenHash = keccak256(abi.encode(lastProven));
-        require(lastProvenHash == checkpointTracker.provenHash(), "Incorrect lastProven checkpoint");
     }
 
     /// @dev Sets a period's end and deadline timestamps

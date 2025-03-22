@@ -4,12 +4,12 @@ pragma solidity ^0.8.28;
 import {ICheckpointTracker} from "src/protocol/ICheckpointTracker.sol";
 
 contract MockCheckpointTracker is ICheckpointTracker {
-    bytes32 public provenHash;
+    Checkpoint private provenCheckpoint;
 
     constructor() {
         // Set the initial proven hash to the zero checkpoint
         Checkpoint memory zeroCheckpoint = Checkpoint({publicationId: 0, commitment: bytes32(0)});
-        provenHash = keccak256(abi.encode(zeroCheckpoint));
+        provenCheckpoint = zeroCheckpoint;
     }
 
     /// @notice Do nothing. All checkpoints and proofs are accepted.
@@ -23,6 +23,10 @@ contract MockCheckpointTracker is ICheckpointTracker {
     /// @notice Helper to set the proven hash for easier testing
     /// @param checkpoint the checkpoint to set as proven, that will be hashed and stored as the proven hash
     function setProvenHash(Checkpoint memory checkpoint) external {
-        provenHash = keccak256(abi.encode(checkpoint));
+        provenCheckpoint = checkpoint;
+    }
+
+    function getProvenCheckpoint() external view returns (Checkpoint memory) {
+        return provenCheckpoint;
     }
 }

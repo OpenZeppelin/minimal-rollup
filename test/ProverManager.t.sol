@@ -18,8 +18,6 @@ contract ProverManagerTest is Test {
     NullVerifier verifier;
     PublicationFeed publicationFeed;
     uint256 constant DEPOSIT_AMOUNT = 2 ether;
-    // We start with the zero checkpoint as the proven checkpoint by default
-    ICheckpointTracker.Checkpoint zeroCheckpoint;
 
     // Addresses used for testing.
     address inbox = address(0x100);
@@ -44,7 +42,6 @@ contract ProverManagerTest is Test {
     function setUp() public {
         checkpointTracker = new MockCheckpointTracker();
         publicationFeed = new PublicationFeed();
-        zeroCheckpoint = ICheckpointTracker.Checkpoint({publicationId: 0, commitment: bytes32(0)});
 
         // Fund the initial prover so the constructor can receive the required livenessBond.
         vm.deal(initialProver, 10 ether);
@@ -314,7 +311,7 @@ contract ProverManagerTest is Test {
             block.timestamp + EXIT_DELAY,
             stakeBefore - (stakeBefore * EVICTOR_INCENTIVE_PERCENTAGE) / 10000
         );
-        proverManager.evictProver(header, zeroCheckpoint);
+        proverManager.evictProver(header);
 
         // Verify period 1 is marked as evicted and its stake reduced
         ProverManager.Period memory periodAfter = proverManager.getPeriod(1);
@@ -337,7 +334,7 @@ contract ProverManagerTest is Test {
         vm.warp(block.timestamp + LIVENESS_WINDOW);
         vm.prank(evictor);
         vm.expectRevert("Publication is not old enough");
-        proverManager.evictProver(header, zeroCheckpoint);
+        proverManager.evictProver(header);
     }
 
     function test_evictProver_RevertWhen_InvalidPublicationHeader() public {
@@ -351,7 +348,7 @@ contract ProverManagerTest is Test {
         // Evict the prover with an invalid publication header
         vm.prank(evictor);
         vm.expectRevert("Publication hash does not match");
-        proverManager.evictProver(header, zeroCheckpoint);
+        proverManager.evictProver(header);
     }
 
     function test_evictProver_RevertWhen_PeriodNotActive() public {
@@ -365,7 +362,7 @@ contract ProverManagerTest is Test {
         vm.warp(block.timestamp + LIVENESS_WINDOW + 1);
         vm.prank(evictor);
         vm.expectRevert("Proving period is not active");
-        proverManager.evictProver(header, zeroCheckpoint);
+        proverManager.evictProver(header);
     }
 
     function test_evictProver_RevertWhen_ProvenCheckpoint() public {
@@ -382,7 +379,7 @@ contract ProverManagerTest is Test {
         vm.warp(block.timestamp + LIVENESS_WINDOW + 1);
         vm.prank(evictor);
         vm.expectRevert("Publication has been proven");
-        proverManager.evictProver(header, provenCheckpoint);
+        proverManager.evictProver(header);
     }
 
     /// --------------------------------------------------------------------------

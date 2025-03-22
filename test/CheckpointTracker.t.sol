@@ -38,7 +38,9 @@ contract CheckpointTrackerTest is Test {
     function test_setUp() public {
         ICheckpointTracker.Checkpoint memory genesisCheckpoint =
             ICheckpointTracker.Checkpoint({publicationId: 0, commitment: keccak256(abi.encode("genesis"))});
-        assertEq(tracker.provenHash(), keccak256(abi.encode(genesisCheckpoint)));
+        ICheckpointTracker.Checkpoint memory provenCheckpoint = tracker.getProvenCheckpoint();
+        assertEq(provenCheckpoint.publicationId, genesisCheckpoint.publicationId);
+        assertEq(provenCheckpoint.commitment, genesisCheckpoint.commitment);
     }
 
     function test_constructor_RevertWhenGenesisIsZero() public {
@@ -47,13 +49,12 @@ contract CheckpointTrackerTest is Test {
     }
 
     function test_constructor_EmitsEvent() public {
-        ICheckpointTracker.Checkpoint memory genesisCheckpoint =
-            ICheckpointTracker.Checkpoint({publicationId: 0, commitment: keccak256(abi.encode("genesis"))});
-        bytes32 genesisHash = keccak256(abi.encode(genesisCheckpoint));
+        bytes32 genesisCommitment = keccak256(abi.encode("genesis"));
+        uint256 genesisPublicationId = 0;
 
         vm.expectEmit();
-        emit ICheckpointTracker.CheckpointUpdated(genesisHash);
-        new CheckpointTracker(keccak256(abi.encode("genesis")), address(feed), address(verifier), proverManager);
+        emit ICheckpointTracker.CheckpointUpdated(genesisPublicationId, genesisCommitment);
+        new CheckpointTracker(genesisCommitment, address(feed), address(verifier), proverManager);
     }
 
     function test_proveTransition_SuccessfulTransition() public {
@@ -67,7 +68,9 @@ contract CheckpointTrackerTest is Test {
         emit ICheckpointTracker.TransitionProven(start, end);
         tracker.proveTransition(start, end, numRelevantPublications, proof);
 
-        assertEq(tracker.provenHash(), keccak256(abi.encode(end)));
+        ICheckpointTracker.Checkpoint memory provenCheckpoint = tracker.getProvenCheckpoint();
+        assertEq(provenCheckpoint.publicationId, end.publicationId);
+        assertEq(provenCheckpoint.commitment, end.commitment);
     }
 
     function test_proveTransition_RevertWhenEndCommitmentIsZero() public {

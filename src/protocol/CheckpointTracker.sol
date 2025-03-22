@@ -6,11 +6,11 @@ import {IPublicationFeed} from "./IPublicationFeed.sol";
 import {IVerifier} from "./IVerifier.sol";
 
 contract CheckpointTracker is ICheckpointTracker {
-    /// @notice The hash of the current proven checkpoint representing the latest verified state of the rollup
+    /// @notice The current proven checkpoint representing the latest verified state of the rollup
     /// @dev Previous checkpoints are not stored here but are synchronized to the `SignalService`
     /// @dev A checkpoint commitment is any value (typically a state root) that uniquely identifies
     /// the state of the rollup at a specific point in time
-    bytes32 public provenHash;
+    Checkpoint private provenCheckpoint;
 
     IPublicationFeed public immutable publicationFeed;
     // This would usually be retrieved dynamically as in the current Taiko implementation, but for simplicity we are
@@ -30,8 +30,8 @@ contract CheckpointTracker is ICheckpointTracker {
         verifier = IVerifier(_verifier);
         proverManager = _proverManager;
         Checkpoint memory genesisCheckpoint = Checkpoint({publicationId: 0, commitment: _genesis});
-        provenHash = keccak256(abi.encode(genesisCheckpoint));
-        emit CheckpointUpdated(provenHash);
+        provenCheckpoint = genesisCheckpoint;
+        emit CheckpointUpdated(genesisCheckpoint.publicationId, genesisCheckpoint.commitment);
     }
 
     /// @inheritdoc ICheckpointTracker
@@ -47,8 +47,10 @@ contract CheckpointTracker is ICheckpointTracker {
 
         require(end.commitment != 0, "Checkpoint commitment cannot be 0");
 
-        bytes32 startCheckpointHash = keccak256(abi.encode(start));
-        require(startCheckpointHash == provenHash, "Start checkpoint must be the latest proven checkpoint");
+        require(
+            start.publicationId == provenCheckpoint.publicationId && start.commitment == provenCheckpoint.commitment,
+            "Start checkpoint must be the latest proven checkpoint"
+        );
 
         require(start.publicationId < end.publicationId, "End publication must be after the last proven publication");
 
@@ -60,7 +62,11 @@ contract CheckpointTracker is ICheckpointTracker {
             startPublicationHash, endPublicationHash, start.commitment, end.commitment, numPublications, proof
         );
 
-        provenHash = keccak256(abi.encode(end));
+        provenCheckpoint = end;
         emit TransitionProven(start, end);
+    }
+
+    function getProvenCheckpoint() external view returns (Checkpoint memory) {
+        return provenCheckpoint;
     }
 }
