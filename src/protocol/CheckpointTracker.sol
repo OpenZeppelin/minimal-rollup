@@ -10,11 +10,11 @@ contract CheckpointTracker is ICheckpointTracker {
     /// @dev Previous checkpoints are not stored here but are synchronized to the `SignalService`
     /// @dev A checkpoint commitment is any value (typically a state root) that uniquely identifies
     /// the state of the rollup at a specific point in time
-    Checkpoint private provenCheckpoint;
+    /// @dev We store the actual checkpoint(not the hash) to avoid race conditions when closing a period or evicting a
+    /// prover(https://github.com/OpenZeppelin/minimal-rollup/pull/77#discussion_r2002192018)
+    Checkpoint private _provenCheckpoint;
 
     IPublicationFeed public immutable publicationFeed;
-    // This would usually be retrieved dynamically as in the current Taiko implementation, but for simplicity we are
-    // just setting it in the constructor
     IVerifier public immutable verifier;
     address public proverManager;
 
@@ -30,7 +30,7 @@ contract CheckpointTracker is ICheckpointTracker {
         verifier = IVerifier(_verifier);
         proverManager = _proverManager;
         Checkpoint memory genesisCheckpoint = Checkpoint({publicationId: 0, commitment: _genesis});
-        provenCheckpoint = genesisCheckpoint;
+        _provenCheckpoint = genesisCheckpoint;
         emit CheckpointUpdated(genesisCheckpoint.publicationId, genesisCheckpoint.commitment);
     }
 
@@ -48,7 +48,7 @@ contract CheckpointTracker is ICheckpointTracker {
         require(end.commitment != 0, "Checkpoint commitment cannot be 0");
 
         require(
-            start.publicationId == provenCheckpoint.publicationId && start.commitment == provenCheckpoint.commitment,
+            start.publicationId == _provenCheckpoint.publicationId && start.commitment == _provenCheckpoint.commitment,
             "Start checkpoint must be the latest proven checkpoint"
         );
 
@@ -62,11 +62,11 @@ contract CheckpointTracker is ICheckpointTracker {
             startPublicationHash, endPublicationHash, start.commitment, end.commitment, numPublications, proof
         );
 
-        provenCheckpoint = end;
+        _provenCheckpoint = end;
         emit TransitionProven(start, end);
     }
 
     function getProvenCheckpoint() external view returns (Checkpoint memory) {
-        return provenCheckpoint;
+        return _provenCheckpoint;
     }
 }
