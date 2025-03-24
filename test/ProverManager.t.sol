@@ -35,7 +35,7 @@ contract ProverManagerTest is Test {
     uint256 constant PROVING_WINDOW = 30;
     uint256 constant LIVENESS_BOND = 1 ether;
     uint256 constant EVICTOR_INCENTIVE_PERCENTAGE = 500; // 5%
-    uint256 constant BURNED_STAKE_PERCENTAGE = 1000; // 10%
+    uint256 constant REWARD_PERCENTAGE = 9000; // 90%
     uint256 constant INITIAL_FEE = 0.1 ether;
     uint256 constant INITIAL_PERIOD = 1;
 
@@ -55,7 +55,7 @@ contract ProverManagerTest is Test {
             provingWindow: PROVING_WINDOW,
             livenessBond: LIVENESS_BOND,
             evictorIncentivePercentage: EVICTOR_INCENTIVE_PERCENTAGE,
-            burnedStakePercentage: BURNED_STAKE_PERCENTAGE
+            rewardPercentage: REWARD_PERCENTAGE
         });
 
         // Deploy ProverManager with constructor funds.
@@ -517,7 +517,7 @@ contract ProverManagerTest is Test {
     function test_prove_ClosedPeriod_MultipleCalls() public {
         // Setup: Create publications and pay for the fees
         IPublicationFeed.PublicationHeader memory startHeader1 = _insertPublication();
-        IPublicationFeed.PublicationHeader memory endHeader1 = _insertPublication();
+        _insertPublication();
         IPublicationFeed.PublicationHeader memory startHeader2 = _insertPublication();
         IPublicationFeed.PublicationHeader memory endHeader2 = _insertPublication();
         vm.startPrank(inbox);
@@ -690,6 +690,184 @@ contract ProverManagerTest is Test {
         (uint256 fee, uint256 delayedFee) = proverManager.getCurrentFees();
         assertEq(fee, bidFee, "Fee should be the bid fee");
         assertEq(delayedFee, bidFee, "Delayed fee should be the bid fee");
+    }
+
+    /// --------------------------------------------------------------------------
+    /// finalizePastPeriod()
+    /// --------------------------------------------------------------------------
+    function test_finalizePastPeriod_WithinDeadline() public {
+        // Setup: Create publications and pay for the fees
+        IPublicationFeed.PublicationHeader memory startHeader = _insertPublication();
+        IPublicationFeed.PublicationHeader memory endHeader = _insertPublication();
+        vm.startPrank(inbox);
+        proverManager.payPublicationFee{value: INITIAL_FEE}(proposer, false);
+        proverManager.payPublicationFee{value: INITIAL_FEE}(proposer, false);
+        vm.stopPrank();
+
+        // Exit as the current prover to close the period
+        vm.prank(initialProver);
+        proverManager.exit();
+
+        // Warp past the end
+        vm.warp(block.timestamp + EXIT_DELAY + 1);
+
+        // Create checkpoints for the publications
+        ICheckpointTracker.Checkpoint memory startCheckpoint = ICheckpointTracker.Checkpoint({
+            publicationId: startHeader.id - 1,
+            commitment: keccak256(abi.encode("commitment1"))
+        });
+        ICheckpointTracker.Checkpoint memory endCheckpoint = ICheckpointTracker.Checkpoint({
+            publicationId: endHeader.id,
+            commitment: keccak256(abi.encode("commitment2"))
+        });
+        uint256 numRelevantPublications = 2;
+
+        // Prove the publications
+        proverManager.prove(
+            startCheckpoint,
+            endCheckpoint,
+            startHeader,
+            endHeader,
+            numRelevantPublications,
+            "0x", // any proof
+            INITIAL_PERIOD
+        );
+
+        // Create a publication after the period ends
+        vm.warp(block.timestamp + 1);
+        IPublicationFeed.PublicationHeader memory afterPeriodHeader = _insertPublication();
+        
+        // Set the proven checkpoint to include the latest publication
+        ICheckpointTracker.Checkpoint memory provenCheckpoint = ICheckpointTracker.Checkpoint({
+            publicationId: afterPeriodHeader.id,
+            commitment: keccak256(abi.encode("commitment3"))
+        });
+        checkpointTracker.setProvenHash(provenCheckpoint);
+
+        uint256 initialProverBalanceBefore = proverManager.balances(initialProver);
+        uint256 stakeBefore = proverManager.getPeriod(INITIAL_PERIOD).stake;
+
+        // Finalize the first period
+        proverManager.finalizePastPeriod(INITIAL_PERIOD, afterPeriodHeader);
+
+        // Verify a portion of the stake was transferred to the prover
+        ProverManager.Period memory periodAfter = proverManager.getPeriod(INITIAL_PERIOD);
+        assertEq(periodAfter.stake, 0, "Stake should be zero after finalization");
+        
+        uint256 initialProverBalanceAfter = proverManager.balances(initialProver);
+        assertEq(initialProverBalanceAfter, initialProverBalanceBefore + stakeBefore, "Prover should receive the remaining stake");
+    }
+
+    function test_finalizePastPeriod_PastDeadline() public {
+        // Setup: Create publications and pay for the fees
+        IPublicationFeed.PublicationHeader memory startHeader = _insertPublication();
+        IPublicationFeed.PublicationHeader memory endHeader = _insertPublication();
+        vm.startPrank(inbox);
+        proverManager.payPublicationFee{value: INITIAL_FEE}(proposer, false);
+        proverManager.payPublicationFee{value: INITIAL_FEE}(proposer, false);
+        vm.stopPrank();
+
+        // Exit as the current prover to close the period
+        vm.prank(initialProver);
+        proverManager.exit();
+
+        // Warp past the deadline
+        vm.warp(block.timestamp + EXIT_DELAY + PROVING_WINDOW + 1);
+
+        // Create checkpoints for the publications
+        ICheckpointTracker.Checkpoint memory startCheckpoint = ICheckpointTracker.Checkpoint({
+            publicationId: startHeader.id - 1,
+            commitment: keccak256(abi.encode("commitment1"))
+        });
+        ICheckpointTracker.Checkpoint memory endCheckpoint = ICheckpointTracker.Checkpoint({
+            publicationId: endHeader.id,
+            commitment: keccak256(abi.encode("commitment2"))
+        });
+        uint256 numRelevantPublications = 2;
+
+        // Prove the publications with a different prover
+        vm.prank(prover1);
+        proverManager.prove(
+            startCheckpoint,
+            endCheckpoint,
+            startHeader,
+            endHeader,
+            numRelevantPublications,
+            "0x", // any proof
+            INITIAL_PERIOD
+        );
+
+        // Create a publication after the period ended
+        IPublicationFeed.PublicationHeader memory afterPeriodHeader = _insertPublication();
+        
+        // Set the proven checkpoint to include the latest publication
+        ICheckpointTracker.Checkpoint memory provenCheckpoint = ICheckpointTracker.Checkpoint({
+            publicationId: afterPeriodHeader.id,
+            commitment: keccak256(abi.encode("commitment3"))
+        });
+        checkpointTracker.setProvenHash(provenCheckpoint);
+
+        uint256 initialProverBalanceBefore = proverManager.balances(initialProver);
+        uint256 prover1BalanceBefore = proverManager.balances(prover1);
+        uint256 stakeBefore = proverManager.getPeriod(INITIAL_PERIOD).stake;
+
+        // Finalize the first period
+        proverManager.finalizePastPeriod(INITIAL_PERIOD, afterPeriodHeader);
+
+        // Verify a portion of the stake was transferred to prover1
+        ProverManager.Period memory periodAfter = proverManager.getPeriod(INITIAL_PERIOD);
+        assertEq(periodAfter.stake, 0, "Stake should be zero after finalization");
+        
+        uint256 initialProverBalanceAfter = proverManager.balances(initialProver);
+        uint256 prover1BalanceAfter = proverManager.balances(prover1);
+        uint256 stakeReward = stakeBefore * REWARD_PERCENTAGE / 10000;
+        assertEq(prover1BalanceAfter, prover1BalanceBefore + stakeReward, "Prover1 should receive the remaining stake");
+        assertEq(initialProverBalanceAfter, initialProverBalanceBefore, "Initial prover should receive nothing");
+    }
+
+    function test_finalizePastPeriod_RevertWhen_PublicationNotProven() public {
+        // Setup: Create publications and exit the period
+        IPublicationFeed.PublicationHeader memory header = _insertPublication();
+        vm.prank(initialProver);
+        proverManager.exit();
+        vm.warp(block.timestamp + EXIT_DELAY + 1);
+        
+        // Create a publication after the period ends
+        vm.warp(block.timestamp + 1);
+        IPublicationFeed.PublicationHeader memory afterPeriodHeader = _insertPublication();
+        
+        // Set the proven checkpoint to a lower publication ID
+        ICheckpointTracker.Checkpoint memory provenCheckpoint = ICheckpointTracker.Checkpoint({
+            publicationId: header.id, // Lower than afterPeriodHeader.id
+            commitment: keccak256(abi.encode("commitment"))
+        });
+        checkpointTracker.setProvenHash(provenCheckpoint);
+        
+        // Attempt to finalize with unproven publication
+        vm.expectRevert("Publication must be proven");
+        proverManager.finalizePastPeriod(INITIAL_PERIOD, afterPeriodHeader);
+    }
+
+    function test_finalizePastPeriod_RevertWhen_PublicationNotAfterPeriod() public {
+        // Setup: Create publications and exit the period
+        _insertPublication();
+        vm.prank(initialProver);
+        proverManager.exit();
+        
+        // Create a publication before the period ends
+        vm.warp(block.timestamp + EXIT_DELAY -1);
+        IPublicationFeed.PublicationHeader memory beforePeriodHeader = _insertPublication();
+        
+        // Set the proven checkpoint to a lower publication ID
+        ICheckpointTracker.Checkpoint memory provenCheckpoint = ICheckpointTracker.Checkpoint({
+            publicationId: beforePeriodHeader.id, 
+            commitment: keccak256(abi.encode("commitment"))
+        });
+        checkpointTracker.setProvenHash(provenCheckpoint);
+        
+        // Attempt to finalize with unproven publication
+        vm.expectRevert("Publication must be after period");
+        proverManager.finalizePastPeriod(INITIAL_PERIOD, beforePeriodHeader);
     }
 
     // -- HELPERS --
