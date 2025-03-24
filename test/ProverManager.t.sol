@@ -485,11 +485,6 @@ contract ProverManagerTest is Test {
         });
         uint256 numRelevantPublications = 2;
 
-        // Capture stake before proving
-        ProverManager.Period memory periodBefore = proverManager.getPeriod(1);
-        uint256 stakeBefore = periodBefore.stake;
-        uint256 expectedBurnedStake = (stakeBefore * BURNED_STAKE_PERCENTAGE) / 10000;
-
         // Prove the publications with a different prover
         vm.prank(prover1);
         proverManager.prove(
@@ -505,7 +500,6 @@ contract ProverManagerTest is Test {
         // Verify period 1 has been updated
         ProverManager.Period memory periodAfter = proverManager.getPeriod(1);
         assertEq(periodAfter.prover, prover1, "Prover should be updated to the new prover");
-        assertEq(periodAfter.stake, stakeBefore - expectedBurnedStake, "Stake should be reduced by burn percentage");
         assertTrue(periodAfter.pastDeadline, "Period should be marked as past deadline");
 
         // Verify prover1 received the fees
@@ -539,9 +533,6 @@ contract ProverManagerTest is Test {
         });
 
         uint256 prover1BalanceBefore = proverManager.balances(prover1);
-        ProverManager.Period memory periodBefore = proverManager.getPeriod(1);
-        uint256 stakeBefore = periodBefore.stake;
-        uint256 expectedBurnedStake = (stakeBefore * BURNED_STAKE_PERCENTAGE) / 10000;
 
         // Prove the publications with prover1
         vm.prank(prover1);
@@ -567,9 +558,9 @@ contract ProverManagerTest is Test {
         uint256 prover2BalanceAfter = proverManager.balances(prover2);
         assertEq(prover2BalanceAfter, INITIAL_FEE * 2, "Prover2 should receive the fees");
 
-        // Verify the burn happened only once
+        // Verify the period is marked as past deadline
         ProverManager.Period memory periodAfter = proverManager.getPeriod(1);
-        assertEq(periodAfter.stake, stakeBefore - expectedBurnedStake, "Stake should be reduced by burn percentage");
+        assertTrue(periodAfter.pastDeadline, "Period should be marked as past deadline");
     }
 
     function test_prove_RevertWhen_LastPublicationDoesNotMatchEndCheckpoint() public {

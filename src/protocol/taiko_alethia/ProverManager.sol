@@ -260,14 +260,10 @@ contract ProverManager is IProposerFees, IProverManager {
 
         bool isPast = block.timestamp > period.deadline && period.deadline != 0;
         if (isPast) {
+            // Whoever proves the final publication in this period can (eventually) call `finalizePastPeriod` to claim a
+            // percentage of the stake. In practice, a single prover will likely close the whole period with one proof.
             period.prover = msg.sender;
-            if (!period.pastDeadline) {
-                // The first time this is called burn a % of the stake. Whoever proves the final publication in this
-                // period can (eventually) call `finalizePastPeriod` to claim the remaining stake. In practice, a
-                // single prover will likely close the whole period with one proof.
-                period.stake -= _calculatePercentage(period.stake, burnedStakePercentage);
-                period.pastDeadline = true;
-            }
+            period.pastDeadline = true;
         }
         balances[period.prover] += numPublications * period.fee;
     }
@@ -282,7 +278,9 @@ contract ProverManager is IProposerFees, IProverManager {
 
         Period storage period = _periods[periodId];
         require(provenPublication.timestamp > period.end, "Publication must be after period");
-        balances[period.prover] += period.stake;
+
+        balances[period.prover] +=
+            period.pastDeadline ? _calculatePercentage(period.stake, burnedStakePercentage) : period.stake;
         period.stake = 0;
     }
 
