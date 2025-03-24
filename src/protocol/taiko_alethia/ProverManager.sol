@@ -262,8 +262,9 @@ contract ProverManager is IProposerFees, IProverManager {
         Period storage period = _periods[periodId];
         require(provenPublication.timestamp > period.end, "Publication must be after period");
 
+        uint256 stake = period.stake;
         balances[period.prover] +=
-            period.pastDeadline ? _calculatePercentage(period.stake, burnedStakePercentage) : period.stake;
+            period.pastDeadline ? (stake - _calculatePercentage(stake, burnedStakePercentage)) : stake;
         period.stake = 0;
     }
 
