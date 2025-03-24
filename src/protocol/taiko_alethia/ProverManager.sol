@@ -169,7 +169,7 @@ contract ProverManager is IProposerFees, IProverManager {
             _ensureSufficientUnderbid(_currentPeriod.fee, offeredFee);
 
             uint256 periodEnd = block.timestamp + successionDelay;
-            _finalizePeriod(_currentPeriod, periodEnd, periodEnd + provingWindow);
+            _closePeriod(_currentPeriod, periodEnd, periodEnd + provingWindow);
         } else {
             address _nextProverAddress = _nextPeriod.prover;
             if (_nextProverAddress != address(0)) {
@@ -204,7 +204,7 @@ contract ProverManager is IProposerFees, IProverManager {
 
         uint256 periodEnd = block.timestamp + exitDelay;
         // We use this to mark the prover as evicted
-        _finalizePeriod(period, periodEnd, periodEnd);
+        _closePeriod(period, periodEnd, periodEnd);
 
         // Reward the evictor and slash the prover
         uint256 evictorIncentive = _calculatePercentage(period.stake, evictorIncentivePercentage);
@@ -225,7 +225,7 @@ contract ProverManager is IProposerFees, IProverManager {
 
         uint256 periodEnd = block.timestamp + exitDelay;
         uint256 _provingDeadline = periodEnd + provingWindow;
-        _finalizePeriod(period, periodEnd, _provingDeadline);
+        _closePeriod(period, periodEnd, _provingDeadline);
 
         emit ProverExited(_prover, periodEnd, _provingDeadline);
     }
@@ -235,7 +235,7 @@ contract ProverManager is IProposerFees, IProverManager {
         uint256 periodId = currentPeriodId;
         Period storage period = _periods[periodId];
         require(period.prover == address(0) && period.end == 0, "No proving vacancy");
-        _finalizePeriod(period, block.timestamp, block.timestamp);
+        _closePeriod(period, block.timestamp, block.timestamp);
 
         Period storage nextPeriod = _periods[periodId + 1];
         _updatePeriod(nextPeriod, msg.sender, fee, livenessBond);
@@ -351,7 +351,7 @@ contract ProverManager is IProposerFees, IProverManager {
     /// @param period The period to finalize
     /// @param endTimestamp The timestamp when the period ends
     /// @param deadlineTimestamp The timestamp by which proofs must be submitted
-    function _finalizePeriod(Period storage period, uint256 endTimestamp, uint256 deadlineTimestamp) private {
+    function _closePeriod(Period storage period, uint256 endTimestamp, uint256 deadlineTimestamp) private {
         period.end = endTimestamp;
         period.deadline = deadlineTimestamp;
     }
