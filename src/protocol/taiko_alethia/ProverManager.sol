@@ -165,22 +165,15 @@ contract ProverManager is IProposerFees, IProverManager {
         uint256 currentPeriod = currentPeriodId;
         Period storage _currentPeriod = _periods[currentPeriod];
         Period storage _nextPeriod = _periods[currentPeriod + 1];
-        uint256 requiredMaxFee;
         if (_currentPeriod.end == 0) {
-            // If the period is still active the bid has to be lower
-            uint256 currentFee = _currentPeriod.fee;
-            requiredMaxFee = _calculatePercentage(currentFee, maxBidPercentage);
-            require(offeredFee <= requiredMaxFee, "Offered fee not low enough");
+            _ensureSufficientUnderbid(_currentPeriod.fee, offeredFee);
 
             uint256 periodEnd = block.timestamp + successionDelay;
             _finalizePeriod(_currentPeriod, periodEnd, periodEnd + provingWindow);
         } else {
             address _nextProverAddress = _nextPeriod.prover;
             if (_nextProverAddress != address(0)) {
-                // If there's already a bid for the next period the bid has to be lower
-                uint256 nextFee = _nextPeriod.fee;
-                requiredMaxFee = _calculatePercentage(nextFee, maxBidPercentage);
-                require(offeredFee <= requiredMaxFee, "Offered fee not low enough");
+                _ensureSufficientUnderbid(_nextPeriod.fee, offeredFee);
 
                 // Refund the liveness bond to the losing bid
                 balances[_nextProverAddress] += _nextPeriod.stake;
@@ -344,6 +337,14 @@ contract ProverManager is IProposerFees, IProverManager {
         period.fee = fee;
         period.stake = stake; // overwrite previous value. We assume the previous value is zero or already returned
         balances[prover] -= stake;
+    }
+
+    /// @dev Ensure the offered fee is low enough. It must be at most `maxBidPercentage` of the fee it is outbidding
+    /// @param fee The fee to be outbid (either the current period's fee or next period's winning fee)
+    /// @param offeredFee The new bid
+    function _ensureSufficientUnderbid(uint256 fee, uint256 offeredFee) private view {
+        uint256 requiredMaxFee = _calculatePercentage(fee, maxBidPercentage);
+        require(offeredFee <= requiredMaxFee, "Offered fee not low enough");
     }
 
     /// @dev Sets a period's end and deadline timestamps
