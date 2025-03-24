@@ -224,7 +224,7 @@ contract ProverManager is IProposerFees, IProverManager {
         require(period.end == 0, "Prover already exited");
 
         uint256 periodEnd = block.timestamp + exitDelay;
-        uint256 _provingWindow = provingWindow
+        uint256 _provingWindow = provingWindow;
         _closePeriod(period, periodEnd, _provingWindow);
 
         emit ProverExited(_prover, periodEnd, periodEnd + _provingWindow);
