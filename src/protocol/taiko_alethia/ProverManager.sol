@@ -13,8 +13,7 @@ contract ProverManager is IProposerFees, IProverManager {
         uint256 fee; // per-publication fee (in wei)
         uint256 end; // the end of the period(this may happen because the prover exits, is evicted or outbid)
         uint256 deadline; // the time by which the prover needs to submit a proof
-        bool pastDeadline; // whether the proof came after the deadline, we set this to true when burning the stake of
-            // the original prover
+        bool pastDeadline; // whether the proof came after the deadline
     }
 
     /// @dev This struct is necessary to pass it to the constructor and avoid stack too deep errors
@@ -27,7 +26,7 @@ contract ProverManager is IProposerFees, IProverManager {
         uint256 provingWindow;
         uint256 livenessBond;
         uint256 evictorIncentivePercentage;
-        uint256 burnedStakePercentage;
+        uint256 rewardPercentage;
     }
 
     address public immutable inbox;
@@ -54,11 +53,10 @@ contract ProverManager is IProposerFees, IProverManager {
     /// @notice The minimum stake required to be a prover
     /// @dev This should be enough to cover the cost of a new prover if the current prover becomes inactive
     uint256 public immutable livenessBond;
-    /// @notice The percentage(in bps) of the liveness bond that the evictor gets as an incentive
+    /// @notice The percentage (in bps) of the liveness bond that the evictor gets as an incentive
     uint256 public immutable evictorIncentivePercentage;
-    /// @notice The percentage(in bps) of the liveness bond (at the moment of the slashing) that is burned when a
-    /// prover is slashed
-    uint256 public immutable burnedStakePercentage;
+    /// @notice The percentage (in bps) of the remaining liveness bond rewarded to the prover who proves the final publication after the deadline
+    uint256 public immutable rewardPercentage;
 
     /// @notice Common balances for proposers and provers
     mapping(address user => uint256 balance) public balances;
@@ -89,7 +87,7 @@ contract ProverManager is IProposerFees, IProverManager {
         provingWindow = _config.provingWindow;
         livenessBond = _config.livenessBond;
         evictorIncentivePercentage = _config.evictorIncentivePercentage;
-        burnedStakePercentage = _config.burnedStakePercentage;
+        rewardPercentage = _config.rewardPercentage;
         inbox = _inbox;
         checkpointTracker = ICheckpointTracker(_checkpointTracker);
         publicationFeed = IPublicationFeed(_publicationFeed);
@@ -264,7 +262,7 @@ contract ProverManager is IProposerFees, IProverManager {
 
         uint256 stake = period.stake;
         balances[period.prover] +=
-            period.pastDeadline ? (stake - _calculatePercentage(stake, burnedStakePercentage)) : stake;
+            period.pastDeadline ? _calculatePercentage(stake, rewardPercentage) : stake;
         period.stake = 0;
     }
 
