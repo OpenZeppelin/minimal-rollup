@@ -229,7 +229,7 @@ contract ProverManager is IProposerFees, IProverManager {
         uint256 periodId
     ) external {
         Period storage period = _periods[periodId];
-        uint256 previousPeriodEnd = period > 0 ? _periods[periodId - 1].end: 0;
+        uint256 previousPeriodEnd = periodId > 0 ? _periods[periodId - 1].end: 0;
 
         require(publicationFeed.validateHeader(lastPub), "Last publication does not exist");
         require(end.publicationId == lastPub.id, "Last publication does not match end checkpoint");
