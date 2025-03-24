@@ -50,10 +50,8 @@ contract CheckpointTrackerTest is Test {
 
     function test_constructor_EmitsEvent() public {
         bytes32 genesisCommitment = keccak256(abi.encode("genesis"));
-        ICheckpointTracker.Checkpoint memory genesisCheckpoint = ICheckpointTracker.Checkpoint({
-            publicationId: 0,
-            commitment: genesisCommitment
-        });
+        ICheckpointTracker.Checkpoint memory genesisCheckpoint =
+            ICheckpointTracker.Checkpoint({publicationId: 0, commitment: genesisCommitment});
 
         vm.expectEmit();
         emit ICheckpointTracker.CheckpointUpdated(genesisCheckpoint);
