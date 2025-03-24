@@ -241,8 +241,8 @@ contract ProverManager is IProposerFees, IProverManager {
 
         checkpointTracker.proveTransition(start, end, numPublications, proof);
 
-        bool isPast = block.timestamp > period.deadline && period.deadline != 0;
-        if (isPast) {
+        bool isPastDeadline = block.timestamp > period.deadline && period.deadline != 0;
+        if (isPastDeadline) {
             // Whoever proves the final publication in this period can (eventually) call `finalizePastPeriod` to claim a
             // percentage of the stake. In practice, a single prover will likely close the whole period with one proof.
             period.prover = msg.sender;
@@ -336,15 +336,15 @@ contract ProverManager is IProposerFees, IProverManager {
     /// @dev Sets a period's end and deadline timestamps
     /// @param period The period to finalize
     /// @param endDelay The duration (from now) when the period will end
-    /// @param provingWindow The duration that proofs can be submitted after the end of the period
+    /// @param _provingWindow The duration that proofs can be submitted after the end of the period
     /// @return end The period's end timestamp
     /// @return deadline The period's deadline timestamp
-    function _closePeriod(Period storage period, uint256 endDelay, uint256 provingWindow)
+    function _closePeriod(Period storage period, uint256 endDelay, uint256 _provingWindow)
         private
         returns (uint256 end, uint256 deadline)
     {
         end = block.timestamp + endDelay;
-        deadline = end + provingWindow;
+        deadline = end + _provingWindow;
         period.end = end;
         period.deadline = deadline;
     }
