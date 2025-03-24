@@ -4,6 +4,12 @@ pragma solidity ^0.8.28;
 import {IBlobRefRegistry} from "../../blobs/IBlobRefRegistry.sol";
 import {IDelayedInclusionStore} from "../IDelayedInclusionStore.sol";
 
+/// @dev A contract that handles storing publications that will be included by the inbox contract at a delayed time.
+///
+/// Offers a simple interface to handle storing and processing delayed inclusions.
+/// The contract is designed to be used in conjunction with a rollups inbox contract.
+/// Delayed inclusions are added to a queue using the `publishDelayed` function and are processed by
+/// calling the `processDueInclusions` function.
 contract DelayedInclusionStore is IDelayedInclusionStore {
     struct DueInclusion {
         bytes32 blobRefHash;
