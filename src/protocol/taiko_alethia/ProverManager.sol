@@ -169,7 +169,7 @@ contract ProverManager is IProposerFees, IProverManager {
             _ensureSufficientUnderbid(_currentPeriod.fee, offeredFee);
 
             uint256 periodEnd = block.timestamp + successionDelay;
-            _closePeriod(_currentPeriod, periodEnd, periodEnd + provingWindow);
+            _closePeriod(_currentPeriod, periodEnd, provingWindow);
         } else {
             address _nextProverAddress = _nextPeriod.prover;
             if (_nextProverAddress != address(0)) {
@@ -204,7 +204,7 @@ contract ProverManager is IProposerFees, IProverManager {
 
         uint256 periodEnd = block.timestamp + exitDelay;
         // We use this to mark the prover as evicted
-        _closePeriod(period, periodEnd, periodEnd);
+        _closePeriod(period, periodEnd, 0);
 
         // Reward the evictor and slash the prover
         uint256 evictorIncentive = _calculatePercentage(period.stake, evictorIncentivePercentage);
@@ -224,10 +224,10 @@ contract ProverManager is IProposerFees, IProverManager {
         require(period.end == 0, "Prover already exited");
 
         uint256 periodEnd = block.timestamp + exitDelay;
-        uint256 _provingDeadline = periodEnd + provingWindow;
-        _closePeriod(period, periodEnd, _provingDeadline);
+        uint256 _provingWindow = provingWindow
+        _closePeriod(period, periodEnd, _provingWindow);
 
-        emit ProverExited(_prover, periodEnd, _provingDeadline);
+        emit ProverExited(_prover, periodEnd, periodEnd + _provingWindow);
     }
 
     /// @inheritdoc IProverManager
@@ -235,7 +235,7 @@ contract ProverManager is IProposerFees, IProverManager {
         uint256 periodId = currentPeriodId;
         Period storage period = _periods[periodId];
         require(period.prover == address(0) && period.end == 0, "No proving vacancy");
-        _closePeriod(period, block.timestamp, block.timestamp);
+        _closePeriod(period, block.timestamp, 0);
 
         Period storage nextPeriod = _periods[periodId + 1];
         _updatePeriod(nextPeriod, msg.sender, fee, livenessBond);
@@ -350,9 +350,9 @@ contract ProverManager is IProposerFees, IProverManager {
     /// @dev Sets a period's end and deadline timestamps
     /// @param period The period to finalize
     /// @param endTimestamp The timestamp when the period ends
-    /// @param deadlineTimestamp The timestamp by which proofs must be submitted
-    function _closePeriod(Period storage period, uint256 endTimestamp, uint256 deadlineTimestamp) private {
+    /// @param provingWindow The duration that proofs can be submitted after the end of the period
+    function _closePeriod(Period storage period, uint256 endTimestamp, uint256 provingWindow) private {
         period.end = endTimestamp;
-        period.deadline = deadlineTimestamp;
+        period.deadline = endTimestamp + provingWindow;
     }
 }
