@@ -31,7 +31,7 @@ contract CheckpointTracker is ICheckpointTracker {
         proverManager = _proverManager;
         Checkpoint memory genesisCheckpoint = Checkpoint({publicationId: 0, commitment: _genesis});
         _provenCheckpoint = genesisCheckpoint;
-        emit CheckpointUpdated(genesisCheckpoint.publicationId, genesisCheckpoint.commitment);
+        emit CheckpointUpdated(genesisCheckpoint);
     }
 
     /// @inheritdoc ICheckpointTracker
@@ -63,7 +63,7 @@ contract CheckpointTracker is ICheckpointTracker {
         );
 
         _provenCheckpoint = end;
-        emit TransitionProven(start, end);
+        emit CheckpointUpdated(end);
     }
 
     function getProvenCheckpoint() external view returns (Checkpoint memory) {

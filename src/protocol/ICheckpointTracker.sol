@@ -8,14 +8,8 @@ interface ICheckpointTracker {
     }
 
     /// @notice Emitted when the proven checkpoint is updated
-    /// @param publicationId the publication id of the last proven checkpoint
-    /// @param commitment the commitment of the last proven checkpoint
-    event CheckpointUpdated(uint256 indexed publicationId, bytes32 commitment);
-
-    /// @notice Emitted when a transition is proven
-    /// @param start the checkpoint before the transition
-    /// @param end the checkpoint after the transition
-    event TransitionProven(Checkpoint start, Checkpoint end);
+    /// @param latestCheckpoint the latest proven checkpoint
+    event CheckpointUpdated(Checkpoint latestCheckpoint);
 
     /// @return _ The last proven checkpoint
     function getProvenCheckpoint() external view returns (Checkpoint memory);

@@ -35,7 +35,7 @@ contract CheckpointTrackerTest is Test {
         proof = abi.encode("proof");
     }
 
-    function test_setUp() public {
+    function test_setUp() public view {
         ICheckpointTracker.Checkpoint memory genesisCheckpoint =
             ICheckpointTracker.Checkpoint({publicationId: 0, commitment: keccak256(abi.encode("genesis"))});
         ICheckpointTracker.Checkpoint memory provenCheckpoint = tracker.getProvenCheckpoint();
@@ -50,10 +50,13 @@ contract CheckpointTrackerTest is Test {
 
     function test_constructor_EmitsEvent() public {
         bytes32 genesisCommitment = keccak256(abi.encode("genesis"));
-        uint256 genesisPublicationId = 0;
+        ICheckpointTracker.Checkpoint memory genesisCheckpoint = ICheckpointTracker.Checkpoint({
+            publicationId: 0,
+            commitment: genesisCommitment
+        });
 
         vm.expectEmit();
-        emit ICheckpointTracker.CheckpointUpdated(genesisPublicationId, genesisCommitment);
+        emit ICheckpointTracker.CheckpointUpdated(genesisCheckpoint);
         new CheckpointTracker(genesisCommitment, address(feed), address(verifier), proverManager);
     }
 
@@ -65,7 +68,7 @@ contract CheckpointTrackerTest is Test {
         uint256 numRelevantPublications = 2;
 
         vm.expectEmit();
-        emit ICheckpointTracker.TransitionProven(start, end);
+        emit ICheckpointTracker.CheckpointUpdated(end);
         tracker.proveTransition(start, end, numRelevantPublications, proof);
 
         ICheckpointTracker.Checkpoint memory provenCheckpoint = tracker.getProvenCheckpoint();
