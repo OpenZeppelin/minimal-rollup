@@ -191,7 +191,7 @@ contract ProverManager is IProposerFees, IProverManager {
     /// @dev This can be called by anyone, and they get `evictorIncentivePercentage` of the liveness bond as an
     /// incentive.
     function evictProver(IPublicationFeed.PublicationHeader calldata publicationHeader) external {
-        require(publicationFeed.validateHeader(publicationHeader), "Publication hash does not match");
+        require(publicationFeed.validateHeader(publicationHeader), "Invalid publication");
 
         uint256 publicationTimestamp = publicationHeader.timestamp;
         require(publicationTimestamp + livenessWindow < block.timestamp, "Publication is not old enough");

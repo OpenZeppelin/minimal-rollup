@@ -347,7 +347,7 @@ contract ProverManagerTest is Test {
 
         // Evict the prover with an invalid publication header
         vm.prank(evictor);
-        vm.expectRevert("Publication hash does not match");
+        vm.expectRevert("Invalid publication");
         proverManager.evictProver(header);
     }
 
