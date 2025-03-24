@@ -157,7 +157,7 @@ contract ProverManager is IProposerFees, IProverManager {
     }
 
     /// @inheritdoc IProverManager
-    /// @dev The offered fee has to be at least `minUndercutPercentage` lower than the current best price.
+    /// @dev The offered fee has to be at most `maxBidPercentage` of the current best price.
     /// @dev The current best price may be the current prover's fee or the fee of the next bid, depending on whether the
     /// period is active or not.
     /// An active period is one that doesn't have an `end` timestamp yet.
