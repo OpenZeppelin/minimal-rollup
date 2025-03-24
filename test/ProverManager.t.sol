@@ -109,7 +109,7 @@ contract ProverManagerTest is Test {
             "Withdrawal did not update balance correctly"
         );
         // Allow a small tolerance for gas.
-        assertApproxEqAbs(balanceAfter, balanceBefore + 0.5 ether, 1e15);
+        assertApproxEqAbs(balanceAfter, balanceBefore + withdrawAmount, 1e15);
     }
 
     /// --------------------------------------------------------------------------
