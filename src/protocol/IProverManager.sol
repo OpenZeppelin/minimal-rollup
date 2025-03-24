@@ -51,11 +51,11 @@ interface IProverManager {
         uint256 periodId
     ) external;
 
-    /// @notice Returns the stake for a closed period to the prover
+    /// @notice Returns the stake for a past period to the prover
     /// @param periodId The id of the period to finalize
     /// @param provenPublication A publication that the caller is claiming has been proven and is after the period end
     /// @dev If there is a proven publication after the period, it implies the whole period has been proven.
     /// @dev We assume there will always be a suitable proven publication.
-    function finalizeClosedPeriod(uint256 periodId, IPublicationFeed.PublicationHeader calldata provenPublication)
+    function finalizePastPeriod(uint256 periodId, IPublicationFeed.PublicationHeader calldata provenPublication)
         external;
 }

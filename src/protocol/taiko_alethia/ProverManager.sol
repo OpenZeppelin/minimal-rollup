@@ -258,14 +258,13 @@ contract ProverManager is IProposerFees, IProverManager {
 
         checkpointTracker.proveTransition(start, end, numPublications, proof);
 
-        bool isClosed = block.timestamp > period.deadline && period.deadline != 0;
-        if (isClosed) {
+        bool isPast = block.timestamp > period.deadline && period.deadline != 0;
+        if (isPast) {
             period.prover = msg.sender;
             if (!period.pastDeadline) {
                 // The first time this is called burn a % of the stake. Whoever proves the final publication in this
-                // period can (eventually) call `finalizeClosedPeriod` to claim the remaining stake. In practice, a
-                // single
-                // prover will likely close the whole period with one proof.
+                // period can (eventually) call `finalizePastPeriod` to claim the remaining stake. In practice, a
+                // single prover will likely close the whole period with one proof.
                 period.stake -= _calculatePercentage(period.stake, burnedStakePercentage);
                 period.pastDeadline = true;
             }
@@ -274,7 +273,7 @@ contract ProverManager is IProposerFees, IProverManager {
     }
 
     /// @inheritdoc IProverManager
-    function finalizeClosedPeriod(uint256 periodId, IPublicationFeed.PublicationHeader calldata provenPublication)
+    function finalizePastPeriod(uint256 periodId, IPublicationFeed.PublicationHeader calldata provenPublication)
         external
     {
         ICheckpointTracker.Checkpoint memory lastProven = checkpointTracker.getProvenCheckpoint();
