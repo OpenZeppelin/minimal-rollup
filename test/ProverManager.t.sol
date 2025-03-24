@@ -736,7 +736,7 @@ contract ProverManagerTest is Test {
         // Create a publication after the period ends
         vm.warp(block.timestamp + 1);
         IPublicationFeed.PublicationHeader memory afterPeriodHeader = _insertPublication();
-        
+
         // Set the proven checkpoint to include the latest publication
         ICheckpointTracker.Checkpoint memory provenCheckpoint = ICheckpointTracker.Checkpoint({
             publicationId: afterPeriodHeader.id,
@@ -753,9 +753,13 @@ contract ProverManagerTest is Test {
         // Verify a portion of the stake was transferred to the prover
         ProverManager.Period memory periodAfter = proverManager.getPeriod(INITIAL_PERIOD);
         assertEq(periodAfter.stake, 0, "Stake should be zero after finalization");
-        
+
         uint256 initialProverBalanceAfter = proverManager.balances(initialProver);
-        assertEq(initialProverBalanceAfter, initialProverBalanceBefore + stakeBefore, "Prover should receive the remaining stake");
+        assertEq(
+            initialProverBalanceAfter,
+            initialProverBalanceBefore + stakeBefore,
+            "Prover should receive the remaining stake"
+        );
     }
 
     function test_finalizePastPeriod_PastDeadline() public {
@@ -799,7 +803,7 @@ contract ProverManagerTest is Test {
 
         // Create a publication after the period ended
         IPublicationFeed.PublicationHeader memory afterPeriodHeader = _insertPublication();
-        
+
         // Set the proven checkpoint to include the latest publication
         ICheckpointTracker.Checkpoint memory provenCheckpoint = ICheckpointTracker.Checkpoint({
             publicationId: afterPeriodHeader.id,
@@ -817,7 +821,7 @@ contract ProverManagerTest is Test {
         // Verify a portion of the stake was transferred to prover1
         ProverManager.Period memory periodAfter = proverManager.getPeriod(INITIAL_PERIOD);
         assertEq(periodAfter.stake, 0, "Stake should be zero after finalization");
-        
+
         uint256 initialProverBalanceAfter = proverManager.balances(initialProver);
         uint256 prover1BalanceAfter = proverManager.balances(prover1);
         uint256 stakeReward = stakeBefore * REWARD_PERCENTAGE / 10000;
@@ -831,18 +835,18 @@ contract ProverManagerTest is Test {
         vm.prank(initialProver);
         proverManager.exit();
         vm.warp(block.timestamp + EXIT_DELAY + 1);
-        
+
         // Create a publication after the period ends
         vm.warp(block.timestamp + 1);
         IPublicationFeed.PublicationHeader memory afterPeriodHeader = _insertPublication();
-        
+
         // Set the proven checkpoint to a lower publication ID
         ICheckpointTracker.Checkpoint memory provenCheckpoint = ICheckpointTracker.Checkpoint({
             publicationId: header.id, // Lower than afterPeriodHeader.id
             commitment: keccak256(abi.encode("commitment"))
         });
         checkpointTracker.setProvenHash(provenCheckpoint);
-        
+
         // Attempt to finalize with unproven publication
         vm.expectRevert("Publication must be proven");
         proverManager.finalizePastPeriod(INITIAL_PERIOD, afterPeriodHeader);
@@ -853,18 +857,18 @@ contract ProverManagerTest is Test {
         _insertPublication();
         vm.prank(initialProver);
         proverManager.exit();
-        
+
         // Create a publication before the period ends
-        vm.warp(block.timestamp + EXIT_DELAY -1);
+        vm.warp(block.timestamp + EXIT_DELAY - 1);
         IPublicationFeed.PublicationHeader memory beforePeriodHeader = _insertPublication();
-        
+
         // Set the proven checkpoint to a lower publication ID
         ICheckpointTracker.Checkpoint memory provenCheckpoint = ICheckpointTracker.Checkpoint({
-            publicationId: beforePeriodHeader.id, 
+            publicationId: beforePeriodHeader.id,
             commitment: keccak256(abi.encode("commitment"))
         });
         checkpointTracker.setProvenHash(provenCheckpoint);
-        
+
         // Attempt to finalize with unproven publication
         vm.expectRevert("Publication must be after period");
         proverManager.finalizePastPeriod(INITIAL_PERIOD, beforePeriodHeader);

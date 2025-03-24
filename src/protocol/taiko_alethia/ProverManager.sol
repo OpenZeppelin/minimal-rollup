@@ -55,7 +55,8 @@ contract ProverManager is IProposerFees, IProverManager {
     uint256 public immutable livenessBond;
     /// @notice The percentage (in bps) of the liveness bond that the evictor gets as an incentive
     uint256 public immutable evictorIncentivePercentage;
-    /// @notice The percentage (in bps) of the remaining liveness bond rewarded to the prover who proves the final publication after the deadline
+    /// @notice The percentage (in bps) of the remaining liveness bond rewarded to the prover who proves the final
+    /// publication after the deadline
     uint256 public immutable rewardPercentage;
 
     /// @notice Common balances for proposers and provers
@@ -261,8 +262,7 @@ contract ProverManager is IProposerFees, IProverManager {
         require(provenPublication.timestamp > period.end, "Publication must be after period");
 
         uint256 stake = period.stake;
-        balances[period.prover] +=
-            period.pastDeadline ? _calculatePercentage(stake, rewardPercentage) : stake;
+        balances[period.prover] += period.pastDeadline ? _calculatePercentage(stake, rewardPercentage) : stake;
         period.stake = 0;
     }
 
