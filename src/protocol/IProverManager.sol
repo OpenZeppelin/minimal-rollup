@@ -18,7 +18,7 @@ interface IProverManager {
     ///   - a prover has exited or been evicted
     ///   - no prover has bid on the next period
     ///   - a publication is made, creating a new period with no prover and no fee
-    /// At this point it is impossible to outbid for the prover because the fee is zero
+    /// At this point it is impossible to outbid the prover because the fee is zero
     /// This function allows anyone to start a new period with a new fee. Note that the new prover will still need to
     // ensure the previous publications are proven before proving their own. Nevertheless, we start a new period so
     // they cannot be evicted based on publications that occurred before they agreed to prove
