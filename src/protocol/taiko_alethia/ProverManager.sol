@@ -5,8 +5,9 @@ import {ICheckpointTracker} from "../ICheckpointTracker.sol";
 import {IProposerFees} from "../IProposerFees.sol";
 import {IProverManager} from "../IProverManager.sol";
 import {IPublicationFeed} from "../IPublicationFeed.sol";
+import {NativeVault} from "../NativeVault.sol";
 
-contract ProverManager is IProposerFees, IProverManager {
+contract ProverManager is IProposerFees, IProverManager, NativeVault {
     struct Period {
         address prover;
         uint256 stake; // stake the prover locked to register
@@ -60,8 +61,6 @@ contract ProverManager is IProposerFees, IProverManager {
     /// prover is slashed
     uint256 public immutable burnedStakePercentage;
 
-    /// @notice Common balances for proposers and provers
-    mapping(address user => uint256 balance) public balances;
     /// @notice The current period
     uint256 public currentPeriodId;
     /// @dev Periods represent proving windows
@@ -100,27 +99,6 @@ contract ProverManager is IProposerFees, IProverManager {
         _claimProvingVacancy(_initialFee, _initialProver);
     }
 
-    /// @notice Deposit ETH into the contract. The deposit can be used both for opting in as a prover or proposer
-    function deposit() external payable {
-        _deposit(msg.sender, msg.value);
-    }
-
-    /// @notice Withdraw available(unlocked) funds.
-    /// @param amount The amount to withdraw
-    function withdraw(uint256 amount) external {
-        balances[msg.sender] -= amount;
-
-        address to = msg.sender;
-        bool ok;
-        // Using assembly to avoid memory allocation costs; only the call's success matters to ensure funds are sent.
-        assembly ("memory-safe") {
-            ok := call(gas(), to, amount, 0, 0, 0, 0)
-        }
-        require(ok, "Withdraw failed");
-
-        emit Withdrawal(msg.sender, amount);
-    }
-
     /// @inheritdoc IProposerFees
     /// @dev This function advances to the next period if the current period has ended.
     // TODO: deal with delayed publications
@@ -142,7 +120,7 @@ contract ProverManager is IProposerFees, IProverManager {
         }
 
         // Deduct fee from proposer's balance
-        balances[proposer] -= _periods[periodId].fee;
+        NativeVault._reduceBalance(proposer, _periods[periodId].fee);
     }
 
     /// @inheritdoc IProverManager
@@ -163,7 +141,7 @@ contract ProverManager is IProposerFees, IProverManager {
                 _ensureSufficientUnderbid(_nextPeriod.fee, offeredFee);
 
                 // Refund the liveness bond to the losing bid
-                balances[_nextProverAddress] += _nextPeriod.stake;
+                NativeVault._increaseBalance(_nextProverAddress, _nextPeriod.stake);
             }
         }
 
@@ -194,7 +172,7 @@ contract ProverManager is IProposerFees, IProverManager {
 
         // Reward the evictor and slash the prover
         uint256 evictorIncentive = _calculatePercentage(period.stake, evictorIncentivePercentage);
-        balances[msg.sender] += evictorIncentive;
+        NativeVault._increaseBalance(msg.sender, evictorIncentive);
         period.stake -= evictorIncentive;
 
         emit ProverEvicted(period.prover, msg.sender, end, period.stake);
@@ -248,7 +226,7 @@ contract ProverManager is IProposerFees, IProverManager {
             period.prover = msg.sender;
             period.pastDeadline = true;
         }
-        balances[period.prover] += numPublications * period.fee;
+        NativeVault._increaseBalance(msg.sender, numPublications * period.fee);
     }
 
     /// @inheritdoc IProverManager
@@ -262,8 +240,9 @@ contract ProverManager is IProposerFees, IProverManager {
         Period storage period = _periods[periodId];
         require(provenPublication.timestamp > period.end, "Publication must be after period");
 
-        balances[period.prover] +=
+        uint256 returnedStake =
             period.pastDeadline ? _calculatePercentage(period.stake, burnedStakePercentage) : period.stake;
+        NativeVault._increaseBalance(period.prover, returnedStake);
         period.stake = 0;
     }
 
@@ -289,7 +268,7 @@ contract ProverManager is IProposerFees, IProverManager {
 
     /// @dev Increases `user`'s balance by `amount`
     function _deposit(address user, uint256 amount) private {
-        balances[user] += amount;
+        NativeVault._increaseBalance(user, amount);
         emit Deposit(user, amount);
     }
 
@@ -322,7 +301,7 @@ contract ProverManager is IProposerFees, IProverManager {
         period.prover = prover;
         period.fee = fee;
         period.stake = stake; // overwrite previous value. We assume the previous value is zero or already returned
-        balances[prover] -= stake;
+        NativeVault._reduceBalance(prover, stake);
     }
 
     /// @dev Ensure the offered fee is low enough. It must be at most `maxBidPercentage` of the fee it is outbidding
