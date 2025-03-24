@@ -73,7 +73,7 @@ contract ProverManagerTest is Test {
         vm.deal(inbox, 10 ether);
 
         // Create a publication to trigger the new period
-        vm.warp(block.timestamp + 1);
+        vm.warp(vm.getBlockTimestamp() + 1);
         vm.prank(inbox);
         proverManager.payPublicationFee{value: INITIAL_FEE}(proposer, false);
     }
@@ -109,7 +109,7 @@ contract ProverManagerTest is Test {
             "Withdrawal did not update balance correctly"
         );
         // Allow a small tolerance for gas.
-        assertApproxEqAbs(balanceAfter, balanceBefore + 0.5 ether, 1e15);
+        assertApproxEqAbs(balanceAfter, balanceBefore + withdrawAmount, 1e15);
     }
 
     /// --------------------------------------------------------------------------
@@ -157,7 +157,7 @@ contract ProverManagerTest is Test {
         proverManager.exit();
 
         // Warp to a time after the period has ended.
-        vm.warp(block.timestamp + EXIT_DELAY + 1);
+        vm.warp(vm.getBlockTimestamp() + EXIT_DELAY + 1);
 
         // Call payPublicationFee from the inbox and check that the period has been advanced.
         vm.prank(inbox);
@@ -256,7 +256,7 @@ contract ProverManagerTest is Test {
         proverManager.deposit{value: DEPOSIT_AMOUNT}();
 
         // Record the current timestamp
-        uint256 timestampBefore = block.timestamp;
+        uint256 timestampBefore = vm.getBlockTimestamp();
 
         // Make a bid that will outbid the current prover
         uint256 bidFee = INITIAL_FEE * MAX_BID_PERCENTAGE / 10000;
@@ -307,25 +307,25 @@ contract ProverManagerTest is Test {
         uint256 stakeBefore = periodBefore.stake;
 
         // Evict the prover
-        vm.warp(block.timestamp + LIVENESS_WINDOW + 1);
+        vm.warp(vm.getBlockTimestamp() + LIVENESS_WINDOW + 1);
         vm.prank(evictor);
         vm.expectEmit();
         emit ProverManager.ProverEvicted(
             initialProver,
             evictor,
-            block.timestamp + EXIT_DELAY,
+            vm.getBlockTimestamp() + EXIT_DELAY,
             stakeBefore - (stakeBefore * EVICTOR_INCENTIVE_PERCENTAGE) / 10000
         );
         proverManager.evictProver(header);
 
         // Verify period 1 is marked as evicted and its stake reduced
         ProverManager.Period memory periodAfter = proverManager.getPeriod(1);
-        assertEq(periodAfter.deadline, block.timestamp + EXIT_DELAY, "Prover should be evicted");
+        assertEq(periodAfter.deadline, vm.getBlockTimestamp() + EXIT_DELAY, "Prover should be evicted");
 
         // Calculate expected incentive for the evictor
         uint256 incentive = (stakeBefore * EVICTOR_INCENTIVE_PERCENTAGE) / 10000;
         assertEq(periodAfter.stake, stakeBefore - incentive, "Stake not reduced correctly");
-        assertEq(periodAfter.end, block.timestamp + EXIT_DELAY, "Period end not set correctly");
+        assertEq(periodAfter.end, vm.getBlockTimestamp() + EXIT_DELAY, "Period end not set correctly");
 
         // Verify that the evictor's balance increased by the incentive
         uint256 evictorBal = proverManager.balances(evictor);
@@ -336,14 +336,14 @@ contract ProverManagerTest is Test {
         IPublicationFeed.PublicationHeader memory header = _insertPublication();
 
         // Evict the prover with a publication that is not old enough
-        vm.warp(block.timestamp + LIVENESS_WINDOW);
+        vm.warp(vm.getBlockTimestamp() + LIVENESS_WINDOW);
         vm.prank(evictor);
         vm.expectRevert("Publication is not old enough");
         proverManager.evictProver(header);
     }
 
     function test_evictProver_RevertWhen_InvalidPublicationHeader() public {
-        uint256 initialTimestamp = block.timestamp;
+        uint256 initialTimestamp = vm.getBlockTimestamp();
         vm.warp(initialTimestamp + LIVENESS_WINDOW + 1);
 
         IPublicationFeed.PublicationHeader memory header = _insertPublication();
@@ -364,7 +364,7 @@ contract ProverManagerTest is Test {
         proverManager.exit();
 
         // Evict the prover
-        vm.warp(block.timestamp + LIVENESS_WINDOW + 1);
+        vm.warp(vm.getBlockTimestamp() + LIVENESS_WINDOW + 1);
         vm.prank(evictor);
         vm.expectRevert("Proving period is not active");
         proverManager.evictProver(header);
@@ -381,7 +381,7 @@ contract ProverManagerTest is Test {
         checkpointTracker.setProvenHash(provenCheckpoint);
 
         // Evict the prover
-        vm.warp(block.timestamp + LIVENESS_WINDOW + 1);
+        vm.warp(vm.getBlockTimestamp() + LIVENESS_WINDOW + 1);
         vm.prank(evictor);
         vm.expectRevert("Publication has been proven");
         proverManager.evictProver(header);
@@ -395,14 +395,16 @@ contract ProverManagerTest is Test {
         vm.prank(initialProver);
         vm.expectEmit();
         emit ProverManager.ProverExited(
-            initialProver, block.timestamp + EXIT_DELAY, block.timestamp + EXIT_DELAY + PROVING_WINDOW
+            initialProver, vm.getBlockTimestamp() + EXIT_DELAY, vm.getBlockTimestamp() + EXIT_DELAY + PROVING_WINDOW
         );
         proverManager.exit();
 
         // Check that period 1 now has an end time and deadline set
         ProverManager.Period memory period = proverManager.getPeriod(1);
-        assertEq(period.end, block.timestamp + EXIT_DELAY, "Exit did not set period end correctly");
-        assertEq(period.deadline, block.timestamp + EXIT_DELAY + PROVING_WINDOW, "Proving deadline not set correctly");
+        assertEq(period.end, vm.getBlockTimestamp() + EXIT_DELAY, "Exit did not set period end correctly");
+        assertEq(
+            period.deadline, vm.getBlockTimestamp() + EXIT_DELAY + PROVING_WINDOW, "Proving deadline not set correctly"
+        );
     }
 
     function test_exit_RevertWhen_NotCurrentProver() public {
@@ -477,7 +479,7 @@ contract ProverManagerTest is Test {
         proverManager.exit();
 
         // Warp past the deadline
-        vm.warp(block.timestamp + EXIT_DELAY + PROVING_WINDOW + 1);
+        vm.warp(vm.getBlockTimestamp() + EXIT_DELAY + PROVING_WINDOW + 1);
 
         // Create checkpoints for the publications
         ICheckpointTracker.Checkpoint memory startCheckpoint = ICheckpointTracker.Checkpoint({
@@ -525,7 +527,7 @@ contract ProverManagerTest is Test {
         // Exit as the current prover to close the period
         vm.prank(initialProver);
         proverManager.exit();
-        vm.warp(block.timestamp + EXIT_DELAY + PROVING_WINDOW + 1);
+        vm.warp(vm.getBlockTimestamp() + EXIT_DELAY + PROVING_WINDOW + 1);
 
         // Create checkpoints for the publications
         ICheckpointTracker.Checkpoint memory startCheckpoint = ICheckpointTracker.Checkpoint({
@@ -597,7 +599,7 @@ contract ProverManagerTest is Test {
         proverManager.exit();
 
         // Create a publication after the period ends
-        vm.warp(block.timestamp + EXIT_DELAY + 1);
+        vm.warp(vm.getBlockTimestamp() + EXIT_DELAY + 1);
         IPublicationFeed.PublicationHeader memory lateHeader = _insertPublication();
 
         // Create checkpoints
@@ -641,7 +643,7 @@ contract ProverManagerTest is Test {
         // Exit as the current prover to set period end
         vm.prank(initialProver);
         proverManager.exit();
-        vm.warp(block.timestamp + EXIT_DELAY + 1);
+        vm.warp(vm.getBlockTimestamp() + EXIT_DELAY + 1);
 
         // Create a publication in period 2
         IPublicationFeed.PublicationHeader memory lateHeader = _insertPublication();
@@ -684,7 +686,7 @@ contract ProverManagerTest is Test {
         proverManager.bid(bidFee);
 
         // Warp to a time after the period has ended.
-        vm.warp(block.timestamp + EXIT_DELAY + 1);
+        vm.warp(vm.getBlockTimestamp() + EXIT_DELAY + 1);
         (uint256 fee, uint256 delayedFee) = proverManager.getCurrentFees();
         assertEq(fee, bidFee, "Fee should be the bid fee");
         assertEq(delayedFee, bidFee, "Delayed fee should be the bid fee");
