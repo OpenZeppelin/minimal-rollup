@@ -167,9 +167,7 @@ contract ProverManager is IProposerFees, IProverManager {
         Period storage _nextPeriod = _periods[currentPeriod + 1];
         if (_currentPeriod.end == 0) {
             _ensureSufficientUnderbid(_currentPeriod.fee, offeredFee);
-
-            uint256 periodEnd = block.timestamp + successionDelay;
-            _closePeriod(_currentPeriod, periodEnd, provingWindow);
+            _closePeriod(_currentPeriod, successionDelay, provingWindow);
         } else {
             address _nextProverAddress = _nextPeriod.prover;
             if (_nextProverAddress != address(0)) {
@@ -202,16 +200,15 @@ contract ProverManager is IProposerFees, IProverManager {
         ICheckpointTracker.Checkpoint memory lastProven = checkpointTracker.getProvenCheckpoint();
         require(publicationHeader.id > lastProven.publicationId, "Publication has been proven");
 
-        uint256 periodEnd = block.timestamp + exitDelay;
         // We use this to mark the prover as evicted
-        _closePeriod(period, periodEnd, 0);
+        (uint256 end,) = _closePeriod(period, exitDelay, 0);
 
         // Reward the evictor and slash the prover
         uint256 evictorIncentive = _calculatePercentage(period.stake, evictorIncentivePercentage);
         balances[msg.sender] += evictorIncentive;
         period.stake -= evictorIncentive;
 
-        emit ProverEvicted(period.prover, msg.sender, periodEnd, period.stake);
+        emit ProverEvicted(period.prover, msg.sender, end, period.stake);
     }
 
     /// @inheritdoc IProverManager
@@ -223,11 +220,8 @@ contract ProverManager is IProposerFees, IProverManager {
         require(msg.sender == _prover, "Not current prover");
         require(period.end == 0, "Prover already exited");
 
-        uint256 periodEnd = block.timestamp + exitDelay;
-        uint256 _provingWindow = provingWindow;
-        _closePeriod(period, periodEnd, _provingWindow);
-
-        emit ProverExited(_prover, periodEnd, periodEnd + _provingWindow);
+        (uint256 end, uint256 deadline) = _closePeriod(period, exitDelay, provingWindow);
+        emit ProverExited(_prover, end, deadline);
     }
 
     /// @inheritdoc IProverManager
@@ -235,7 +229,7 @@ contract ProverManager is IProposerFees, IProverManager {
         uint256 periodId = currentPeriodId;
         Period storage period = _periods[periodId];
         require(period.prover == address(0) && period.end == 0, "No proving vacancy");
-        _closePeriod(period, block.timestamp, 0);
+        _closePeriod(period, 0, 0);
 
         Period storage nextPeriod = _periods[periodId + 1];
         _updatePeriod(nextPeriod, msg.sender, fee, livenessBond);
@@ -349,10 +343,17 @@ contract ProverManager is IProposerFees, IProverManager {
 
     /// @dev Sets a period's end and deadline timestamps
     /// @param period The period to finalize
-    /// @param endTimestamp The timestamp when the period ends
+    /// @param endDelay The duration (from now) when the period will end
     /// @param provingWindow The duration that proofs can be submitted after the end of the period
-    function _closePeriod(Period storage period, uint256 endTimestamp, uint256 provingWindow) private {
-        period.end = endTimestamp;
-        period.deadline = endTimestamp + provingWindow;
+    /// @return end The period's end timestamp
+    /// @return deadline The period's deadline timestamp
+    function _closePeriod(Period storage period, uint256 endDelay, uint256 provingWindow)
+        private
+        returns (uint256 end, uint256 deadline)
+    {
+        end = block.timestamp + endDelay;
+        deadline = end + provingWindow;
+        period.end = end;
+        period.deadline = deadline;
     }
 }
