@@ -94,21 +94,10 @@ contract ProverManager is IProposerFees, IProverManager {
         checkpointTracker = ICheckpointTracker(_checkpointTracker);
         publicationFeed = IPublicationFeed(_publicationFeed);
 
-        // Initialize the first period with a known prover and a set fee
-        // Start at period 1 so every period has a previous one (and an implicit start timestamp)
-        // use block.timestamp - 1 as period 0's end timestamp so publications in this block are
-        // part of period 1. We assume no relevant publications occur before this contract is deployed.
-        Period storage p0 = _periods[0];
-        p0.end = p0.deadline = block.timestamp - 1;
-
-        currentPeriodId = 1;
-        emit NewPeriod(1);
-
-        require(msg.value >= _config.livenessBond, "Insufficient balance for liveness bond");
-        Period storage p1 = _periods[1];
-        p1.prover = _initialProver;
-        p1.fee = _initialFee;
-        p1.stake = _config.livenessBond;
+        // Close the first period so every period has a previous one (and an implicit start timestamp)
+        // The initial fee and prover will take effect in the block after this one
+        _deposit(_initialProver, msg.value);
+        _claimProvingVacancy(_initialFee, _initialProver);
     }
 
     /// @notice Deposit ETH into the contract. The deposit can be used both for opting in as a prover or proposer
@@ -226,13 +215,7 @@ contract ProverManager is IProposerFees, IProverManager {
 
     /// @inheritdoc IProverManager
     function claimProvingVacancy(uint256 fee) external {
-        uint256 periodId = currentPeriodId;
-        Period storage period = _periods[periodId];
-        require(period.prover == address(0) && period.end == 0, "No proving vacancy");
-        _closePeriod(period, 0, 0);
-
-        Period storage nextPeriod = _periods[periodId + 1];
-        _updatePeriod(nextPeriod, msg.sender, fee, livenessBond);
+        _claimProvingVacancy(fee, msg.sender);
     }
 
     /// @inheritdoc IProverManager
@@ -308,6 +291,18 @@ contract ProverManager is IProposerFees, IProverManager {
     function _deposit(address user, uint256 amount) private {
         balances[user] += amount;
         emit Deposit(user, amount);
+    }
+
+    /// @dev implementation of IProverManager.claimProvingVacancy with the option to specify a prover
+    /// This lets the constructor claim the first vacancy on behalf of _initialProver
+    function _claimProvingVacancy(uint256 fee, address prover) private {
+        uint256 periodId = currentPeriodId;
+        Period storage period = _periods[periodId];
+        require(period.prover == address(0) && period.end == 0, "No proving vacancy");
+        _closePeriod(period, 0, 0);
+
+        Period storage nextPeriod = _periods[periodId + 1];
+        _updatePeriod(nextPeriod, prover, fee, livenessBond);
     }
 
     /// @dev Calculates the percentage of a given numerator scaling up to avoid precision loss

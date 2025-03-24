@@ -71,6 +71,11 @@ contract ProverManagerTest is Test {
 
         // Fund the Inbox contract.
         vm.deal(inbox, 10 ether);
+
+        // Create a publication to trigger the new period
+        vm.warp(block.timestamp + 1);
+        vm.prank(inbox);
+        proverManager.payPublicationFee{value: INITIAL_FEE}(proposer, false);
     }
 
     /// --------------------------------------------------------------------------
