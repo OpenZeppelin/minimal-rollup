@@ -8,7 +8,6 @@ import {UniversalTest} from "./UniversalTest.t.sol";
 // This implies it has no end timestamp or the end timestamp has not been crossed.
 // It can be inherited by any Test contract that respects this condition.
 abstract contract CurrentPeriodIsActive is UniversalTest {
-
     function test_payPublicationFee_ActivePeriod() public {
         uint256 currentPeriod = proverManager.currentPeriodId();
         ProverManager.Period memory p = proverManager.getPeriod(currentPeriod);
@@ -23,5 +22,19 @@ abstract contract CurrentPeriodIsActive is UniversalTest {
 
         uint256 balanceAfter = proverManager.balances(proposer);
         assertEq(balanceAfter, balanceBefore - p.fee, "Publication fee not deducted properly");
+    }
+
+    function test_payPublicationFee_ActivePeriodSendEth() public {
+        uint256 currentPeriod = proverManager.currentPeriodId();
+        ProverManager.Period memory p = proverManager.getPeriod(currentPeriod);
+
+        uint256 balanceBefore = proverManager.balances(proposer);
+        vm.prank(inbox);
+        vm.expectEmit();
+        emit ProverManager.Deposit(proposer, DEPOSIT_AMOUNT);
+        proverManager.payPublicationFee{value: DEPOSIT_AMOUNT}(proposer, false);
+
+        uint256 balanceAfter = proverManager.balances(proposer);
+        assertEq(balanceAfter, balanceBefore + DEPOSIT_AMOUNT - p.fee, "Publication fee not deducted properly");
     }
 }

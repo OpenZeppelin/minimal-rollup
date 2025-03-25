@@ -15,7 +15,7 @@ abstract contract UniversalTest is InvariantTest {
     uint256 constant DEPOSIT_AMOUNT = 2 ether;
     uint256 constant WITHDRAW_AMOUNT = 0.5 ether;
 
-    function setUp() public override virtual {
+    function setUp() public virtual override {
         super.setUp();
         vm.deal(proposer, 10 ether);
     }

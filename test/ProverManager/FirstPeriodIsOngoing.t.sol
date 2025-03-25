@@ -5,7 +5,6 @@ import {CurrentPeriodIsActive} from "./CurrentPeriodIsActive.t.sol";
 
 /// @dev The FirstPeriodIsOngoing is one example where CurrentPeriodIsActive
 contract FirstPeriodIsOngoing is CurrentPeriodIsActive {
-
     function setUp() public override {
         super.setUp();
 
@@ -14,5 +13,4 @@ contract FirstPeriodIsOngoing is CurrentPeriodIsActive {
         vm.prank(inbox);
         proverManager.payPublicationFee{value: INITIAL_FEE}(proposer, false);
     }
-
 }

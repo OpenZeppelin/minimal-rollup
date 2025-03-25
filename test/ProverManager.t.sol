@@ -82,18 +82,6 @@ contract ProverManagerTest is Test {
     /// payPublicationFee()
     /// --------------------------------------------------------------------------
 
-    function test_payPublicationFee_AllowsToSendEth() public {
-        // Call payPublicationFee from the inbox.
-        vm.prank(inbox);
-        vm.expectEmit();
-        emit ProverManager.Deposit(proposer, DEPOSIT_AMOUNT);
-        proverManager.payPublicationFee{value: DEPOSIT_AMOUNT}(proposer, false);
-
-        uint256 balanceAfter = proverManager.balances(proposer);
-        // The fee deducted should be INITIAL_FEE.
-        assertEq(balanceAfter, DEPOSIT_AMOUNT - INITIAL_FEE, "Publication fee not deducted properly");
-    }
-
     function test_payPublicationFee_AdvancesPeriod() public {
         // Deposit funds for proposer.
         vm.prank(proposer);
