@@ -14,8 +14,7 @@ contract ProverManager is IProposerFees, IProverManager, NativeVault {
         uint256 fee; // per-publication fee (in wei)
         uint256 end; // the end of the period(this may happen because the prover exits, is evicted or outbid)
         uint256 deadline; // the time by which the prover needs to submit a proof
-        bool pastDeadline; // whether the proof came after the deadline, we set this to true when burning the stake of
-            // the original prover
+        bool pastDeadline; // whether the proof came after the deadline
     }
 
     /// @dev This struct is necessary to pass it to the constructor and avoid stack too deep errors
@@ -28,7 +27,7 @@ contract ProverManager is IProposerFees, IProverManager, NativeVault {
         uint256 provingWindow;
         uint256 livenessBond;
         uint256 evictorIncentivePercentage;
-        uint256 burnedStakePercentage;
+        uint256 rewardPercentage;
     }
 
     address public immutable inbox;
@@ -55,11 +54,11 @@ contract ProverManager is IProposerFees, IProverManager, NativeVault {
     /// @notice The minimum stake required to be a prover
     /// @dev This should be enough to cover the cost of a new prover if the current prover becomes inactive
     uint256 public immutable livenessBond;
-    /// @notice The percentage(in bps) of the liveness bond that the evictor gets as an incentive
+    /// @notice The percentage (in bps) of the liveness bond that the evictor gets as an incentive
     uint256 public immutable evictorIncentivePercentage;
-    /// @notice The percentage(in bps) of the liveness bond (at the moment of the slashing) that is burned when a
-    /// prover is slashed
-    uint256 public immutable burnedStakePercentage;
+    /// @notice The percentage (in bps) of the remaining liveness bond rewarded to the prover who proves the final
+    /// publication after the deadline
+    uint256 public immutable rewardPercentage;
 
     /// @notice The current period
     uint256 public currentPeriodId;
@@ -88,7 +87,7 @@ contract ProverManager is IProposerFees, IProverManager, NativeVault {
         provingWindow = _config.provingWindow;
         livenessBond = _config.livenessBond;
         evictorIncentivePercentage = _config.evictorIncentivePercentage;
-        burnedStakePercentage = _config.burnedStakePercentage;
+        rewardPercentage = _config.rewardPercentage;
         inbox = _inbox;
         checkpointTracker = ICheckpointTracker(_checkpointTracker);
         publicationFeed = IPublicationFeed(_publicationFeed);
@@ -219,8 +218,8 @@ contract ProverManager is IProposerFees, IProverManager, NativeVault {
 
         checkpointTracker.proveTransition(start, end, numPublications, proof);
 
-        bool isPast = block.timestamp > period.deadline && period.deadline != 0;
-        if (isPast) {
+        bool isPastDeadline = block.timestamp > period.deadline && period.deadline != 0;
+        if (isPastDeadline) {
             // Whoever proves the final publication in this period can (eventually) call `finalizePastPeriod` to claim a
             // percentage of the stake. In practice, a single prover will likely close the whole period with one proof.
             period.prover = msg.sender;
@@ -240,8 +239,8 @@ contract ProverManager is IProposerFees, IProverManager, NativeVault {
         Period storage period = _periods[periodId];
         require(provenPublication.timestamp > period.end, "Publication must be after period");
 
-        uint256 returnedStake =
-            period.pastDeadline ? _calculatePercentage(period.stake, burnedStakePercentage) : period.stake;
+        uint256 stake = period.stake;
+        uint256 returnedStake = period.pastDeadline ? _calculatePercentage(stake, rewardPercentage) : stake;
         NativeVault._increaseBalance(period.prover, returnedStake);
         period.stake = 0;
     }
@@ -315,15 +314,15 @@ contract ProverManager is IProposerFees, IProverManager, NativeVault {
     /// @dev Sets a period's end and deadline timestamps
     /// @param period The period to finalize
     /// @param endDelay The duration (from now) when the period will end
-    /// @param provingWindow The duration that proofs can be submitted after the end of the period
+    /// @param _provingWindow The duration that proofs can be submitted after the end of the period
     /// @return end The period's end timestamp
     /// @return deadline The period's deadline timestamp
-    function _closePeriod(Period storage period, uint256 endDelay, uint256 provingWindow)
+    function _closePeriod(Period storage period, uint256 endDelay, uint256 _provingWindow)
         private
         returns (uint256 end, uint256 deadline)
     {
         end = block.timestamp + endDelay;
-        deadline = end + provingWindow;
+        deadline = end + _provingWindow;
         period.end = end;
         period.deadline = deadline;
     }
