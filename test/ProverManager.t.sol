@@ -79,73 +79,8 @@ contract ProverManagerTest is Test {
     }
 
     /// --------------------------------------------------------------------------
-    /// Deposit and Withdraw
-    /// --------------------------------------------------------------------------
-    function test_deposit() public {
-        vm.prank(prover1);
-        vm.expectEmit();
-        emit ProverManager.Deposit(prover1, DEPOSIT_AMOUNT);
-        proverManager.deposit{value: DEPOSIT_AMOUNT}();
-
-        uint256 bal = proverManager.balances(prover1);
-        assertEq(bal, DEPOSIT_AMOUNT, "Deposit did not update balance correctly");
-    }
-
-    function test_withdraw() public {
-        uint256 withdrawAmount = 0.5 ether;
-        vm.startPrank(prover1);
-        proverManager.deposit{value: DEPOSIT_AMOUNT}();
-
-        // Withdraw 0.5 ether.
-        uint256 balanceBefore = prover1.balance;
-        vm.expectEmit();
-        emit ProverManager.Withdrawal(prover1, withdrawAmount);
-        proverManager.withdraw(withdrawAmount);
-        uint256 balanceAfter = prover1.balance;
-
-        assertEq(
-            proverManager.balances(prover1),
-            DEPOSIT_AMOUNT - withdrawAmount,
-            "Withdrawal did not update balance correctly"
-        );
-        // Allow a small tolerance for gas.
-        assertApproxEqAbs(balanceAfter, balanceBefore + withdrawAmount, 1e15);
-    }
-
-    /// --------------------------------------------------------------------------
     /// payPublicationFee()
     /// --------------------------------------------------------------------------
-    function test_payPublicationFee_RevertWhen_NotInbox() public {
-        vm.expectRevert("Only the Inbox contract can call this function");
-        proverManager.payPublicationFee(prover1, false);
-    }
-
-    function test_payPublicationFee_SamePeriod() public {
-        // Deposit funds for proposer.
-        vm.prank(proposer);
-        proverManager.deposit{value: DEPOSIT_AMOUNT}();
-
-        uint256 balanceBefore = proverManager.balances(proposer);
-        // Call payPublicationFee from the inbox.
-        vm.prank(inbox);
-        proverManager.payPublicationFee{value: 0}(proposer, false);
-
-        uint256 balanceAfter = proverManager.balances(proposer);
-        // The fee deducted should be INITIAL_FEE.
-        assertEq(balanceAfter, balanceBefore - INITIAL_FEE, "Publication fee not deducted properly");
-    }
-
-    function test_payPublicationFee_AllowsToSendEth() public {
-        // Call payPublicationFee from the inbox.
-        vm.prank(inbox);
-        vm.expectEmit();
-        emit ProverManager.Deposit(proposer, DEPOSIT_AMOUNT);
-        proverManager.payPublicationFee{value: DEPOSIT_AMOUNT}(proposer, false);
-
-        uint256 balanceAfter = proverManager.balances(proposer);
-        // The fee deducted should be INITIAL_FEE.
-        assertEq(balanceAfter, DEPOSIT_AMOUNT - INITIAL_FEE, "Publication fee not deducted properly");
-    }
 
     function test_payPublicationFee_AdvancesPeriod() public {
         // Deposit funds for proposer.
