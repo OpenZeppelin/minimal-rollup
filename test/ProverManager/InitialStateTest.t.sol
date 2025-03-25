@@ -2,11 +2,10 @@
 pragma solidity ^0.8.28;
 
 import {ProverManager} from "../../src/protocol/taiko_alethia/ProverManager.sol";
-import {InitialState} from "./InitialState.t.sol";
-import {UniversalTest} from "./UniversalTest.t.sol";
+import {CurrentPeriodIsActive} from "./CurrentPeriodIsActive.t.sol";
 
-contract InitialStateTest is UniversalTest {
-
+/// @dev The InitialState is one example where CurrentPeriodIsActive
+contract InitialStateTest is CurrentPeriodIsActive {
     function test_InitialBalanceIsZero() public view {
         assertEq(proverManager.balances(deployer), 0, "Deployer has non-zero balance");
         assertEq(proverManager.balances(initialProver), 0, "Initial prover has non-zero balance");

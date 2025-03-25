@@ -81,25 +81,6 @@ contract ProverManagerTest is Test {
     /// --------------------------------------------------------------------------
     /// payPublicationFee()
     /// --------------------------------------------------------------------------
-    function test_payPublicationFee_RevertWhen_NotInbox() public {
-        vm.expectRevert("Only the Inbox contract can call this function");
-        proverManager.payPublicationFee(prover1, false);
-    }
-
-    function test_payPublicationFee_SamePeriod() public {
-        // Deposit funds for proposer.
-        vm.prank(proposer);
-        proverManager.deposit{value: DEPOSIT_AMOUNT}();
-
-        uint256 balanceBefore = proverManager.balances(proposer);
-        // Call payPublicationFee from the inbox.
-        vm.prank(inbox);
-        proverManager.payPublicationFee{value: 0}(proposer, false);
-
-        uint256 balanceAfter = proverManager.balances(proposer);
-        // The fee deducted should be INITIAL_FEE.
-        assertEq(balanceAfter, balanceBefore - INITIAL_FEE, "Publication fee not deducted properly");
-    }
 
     function test_payPublicationFee_AllowsToSendEth() public {
         // Call payPublicationFee from the inbox.

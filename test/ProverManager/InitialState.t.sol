@@ -39,6 +39,10 @@ contract InitialState is Test {
         // Fund the deployer so the constructor can receive the required livenessBond.
         vm.deal(deployer, 10 ether);
 
+        // Fund the Inbox contract. In a real deployment the inbox will be triggered by an EOA
+        // but for simplicity, we initiate transactions from the inbox directly.
+        vm.deal(inbox, 10 ether);
+
         // Create the config struct for the constructor
         ProverManager.ProverManagerConfig memory config = ProverManager.ProverManagerConfig({
             maxBidPercentage: MAX_BID_PERCENTAGE,
