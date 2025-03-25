@@ -60,12 +60,12 @@ contract DelayedInclusionStore is IDelayedInclusionStore {
     /// @dev Can only be called by the inbox contract.
     function processDueInclusions() external returns (Inclusion[] memory) {
         uint256 len = _delayedInclusions.length;
-        uint256 cachedHead = _head;
-        if (cachedHead >= len) {
+        uint256 head = _head;
+        if (head >= len) {
             return new Inclusion[](0);
         }
 
-        uint256 l = cachedHead;
+        uint256 l = head;
         uint256 r = len;
         uint256 timestamp = block.timestamp;
         while (l < r) {
@@ -79,7 +79,7 @@ contract DelayedInclusionStore is IDelayedInclusionStore {
         }
 
         // l now is the first index where the inclusion is not yet due.
-        uint256 count = l - cachedHead;
+        uint256 count = l - head;
         if (count == 0) {
             return new Inclusion[](0);
         }
@@ -90,7 +90,7 @@ contract DelayedInclusionStore is IDelayedInclusionStore {
 
         Inclusion[] memory inclusions = new Inclusion[](count);
         for (uint256 i = 0; i < count; ++i) {
-            inclusions[i] = Inclusion(_delayedInclusions[cachedHead + i].blobRefHash);
+            inclusions[i] = Inclusion(_delayedInclusions[head + i].blobRefHash);
         }
 
         emit DelayedInclusionProcessed(inclusions);
