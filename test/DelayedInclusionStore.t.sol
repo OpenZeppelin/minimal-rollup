@@ -55,7 +55,6 @@ contract BaseStateTest is BaseState {
         );
         vm.prank(sender);
 
-        vm.blobhashes(blobHashes);
         inclusionStore.publishDelayed(blobIndices);
         assertEq(readInclusionArray(0).blobRefHash, expectedRefHash);
         assertEq(readInclusionArray(0).due, vm.getBlockTimestamp() + inclusionDelay);
