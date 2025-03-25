@@ -171,7 +171,7 @@ contract ProverManagerTest is Test {
         // prover1 deposits sufficient funds
         _deposit(prover1, DEPOSIT_AMOUNT);
 
-        uint256 maxAllowedFee = INITIAL_FEE * MAX_BID_PERCENTAGE / 10000;
+        uint256 maxAllowedFee = _maxAllowedFee(INITIAL_FEE);
 
         vm.prank(prover1);
         vm.expectEmit();
@@ -196,7 +196,7 @@ contract ProverManagerTest is Test {
         // Attempt to bid without sufficient balance for liveness bond
         vm.prank(prover2);
         vm.expectRevert();
-        proverManager.bid(0.05 ether);
+        proverManager.bid(_maxAllowedFee(INITIAL_FEE));
     }
 
     function test_bid_RevertWhen_FeeNotLowEnough() public {
@@ -204,7 +204,7 @@ contract ProverManagerTest is Test {
         _deposit(prover1, DEPOSIT_AMOUNT);
 
         // Calculate a fee that's not low enough
-        uint256 maxFee = INITIAL_FEE * MAX_BID_PERCENTAGE / 10000;
+        uint256 maxFee = _maxAllowedFee(INITIAL_FEE);
         uint256 insufficientlyReducedFee = maxFee + 1;
 
         vm.prank(prover1);
@@ -216,7 +216,7 @@ contract ProverManagerTest is Test {
         // First, have prover1 make a successful bid
         _deposit(prover1, DEPOSIT_AMOUNT);
 
-        uint256 firstBidFee = INITIAL_FEE * MAX_BID_PERCENTAGE / 10000;
+        uint256 firstBidFee = _maxAllowedFee(INITIAL_FEE);
         vm.prank(prover1);
         proverManager.bid(firstBidFee);
 
@@ -224,7 +224,7 @@ contract ProverManagerTest is Test {
         _deposit(prover2, DEPOSIT_AMOUNT);
 
         // Calculate required fee for second bid
-        uint256 secondBidFee = firstBidFee * MAX_BID_PERCENTAGE / 10000;
+        uint256 secondBidFee = _maxAllowedFee(firstBidFee);
 
         vm.prank(prover2);
         vm.expectEmit();
@@ -252,7 +252,7 @@ contract ProverManagerTest is Test {
         uint256 timestampBefore = vm.getBlockTimestamp();
 
         // Make a bid that will outbid the current prover
-        uint256 bidFee = INITIAL_FEE * MAX_BID_PERCENTAGE / 10000;
+        uint256 bidFee = _maxAllowedFee(INITIAL_FEE);
         vm.prank(prover1);
         proverManager.bid(bidFee);
 
@@ -272,14 +272,14 @@ contract ProverManagerTest is Test {
         // First, have prover1 make a successful bid
         _deposit(prover1, DEPOSIT_AMOUNT);
 
-        uint256 firstBidFee = INITIAL_FEE * MAX_BID_PERCENTAGE / 10000;
+        uint256 firstBidFee = _maxAllowedFee(INITIAL_FEE);
         vm.prank(prover1);
         proverManager.bid(firstBidFee);
 
         // Now have prover2 try to bid with insufficient undercut
         _deposit(prover2, DEPOSIT_AMOUNT);
 
-        uint256 maxFee = firstBidFee * MAX_BID_PERCENTAGE / 10000;
+        uint256 maxFee = _maxAllowedFee(firstBidFee);
         uint256 insufficientlyReducedFee = maxFee + 1;
 
         vm.prank(prover2);
@@ -296,16 +296,14 @@ contract ProverManagerTest is Test {
         // Capture current period stake before eviction
         ProverManager.Period memory periodBefore = proverManager.getPeriod(1);
         uint256 stakeBefore = periodBefore.stake;
+        uint256 incentive = _calculatePercentage(stakeBefore, EVICTOR_INCENTIVE_PERCENTAGE);
 
         // Evict the prover
         vm.warp(vm.getBlockTimestamp() + LIVENESS_WINDOW + 1);
         vm.prank(evictor);
         vm.expectEmit();
         emit ProverManager.ProverEvicted(
-            initialProver,
-            evictor,
-            vm.getBlockTimestamp() + EXIT_DELAY,
-            stakeBefore - (stakeBefore * EVICTOR_INCENTIVE_PERCENTAGE) / 10000
+            initialProver, evictor, vm.getBlockTimestamp() + EXIT_DELAY, stakeBefore - incentive
         );
         proverManager.evictProver(header);
 
@@ -314,7 +312,6 @@ contract ProverManagerTest is Test {
         assertEq(periodAfter.deadline, vm.getBlockTimestamp() + EXIT_DELAY, "Prover should be evicted");
 
         // Calculate expected incentive for the evictor
-        uint256 incentive = (stakeBefore * EVICTOR_INCENTIVE_PERCENTAGE) / 10000;
         assertEq(periodAfter.stake, stakeBefore - incentive, "Stake not reduced correctly");
         assertEq(periodAfter.end, vm.getBlockTimestamp() + EXIT_DELAY, "Period end not set correctly");
 
@@ -885,7 +882,7 @@ contract ProverManagerTest is Test {
 
         uint256 initialProverBalanceAfter = proverManager.balances(initialProver);
         uint256 prover1BalanceAfter = proverManager.balances(prover1);
-        uint256 stakeReward = stakeBefore * REWARD_PERCENTAGE / 10000;
+        uint256 stakeReward = _calculatePercentage(stakeBefore, REWARD_PERCENTAGE);
         assertEq(prover1BalanceAfter, prover1BalanceBefore + stakeReward, "Prover1 should receive the remaining stake");
         assertEq(initialProverBalanceAfter, initialProverBalanceBefore, "Initial prover should receive nothing");
     }
@@ -989,5 +986,13 @@ contract ProverManagerTest is Test {
     function _deposit(address user, uint256 amount) internal {
         vm.prank(user);
         proverManager.deposit{value: amount}();
+    }
+
+    function _maxAllowedFee(uint256 fee) internal pure returns (uint256) {
+        return _calculatePercentage(fee, MAX_BID_PERCENTAGE);
+    }
+
+    function _calculatePercentage(uint256 amount, uint256 percentage) internal pure returns (uint256) {
+        return amount * percentage / 10_000;
     }
 }
