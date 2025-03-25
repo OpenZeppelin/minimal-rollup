@@ -79,40 +79,6 @@ contract ProverManagerTest is Test {
     }
 
     /// --------------------------------------------------------------------------
-    /// Deposit and Withdraw
-    /// --------------------------------------------------------------------------
-    function test_deposit() public {
-        vm.prank(prover1);
-        vm.expectEmit();
-        emit ProverManager.Deposit(prover1, DEPOSIT_AMOUNT);
-        proverManager.deposit{value: DEPOSIT_AMOUNT}();
-
-        uint256 bal = proverManager.balances(prover1);
-        assertEq(bal, DEPOSIT_AMOUNT, "Deposit did not update balance correctly");
-    }
-
-    function test_withdraw() public {
-        uint256 withdrawAmount = 0.5 ether;
-        vm.startPrank(prover1);
-        proverManager.deposit{value: DEPOSIT_AMOUNT}();
-
-        // Withdraw 0.5 ether.
-        uint256 balanceBefore = prover1.balance;
-        vm.expectEmit();
-        emit ProverManager.Withdrawal(prover1, withdrawAmount);
-        proverManager.withdraw(withdrawAmount);
-        uint256 balanceAfter = prover1.balance;
-
-        assertEq(
-            proverManager.balances(prover1),
-            DEPOSIT_AMOUNT - withdrawAmount,
-            "Withdrawal did not update balance correctly"
-        );
-        // Allow a small tolerance for gas.
-        assertApproxEqAbs(balanceAfter, balanceBefore + withdrawAmount, 1e15);
-    }
-
-    /// --------------------------------------------------------------------------
     /// payPublicationFee()
     /// --------------------------------------------------------------------------
     function test_payPublicationFee_RevertWhen_NotInbox() public {

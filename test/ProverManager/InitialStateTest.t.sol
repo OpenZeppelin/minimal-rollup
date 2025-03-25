@@ -3,9 +3,10 @@ pragma solidity ^0.8.28;
 
 import {ProverManager} from "../../src/protocol/taiko_alethia/ProverManager.sol";
 import {InitialState} from "./InitialState.t.sol";
-import {InvariantTest} from "./InvariantTest.t.sol";
+import {UniversalTest} from "./UniversalTest.t.sol";
 
-contract InitialStateTest is InitialState, InvariantTest {
+contract InitialStateTest is UniversalTest {
+
     function test_InitialBalanceIsZero() public view {
         assertEq(proverManager.balances(deployer), 0, "Deployer has non-zero balance");
         assertEq(proverManager.balances(initialProver), 0, "Initial prover has non-zero balance");

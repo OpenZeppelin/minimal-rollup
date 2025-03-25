@@ -31,9 +31,8 @@ contract InitialState is Test {
     uint256 constant EVICTOR_INCENTIVE_PERCENTAGE = 500; // 5%
     uint256 constant REWARD_PERCENTAGE = 9000; // 90%
     uint256 constant INITIAL_FEE = 0.1 ether;
-    uint256 constant INITIAL_PERIOD = 1;
 
-    function setUp() public {
+    function setUp() public virtual {
         checkpointTracker = new MockCheckpointTracker();
         publicationFeed = new PublicationFeed();
 
@@ -63,6 +62,6 @@ contract InitialState is Test {
     }
 
     function _domainSeparator() internal pure returns (bytes32) {
-        return keccak256("InitialState");
+        return keccak256("ProverManager");
     }
 }
