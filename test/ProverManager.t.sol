@@ -426,6 +426,109 @@ contract ProverManagerTest is Test {
     }
 
     /// --------------------------------------------------------------------------
+    /// claimProvingVacancy()
+    /// --------------------------------------------------------------------------
+    function test_claimProvingVacancy() public {
+        // First, have the current prover exit
+        vm.prank(initialProver);
+        proverManager.exit();
+
+        vm.warp(vm.getBlockTimestamp() + EXIT_DELAY + 1);
+
+        //Submit a publication to advance to the vacant period(period 2)
+        vm.prank(inbox);
+        proverManager.payPublicationFee{value: INITIAL_FEE}(proposer, false);
+
+        // Ensure prover1 has enough funds
+        vm.prank(prover1);
+        proverManager.deposit{value: DEPOSIT_AMOUNT}();
+
+        // Claim the vacancy
+        uint256 prover1BalanceBefore = proverManager.balances(prover1);
+        uint256 newFee = 0.2 ether; //arbitrary new fee
+        vm.prank(prover1);
+        proverManager.claimProvingVacancy(newFee);
+
+        // Check that period 2(the vacant period) has been closed correctly
+        ProverManager.Period memory period2 = proverManager.getPeriod(2);
+        assertEq(period2.end, vm.getBlockTimestamp(), "Period 2 end timestamp should be the current timestamp");
+        assertEq(period2.deadline, vm.getBlockTimestamp(), "Period 2 deadline should be the current timestamp");
+
+        // Check that period 3 has been created correctly
+        ProverManager.Period memory period3 = proverManager.getPeriod(3);
+        assertEq(period3.prover, prover1, "Prover1 should be the new prover");
+        assertEq(period3.fee, newFee, "Fee should be set to the new fee");
+        assertEq(period3.stake, LIVENESS_BOND, "Liveness bond should be locked");
+
+        // // Check that prover1's balance was reduced by the liveness bond
+        uint256 prover1BalanceAfter = proverManager.balances(prover1);
+        assertEq(prover1BalanceAfter, prover1BalanceBefore - LIVENESS_BOND, "User balance not deducted correctly");
+    }
+
+    function test_claimProvingVacancy_RevertWhen_NoVacancy() public {
+        // Attempt to claim a vacancy when the period is still active
+        vm.prank(prover1);
+        proverManager.deposit{value: DEPOSIT_AMOUNT}();
+
+        vm.prank(prover1);
+        vm.expectRevert("No proving vacancy");
+        proverManager.claimProvingVacancy(0.2 ether);
+    }
+
+    function test_claimProvingVacancy_RevertWhen_InsufficientBalance() public {
+        // First, have the current prover exit to create a vacancy
+        vm.prank(initialProver);
+        proverManager.exit();
+
+        vm.warp(vm.getBlockTimestamp() + EXIT_DELAY + 1);
+
+        //Submit a publication to advance to the vacant period(period 2)
+        vm.prank(inbox);
+        proverManager.payPublicationFee{value: INITIAL_FEE}(proposer, false);
+
+        // Attempt to claim the vacancy without sufficient balance
+        vm.prank(prover2);
+        vm.expectRevert();
+        proverManager.claimProvingVacancy(0.2 ether);
+    }
+
+    function test_claimProvingVacancy_AdvancesPeriod() public {
+        // First, have the current prover exit to create a vacancy
+        vm.prank(initialProver);
+        proverManager.exit();
+
+        vm.warp(vm.getBlockTimestamp() + EXIT_DELAY + 1);
+
+        //Submit a publication to advance to the vacant period(period 2)
+        vm.prank(inbox);
+        proverManager.payPublicationFee{value: INITIAL_FEE}(proposer, false);
+
+        // Ensure prover1 has enough funds
+        vm.prank(prover1);
+        proverManager.deposit{value: DEPOSIT_AMOUNT}();
+
+        // Verify the current period before claiming
+        uint256 periodBefore = proverManager.currentPeriodId();
+
+        // Claim the vacancy
+        vm.prank(prover1);
+        proverManager.claimProvingVacancy(0.2 ether);
+
+        // Verify the period has been advanced
+        uint256 periodAfter = proverManager.currentPeriodId();
+        assertEq(periodAfter, periodBefore, "Period should not advance when claiming vacancy");
+
+        // Verify that a new publication advances the period
+        vm.warp(vm.getBlockTimestamp() + 1);
+        vm.prank(proposer);
+        proverManager.deposit{value: INITIAL_FEE}();
+        vm.prank(inbox);
+        vm.expectEmit();
+        emit ProverManager.NewPeriod(periodAfter + 1);
+        proverManager.payPublicationFee(proposer, false);
+    }
+
+    /// --------------------------------------------------------------------------
     /// prove()
     /// --------------------------------------------------------------------------
     function test_prove_OpenPeriod() public {
@@ -664,35 +767,6 @@ contract ProverManagerTest is Test {
     }
 
     /// --------------------------------------------------------------------------
-    /// getCurrentFees()
-    /// --------------------------------------------------------------------------
-
-    function test_getCurrentFees_SamePeriod() public view {
-        (uint256 fee, uint256 delayedFee) = proverManager.getCurrentFees();
-        assertEq(fee, INITIAL_FEE, "Fee should be the initial fee");
-        assertEq(delayedFee, INITIAL_FEE, "Delayed fee should be the initial fee");
-    }
-
-    function test_geCurrentFees_WhenPeriodEnded() public {
-        // Exit as a prover.
-        vm.prank(initialProver);
-        proverManager.exit();
-
-        // Bid as a new prover
-        vm.prank(prover1);
-        proverManager.deposit{value: DEPOSIT_AMOUNT}();
-        uint256 bidFee = INITIAL_FEE * 2;
-        vm.prank(prover1);
-        proverManager.bid(bidFee);
-
-        // Warp to a time after the period has ended.
-        vm.warp(vm.getBlockTimestamp() + EXIT_DELAY + 1);
-        (uint256 fee, uint256 delayedFee) = proverManager.getCurrentFees();
-        assertEq(fee, bidFee, "Fee should be the bid fee");
-        assertEq(delayedFee, bidFee, "Delayed fee should be the bid fee");
-    }
-
-    /// --------------------------------------------------------------------------
     /// finalizePastPeriod()
     /// --------------------------------------------------------------------------
     function test_finalizePastPeriod_WithinDeadline() public {
@@ -875,106 +949,32 @@ contract ProverManagerTest is Test {
     }
 
     /// --------------------------------------------------------------------------
-    /// claimProvingVacancy()
+    /// getCurrentFees()
     /// --------------------------------------------------------------------------
-    function test_claimProvingVacancy() public {
-        // First, have the current prover exit
+
+    function test_getCurrentFees_SamePeriod() public view {
+        (uint256 fee, uint256 delayedFee) = proverManager.getCurrentFees();
+        assertEq(fee, INITIAL_FEE, "Fee should be the initial fee");
+        assertEq(delayedFee, INITIAL_FEE, "Delayed fee should be the initial fee");
+    }
+
+    function test_geCurrentFees_WhenPeriodEnded() public {
+        // Exit as a prover.
         vm.prank(initialProver);
         proverManager.exit();
 
-        vm.warp(vm.getBlockTimestamp() + EXIT_DELAY + 1);
-
-        //Submit a publication to advance to the vacant period(period 2)
-        vm.prank(inbox);
-        proverManager.payPublicationFee{value: INITIAL_FEE}(proposer, false);
-
-        // Ensure prover1 has enough funds
+        // Bid as a new prover
         vm.prank(prover1);
         proverManager.deposit{value: DEPOSIT_AMOUNT}();
-
-        // Claim the vacancy
-        uint256 prover1BalanceBefore = proverManager.balances(prover1);
-        uint256 newFee = 0.2 ether; //arbitrary new fee
+        uint256 bidFee = INITIAL_FEE * 2;
         vm.prank(prover1);
-        proverManager.claimProvingVacancy(newFee);
+        proverManager.bid(bidFee);
 
-        // Check that period 2(the vacant period) has been closed correctly
-        ProverManager.Period memory period2 = proverManager.getPeriod(2);
-        assertEq(period2.end, vm.getBlockTimestamp(), "Period 2 end timestamp should be the current timestamp");
-        assertEq(period2.deadline, vm.getBlockTimestamp(), "Period 2 deadline should be the current timestamp");
-
-        // Check that period 3 has been created correctly
-        ProverManager.Period memory period3 = proverManager.getPeriod(3);
-        assertEq(period3.prover, prover1, "Prover1 should be the new prover");
-        assertEq(period3.fee, newFee, "Fee should be set to the new fee");
-        assertEq(period3.stake, LIVENESS_BOND, "Liveness bond should be locked");
-
-        // // Check that prover1's balance was reduced by the liveness bond
-        uint256 prover1BalanceAfter = proverManager.balances(prover1);
-        assertEq(prover1BalanceAfter, prover1BalanceBefore - LIVENESS_BOND, "User balance not deducted correctly");
-    }
-
-    function test_claimProvingVacancy_RevertWhen_NoVacancy() public {
-        // Attempt to claim a vacancy when the period is still active
-        vm.prank(prover1);
-        proverManager.deposit{value: DEPOSIT_AMOUNT}();
-
-        vm.prank(prover1);
-        vm.expectRevert("No proving vacancy");
-        proverManager.claimProvingVacancy(0.2 ether);
-    }
-
-    function test_claimProvingVacancy_RevertWhen_InsufficientBalance() public {
-        // First, have the current prover exit to create a vacancy
-        vm.prank(initialProver);
-        proverManager.exit();
-
+        // Warp to a time after the period has ended.
         vm.warp(vm.getBlockTimestamp() + EXIT_DELAY + 1);
-
-        //Submit a publication to advance to the vacant period(period 2)
-        vm.prank(inbox);
-        proverManager.payPublicationFee{value: INITIAL_FEE}(proposer, false);
-
-        // Attempt to claim the vacancy without sufficient balance
-        vm.prank(prover2);
-        vm.expectRevert();
-        proverManager.claimProvingVacancy(0.2 ether);
-    }
-
-    function test_claimProvingVacancy_AdvancesPeriod() public {
-        // First, have the current prover exit to create a vacancy
-        vm.prank(initialProver);
-        proverManager.exit();
-
-        vm.warp(vm.getBlockTimestamp() + EXIT_DELAY + 1);
-
-        //Submit a publication to advance to the vacant period(period 2)
-        vm.prank(inbox);
-        proverManager.payPublicationFee{value: INITIAL_FEE}(proposer, false);
-
-        // Ensure prover1 has enough funds
-        vm.prank(prover1);
-        proverManager.deposit{value: DEPOSIT_AMOUNT}();
-
-        // Verify the current period before claiming
-        uint256 periodBefore = proverManager.currentPeriodId();
-
-        // Claim the vacancy
-        vm.prank(prover1);
-        proverManager.claimProvingVacancy(0.2 ether);
-
-        // Verify the period has been advanced
-        uint256 periodAfter = proverManager.currentPeriodId();
-        assertEq(periodAfter, periodBefore, "Period should not advance when claiming vacancy");
-
-        // Verify that a new publication advances the period
-        vm.warp(vm.getBlockTimestamp() + 1);
-        vm.prank(proposer);
-        proverManager.deposit{value: INITIAL_FEE}();
-        vm.prank(inbox);
-        vm.expectEmit();
-        emit ProverManager.NewPeriod(periodAfter + 1);
-        proverManager.payPublicationFee(proposer, false);
+        (uint256 fee, uint256 delayedFee) = proverManager.getCurrentFees();
+        assertEq(fee, bidFee, "Fee should be the bid fee");
+        assertEq(delayedFee, bidFee, "Delayed fee should be the bid fee");
     }
 
     // -- HELPERS --
