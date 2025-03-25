@@ -93,11 +93,11 @@ contract ProverManagerTest is Test {
 
     function test_withdraw() public {
         uint256 withdrawAmount = 0.5 ether;
-        vm.startPrank(prover1);
-        proverManager.deposit{value: DEPOSIT_AMOUNT}();
+        _deposit(prover1, DEPOSIT_AMOUNT);
 
         // Withdraw 0.5 ether.
         uint256 balanceBefore = prover1.balance;
+        vm.prank(prover1);
         vm.expectEmit();
         emit ProverManager.Withdrawal(prover1, withdrawAmount);
         proverManager.withdraw(withdrawAmount);
@@ -122,8 +122,7 @@ contract ProverManagerTest is Test {
 
     function test_payPublicationFee_SamePeriod() public {
         // Deposit funds for proposer.
-        vm.prank(proposer);
-        proverManager.deposit{value: DEPOSIT_AMOUNT}();
+        _deposit(proposer, DEPOSIT_AMOUNT);
 
         uint256 balanceBefore = proverManager.balances(proposer);
         // Call payPublicationFee from the inbox.
@@ -149,8 +148,7 @@ contract ProverManagerTest is Test {
 
     function test_payPublicationFee_AdvancesPeriod() public {
         // Deposit funds for proposer.
-        vm.prank(proposer);
-        proverManager.deposit{value: DEPOSIT_AMOUNT}();
+        _deposit(proposer, DEPOSIT_AMOUNT);
 
         // Exit as a prover.
         vm.prank(initialProver);
@@ -171,8 +169,7 @@ contract ProverManagerTest is Test {
     /// --------------------------------------------------------------------------
     function test_bid_ActivePeriod() public {
         // prover1 deposits sufficient funds
-        vm.prank(prover1);
-        proverManager.deposit{value: DEPOSIT_AMOUNT}();
+        _deposit(prover1, DEPOSIT_AMOUNT);
 
         uint256 maxAllowedFee = INITIAL_FEE * MAX_BID_PERCENTAGE / 10000;
 
@@ -204,8 +201,7 @@ contract ProverManagerTest is Test {
 
     function test_bid_RevertWhen_FeeNotLowEnough() public {
         // prover1 deposits sufficient funds
-        vm.prank(prover1);
-        proverManager.deposit{value: DEPOSIT_AMOUNT}();
+        _deposit(prover1, DEPOSIT_AMOUNT);
 
         // Calculate a fee that's not low enough
         uint256 maxFee = INITIAL_FEE * MAX_BID_PERCENTAGE / 10000;
@@ -218,16 +214,14 @@ contract ProverManagerTest is Test {
 
     function test_bid_ExistingNextPeriod() public {
         // First, have prover1 make a successful bid
-        vm.prank(prover1);
-        proverManager.deposit{value: DEPOSIT_AMOUNT}();
+        _deposit(prover1, DEPOSIT_AMOUNT);
 
         uint256 firstBidFee = INITIAL_FEE * MAX_BID_PERCENTAGE / 10000;
         vm.prank(prover1);
         proverManager.bid(firstBidFee);
 
         // Now have prover2 outbid prover1
-        vm.prank(prover2);
-        proverManager.deposit{value: DEPOSIT_AMOUNT}();
+        _deposit(prover2, DEPOSIT_AMOUNT);
 
         // Calculate required fee for second bid
         uint256 secondBidFee = firstBidFee * MAX_BID_PERCENTAGE / 10000;
@@ -252,8 +246,7 @@ contract ProverManagerTest is Test {
     }
 
     function test_bid_ActivatesSuccessionDelay() public {
-        vm.prank(prover1);
-        proverManager.deposit{value: DEPOSIT_AMOUNT}();
+        _deposit(prover1, DEPOSIT_AMOUNT);
 
         // Record the current timestamp
         uint256 timestampBefore = vm.getBlockTimestamp();
@@ -277,16 +270,14 @@ contract ProverManagerTest is Test {
 
     function test_bid_RevertWhen_NotEnoughUndercutOnNextPeriod() public {
         // First, have prover1 make a successful bid
-        vm.prank(prover1);
-        proverManager.deposit{value: DEPOSIT_AMOUNT}();
+        _deposit(prover1, DEPOSIT_AMOUNT);
 
         uint256 firstBidFee = INITIAL_FEE * MAX_BID_PERCENTAGE / 10000;
         vm.prank(prover1);
         proverManager.bid(firstBidFee);
 
         // Now have prover2 try to bid with insufficient undercut
-        vm.prank(prover2);
-        proverManager.deposit{value: DEPOSIT_AMOUNT}();
+        _deposit(prover2, DEPOSIT_AMOUNT);
 
         uint256 maxFee = firstBidFee * MAX_BID_PERCENTAGE / 10000;
         uint256 insufficientlyReducedFee = maxFee + 1;
@@ -440,8 +431,7 @@ contract ProverManagerTest is Test {
         proverManager.payPublicationFee{value: INITIAL_FEE}(proposer, false);
 
         // Ensure prover1 has enough funds
-        vm.prank(prover1);
-        proverManager.deposit{value: DEPOSIT_AMOUNT}();
+        _deposit(prover1, DEPOSIT_AMOUNT);
 
         // Claim the vacancy
         uint256 prover1BalanceBefore = proverManager.balances(prover1);
@@ -467,8 +457,7 @@ contract ProverManagerTest is Test {
 
     function test_claimProvingVacancy_RevertWhen_NoVacancy() public {
         // Attempt to claim a vacancy when the period is still active
-        vm.prank(prover1);
-        proverManager.deposit{value: DEPOSIT_AMOUNT}();
+        _deposit(prover1, DEPOSIT_AMOUNT);
 
         vm.prank(prover1);
         vm.expectRevert("No proving vacancy");
@@ -504,8 +493,7 @@ contract ProverManagerTest is Test {
         proverManager.payPublicationFee{value: INITIAL_FEE}(proposer, false);
 
         // Ensure prover1 has enough funds
-        vm.prank(prover1);
-        proverManager.deposit{value: DEPOSIT_AMOUNT}();
+        _deposit(prover1, DEPOSIT_AMOUNT);
 
         // Verify the current period before claiming
         uint256 periodBefore = proverManager.currentPeriodId();
@@ -520,8 +508,7 @@ contract ProverManagerTest is Test {
 
         // Verify that a new publication advances the period
         vm.warp(vm.getBlockTimestamp() + 1);
-        vm.prank(proposer);
-        proverManager.deposit{value: INITIAL_FEE}();
+        _deposit(proposer, INITIAL_FEE);
         vm.prank(inbox);
         vm.expectEmit();
         emit ProverManager.NewPeriod(periodAfter + 1);
@@ -964,8 +951,7 @@ contract ProverManagerTest is Test {
         proverManager.exit();
 
         // Bid as a new prover
-        vm.prank(prover1);
-        proverManager.deposit{value: DEPOSIT_AMOUNT}();
+        _deposit(prover1, DEPOSIT_AMOUNT);
         uint256 bidFee = INITIAL_FEE * 2;
         vm.prank(prover1);
         proverManager.bid(bidFee);
@@ -998,5 +984,10 @@ contract ProverManagerTest is Test {
             blockNumber: blockNumber,
             attributesHash: attributesHash
         });
+    }
+
+    function _deposit(address user, uint256 amount) internal {
+        vm.prank(user);
+        proverManager.deposit{value: amount}();
     }
 }
