@@ -17,9 +17,8 @@ contract DelayedInclusionStore is IDelayedInclusionStore {
     }
 
     /// @notice Emitted when a delayed publication is stored
-    /// @param dueInclusion The delayed publication including
-    /// the blob reference hash and due timestamp
     /// @param sender The address that stored the delayed publication
+    /// @param dueInclusion The delayed publication including the blob reference hash and due timestamp
     event DelayedInclusionStored(address indexed sender, DueInclusion dueInclusion);
 
     // Append-only queue for delayed inclusions
