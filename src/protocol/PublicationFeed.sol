@@ -45,4 +45,9 @@ contract PublicationFeed is IPublicationFeed {
     function getNextPublicationId() external view returns (uint256) {
         return publicationHashes.length;
     }
+
+    /// @inheritdoc IPublicationFeed
+    function validateHeader(PublicationHeader calldata header) external view returns (bool) {
+        return keccak256(abi.encode(header)) == publicationHashes[header.id];
+    }
 }
