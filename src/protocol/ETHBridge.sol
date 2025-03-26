@@ -3,15 +3,18 @@ pragma solidity ^0.8.28;
 
 import {LibTrieProof} from "../libs/LibTrieProof.sol";
 
-import {LibValueTicket} from "../libs/LibValueTicket.sol";
 import {IETHBridge} from "./IETHBridge.sol";
+import {SlotDerivation} from "@openzeppelin/contracts/utils/SlotDerivation.sol";
+import {StorageSlot} from "@openzeppelin/contracts/utils/StorageSlot.sol";
+import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 
-/// @dev Bridge implementation to send native ETH to other chains using storage proofs.
+/// @dev Abstract ETH bridging contract to send native ETH to other chains using storage proofs.
 ///
-/// IMPORTANT: No recovery mechanism is implemented in case an account creates a ticket that can't be claimed. Consider
-/// implementing one on top of this bridge for more specific use cases.
-contract ETHBridge is IETHBridge {
-    using LibValueTicket for LibValueTicket.ValueTicket;
+/// IMPORTANT: No recovery mechanism is implemented in case an account creates a deposit that can't be claimed.
+abstract contract ETHBridge is IETHBridge {
+    using SafeCast for uint256;
+    using StorageSlot for bytes32;
+    using SlotDerivation for *;
 
     mapping(bytes32 id => bool) _claimed;
 
@@ -21,44 +24,57 @@ contract ETHBridge is IETHBridge {
     }
 
     /// @inheritdoc IETHBridge
-    function ticketId(LibValueTicket.ValueTicket memory ticket) public view virtual returns (bytes32 id) {
-        return ticket.id();
+    function getDepositId(ETHDeposit memory deposit) public view virtual returns (bytes32 id) {
+        return _generateId(deposit);
     }
 
     /// @inheritdoc IETHBridge
-    function verifyTicket(
-        LibValueTicket.ValueTicket memory ticket,
+    function depositETH(uint64 chainId, address to, uint256 data) public payable virtual returns (bytes32 id) {
+        address sender = msg.sender;
+        uint64 nonce = _useNonce(sender).toUint64();
+        ETHDeposit memory deposit = ETHDeposit(chainId, nonce, sender, to, msg.value, data);
+        id = _generateId(deposit);
+        emit ETHDepositMade(id, deposit);
+    }
+
+    /// @inheritdoc IETHBridge
+    function claimDeposit(
+        ETHDeposit memory deposit,
         bytes32 root,
         bytes[] memory accountProof,
-        bytes[] memory proof
-    ) public view virtual returns (bool verified, bytes32 id) {
-        return ticket.verifyTicket(root, accountProof, proof);
-    }
-
-    /// @inheritdoc IETHBridge
-    function createTicket(uint64 chainId, address to) external payable virtual {
-        emit ETHTicket(LibValueTicket.createTicket(chainId, msg.sender, to, msg.value));
-    }
-
-    /// @inheritdoc IETHBridge
-    function claimTicket(
-        LibValueTicket.ValueTicket memory ticket,
-        bytes32 root,
-        bytes[] memory accountProof,
-        bytes[] memory proof
-    ) external virtual {
-        bytes32 id_ = ticket.checkTicket(root, accountProof, proof);
-        require(!claimed(id_), AlreadyClaimed());
-        _claimed[id_] = true;
-        _sendETH(ticket.to, ticket.value);
-        emit ETHTicketClaimed(ticket);
-    }
+        bytes[] memory stateProof
+    ) external virtual returns (bytes32 id);
 
     /// @dev Function to transfer ETH to the receiver but ignoring the returndata.
-    function _sendETH(address to, uint256 value) private returns (bool success) {
+    function _sendETH(address to, uint256 value) internal virtual returns (bool success) {
         assembly ("memory-safe") {
             success := call(gas(), to, value, 0, 0, 0, 0)
         }
         require(success, FailedClaim());
+    }
+
+    /// @dev Processes the generic deposit claim logic.
+    function _processClaimDepositWithId(bytes32 id, ETHDeposit memory deposit) internal {
+        require(!claimed(id), AlreadyClaimed());
+        _claimed[id] = true;
+        _sendETH(deposit.to, deposit.amount);
+        emit ETHDepositClaimed(id, deposit);
+    }
+
+    function _generateId(ETHDeposit memory deposit) internal pure virtual returns (bytes32) {
+        return keccak256(abi.encode(deposit));
+    }
+
+    /// @dev Consumes a nonce and returns the current value and increments nonce.
+    function _useNonce(address account) internal returns (uint256) {
+        // For each account, the nonce has an initial value of 0, can only be incremented by one, and cannot be
+        // decremented or reset. This guarantees that the nonce never overflows.
+
+        unchecked {
+            // It is important to do x++ and not ++x here.
+            // slot: keccak256(abi.encode(uint256(keccak256("LibValueTicket.nonces")) - 1)) & ~bytes32(uint256(0xff))
+            return 0x23c95d7a21dec6ba744555d361d2572ad62017f33fd3da51a4ffa8cde254e900.deriveMapping(account)
+                .getUint256Slot().value++;
+        }
     }
 }

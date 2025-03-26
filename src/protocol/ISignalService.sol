@@ -13,14 +13,16 @@ interface ISignalService {
     /// @dev Stores a data signal and returns its storage location.
     function sendSignal(bytes32 value) external returns (bytes32 slot);
 
-    /// @dev Verifies if the signal can be proved to be part of a merkle tree defined by `root` for the specified
-    /// signal service storage. See `signalSlot` for the storage slot derivation.
+    /// @dev Verifies if the signal can be proved to be part of a merkle tree
+    /// defined by `root` for the specified signal service storage.
+    /// @param accountProof Merkle proof for account state against global stateRoot
+    /// @param stateProof Merkle proof for slot value against account's storageRoot
     function verifySignal(
         address account,
         bytes32 root,
         uint64 chainId,
         bytes32 value,
         bytes[] memory accountProof,
-        bytes[] memory storageProof
+        bytes[] memory stateProof
     ) external pure;
 }

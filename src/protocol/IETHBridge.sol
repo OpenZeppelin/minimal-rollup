@@ -1,52 +1,66 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
-import {LibValueTicket} from "../libs/LibValueTicket.sol";
-
-/// @dev Bridges native value (i.e. ETH) by creating and verifying tickets using the `LibValueTicket`.
+/// @dev Bridges native value (i.e. ETH) by creating and verifying ETHDeposits.
 ///
-/// These can be created by sending value to the `createTicket` function. Later, the receiver can claim the ticket on
-/// the destination chain by using a storage proof.
-///
-/// ETH bridge MUST be deployed at the same address on both chains.
+/// These can be created by sending value to the `depositETH` function. Later, the receiver can
+/// claim the deposit on the destination chain by using a storage proof.
 interface IETHBridge {
-    /// @dev Sender (`from`) sent `value` with `nonce` to the receiver (`to`). Claimable on `chainId`.
-    event ETHTicket(LibValueTicket.ValueTicket ticket);
+    struct ETHDeposit {
+        // The destination chain id
+        uint64 chainId;
+        // The nonce of the sender
+        uint64 nonce;
+        // The sender of the deposit
+        address from;
+        // The receiver of the deposit
+        address to;
+        // The amount of the deposit
+        uint256 amount;
+        // Any calldata to be sent to the receiver in case of a contract
+        uint256 data;
+    }
 
-    /// @dev A ticket was claimed.
-    event ETHTicketClaimed(LibValueTicket.ValueTicket ticket);
+    /// @dev Emitted when a deposit is made.
+    /// @param id The deposit id
+    /// @param deposit The ETH deposit
+    event ETHDepositMade(bytes32 indexed id, ETHDeposit deposit);
+
+    /// @dev Emitted when a deposit is claimed.
+    /// @param id The deposit id
+    /// @param deposit The claimed ETH deposit
+    event ETHDepositClaimed(bytes32 indexed id, ETHDeposit deposit);
 
     /// @dev Failed to call the receiver with value.
     error FailedClaim();
 
-    /// @dev Ticket was already claimed.
+    /// @dev A deposit was already claimed.
     error AlreadyClaimed();
 
-    /// @dev Whether the ticket identified by `id` has been claimed.
+    /// @dev Whether the deposit identified by `id` has been claimed.
+    /// @param id The deposit id
     function claimed(bytes32 id) external view returns (bool);
 
-    /// @dev Ticket identifier.
-    function ticketId(LibValueTicket.ValueTicket memory ticket) external view returns (bytes32 id);
+    /// @dev ETH Deposit identifier.
+    /// @param deposit The ETH deposit
+    function getDepositId(ETHDeposit memory deposit) external view returns (bytes32 id);
 
-    /// @dev Verifies if a ticket defined created on the `chainId` with `nonce` by the receiver (`from`) is valid
-    /// for the receiver `to` to claim `value` on this chain by performing an storage proof of this bridge address using
-    /// `accountProof` and validating it against the network state root using `proof`.
-    function verifyTicket(
-        LibValueTicket.ValueTicket memory ticket,
+    /// @dev Creates an ETH deposit with `msg.value` for the receiver (`to`) to be claimed on the `chainId`.
+    /// @param chainId The destination chain id
+    /// @param to The receiver of the deposit
+    /// @param data Any calldata to be sent to the receiver in case of a contract
+    function depositETH(uint64 chainId, address to, uint256 data) external payable returns (bytes32 id);
+
+    /// @dev Claims an ETH depoist created on `chainId` by the sender (`from`) with `nonce`. The `value` ETH claimed  is
+    /// sent to the receiver (`to`) after verifying a storage proof.
+    /// @param deposit The ETH deposit
+    /// @param root The state root
+    /// @param accountProof Merkle proof for account state against global stateRoot
+    /// @param stateProof Merkle proof for slot value against account's storageRoot
+    function claimDeposit(
+        ETHDeposit memory deposit,
         bytes32 root,
         bytes[] memory accountProof,
-        bytes[] memory proof
-    ) external view returns (bool verified, bytes32 id);
-
-    /// @dev Creates a ticket with `msg.value` ETH for the receiver (`to`) to claim on the `chainId`.
-    function createTicket(uint64 chainId, address to) external payable;
-
-    /// @dev Claims a ticket created on `chainId` by the sender (`from`) with `nonce`. The `value` ETH claimed  is
-    /// sent to the receiver (`to`) after verifying the proofs. See `verifyTicket`.
-    function claimTicket(
-        LibValueTicket.ValueTicket memory ticket,
-        bytes32 root,
-        bytes[] memory accountProof,
-        bytes[] memory proof
-    ) external;
+        bytes[] memory stateProof
+    ) external returns (bytes32 id);
 }
