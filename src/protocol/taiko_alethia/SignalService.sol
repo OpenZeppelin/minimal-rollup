@@ -16,7 +16,8 @@ contract SignalService is ISignalService, ETHBridge {
 
     /// @dev Only required to be called on L1
     function sendSignal(bytes32 value) external returns (bytes32 signal) {
-        return emit SignalSent(value.signal());
+        signal = value.signal();
+        emit SignalSent(signal);
     }
 
     /// @dev Only required to be called on L1
@@ -33,9 +34,11 @@ contract SignalService is ISignalService, ETHBridge {
         bytes32 signal,
         bytes[] memory accountProof,
         bytes[] memory storageProof
-    ) external pure {
+    ) external {
         // TODO: Get the root from the trusted source
         _verifySignal(account, root, chainId, signal, accountProof, storageProof);
+
+        emit SignalVerified(signal, chainId, root);
     }
 
     /// @dev Overrides ETHBridge.depositETH to add signaling functionality.
@@ -66,6 +69,6 @@ contract SignalService is ISignalService, ETHBridge {
         bytes[] memory stateProof
     ) internal pure {
         (bool valid,) = LibSignal.verifySignal(account, root, chainId, signal, accountProof, stateProof);
-        require(valid, "SignalService: invalid signal");
+        require(valid, SignalNotSent(signal, root));
     }
 }

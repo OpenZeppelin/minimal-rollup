@@ -10,9 +10,20 @@ pragma solidity ^0.8.28;
 /// Signals are broadcast without specific recipients, allowing flexible cross-chain data sourcing from any
 /// source chain state (e.g., full transaction logs or contract storage).
 interface ISignalService {
+    /// @dev Emitted when a signal is sent.
+    /// @param signal Signal value that was stored
     event SignalSent(bytes32 signal);
 
+    /// @dev Emitted when a signal is verified.
+    /// @param signal Signal value that was verified
+    /// @param chainId Chain ID where the signal was sent to
+    /// @param root TODO: check this
     event SignalVerified(bytes32 signal, uint64 chainId, bytes32 root);
+
+    /// @dev Emitted when a signal fails to be verified.
+    /// @param signal Signal value that was not verified
+    /// @param root TODO: check this
+    error SignalNotSent(bytes32 signal, bytes32 root);
 
     /// @dev Stores a data signal and returns its storage location.
     /// @param value Data signal to be stored
@@ -37,5 +48,5 @@ interface ISignalService {
         bytes32 signal,
         bytes[] memory accountProof,
         bytes[] memory stateProof
-    ) external pure;
+    ) external;
 }
