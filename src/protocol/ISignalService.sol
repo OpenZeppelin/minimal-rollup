@@ -23,10 +23,10 @@ interface ISignalService {
     /// @dev Emitted when a signal fails to be verified.
     /// @param signal Signal value that was not verified
     /// @param root TODO: check this
-    error SignalNotSent(bytes32 signal, bytes32 root);
+    error SignalNotReceived(bytes32 signal, bytes32 root);
 
     /// @dev Stores a data signal and returns its storage location.
-    /// @param value Data signal to be stored
+    /// @param value Data to be stored (signalled)
     function sendSignal(bytes32 value) external returns (bytes32 slot);
 
     /// @dev Checks if a signal has been sent.

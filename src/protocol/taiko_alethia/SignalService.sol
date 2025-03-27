@@ -14,19 +14,19 @@ import {ISignalService} from "../ISignalService.sol";
 contract SignalService is ISignalService, ETHBridge {
     using LibSignal for bytes32;
 
-    /// @dev Only required to be called on L1
+    /// @inheritdoc ISignalService
     function sendSignal(bytes32 value) external returns (bytes32 signal) {
         signal = value.signal();
         emit SignalSent(signal);
     }
 
-    /// @dev Only required to be called on L1
+    /// @inheritdoc ISignalService
     function isSignalSent(bytes32 signal) external view returns (bool) {
         // This will return `false` when the signal itself is 0
         return signal.signaled();
     }
 
-    /// @dev Only required to be called on L2
+    /// @inheritdoc ISignalService
     function verifySignal(
         address account,
         bytes32 root,
@@ -42,12 +42,14 @@ contract SignalService is ISignalService, ETHBridge {
     }
 
     /// @dev Overrides ETHBridge.depositETH to add signaling functionality.
-    function depositETH(uint64 chainId, address to, uint256 data) public payable override returns (bytes32 id) {
+    function depositETH(uint64 chainId, address to, bytes memory data) public payable override returns (bytes32 id) {
         id = super.depositETH(chainId, to, data);
         id.signal();
     }
 
     // CHECK: Should this function be non-reentrant?
+    /// @inheritdoc ETHBridge
+    /// @dev Overrides ETHBridge.claimDeposit to add signal verification logic.
     function claimDeposit(ETHDeposit memory deposit, bytes32 root, bytes[] memory accountProof, bytes[] memory proof)
         external
         override
@@ -69,6 +71,6 @@ contract SignalService is ISignalService, ETHBridge {
         bytes[] memory stateProof
     ) internal pure {
         (bool valid,) = LibSignal.verifySignal(account, root, chainId, signal, accountProof, stateProof);
-        require(valid, SignalNotSent(signal, root));
+        require(valid, SignalNotReceived(signal, root));
     }
 }

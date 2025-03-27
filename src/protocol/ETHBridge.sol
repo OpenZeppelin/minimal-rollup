@@ -29,7 +29,7 @@ abstract contract ETHBridge is IETHBridge {
     }
 
     /// @inheritdoc IETHBridge
-    function depositETH(uint64 chainId, address to, uint256 data) public payable virtual returns (bytes32 id) {
+    function depositETH(uint64 chainId, address to, bytes memory data) public payable virtual returns (bytes32 id) {
         address sender = msg.sender;
         uint64 nonce = _useNonce(sender).toUint64();
         ETHDeposit memory deposit = ETHDeposit(chainId, nonce, sender, to, msg.value, data);
@@ -46,21 +46,29 @@ abstract contract ETHBridge is IETHBridge {
     ) external virtual returns (bytes32 id);
 
     /// @dev Function to transfer ETH to the receiver but ignoring the returndata.
-    function _sendETH(address to, uint256 value) internal virtual returns (bool success) {
+    /// @param to Address to send the ETH to
+    /// @param value Amount of ETH to send
+    /// @param data Data to send to the receiver
+    function _sendETH(address to, uint256 value, bytes memory data) internal virtual returns (bool success) {
         assembly ("memory-safe") {
-            success := call(gas(), to, value, 0, 0, 0, 0)
+            // CHECK: use staticcall?
+            success := call(gas(), to, value, add(data, 0x20), mload(data), 0, 0)
         }
         require(success, FailedClaim());
     }
 
     /// @dev Processes the generic deposit claim logic.
+    /// @param id Identifier of the deposit
+    /// @param deposit Deposit to process
     function _processClaimDepositWithId(bytes32 id, ETHDeposit memory deposit) internal {
         require(!claimed(id), AlreadyClaimed());
         _claimed[id] = true;
-        _sendETH(deposit.to, deposit.amount);
+        _sendETH(deposit.to, deposit.amount, deposit.data);
         emit ETHDepositClaimed(id, deposit);
     }
 
+    /// @dev Generates a unique ID for a deposit.
+    /// @param deposit Deposit to generate an ID for
     function _generateId(ETHDeposit memory deposit) internal pure virtual returns (bytes32) {
         return keccak256(abi.encode(deposit));
     }
