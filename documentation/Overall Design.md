@@ -34,6 +34,7 @@ In any case, it is up to the rollup node to convert the data referenced by the p
 
 <p align="center"><img src="./design_images.2.png"/></p>
 
+
 ## Checkpoints
 
 We define a checkpoint as the L2 block hash after applying all the transactions in a publication. This means there is an implicit L2 checkpoint per publication and a publication is the smallest unit of proving. However:
@@ -42,7 +43,7 @@ We define a checkpoint as the L2 block hash after applying all the transactions 
 - this implies a prover can make a proof over any number of publications. The proving market creates a liveness incentive but otherwise there are no restrictions on proof size or frequency, so provers are free to optimize and aggregate (potentially across different rollups) however they want.
 - we only save a checkpoint to the L1 (in the rollup's `CheckpointTracker` contract) when it has been proven. The prover specifies the relevant publications when submitting a proof.
 
-We expect most proofs to span several publications, so most checkpoints will not be posted to L1.
+We expect most proofs to span several publications, so most checkpoints will not be posted to L1. 
 The current prover market design incentivizes provers for long windows of time, reducing the need to support parallel proving (where multiple transitions can be proven at the same time and can be joined together to advance the proven checkpoint). Because of this, only the latest proven checkpoint needs to be saved in storage (overwriting the previous one).
 
 <p align="center"><img src="./design_images.3.png"/></p>
@@ -55,6 +56,7 @@ Any rollup can introduce a delayed inclusion mechanism by deferring calls to the
 - after every publication, the `TaikoInbox` queries the `DelayedInclusionStore` and publishes everything that is due for inclusion.
 
 <span style="color: orange;">There is a separate publication hash per delayed inclusion</span>. We could create one publication for all sequential delayed inclusions or even one per L1 transaction, but this complicates the proving pricing model (described in another document).
+
 
 ## Shared Blobs
 
@@ -72,10 +74,11 @@ Our current design uses the same `PublicationFeed` contract for all rollups with
 These properties seem like they should be useful for composability. However:
 
 - we have not yet designed any features that rely on them.
-- the shared feed undermines the ability to recognise when a publication is no longer required, so <span style="color: orange;">it prevents the use of a ring buffer</span>.
+- the shared feed undermines the ability to recognise when a publication is no longer required, so  <span style="color: orange;">it prevents the use of a ring buffer</span>.
 - we cannot compute the number of relevant publications between two publication ids, so we need to pass this as a separate parameter to the proof.
 
 If we do not implement any composability features, we should restore the different publication feeds per rollup so the implementation can be optimised.
+
 
 ## Non-shared Publications
 
@@ -89,4 +92,3 @@ Instead, a publisher is expected to call the inbox of every rollup that should p
 As an optimization, the `TaikoInbox` contract includes a pointer to the previous Taiko publication so provers do not need to process the irrelevant publications.
 
 <p align="center"><img src="./design_images.5.png"/></p>
-
