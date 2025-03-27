@@ -3,7 +3,9 @@ pragma solidity ^0.8.28;
 
 import {LibSignal} from "../../libs/LibSignal.sol";
 import {LibTrieProof} from "../../libs/LibTrieProof.sol";
+import {CheckpointSyncer} from "../CheckpointSyncer.sol";
 import {ETHBridge} from "../ETHBridge.sol";
+import {ICheckpointTracker} from "../ICheckpointTracker.sol";
 import {ISignalService} from "../ISignalService.sol";
 
 /// @dev Implementation of a secure cross-chain messaging system for broadcasting arbitrary data (i.e. signals).
@@ -11,8 +13,10 @@ import {ISignalService} from "../ISignalService.sol";
 /// The service defines the minimal logic to broadcast signals through `sendSignal` and verify them with
 /// `verifySignal`. The service is designed to be used in conjunction with the `ETHBridge` contract to
 /// enable cross-chain communication.
-contract SignalService is ISignalService, ETHBridge {
+contract SignalService is ISignalService, ETHBridge, CheckpointSyncer {
     using LibSignal for bytes32;
+
+    constructor(address _checkpointTracker) CheckpointSyncer(_checkpointTracker) {}
 
     /// @inheritdoc ISignalService
     function sendSignal(bytes32 value) external returns (bytes32 signal) {
@@ -59,6 +63,26 @@ contract SignalService is ISignalService, ETHBridge {
         _verifySignal(root, deposit.chainId, id, accountProof, proof);
 
         super._processClaimDepositWithId(id, deposit);
+    }
+
+    function syncCheckpoint(ICheckpointTracker.Checkpoint memory checkpoint, uint64 chainId)
+        public
+        override
+        returns (bytes32 id)
+    {
+        id = super.syncCheckpoint(checkpoint, chainId);
+        id.signal();
+    }
+
+    function verifyCheckpoint(
+        ICheckpointTracker.Checkpoint memory checkpoint,
+        uint64 chainId,
+        bytes32 root,
+        bytes[] memory accountProof,
+        bytes[] memory proof
+    ) public view override returns (bytes32 id) {
+        id = getCheckpointId(checkpoint, chainId);
+        _verifySignal(root, chainId, id, accountProof, proof);
     }
 
     function _verifySignal(

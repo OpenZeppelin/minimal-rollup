@@ -49,13 +49,13 @@ contract CheckpointTrackerTest is Test {
     }
 
     function test_constructor_EmitsEvent() public {
-        bytes32 genesisCommitment = keccak256(abi.encode("genesis"));
+        bytes32 genesisCheckpoint = keccak256(abi.encode("genesis"));
         ICheckpointTracker.Checkpoint memory genesisCheckpoint =
-            ICheckpointTracker.Checkpoint({publicationId: 0, commitment: genesisCommitment});
+            ICheckpointTracker.Checkpoint({publicationId: 0, commitment: genesisCheckpoint});
 
         vm.expectEmit();
         emit ICheckpointTracker.CheckpointUpdated(genesisCheckpoint);
-        new CheckpointTracker(genesisCommitment, address(feed), address(verifier), proverManager);
+        new CheckpointTracker(genesisCheckpoint, address(feed), address(verifier), proverManager);
     }
 
     function test_proveTransition_SuccessfulTransition() public {
@@ -74,7 +74,7 @@ contract CheckpointTrackerTest is Test {
         assertEq(provenCheckpoint.commitment, end.commitment);
     }
 
-    function test_proveTransition_RevertWhenEndCommitmentIsZero() public {
+    function test_proveTransition_RevertWhenEndCheckpointIsZero() public {
         ICheckpointTracker.Checkpoint memory start =
             ICheckpointTracker.Checkpoint({publicationId: 0, commitment: keccak256(abi.encode("genesis"))});
         ICheckpointTracker.Checkpoint memory end =

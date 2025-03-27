@@ -69,7 +69,7 @@ abstract contract ETHBridge is IETHBridge {
 
     /// @dev Generates a unique ID for a deposit.
     /// @param deposit Deposit to generate an ID for
-    function _generateId(ETHDeposit memory deposit) internal pure virtual returns (bytes32) {
+    function _generateId(ETHDeposit memory deposit) internal pure returns (bytes32) {
         return keccak256(abi.encode(deposit));
     }
 
