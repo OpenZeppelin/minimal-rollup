@@ -21,24 +21,23 @@ contract SignalService is ISignalService, ETHBridge {
     }
 
     /// @inheritdoc ISignalService
-    function isSignalSent(bytes32 signal) external view returns (bool) {
+    function isSignalStored(bytes32 value) external view returns (bool) {
         // This will return `false` when the signal itself is 0
-        return signal.signaled();
+        return value.signaled();
     }
 
     /// @inheritdoc ISignalService
     function verifySignal(
-        address account,
         bytes32 root,
         uint64 chainId,
-        bytes32 signal,
+        bytes32 value,
         bytes[] memory accountProof,
         bytes[] memory storageProof
     ) external {
         // TODO: Get the root from the trusted source
-        _verifySignal(account, root, chainId, signal, accountProof, storageProof);
+        _verifySignal(root, chainId, value, accountProof, storageProof);
 
-        emit SignalVerified(signal, chainId, root);
+        emit SignalVerified(value, chainId, root);
     }
 
     /// @dev Overrides ETHBridge.depositETH to add signaling functionality.
@@ -57,20 +56,19 @@ contract SignalService is ISignalService, ETHBridge {
     {
         id = _generateId(deposit);
 
-        _verifySignal(address(this), root, deposit.chainId, id, accountProof, proof);
+        _verifySignal(root, deposit.chainId, id, accountProof, proof);
 
         super._processClaimDepositWithId(id, deposit);
     }
 
     function _verifySignal(
-        address account,
         bytes32 root,
         uint64 chainId,
-        bytes32 signal,
+        bytes32 value,
         bytes[] memory accountProof,
         bytes[] memory stateProof
-    ) internal pure {
-        (bool valid,) = LibSignal.verifySignal(account, root, chainId, signal, accountProof, stateProof);
-        require(valid, SignalNotReceived(signal, root));
+    ) internal view {
+        (bool valid,) = LibSignal.verifySignal(address(this), root, chainId, value, accountProof, stateProof);
+        require(valid, SignalNotReceived(value, root));
     }
 }

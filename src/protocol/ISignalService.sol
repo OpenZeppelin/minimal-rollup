@@ -15,37 +15,36 @@ interface ISignalService {
     event SignalSent(bytes32 signal);
 
     /// @dev Emitted when a signal is verified.
-    /// @param signal Signal value that was verified
+    /// @param value Value that was signaled
     /// @param chainId Chain ID where the signal was sent to
     /// @param root TODO: check this
-    event SignalVerified(bytes32 signal, uint64 chainId, bytes32 root);
+    event SignalVerified(bytes32 value, uint64 chainId, bytes32 root);
 
     /// @dev Emitted when a signal fails to be verified.
-    /// @param signal Signal value that was not verified
+    /// @param value Value that was not successfully verified
     /// @param root TODO: check this
-    error SignalNotReceived(bytes32 signal, bytes32 root);
+    error SignalNotReceived(bytes32 value, bytes32 root);
 
     /// @dev Stores a data signal and returns its storage location.
     /// @param value Data to be stored (signalled)
     function sendSignal(bytes32 value) external returns (bytes32 slot);
 
-    /// @dev Checks if a signal has been sent.
-    /// @param signal Signal value to be checked
-    function isSignalSent(bytes32 signal) external view returns (bool);
+    /// @dev Checks if a signal has been stored
+    /// @dev Note: This does not been it has been 'sent' to destination chain.
+    /// @param value Value to be checked is stored
+    function isSignalStored(bytes32 value) external view returns (bool);
 
     /// @dev Verifies if the signal can be proved to be part of a merkle tree
     /// defined by `root` for the specified signal service storage.
-    /// @param account Account address that stores the signal (address(this))
     /// @param root TODO: check this
     /// @param chainId Chain ID where the signal was sent to
-    /// @param signal Signal value to be verified
+    /// @param value Value to be verified
     /// @param accountProof Merkle proof for account state against global stateRoot
     /// @param stateProof Merkle proof for slot value against account's storageRoot
     function verifySignal(
-        address account,
         bytes32 root,
         uint64 chainId,
-        bytes32 signal,
+        bytes32 value,
         bytes[] memory accountProof,
         bytes[] memory stateProof
     ) external;
