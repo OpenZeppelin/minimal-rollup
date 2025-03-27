@@ -5,19 +5,24 @@ import {LibSignal} from "../../libs/LibSignal.sol";
 import {LibTrieProof} from "../../libs/LibTrieProof.sol";
 import {ETHBridge} from "../ETHBridge.sol";
 import {ISignalService} from "../ISignalService.sol";
-import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 
 /// @dev Implementation of a secure cross-chain messaging system for broadcasting arbitrary data (i.e. signals).
 ///
 /// The service defines the minimal logic to broadcast signals through `sendSignal` and verify them with
-/// `verifySignal`.
+/// `verifySignal`. The service is designed to be used in conjunction with the `ETHBridge` contract to
+/// enable cross-chain communication.
 contract SignalService is ISignalService, ETHBridge {
     using LibSignal for bytes32;
-    using SafeCast for uint256;
 
     /// @dev Only required to be called on L1
     function sendSignal(bytes32 value) external returns (bytes32 signal) {
-        return value.signal();
+        return emit SignalSent(value.signal());
+    }
+
+    /// @dev Only required to be called on L1
+    function isSignalSent(bytes32 signal) external view returns (bool) {
+        // This will return `false` when the signal itself is 0
+        return signal.signaled();
     }
 
     /// @dev Only required to be called on L2
@@ -30,8 +35,7 @@ contract SignalService is ISignalService, ETHBridge {
         bytes[] memory storageProof
     ) external pure {
         // TODO: Get the root from the trusted source
-        bool isValid = _verifySignal(account, root, chainId, signal, accountProof, storageProof);
-        require(isValid, "SignalService: invalid signal");
+        _verifySignal(account, root, chainId, signal, accountProof, storageProof);
     }
 
     /// @dev Overrides ETHBridge.depositETH to add signaling functionality.
@@ -48,8 +52,7 @@ contract SignalService is ISignalService, ETHBridge {
     {
         id = _generateId(deposit);
 
-        bool isValid = _verifySignal(address(this), root, deposit.chainId, id, accountProof, proof);
-        require(isValid, "SignalService: invalid deposit");
+        _verifySignal(address(this), root, deposit.chainId, id, accountProof, proof);
 
         super._processClaimDepositWithId(id, deposit);
     }
@@ -61,8 +64,8 @@ contract SignalService is ISignalService, ETHBridge {
         bytes32 signal,
         bytes[] memory accountProof,
         bytes[] memory stateProof
-    ) internal pure returns (bool) {
+    ) internal pure {
         (bool valid,) = LibSignal.verifySignal(account, root, chainId, signal, accountProof, stateProof);
-        return valid;
+        require(valid, "SignalService: invalid signal");
     }
 }
