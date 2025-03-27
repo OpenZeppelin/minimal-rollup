@@ -47,7 +47,7 @@ contract DelayedInclusionStore is IDelayedInclusionStore {
     /// @inheritdoc IDelayedInclusionStore
     /// @dev Stores the blob reference as a DueInclusion
     function publishDelayed(uint256[] memory blobIndices) external {
-        (bytes32 refHash, ) = blobRefRegistry.registerRef(blobIndices);
+        (bytes32 refHash,) = blobRefRegistry.registerRef(blobIndices);
         DueInclusion memory dueInclusion = DueInclusion(refHash, block.timestamp + inclusionDelay);
         _delayedInclusions.push(dueInclusion);
         emit DelayedInclusionStored(msg.sender, dueInclusion);
