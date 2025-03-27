@@ -52,8 +52,7 @@ This guide is not intended to be comprehensive, but rather to provide a starting
 
 1. Events and structs when part of the contract's public API should be defined in the contract interface.
 
-    If they are an implementation detail, or emitted by a specific implementation, they should insteadbe defined in the contract itself, and not part of the interface.
-
+    If they are an implementation detail, or emitted by a specific implementation, they should instead be defined in the contract itself, and not part of the interface.
     ```solidity
     interface IMyContract {
         // These event and struct are part of the interface
