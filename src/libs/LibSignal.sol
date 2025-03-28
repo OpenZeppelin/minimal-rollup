@@ -30,6 +30,9 @@ library LibSignal {
     }
 
     /// @dev A `value` was signaled at a namespaced slot. See `deriveSlot`.
+    /// @dev This indicates whether the relevant storage slot is non-zero, which has two implications:
+    /// - if a signal slot has an incorrect non-zero value, it will be "signaled" but `verifySignal` will fail
+    /// - zero signals are not supported (but can be proven with `verifySignal`)
     function signaled(uint64 chainId, address account, bytes32 value) internal view returns (bool) {
         return deriveSlot(chainId, account, value).getBytes32Slot().value != 0;
     }
