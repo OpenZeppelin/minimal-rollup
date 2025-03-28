@@ -20,9 +20,8 @@ interface ISignalService {
     /// @param root TODO: check this
     event SignalVerified(bytes32 value, uint64 chainId, bytes32 root);
 
-    /// @dev Emitted when a signal fails to be verified.
-    /// @param value Value that was not successfully verified
-    /// @param root TODO: check this
+    /// @dev Error when a signal fails to be verified.
+    /// @param value Value that was not verified
     error SignalNotReceived(bytes32 value, bytes32 root);
 
     /// @dev Stores a data signal and returns its storage location.
