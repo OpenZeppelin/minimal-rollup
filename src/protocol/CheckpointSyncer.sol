@@ -6,11 +6,15 @@ import {ICheckpointTracker} from "./ICheckpointTracker.sol";
 
 /// @dev Tracks and synchronizes checkpoints from different chains using their chainId.
 abstract contract CheckpointSyncer is ICheckpointSyncer {
-    address private immutable checkpointTracker;
+    address private immutable _checkpointTracker;
 
     /// @dev Sets the checkpoint tracker.
-    constructor(address _checkpointTracker) {
-        _checkpointTracker = checkpointTracker;
+    constructor(address checkpointTracker_) {
+        checkpointTracker_ = _checkpointTracker;
+    }
+
+    function checkpointTracker() public view returns (address) {
+        return _checkpointTracker;
     }
 
     /// @inheritdoc ICheckpointSyncer
@@ -29,7 +33,7 @@ abstract contract CheckpointSyncer is ICheckpointSyncer {
         virtual
         returns (bytes32 id)
     {
-        require(msg.sender == checkpointTracker, UnauthorizedCheckpointTracker());
+        require(msg.sender == checkpointTracker(), UnauthorizedCheckpointTracker());
         id = getCheckpointId(checkpoint, chainId);
         emit CheckpointSynced(checkpoint, chainId);
     }
@@ -38,9 +42,8 @@ abstract contract CheckpointSyncer is ICheckpointSyncer {
     function verifyCheckpoint(
         ICheckpointTracker.Checkpoint memory checkpoint,
         uint64 chainId,
-        bytes32 root,
         bytes[] memory accountProof,
-        bytes[] memory proof
+        bytes[] memory storageProof
     ) public view virtual returns (bytes32 id);
 
     function _generateId(ICheckpointTracker.Checkpoint memory checkpoint, uint64 chainId)

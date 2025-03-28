@@ -42,7 +42,7 @@ library LibSignal {
 
     /// @dev Signal a `value` at a namespaced slot for the current `block.chainid`.
     function signal(address account, bytes32 value) internal returns (bytes32) {
-        return signal(block.chainid.toUint64(), account, value);
+        return signal(uint64(block.chainid), account, value);
     }
 
     /// @dev Signal a `value` at a namespaced slot. See `deriveSlot`.
@@ -59,7 +59,7 @@ library LibSignal {
 
     /// @dev Returns the storage slot for a signal. Namespaced to the current `block.chainid`.
     function deriveSlot(address account, bytes32 value) internal view returns (bytes32) {
-        return deriveSlot(block.chainid.toUint64(), account, value);
+        return deriveSlot(uint64(block.chainid), account, value);
     }
 
     /// @dev Returns the storage slot for a signal.
@@ -67,17 +67,25 @@ library LibSignal {
         return string(abi.encodePacked(chainId, account, value)).erc7201Slot();
     }
 
-    /// @dev Performs a storage proof on the `account`. User must ensure the `root` is trusted for the given `chainId`.
+    /// @dev Performs a storage proof verification for a signal stored on the contract using this library
+    /// @param root The state root from the source chain to verify against
+    /// @param chainId The chain ID of the source chain where the signal was sent
+    /// @param sender The address that originally sent the signal on the source chain
+    /// @param value The signal value to verify
+    /// @param accountProof Merkle proof for the contract's account against the state root
+    /// @param storageProof Merkle proof for the derived storage slot against the account's storage root
+    /// @return valid Boolean indicating whether the signal was successfully verified
+    /// @return storageRoot The storage root of the account from the proof
     function verifySignal(
-        address account,
         bytes32 root,
         uint64 chainId,
+        address sender,
         bytes32 value,
         bytes[] memory accountProof,
         bytes[] memory storageProof
-    ) internal pure returns (bool valid, bytes32 storageRoot) {
+    ) internal view returns (bool valid, bytes32 storageRoot) {
         return LibTrieProof.verifyStorage(
-            account, deriveSlot(chainId, account, value), value, root, accountProof, storageProof
+            address(this), deriveSlot(chainId, sender, value), value, root, accountProof, storageProof
         );
     }
 }

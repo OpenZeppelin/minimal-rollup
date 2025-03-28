@@ -12,36 +12,35 @@ import {ISignalService} from "../ISignalService.sol";
 ///
 /// The service defines the minimal logic to broadcast signals through `sendSignal` and verify them with
 /// `verifySignal`. The service is designed to be used in conjunction with the `ETHBridge` contract to
-/// enable cross-chain communication.
+/// enable cross-chain communication and the CheckpointSyncer to retrieve trusted state roots.
 contract SignalService is ISignalService, ETHBridge, CheckpointSyncer {
     using LibSignal for bytes32;
 
     constructor(address _checkpointTracker) CheckpointSyncer(_checkpointTracker) {}
 
     /// @inheritdoc ISignalService
-    function sendSignal(bytes32 value) external returns (bytes32 signal) {
-        signal = value.signal();
-        emit SignalSent(signal);
+    function sendSignal(bytes32 value) external returns (bytes32 slot) {
+        slot = value.signal();
+        emit SignalSent(msg.sender, block.chainid, value);
     }
 
     /// @inheritdoc ISignalService
     function isSignalStored(bytes32 value, address sender) external view returns (bool) {
         // This will return `false` when the signal itself is 0
-        return value.signaled(sender);
+        return LibSignal.signaled(sender, value);
     }
 
     /// @inheritdoc ISignalService
     function verifySignal(
-        bytes32 root,
         uint64 chainId,
+        address sender,
         bytes32 value,
         bytes[] memory accountProof,
         bytes[] memory storageProof
     ) external {
-        // TODO: Get the root from the trusted source
-        _verifySignal(root, chainId, value, accountProof, storageProof);
+        _verifySignal(chainId, sender, value, accountProof, storageProof);
 
-        emit SignalVerified(value, chainId, root);
+        emit SignalVerified(chainId, sender, value);
     }
 
     /// @dev Overrides ETHBridge.depositETH to add signaling functionality.
@@ -53,14 +52,14 @@ contract SignalService is ISignalService, ETHBridge, CheckpointSyncer {
     // CHECK: Should this function be non-reentrant?
     /// @inheritdoc ETHBridge
     /// @dev Overrides ETHBridge.claimDeposit to add signal verification logic.
-    function claimDeposit(ETHDeposit memory deposit, bytes32 root, bytes[] memory accountProof, bytes[] memory proof)
+    function claimDeposit(ETHDeposit memory deposit, bytes[] memory accountProof, bytes[] memory storageProof)
         external
         override
         returns (bytes32 id)
     {
         id = _generateId(deposit);
 
-        _verifySignal(root, deposit.chainId, id, accountProof, proof);
+        _verifySignal(deposit.chainId, deposit.from, id, accountProof, storageProof);
 
         super._processClaimDepositWithId(id, deposit);
     }
@@ -77,22 +76,24 @@ contract SignalService is ISignalService, ETHBridge, CheckpointSyncer {
     function verifyCheckpoint(
         ICheckpointTracker.Checkpoint memory checkpoint,
         uint64 chainId,
-        bytes32 root,
         bytes[] memory accountProof,
-        bytes[] memory proof
+        bytes[] memory storageProof
     ) public view override returns (bytes32 id) {
         id = getCheckpointId(checkpoint, chainId);
-        _verifySignal(root, chainId, id, accountProof, proof);
+
+        _verifySignal(chainId, checkpointTracker(), id, accountProof, storageProof);
     }
 
     function _verifySignal(
-        bytes32 root,
         uint64 chainId,
+        address sender,
         bytes32 value,
         bytes[] memory accountProof,
-        bytes[] memory stateProof
+        bytes[] memory storageProof
     ) internal view {
-        (bool valid,) = LibSignal.verifySignal(address(this), root, chainId, value, accountProof, stateProof);
-        require(valid, SignalNotReceived(value, root));
+        // WARN: THIS IS NOT THE ROOT ITS JUST A PLACE HOLDER
+        bytes32 root = keccak256("root");
+        (bool valid,) = LibSignal.verifySignal(root, chainId, sender, value, accountProof, storageProof);
+        require(valid, SignalNotReceived(value));
     }
 }

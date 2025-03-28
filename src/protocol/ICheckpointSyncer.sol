@@ -27,13 +27,11 @@ interface ICheckpointSyncer {
         external
         returns (bytes32 id);
 
-    /// @dev Verifies that a `checkpoint` is valid for the provided `chainId`, `height` and `root`.
-    /// The `root` MUST be trusted.
+    /// @dev Verifies that a `checkpoint` has been signaled on the destchain.
     function verifyCheckpoint(
         ICheckpointTracker.Checkpoint memory checkpoint,
         uint64 chainId,
-        bytes32 root,
         bytes[] memory accountProof,
-        bytes[] memory proof
+        bytes[] memory storageProof
     ) external view returns (bytes32 id);
 }
