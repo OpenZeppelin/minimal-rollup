@@ -29,7 +29,8 @@ interface ISignalService {
     function sendSignal(bytes32 value) external returns (bytes32 slot);
 
     /// @dev Checks if a signal has been stored
-    /// @dev Note: This does not mean it has been 'sent' to destination chain, only that it has been stored on the source chain.
+    /// @dev Note: This does not mean it has been 'sent' to destination chain, only that it has been stored on the
+    /// source chain.
     /// @param value Value to be checked is stored
     // @param sender The address that sent the signal
     function isSignalStored(bytes32 value, address sender) external view returns (bool);

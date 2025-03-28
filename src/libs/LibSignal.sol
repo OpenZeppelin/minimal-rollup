@@ -4,7 +4,6 @@ pragma solidity ^0.8.28;
 import {LibTrieProof} from "./LibTrieProof.sol";
 import {SlotDerivation} from "@openzeppelin/contracts/utils/SlotDerivation.sol";
 import {StorageSlot} from "@openzeppelin/contracts/utils/StorageSlot.sol";
-import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 
 /// @dev Library for secure broadcasting (i.e. signaling) cross-chain arbitrary data.
 ///
@@ -15,7 +14,6 @@ import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 /// Later, on a destination chain the signal can be proven by providing the proof to `verifySignal` as long as the
 /// state root is trusted (e.g. the L1 state root can made available on the L2 by the proposer).
 library LibSignal {
-    using SafeCast for uint256;
     using StorageSlot for bytes32;
     using SlotDerivation for string;
 
@@ -26,7 +24,7 @@ library LibSignal {
 
     /// @dev A `value` was signaled at a namespaced slot for the current `block.chainid`.
     function signaled(address account, bytes32 value) internal view returns (bool) {
-        return signaled(block.chainid.toUint64(), account, value);
+        return signaled(uint64(block.chainid), account, value);
     }
 
     /// @dev A `value` was signaled at a namespaced slot. See `deriveSlot`.

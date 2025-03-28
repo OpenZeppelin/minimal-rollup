@@ -31,7 +31,7 @@ abstract contract CheckpointSyncer is ICheckpointSyncer {
     {
         require(msg.sender == checkpointTracker, UnauthorizedCheckpointTracker());
         id = getCheckpointId(checkpoint, chainId);
-        emit CheckpointSynced(checkpoint);
+        emit CheckpointSynced(checkpoint, chainId);
     }
 
     /// @inheritdoc ICheckpointSyncer

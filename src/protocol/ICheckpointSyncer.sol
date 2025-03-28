@@ -10,8 +10,8 @@ import {ICheckpointTracker} from "./ICheckpointTracker.sol";
 ///
 /// Each checkpoint is identified by an id composed by the chainId, height and checkpoint itself.
 interface ICheckpointSyncer {
-    /// @dev A new `checkpoint` has been synced for `chainId` at `height`.
-    event CheckpointSynced(ICheckpointTracker.Checkpoint checkpoint);
+    /// @dev A new `checkpoint` has been synced for `chainId`.
+    event CheckpointSynced(ICheckpointTracker.Checkpoint checkpoint, uint64 chainId);
 
     /// @dev The caller is not a recognized checkpoint tracker.
     error UnauthorizedCheckpointTracker();

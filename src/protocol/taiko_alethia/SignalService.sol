@@ -25,9 +25,9 @@ contract SignalService is ISignalService, ETHBridge, CheckpointSyncer {
     }
 
     /// @inheritdoc ISignalService
-    function isSignalStored(bytes32 value) external view returns (bool) {
+    function isSignalStored(bytes32 value, address sender) external view returns (bool) {
         // This will return `false` when the signal itself is 0
-        return value.signaled();
+        return value.signaled(sender);
     }
 
     /// @inheritdoc ISignalService
