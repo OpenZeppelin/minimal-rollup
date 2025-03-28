@@ -29,9 +29,10 @@ interface ISignalService {
     function sendSignal(bytes32 value) external returns (bytes32 slot);
 
     /// @dev Checks if a signal has been stored
-    /// @dev Note: This does not been it has been 'sent' to destination chain.
+    /// @dev Note: This does not mean it has been 'sent' to destination chain, only that it has been stored on the source chain.
     /// @param value Value to be checked is stored
-    function isSignalStored(bytes32 value) external view returns (bool);
+    // @param sender The address that sent the signal
+    function isSignalStored(bytes32 value, address sender) external view returns (bool);
 
     /// @dev Verifies if the signal can be proved to be part of a merkle tree
     /// defined by `root` for the specified signal service storage.
