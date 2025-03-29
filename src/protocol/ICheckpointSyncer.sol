@@ -16,6 +16,9 @@ interface ICheckpointSyncer {
     /// @dev The caller is not a recognized checkpoint tracker.
     error UnauthorizedCheckpointTracker();
 
+    /// @dev Returns the checkpoint tracker address.
+    function checkpointTracker() external view returns (address);
+
     /// @dev checkpoint identifier.
     function getCheckpointId(ICheckpointTracker.Checkpoint memory checkpoint, uint64 chainId)
         external
