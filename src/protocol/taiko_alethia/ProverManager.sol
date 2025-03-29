@@ -161,13 +161,23 @@ contract ProverManager is IProposerFees, IProverManager {
             if (_nextProverAddress != address(0)) {
                 _ensureSufficientUnderbid(_nextPeriod.fee, offeredFee);
 
-                // Refund the liveness bond to the losing bid
-                balances[_nextProverAddress] += _nextPeriod.stake;
+                // Refund the liveness bond to the previous next bidder,
+                // but only if it's not the current prover (reused bond).
+                if (_nextProverAddress != _currentPeriod.prover) {
+                    balances[_nextProverAddress] += _nextPeriod.stake;
+                }
             }
         }
 
-        // Record the next period info
         uint256 _livenessBond = livenessBond;
+        // If the current prover is bidding again, allow bond reuse
+        if (_currentPeriod.prover == msg.sender) {
+            require(offeredFee > _currentPeriod.fee, "FeeNotHigher");
+            _livenessBond = 0; // do not deduct again
+        } else {
+            require(balances[msg.sender] >= livenessBond, "Insufficient balance for bond");
+        }
+
         _updatePeriod(_nextPeriod, msg.sender, offeredFee, _livenessBond);
 
         emit ProverOffer(msg.sender, currentPeriod + 1, offeredFee, _livenessBond);
@@ -261,9 +271,13 @@ contract ProverManager is IProposerFees, IProverManager {
         Period storage period = _periods[periodId];
         require(provenPublication.timestamp > period.end, "Publication must be after period");
 
-        uint256 stake = period.stake;
-        balances[period.prover] += period.pastDeadline ? _calculatePercentage(stake, rewardPercentage) : stake;
-        period.stake = 0;
+        // Only release the bond if the prover didn't continue into the next period
+        Period storage nextPeriod = _periods[periodId + 1];
+        if (nextPeriod.prover != period.prover) {
+            uint256 stake = period.stake;
+            balances[period.prover] += period.pastDeadline ? _calculatePercentage(stake, rewardPercentage) : stake;
+            period.stake = 0;
+        }
     }
 
     /// @inheritdoc IProposerFees

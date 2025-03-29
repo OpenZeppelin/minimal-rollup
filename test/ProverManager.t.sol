@@ -284,6 +284,32 @@ contract ProverManagerTest is Test {
         proverManager.bid(insufficientlyReducedFee);
     }
 
+    function test_bid_ReusesBond_WhenSameProverWinsNextPeriod() public {
+        // First, have prover1 make a successful bid
+        _deposit(prover1, DEPOSIT_AMOUNT);
+
+        uint256 firstBidFee = _maxAllowedFee(INITIAL_FEE);
+        vm.prank(prover1);
+        proverManager.bid(firstBidFee);
+
+        // Calculate required fee for second bid
+        uint256 secondBidFee = _maxAllowedFee(firstBidFee);
+
+        vm.prank(prover1);
+        vm.expectEmit();
+        emit ProverManager.ProverOffer(prover1, 2, secondBidFee, LIVENESS_BOND);
+        proverManager.bid(secondBidFee);
+
+        // Check that prover1's balance was not reduced the second time
+        uint256 prover1Bal = proverManager.balances(prover1);
+        assertEq(prover1Bal, DEPOSIT_AMOUNT - LIVENESS_BOND, "Prover1 should have their liveness bond refunded");
+
+        // Check that period 2 now has prover1 as the prover
+        ProverManager.Period memory period = proverManager.getPeriod(2);
+        assertEq(period.prover, prover1, "Prover1 should now be the next prover");
+        assertEq(period.fee, secondBidFee, "Fee should be updated to prover2's bid");
+    }
+
     /// --------------------------------------------------------------------------
     /// evictProver()
     /// --------------------------------------------------------------------------
