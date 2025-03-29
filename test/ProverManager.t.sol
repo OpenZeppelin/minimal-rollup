@@ -310,6 +310,26 @@ contract ProverManagerTest is Test {
         assertEq(period.fee, secondBidFee, "Fee should be updated to prover2's bid");
     }
 
+    function test_bid_RevertWhen_SameProverDoesNotIncreaseFee() public {
+        // First, have prover1 make a successful bid
+        _deposit(prover1, DEPOSIT_AMOUNT);
+
+        uint256 firstBidFee = _maxAllowedFee(INITIAL_FEE);
+        vm.prank(prover1);
+        proverManager.bid(firstBidFee);
+
+        // Now try to bid again with same fee
+        vm.prank(prover1);
+        vm.expectRevert("FeeNotHigher1");
+        proverManager.bid(firstBidFee);
+
+        // Also test with a lower fee (should revert too)
+        uint256 lowerFee = _maxAllowedFee(firstBidFee);
+        vm.prank(prover1);
+        vm.expectRevert("FeeNotHigher");
+        proverManager.bid(lowerFee);
+    }
+
     /// --------------------------------------------------------------------------
     /// evictProver()
     /// --------------------------------------------------------------------------

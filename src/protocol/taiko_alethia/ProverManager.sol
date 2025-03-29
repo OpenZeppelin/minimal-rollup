@@ -158,20 +158,17 @@ contract ProverManager is IProposerFees, IProverManager {
             _closePeriod(_currentPeriod, successionDelay, provingWindow);
         } else {
             address _nextProverAddress = _nextPeriod.prover;
-            if (_nextProverAddress != address(0)) {
+            if (_nextProverAddress != address(0) && _nextProverAddress != _currentPeriod.prover) {
                 _ensureSufficientUnderbid(_nextPeriod.fee, offeredFee);
 
-                // Refund the liveness bond to the previous next bidder,
-                // but only if it's not the current prover (reused bond).
-                if (_nextProverAddress != _currentPeriod.prover) {
-                    balances[_nextProverAddress] += _nextPeriod.stake;
-                }
+                // Refund the liveness bond to the losing bid
+                balances[_nextProverAddress] += _nextPeriod.stake;
             }
         }
 
         uint256 _livenessBond = livenessBond;
         // If the current prover is bidding again, allow bond reuse
-        if (_currentPeriod.prover == msg.sender) {
+        if (_currentPeriod.end != 0 && _currentPeriod.prover == msg.sender) {
             require(offeredFee > _currentPeriod.fee, "FeeNotHigher");
             _livenessBond = 0; // do not deduct again
         } else {
