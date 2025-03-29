@@ -167,7 +167,7 @@ contract ProverManager is IProposerFees, IProverManager {
         }
 
         uint256 _livenessBond = livenessBond;
-        // If the current prover is bidding again, allow bond reuse
+        // If the current prover is bidding again for the next period, allow bond reuse
         if (_currentPeriod.end != 0 && _currentPeriod.prover == msg.sender) {
             require(offeredFee > _currentPeriod.fee, "FeeNotHigher");
             _livenessBond = 0; // do not deduct again
