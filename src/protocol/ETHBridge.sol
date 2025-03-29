@@ -38,10 +38,20 @@ abstract contract ETHBridge is IETHBridge {
     }
 
     /// @inheritdoc IETHBridge
-    function claimDeposit(ETHDeposit memory deposit, bytes[] memory accountProof, bytes[] memory storageRoot)
+    function claimDeposit(ETHDeposit memory deposit, bytes[] memory accountProof, bytes[] memory storageProof)
         external
         virtual
         returns (bytes32 id);
+
+    /// @dev Processes deposit claim by id.
+    /// @param id Identifier of the deposit
+    /// @param deposit Deposit to process
+    function _processClaimDepositWithId(bytes32 id, ETHDeposit memory deposit) internal virtual {
+        require(!claimed(id), AlreadyClaimed());
+        _claimed[id] = true;
+        _sendETH(deposit.to, deposit.amount, deposit.data);
+        emit ETHDepositClaimed(id, deposit);
+    }
 
     /// @dev Function to transfer ETH to the receiver but ignoring the returndata.
     /// @param to Address to send the ETH to
@@ -53,16 +63,6 @@ abstract contract ETHBridge is IETHBridge {
             success := call(gas(), to, value, add(data, 0x20), mload(data), 0, 0)
         }
         require(success, FailedClaim());
-    }
-
-    /// @dev Processes the generic deposit claim logic.
-    /// @param id Identifier of the deposit
-    /// @param deposit Deposit to process
-    function _processClaimDepositWithId(bytes32 id, ETHDeposit memory deposit) internal {
-        require(!claimed(id), AlreadyClaimed());
-        _claimed[id] = true;
-        _sendETH(deposit.to, deposit.amount, deposit.data);
-        emit ETHDepositClaimed(id, deposit);
     }
 
     /// @dev Generates a unique ID for a deposit.
