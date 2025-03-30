@@ -335,8 +335,16 @@ contract ProverManagerTest is Test {
         emit ProverManager.ProverOffer(prover2, 3, fee2, LIVENESS_BOND, false);
         proverManager.bid(fee2);
 
-        assertEq(proverManager.balances(prover2), DEPOSIT_AMOUNT - LIVENESS_BOND, "prover2 balance should be reduced by liveness bond");
-        assertEq(proverManager.balances(prover1), DEPOSIT_AMOUNT - LIVENESS_BOND, "prover1 balance should be reduced by liveness bond. not returned yet.");
+        assertEq(
+            proverManager.balances(prover2),
+            DEPOSIT_AMOUNT - LIVENESS_BOND,
+            "prover2 balance should be reduced by liveness bond"
+        );
+        assertEq(
+            proverManager.balances(prover1),
+            DEPOSIT_AMOUNT - LIVENESS_BOND,
+            "prover1 balance should be reduced by liveness bond. not returned yet."
+        );
 
         // Step 3: prover1 comes back and re-bids with better fee — bond should be reused
         uint256 fee3 = _maxAllowedFee(fee2);
@@ -355,12 +363,16 @@ contract ProverManagerTest is Test {
         assertEq(proverManager.balances(prover2), DEPOSIT_AMOUNT, "Prover2 should have their bond refunded");
 
         // Check: prover1's bond was not deducted a second time
-        assertEq(proverManager.balances(prover1), DEPOSIT_AMOUNT - LIVENESS_BOND, "Prover1 should not be charged a second bond");
+        assertEq(
+            proverManager.balances(prover1),
+            DEPOSIT_AMOUNT - LIVENESS_BOND,
+            "Prover1 should not be charged a second bond"
+        );
     }
 
     function test_finalizePastPeriod_ReleasesBondAfterConsecutiveWins() public {
         // Step 1: Prover1 bids for period 2
-         _deposit(prover1, DEPOSIT_AMOUNT);
+        _deposit(prover1, DEPOSIT_AMOUNT);
         uint256 firstFee = _maxAllowedFee(INITIAL_FEE);
         vm.prank(prover1);
         vm.expectEmit();
@@ -391,11 +403,14 @@ contract ProverManagerTest is Test {
         emit ProverManager.ProverOffer(prover1, 4, fee3, LIVENESS_BOND, true);
         proverManager.bid(fee3);
 
-        assertEq(proverManager.balances(prover1), DEPOSIT_AMOUNT - LIVENESS_BOND, "Prover1 should not be charged a second bond");
+        assertEq(
+            proverManager.balances(prover1),
+            DEPOSIT_AMOUNT - LIVENESS_BOND,
+            "Prover1 should not be charged a second bond"
+        );
 
         // Submit publications for period 3
-        IPublicationFeed.PublicationHeader[] memory headers3 =
-            _insertPublicationsWithFees(2, fee3);
+        IPublicationFeed.PublicationHeader[] memory headers3 = _insertPublicationsWithFees(2, fee3);
         IPublicationFeed.PublicationHeader memory startHeader3 = headers3[0];
         IPublicationFeed.PublicationHeader memory endHeader3 = headers3[1];
 
@@ -407,7 +422,11 @@ contract ProverManagerTest is Test {
         emit ProverManager.ProverOffer(prover2, 4, fee4, LIVENESS_BOND, false);
         proverManager.bid(fee4);
 
-        assertEq(proverManager.balances(prover1), DEPOSIT_AMOUNT - LIVENESS_BOND, "Prover1 should not be charged a second bond");
+        assertEq(
+            proverManager.balances(prover1),
+            DEPOSIT_AMOUNT - LIVENESS_BOND,
+            "Prover1 should not be charged a second bond"
+        );
         assertEq(proverManager.balances(prover2), DEPOSIT_AMOUNT - LIVENESS_BOND, "Prover2 should be charged one bond");
 
         // Warp and trigger period 4
@@ -462,11 +481,7 @@ contract ProverManagerTest is Test {
         assertEq(periodAfter.stake, 0, "Stake should be cleared after finalization");
 
         uint256 balanceAfter = proverManager.balances(prover1);
-        assertEq(
-            balanceAfter,
-            balanceBefore + stake,
-            "Prover1 should be refunded after they stop being prover"
-        );
+        assertEq(balanceAfter, balanceBefore + stake, "Prover1 should be refunded after they stop being prover");
     }
 
     /// --------------------------------------------------------------------------
