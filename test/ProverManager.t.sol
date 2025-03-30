@@ -173,7 +173,7 @@ contract ProverManagerTest is Test {
 
         vm.prank(prover1);
         vm.expectEmit();
-        emit ProverManager.ProverOffer(prover1, 2, maxAllowedFee, LIVENESS_BOND);
+        emit ProverManager.ProverOffer(prover1, 2, maxAllowedFee, LIVENESS_BOND, false);
         proverManager.bid(maxAllowedFee);
 
         // Check that period 2 has been created
@@ -206,7 +206,7 @@ contract ProverManagerTest is Test {
 
         vm.prank(prover2);
         vm.expectEmit();
-        emit ProverManager.ProverOffer(prover2, 2, secondBidFee, LIVENESS_BOND);
+        emit ProverManager.ProverOffer(prover2, 2, secondBidFee, LIVENESS_BOND, false);
         proverManager.bid(secondBidFee);
 
         // Check that period 2 now has prover2 as the prover
@@ -282,6 +282,191 @@ contract ProverManagerTest is Test {
         vm.prank(prover1);
         vm.expectRevert("Offered fee not low enough");
         proverManager.bid(insufficientlyReducedFee);
+    }
+
+    function test_bid_SameProverReusesBond() public {
+        // First, have prover1 make a successful bid
+        _deposit(prover1, DEPOSIT_AMOUNT);
+
+        uint256 firstBidFee = _maxAllowedFee(INITIAL_FEE);
+        vm.prank(prover1);
+        proverManager.bid(firstBidFee);
+
+        // End current period
+        vm.warp(block.timestamp + EXIT_DELAY + 1);
+        vm.prank(inbox);
+        proverManager.payPublicationFee{value: INITIAL_FEE}(proposer, false);
+
+        // prover1 bids again with a valid fee (maxAllowedFee under their previous)
+        uint256 secondBidFee = _maxAllowedFee(firstBidFee);
+        vm.prank(prover1);
+        vm.expectEmit();
+        emit ProverManager.ProverOffer(prover1, 3, secondBidFee, LIVENESS_BOND, true);
+        proverManager.bid(secondBidFee);
+
+        // Check that bond was reused in period 3
+        ProverManager.Period memory period = proverManager.getPeriod(3);
+        assertEq(period.prover, prover1, "Prover1 should remain the prover");
+        assertEq(period.fee, secondBidFee, "Fee should be updated");
+        assertEq(period.stake, LIVENESS_BOND, "Stake should be zero due to bond reuse");
+
+        // Check that prover1's balance was NOT reduced again
+        uint256 prover1Bal = proverManager.balances(prover1);
+        assertEq(prover1Bal, DEPOSIT_AMOUNT - LIVENESS_BOND, "Bond should not be deducted again");
+    }
+
+    function test_bid_SameProverReplacesExistingNextBidReusesBond() public {
+        // Step 1: prover1 becomes current prover in period 2
+        _deposit(prover1, DEPOSIT_AMOUNT);
+        uint256 firstFee = _maxAllowedFee(INITIAL_FEE);
+        vm.prank(prover1);
+        proverManager.bid(firstFee);
+
+        // Advance to period 3
+        vm.warp(block.timestamp + EXIT_DELAY + 1);
+        vm.prank(inbox);
+        proverManager.payPublicationFee{value: INITIAL_FEE}(proposer, false);
+
+        // Step 2: prover2 makes a provisional bid for period 3
+        _deposit(prover2, DEPOSIT_AMOUNT);
+        uint256 fee2 = _maxAllowedFee(firstFee);
+        vm.prank(prover2);
+        vm.expectEmit();
+        emit ProverManager.ProverOffer(prover2, 3, fee2, LIVENESS_BOND, false);
+        proverManager.bid(fee2);
+
+        assertEq(proverManager.balances(prover2), DEPOSIT_AMOUNT - LIVENESS_BOND, "prover2 balance should be reduced by liveness bond");
+        assertEq(proverManager.balances(prover1), DEPOSIT_AMOUNT - LIVENESS_BOND, "prover1 balance should be reduced by liveness bond. not returned yet.");
+
+        // Step 3: prover1 comes back and re-bids with better fee — bond should be reused
+        uint256 fee3 = _maxAllowedFee(fee2);
+        vm.prank(prover1);
+        vm.expectEmit();
+        emit ProverManager.ProverOffer(prover1, 3, fee3, LIVENESS_BOND, true);
+        proverManager.bid(fee3);
+
+        // Check: prover1 is now the next prover for period 3
+        ProverManager.Period memory period = proverManager.getPeriod(3);
+        assertEq(period.prover, prover1, "Prover1 should now be the next prover");
+        assertEq(period.fee, fee3, "Fee should match the last bid");
+        assertEq(period.stake, LIVENESS_BOND, "Stake should match bond reuse value");
+
+        // Check: prover2's bond was refunded
+        assertEq(proverManager.balances(prover2), DEPOSIT_AMOUNT, "Prover2 should have their bond refunded");
+
+        // Check: prover1's bond was not deducted a second time
+        assertEq(proverManager.balances(prover1), DEPOSIT_AMOUNT - LIVENESS_BOND, "Prover1 should not be charged a second bond");
+    }
+
+    function test_finalizePastPeriod_ReleasesBondAfterConsecutiveWins() public {
+        // Step 1: Prover1 bids for period 2
+         _deposit(prover1, DEPOSIT_AMOUNT);
+        uint256 firstFee = _maxAllowedFee(INITIAL_FEE);
+        vm.prank(prover1);
+        vm.expectEmit();
+        emit ProverManager.ProverOffer(prover1, 2, firstFee, LIVENESS_BOND, false);
+        proverManager.bid(firstFee);
+
+        // Advance to period 3
+        vm.warp(vm.getBlockTimestamp() + EXIT_DELAY + 1);
+        vm.prank(inbox);
+        proverManager.payPublicationFee{value: INITIAL_FEE}(proposer, false);
+
+        // Prover1 bids for period 3
+        uint256 fee2 = _maxAllowedFee(firstFee);
+        vm.prank(prover1);
+        vm.expectEmit();
+        emit ProverManager.ProverOffer(prover1, 3, fee2, LIVENESS_BOND, true);
+        proverManager.bid(fee2);
+
+        // Advance to period 4
+        vm.warp(vm.getBlockTimestamp() + EXIT_DELAY + 1);
+        vm.prank(inbox);
+        proverManager.payPublicationFee{value: INITIAL_FEE}(proposer, false);
+
+        // Prover1 bids again (bond reuse) for period 4
+        uint256 fee3 = _maxAllowedFee(fee2);
+        vm.prank(prover1);
+        vm.expectEmit();
+        emit ProverManager.ProverOffer(prover1, 4, fee3, LIVENESS_BOND, true);
+        proverManager.bid(fee3);
+
+        assertEq(proverManager.balances(prover1), DEPOSIT_AMOUNT - LIVENESS_BOND, "Prover1 should not be charged a second bond");
+
+        // Submit publications for period 3
+        IPublicationFeed.PublicationHeader[] memory headers3 =
+            _insertPublicationsWithFees(2, fee3);
+        IPublicationFeed.PublicationHeader memory startHeader3 = headers3[0];
+        IPublicationFeed.PublicationHeader memory endHeader3 = headers3[1];
+
+        // Prover2 bids for period 4
+        _deposit(prover2, DEPOSIT_AMOUNT);
+        uint256 fee4 = _maxAllowedFee(fee3);
+        vm.prank(prover2);
+        vm.expectEmit();
+        emit ProverManager.ProverOffer(prover2, 4, fee4, LIVENESS_BOND, false);
+        proverManager.bid(fee4);
+
+        assertEq(proverManager.balances(prover1), DEPOSIT_AMOUNT - LIVENESS_BOND, "Prover1 should not be charged a second bond");
+        assertEq(proverManager.balances(prover2), DEPOSIT_AMOUNT - LIVENESS_BOND, "Prover2 should be charged one bond");
+
+        // Warp and trigger period 4
+        vm.warp(vm.getBlockTimestamp() + EXIT_DELAY + 1);
+        vm.prank(inbox);
+        proverManager.payPublicationFee{value: INITIAL_FEE}(proposer, false);
+
+        // Prove period 3 (last period prover1 was active)
+        ICheckpointTracker.Checkpoint memory startCheckpoint = ICheckpointTracker.Checkpoint({
+            publicationId: startHeader3.id - 1,
+            commitment: keccak256(abi.encode("commitment3_start"))
+        });
+        ICheckpointTracker.Checkpoint memory endCheckpoint = ICheckpointTracker.Checkpoint({
+            publicationId: endHeader3.id,
+            commitment: keccak256(abi.encode("commitment3_end"))
+        });
+
+        vm.prank(prover1);
+        proverManager.prove(
+            startCheckpoint,
+            endCheckpoint,
+            startHeader3,
+            endHeader3,
+            2,
+            "0x",
+            3 // periodId = 3
+        );
+
+        // Insert a publication after period 3 to finalize it
+        vm.warp(block.timestamp + 1);
+        IPublicationFeed.PublicationHeader memory afterPeriod3Header = _insertPublication();
+
+        ICheckpointTracker.Checkpoint memory checkpointAfter3 = ICheckpointTracker.Checkpoint({
+            publicationId: afterPeriod3Header.id,
+            commitment: keccak256(abi.encode("commitment4"))
+        });
+        checkpointTracker.setProvenHash(checkpointAfter3);
+
+        // Record prover1 balance before finalization
+        uint256 balanceBefore = proverManager.balances(prover1);
+        uint256 stake = proverManager.getPeriod(3).stake;
+
+        ProverManager.Period memory period4 = proverManager.getPeriod(4);
+        assertEq(period4.prover, prover2, "Prover2 should now be the next prover");
+        assertEq(period4.fee, fee4, "Fee should match the last bid");
+        assertEq(period4.stake, LIVENESS_BOND, "Stake should match bond reuse value");
+
+        // Finalize period 3 (last one prover1 was active)
+        proverManager.finalizePastPeriod(3, afterPeriod3Header);
+
+        ProverManager.Period memory periodAfter = proverManager.getPeriod(3);
+        assertEq(periodAfter.stake, 0, "Stake should be cleared after finalization");
+
+        uint256 balanceAfter = proverManager.balances(prover1);
+        assertEq(
+            balanceAfter,
+            balanceBefore + stake,
+            "Prover1 should be refunded after they stop being prover"
+        );
     }
 
     /// --------------------------------------------------------------------------

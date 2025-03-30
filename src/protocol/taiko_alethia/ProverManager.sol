@@ -68,7 +68,7 @@ contract ProverManager is IProposerFees, IProverManager {
 
     event Deposit(address indexed user, uint256 amount);
     event Withdrawal(address indexed user, uint256 amount);
-    event ProverOffer(address indexed proposer, uint256 period, uint256 fee, uint256 stake);
+    event ProverOffer(address indexed proposer, uint256 period, uint256 fee, uint256 stake, bool bondReused);
     event ProverEvicted(address indexed prover, address indexed evictor, uint256 periodEnd, uint256 livenessBond);
     event ProverExited(address indexed prover, uint256 periodEnd, uint256 provingDeadline);
     event NewPeriod(uint256 period);
@@ -149,6 +149,7 @@ contract ProverManager is IProposerFees, IProverManager {
     /// @dev The current best price may be the current prover's fee or the fee of the next bid, depending on whether the
     /// period is active or not.
     /// An active period is one that doesn't have an `end` timestamp yet.
+    /// When a period is active, the bid will be for the next period.
     function bid(uint256 offeredFee) external {
         uint256 currentPeriod = currentPeriodId;
         Period storage _currentPeriod = _periods[currentPeriod];
@@ -161,16 +162,19 @@ contract ProverManager is IProposerFees, IProverManager {
             if (_nextProverAddress != address(0)) {
                 _ensureSufficientUnderbid(_nextPeriod.fee, offeredFee);
 
-                // Refund the liveness bond to the losing bid
-                balances[_nextProverAddress] += _nextPeriod.stake;
+                // Refund the liveness bond to the previous next bidder,
+                // but only if it's not the current prover (who may reuse the bond)
+                if (_nextProverAddress != _currentPeriod.prover) {
+                    balances[_nextProverAddress] += _nextPeriod.stake;
+                }
             }
         }
 
         // Record the next period info
         uint256 _livenessBond = livenessBond;
-        _updatePeriod(_nextPeriod, msg.sender, offeredFee, _livenessBond);
+        bool bondReused = _updatePeriod(_nextPeriod, msg.sender, offeredFee, _livenessBond);
 
-        emit ProverOffer(msg.sender, currentPeriod + 1, offeredFee, _livenessBond);
+        emit ProverOffer(msg.sender, currentPeriod + 1, offeredFee, _livenessBond, bondReused);
     }
 
     /// @inheritdoc IProverManager
@@ -261,9 +265,13 @@ contract ProverManager is IProposerFees, IProverManager {
         Period storage period = _periods[periodId];
         require(provenPublication.timestamp > period.end, "Publication must be after period");
 
-        uint256 stake = period.stake;
-        balances[period.prover] += period.pastDeadline ? _calculatePercentage(stake, rewardPercentage) : stake;
-        period.stake = 0;
+        // Only release the bond if the prover didn't continue into the next period
+        Period storage nextPeriod = _periods[periodId + 1];
+        if (nextPeriod.prover != period.prover) {
+            uint256 stake = period.stake;
+            balances[period.prover] += period.pastDeadline ? _calculatePercentage(stake, rewardPercentage) : stake;
+            period.stake = 0;
+        }
     }
 
     /// @inheritdoc IProposerFees
@@ -317,11 +325,22 @@ contract ProverManager is IProposerFees, IProverManager {
     /// @param prover The address of the prover
     /// @param fee The fee offered by the prover
     /// @param stake The liveness bond to be staked
-    function _updatePeriod(Period storage period, address prover, uint256 fee, uint256 stake) private {
+    function _updatePeriod(Period storage period, address prover, uint256 fee, uint256 stake) private returns (bool bondReused) {
         period.prover = prover;
         period.fee = fee;
-        period.stake = stake; // overwrite previous value. We assume the previous value is zero or already returned
-        balances[prover] -= stake;
+
+        // Reuse bond if same prover is continuing from previous period
+        if (_periods[currentPeriodId].prover == prover) {
+            // Carry over existing stake — no deduction needed
+            period.stake = _periods[currentPeriodId].stake;
+            return true;
+        } else {
+            // New prover or fresh start — deduct stake from balance
+            require(balances[prover] >= stake, "Insufficient balance for bond");
+            balances[prover] -= stake;
+            period.stake = stake;
+            return false;
+        }
     }
 
     /// @dev Ensure the offered fee is low enough. It must be at most `maxBidPercentage` of the fee it is outbidding
