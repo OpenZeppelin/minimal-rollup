@@ -292,6 +292,10 @@ contract ProverManagerTest is Test {
         vm.prank(prover1);
         proverManager.bid(firstBidFee);
 
+        vm.warp(vm.getBlockTimestamp() + 1);
+        vm.prank(inbox);
+        proverManager.payPublicationFee{value: INITIAL_FEE}(proposer, false);
+
         // Calculate required fee for second bid
         uint256 secondBidFee = _maxAllowedFee(firstBidFee);
 
@@ -308,6 +312,7 @@ contract ProverManagerTest is Test {
         ProverManager.Period memory period = proverManager.getPeriod(2);
         assertEq(period.prover, prover1, "Prover1 should now be the next prover");
         assertEq(period.fee, secondBidFee, "Fee should be updated to prover2's bid");
+        // assertEq(period.stake, 0, "No new stake should be recorded when bond is reused");
     }
 
     function test_bid_RevertWhen_SameProverDoesNotIncreaseFee() public {
@@ -318,9 +323,13 @@ contract ProverManagerTest is Test {
         vm.prank(prover1);
         proverManager.bid(firstBidFee);
 
+        vm.warp(vm.getBlockTimestamp() + 1);
+        vm.prank(inbox);
+        proverManager.payPublicationFee{value: INITIAL_FEE}(proposer, false);
+
         // Now try to bid again with same fee
         vm.prank(prover1);
-        vm.expectRevert("FeeNotHigher1");
+        vm.expectRevert("FeeNotHigher");
         proverManager.bid(firstBidFee);
 
         // Also test with a lower fee (should revert too)

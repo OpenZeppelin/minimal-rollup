@@ -153,6 +153,8 @@ contract ProverManager is IProposerFees, IProverManager {
         uint256 currentPeriod = currentPeriodId;
         Period storage _currentPeriod = _periods[currentPeriod];
         Period storage _nextPeriod = _periods[currentPeriod + 1];
+
+        // _currentPeriod.end == 0 means the period is active
         if (_currentPeriod.end == 0) {
             _ensureSufficientUnderbid(_currentPeriod.fee, offeredFee);
             _closePeriod(_currentPeriod, successionDelay, provingWindow);
