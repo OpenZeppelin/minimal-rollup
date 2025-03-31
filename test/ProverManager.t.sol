@@ -4,7 +4,7 @@ pragma solidity ^0.8.28;
 import "forge-std/Test.sol";
 
 import {ProverManager} from "../src/protocol/taiko_alethia/ProverManager.sol";
-import {NativeVault} from "src/protocol/NativeVault.sol";
+import {INativeVault} from "src/protocol/INativeVault.sol";
 
 import {ICheckpointTracker} from "src/protocol/ICheckpointTracker.sol";
 import {IPublicationFeed} from "src/protocol/IPublicationFeed.sol";
@@ -85,7 +85,7 @@ contract ProverManagerTest is Test {
     function test_deposit() public {
         vm.prank(prover1);
         vm.expectEmit();
-        emit NativeVault.Deposit(prover1, DEPOSIT_AMOUNT);
+        emit INativeVault.Deposit(prover1, DEPOSIT_AMOUNT);
         proverManager.deposit{value: DEPOSIT_AMOUNT}();
 
         uint256 bal = proverManager.balances(prover1);
@@ -100,7 +100,7 @@ contract ProverManagerTest is Test {
         uint256 balanceBefore = prover1.balance;
         vm.prank(prover1);
         vm.expectEmit();
-        emit NativeVault.Withdrawal(prover1, withdrawAmount);
+        emit INativeVault.Withdrawal(prover1, withdrawAmount);
         proverManager.withdraw(withdrawAmount);
         uint256 balanceAfter = prover1.balance;
 
@@ -134,7 +134,7 @@ contract ProverManagerTest is Test {
         // Call payPublicationFee from the inbox.
         vm.prank(inbox);
         vm.expectEmit();
-        emit NativeVault.Deposit(proposer, DEPOSIT_AMOUNT);
+        emit INativeVault.Deposit(proposer, DEPOSIT_AMOUNT);
         proverManager.payPublicationFee{value: DEPOSIT_AMOUNT}(proposer, false);
 
         uint256 balanceAfter = proverManager.balances(proposer);

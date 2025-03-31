@@ -2,6 +2,8 @@
 pragma solidity ^0.8.28;
 
 import {ICheckpointTracker} from "../ICheckpointTracker.sol";
+
+import {INativeVault} from "../INativeVault.sol";
 import {IProposerFees} from "../IProposerFees.sol";
 import {IProverManager} from "../IProverManager.sol";
 import {IPublicationFeed} from "../IPublicationFeed.sol";
@@ -266,7 +268,7 @@ contract ProverManager is IProposerFees, IProverManager, NativeVault {
     /// @dev Increases `user`'s balance by `amount`
     function _deposit(address user, uint256 amount) private {
         NativeVault._increaseBalance(user, amount);
-        emit NativeVault.Deposit(user, amount);
+        emit INativeVault.Deposit(user, amount);
     }
 
     /// @dev implementation of IProverManager.claimProvingVacancy with the option to specify a prover

@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
+import {INativeVault} from "./INativeVault.sol";
+
 /// @dev A contract that handles accounting for native tokens.
 ///
 /// Offers an simple interface to handle internal accounting of deposited native tokens.
@@ -9,23 +11,16 @@ pragma solidity ^0.8.28;
 /// It is recommended to use this contract as a base for applications that require isolated accounting of native tokens.
 /// Example use cases include stake, liveness bonds, or any other economic mechanism that require native tokens.
 /// to be deposited and withdrawn.
-abstract contract NativeVault {
-    event IncreaseBalance(address indexed user, uint256 amount);
-    event ReduceBalance(address indexed user, uint256 amount);
-    event Deposit(address indexed user, uint256 amount);
-    event Withdrawal(address indexed user, uint256 amount);
-
-    error InsufficientBalance();
-
+abstract contract NativeVault is INativeVault {
     mapping(address user => uint256 balance) private _balances;
 
-    /// @notice Deposit native currency (i.e. msg.value) into the contract.
+    /// @inheritdoc INativeVault
     function deposit() external payable virtual {
         _increaseBalance(msg.sender, msg.value);
         emit Deposit(msg.sender, msg.value);
     }
 
-    /// @notice Withdraw native currency from the contract.
+    /// @inheritdoc INativeVault
     function withdraw(uint256 amount) external virtual {
         _reduceBalance(msg.sender, amount);
 
@@ -39,7 +34,7 @@ abstract contract NativeVault {
         emit Withdrawal(to, amount);
     }
 
-    /// @notice Returns the balance of a user.
+    /// @inheritdoc INativeVault
     function balances(address user) external view virtual returns (uint256) {
         return _balances[user];
     }
