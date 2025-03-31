@@ -12,6 +12,8 @@ pragma solidity ^0.8.28;
 abstract contract NativeVault {
     event IncreaseBalance(address indexed user, uint256 amount);
     event ReduceBalance(address indexed user, uint256 amount);
+    event Deposit(address indexed user, uint256 amount);
+    event Withdrawal(address indexed user, uint256 amount);
 
     error InsufficientBalance();
 
@@ -20,6 +22,7 @@ abstract contract NativeVault {
     /// @notice Deposit native currency (i.e. msg.value) into the contract.
     function deposit() external payable virtual {
         _increaseBalance(msg.sender, msg.value);
+        emit Deposit(msg.sender, msg.value);
     }
 
     /// @notice Withdraw native currency from the contract.
@@ -33,6 +36,7 @@ abstract contract NativeVault {
             ok := call(gas(), to, amount, 0, 0, 0, 0)
         }
         require(ok, "NativeVault: transfer failed");
+        emit Withdrawal(to, amount);
     }
 
     /// @notice Returns the balance of a user.

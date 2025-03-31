@@ -65,8 +65,6 @@ contract ProverManager is IProposerFees, IProverManager, NativeVault {
     /// @dev Periods represent proving windows
     mapping(uint256 periodId => Period) private _periods;
 
-    event Deposit(address indexed user, uint256 amount);
-    event Withdrawal(address indexed user, uint256 amount);
     event ProverOffer(address indexed proposer, uint256 period, uint256 fee, uint256 stake);
     event ProverEvicted(address indexed prover, address indexed evictor, uint256 periodEnd, uint256 livenessBond);
     event ProverExited(address indexed prover, uint256 periodEnd, uint256 provingDeadline);
@@ -225,7 +223,7 @@ contract ProverManager is IProposerFees, IProverManager, NativeVault {
             period.prover = msg.sender;
             period.pastDeadline = true;
         }
-        NativeVault._increaseBalance(msg.sender, numPublications * period.fee);
+        NativeVault._increaseBalance(period.prover, numPublications * period.fee);
     }
 
     /// @inheritdoc IProverManager
@@ -268,7 +266,7 @@ contract ProverManager is IProposerFees, IProverManager, NativeVault {
     /// @dev Increases `user`'s balance by `amount`
     function _deposit(address user, uint256 amount) private {
         NativeVault._increaseBalance(user, amount);
-        emit Deposit(user, amount);
+        emit NativeVault.Deposit(user, amount);
     }
 
     /// @dev implementation of IProverManager.claimProvingVacancy with the option to specify a prover

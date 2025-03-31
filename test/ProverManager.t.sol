@@ -4,6 +4,7 @@ pragma solidity ^0.8.28;
 import "forge-std/Test.sol";
 
 import {ProverManager} from "../src/protocol/taiko_alethia/ProverManager.sol";
+import {NativeVault} from "src/protocol/NativeVault.sol";
 
 import {ICheckpointTracker} from "src/protocol/ICheckpointTracker.sol";
 import {IPublicationFeed} from "src/protocol/IPublicationFeed.sol";
@@ -84,7 +85,7 @@ contract ProverManagerTest is Test {
     function test_deposit() public {
         vm.prank(prover1);
         vm.expectEmit();
-        emit ProverManager.Deposit(prover1, DEPOSIT_AMOUNT);
+        emit NativeVault.Deposit(prover1, DEPOSIT_AMOUNT);
         proverManager.deposit{value: DEPOSIT_AMOUNT}();
 
         uint256 bal = proverManager.balances(prover1);
@@ -93,13 +94,13 @@ contract ProverManagerTest is Test {
 
     function test_withdraw() public {
         uint256 withdrawAmount = 0.5 ether;
-        vm.startPrank(prover1);
-        proverManager.deposit{value: DEPOSIT_AMOUNT}();
+        _deposit(prover1, DEPOSIT_AMOUNT);
 
         // Withdraw 0.5 ether.
         uint256 balanceBefore = prover1.balance;
+        vm.prank(prover1);
         vm.expectEmit();
-        emit ProverManager.Withdrawal(prover1, withdrawAmount);
+        emit NativeVault.Withdrawal(prover1, withdrawAmount);
         proverManager.withdraw(withdrawAmount);
         uint256 balanceAfter = prover1.balance;
 
@@ -115,15 +116,10 @@ contract ProverManagerTest is Test {
     /// --------------------------------------------------------------------------
     /// payPublicationFee()
     /// --------------------------------------------------------------------------
-    function test_payPublicationFee_RevertWhen_NotInbox() public {
-        vm.expectRevert("Only the Inbox contract can call this function");
-        proverManager.payPublicationFee(prover1, false);
-    }
 
     function test_payPublicationFee_SamePeriod() public {
         // Deposit funds for proposer.
-        vm.prank(proposer);
-        proverManager.deposit{value: DEPOSIT_AMOUNT}();
+        _deposit(proposer, DEPOSIT_AMOUNT);
 
         uint256 balanceBefore = proverManager.balances(proposer);
         // Call payPublicationFee from the inbox.
@@ -131,7 +127,6 @@ contract ProverManagerTest is Test {
         proverManager.payPublicationFee{value: 0}(proposer, false);
 
         uint256 balanceAfter = proverManager.balances(proposer);
-        // The fee deducted should be INITIAL_FEE.
         assertEq(balanceAfter, balanceBefore - INITIAL_FEE, "Publication fee not deducted properly");
     }
 
@@ -139,22 +134,19 @@ contract ProverManagerTest is Test {
         // Call payPublicationFee from the inbox.
         vm.prank(inbox);
         vm.expectEmit();
-        emit ProverManager.Deposit(proposer, DEPOSIT_AMOUNT);
+        emit NativeVault.Deposit(proposer, DEPOSIT_AMOUNT);
         proverManager.payPublicationFee{value: DEPOSIT_AMOUNT}(proposer, false);
 
         uint256 balanceAfter = proverManager.balances(proposer);
-        // The fee deducted should be INITIAL_FEE.
         assertEq(balanceAfter, DEPOSIT_AMOUNT - INITIAL_FEE, "Publication fee not deducted properly");
     }
 
     function test_payPublicationFee_AdvancesPeriod() public {
         // Deposit funds for proposer.
-        vm.prank(proposer);
-        proverManager.deposit{value: DEPOSIT_AMOUNT}();
+        _deposit(proposer, DEPOSIT_AMOUNT);
 
         // Exit as a prover.
-        vm.prank(initialProver);
-        proverManager.exit();
+        _exit(initialProver);
 
         // Warp to a time after the period has ended.
         vm.warp(vm.getBlockTimestamp() + EXIT_DELAY + 1);
@@ -166,15 +158,19 @@ contract ProverManagerTest is Test {
         proverManager.payPublicationFee{value: INITIAL_FEE}(proposer, false);
     }
 
+    function test_payPublicationFee_RevertWhen_NotInbox() public {
+        vm.expectRevert("Only the Inbox contract can call this function");
+        proverManager.payPublicationFee(prover1, false);
+    }
+
     /// --------------------------------------------------------------------------
     /// bid()
     /// --------------------------------------------------------------------------
     function test_bid_ActivePeriod() public {
         // prover1 deposits sufficient funds
-        vm.prank(prover1);
-        proverManager.deposit{value: DEPOSIT_AMOUNT}();
+        _deposit(prover1, DEPOSIT_AMOUNT);
 
-        uint256 maxAllowedFee = INITIAL_FEE * MAX_BID_PERCENTAGE / 10000;
+        uint256 maxAllowedFee = _maxAllowedFee(INITIAL_FEE);
 
         vm.prank(prover1);
         vm.expectEmit();
@@ -195,49 +191,26 @@ contract ProverManagerTest is Test {
         assertEq(prover1Bal, DEPOSIT_AMOUNT - LIVENESS_BOND, "User balance not deducted correctly");
     }
 
-    function test_bid_RevertWhen_InsufficientBalance() public {
-        // Attempt to bid without sufficient balance for liveness bond
-        vm.prank(prover2);
-        vm.expectRevert();
-        proverManager.bid(0.05 ether);
-    }
-
-    function test_bid_RevertWhen_FeeNotLowEnough() public {
-        // prover1 deposits sufficient funds
-        vm.prank(prover1);
-        proverManager.deposit{value: DEPOSIT_AMOUNT}();
-
-        // Calculate a fee that's not low enough
-        uint256 maxFee = INITIAL_FEE * MAX_BID_PERCENTAGE / 10000;
-        uint256 insufficientlyReducedFee = maxFee + 1;
-
-        vm.prank(prover1);
-        vm.expectRevert("Offered fee not low enough");
-        proverManager.bid(insufficientlyReducedFee);
-    }
-
     function test_bid_ExistingNextPeriod() public {
         // First, have prover1 make a successful bid
-        vm.prank(prover1);
-        proverManager.deposit{value: DEPOSIT_AMOUNT}();
+        _deposit(prover1, DEPOSIT_AMOUNT);
 
-        uint256 firstBidFee = INITIAL_FEE * MAX_BID_PERCENTAGE / 10000;
+        uint256 firstBidFee = _maxAllowedFee(INITIAL_FEE);
         vm.prank(prover1);
         proverManager.bid(firstBidFee);
 
         // Now have prover2 outbid prover1
-        vm.prank(prover2);
-        proverManager.deposit{value: DEPOSIT_AMOUNT}();
+        _deposit(prover2, DEPOSIT_AMOUNT);
 
         // Calculate required fee for second bid
-        uint256 secondBidFee = firstBidFee * MAX_BID_PERCENTAGE / 10000;
+        uint256 secondBidFee = _maxAllowedFee(firstBidFee);
 
         vm.prank(prover2);
         vm.expectEmit();
         emit ProverManager.ProverOffer(prover2, 2, secondBidFee, LIVENESS_BOND);
         proverManager.bid(secondBidFee);
 
-        // Check that period 1 now has prover2 as the prover
+        // Check that period 2 now has prover2 as the prover
         ProverManager.Period memory period = proverManager.getPeriod(2);
         assertEq(period.prover, prover2, "Prover2 should now be the next prover");
         assertEq(period.fee, secondBidFee, "Fee should be updated to prover2's bid");
@@ -252,18 +225,16 @@ contract ProverManagerTest is Test {
     }
 
     function test_bid_ActivatesSuccessionDelay() public {
-        vm.prank(prover1);
-        proverManager.deposit{value: DEPOSIT_AMOUNT}();
+        _deposit(prover1, DEPOSIT_AMOUNT);
 
         // Record the current timestamp
         uint256 timestampBefore = vm.getBlockTimestamp();
 
         // Make a bid that will outbid the current prover
-        uint256 bidFee = INITIAL_FEE * MAX_BID_PERCENTAGE / 10000;
+        uint256 bidFee = _maxAllowedFee(INITIAL_FEE);
         vm.prank(prover1);
         proverManager.bid(bidFee);
 
-        // Check that period 0 now has an end time set
         ProverManager.Period memory period = proverManager.getPeriod(1);
         assertEq(
             period.end,
@@ -277,21 +248,39 @@ contract ProverManagerTest is Test {
 
     function test_bid_RevertWhen_NotEnoughUndercutOnNextPeriod() public {
         // First, have prover1 make a successful bid
-        vm.prank(prover1);
-        proverManager.deposit{value: DEPOSIT_AMOUNT}();
+        _deposit(prover1, DEPOSIT_AMOUNT);
 
-        uint256 firstBidFee = INITIAL_FEE * MAX_BID_PERCENTAGE / 10000;
+        uint256 firstBidFee = _maxAllowedFee(INITIAL_FEE);
         vm.prank(prover1);
         proverManager.bid(firstBidFee);
 
         // Now have prover2 try to bid with insufficient undercut
-        vm.prank(prover2);
-        proverManager.deposit{value: DEPOSIT_AMOUNT}();
+        _deposit(prover2, DEPOSIT_AMOUNT);
 
-        uint256 maxFee = firstBidFee * MAX_BID_PERCENTAGE / 10000;
+        uint256 maxFee = _maxAllowedFee(firstBidFee);
         uint256 insufficientlyReducedFee = maxFee + 1;
 
         vm.prank(prover2);
+        vm.expectRevert("Offered fee not low enough");
+        proverManager.bid(insufficientlyReducedFee);
+    }
+
+    function test_bid_RevertWhen_InsufficientBalance() public {
+        // Attempt to bid without sufficient balance for liveness bond
+        vm.prank(prover2);
+        vm.expectRevert();
+        proverManager.bid(_maxAllowedFee(INITIAL_FEE));
+    }
+
+    function test_bid_RevertWhen_FeeNotLowEnough() public {
+        // prover1 deposits sufficient funds
+        _deposit(prover1, DEPOSIT_AMOUNT);
+
+        // Calculate a fee that's not low enough
+        uint256 maxFee = _maxAllowedFee(INITIAL_FEE);
+        uint256 insufficientlyReducedFee = maxFee + 1;
+
+        vm.prank(prover1);
         vm.expectRevert("Offered fee not low enough");
         proverManager.bid(insufficientlyReducedFee);
     }
@@ -305,27 +294,22 @@ contract ProverManagerTest is Test {
         // Capture current period stake before eviction
         ProverManager.Period memory periodBefore = proverManager.getPeriod(1);
         uint256 stakeBefore = periodBefore.stake;
+        uint256 incentive = _calculatePercentage(stakeBefore, EVICTOR_INCENTIVE_PERCENTAGE);
 
         // Evict the prover
         vm.warp(vm.getBlockTimestamp() + LIVENESS_WINDOW + 1);
         vm.prank(evictor);
         vm.expectEmit();
         emit ProverManager.ProverEvicted(
-            initialProver,
-            evictor,
-            vm.getBlockTimestamp() + EXIT_DELAY,
-            stakeBefore - (stakeBefore * EVICTOR_INCENTIVE_PERCENTAGE) / 10000
+            initialProver, evictor, vm.getBlockTimestamp() + EXIT_DELAY, stakeBefore - incentive
         );
         proverManager.evictProver(header);
 
         // Verify period 1 is marked as evicted and its stake reduced
         ProverManager.Period memory periodAfter = proverManager.getPeriod(1);
         assertEq(periodAfter.deadline, vm.getBlockTimestamp() + EXIT_DELAY, "Prover should be evicted");
-
-        // Calculate expected incentive for the evictor
-        uint256 incentive = (stakeBefore * EVICTOR_INCENTIVE_PERCENTAGE) / 10000;
-        assertEq(periodAfter.stake, stakeBefore - incentive, "Stake not reduced correctly");
         assertEq(periodAfter.end, vm.getBlockTimestamp() + EXIT_DELAY, "Period end not set correctly");
+        assertEq(periodAfter.stake, stakeBefore - incentive, "Stake not reduced correctly");
 
         // Verify that the evictor's balance increased by the incentive
         uint256 evictorBal = proverManager.balances(evictor);
@@ -360,8 +344,7 @@ contract ProverManagerTest is Test {
         IPublicationFeed.PublicationHeader memory header = _insertPublication();
 
         // Exit the period, setting and end to the period
-        vm.prank(initialProver);
-        proverManager.exit();
+        _exit(initialProver);
 
         // Evict the prover
         vm.warp(vm.getBlockTimestamp() + LIVENESS_WINDOW + 1);
@@ -391,7 +374,7 @@ contract ProverManagerTest is Test {
     /// exit()
     /// --------------------------------------------------------------------------
     function test_exit() public {
-        // initialProver is the prover for period 0
+        // initialProver is the prover for period 1
         vm.prank(initialProver);
         vm.expectEmit();
         emit ProverManager.ProverExited(
@@ -416,8 +399,7 @@ contract ProverManagerTest is Test {
 
     function test_exit_RevertWhen_AlreadyExited() public {
         // First exit
-        vm.prank(initialProver);
-        proverManager.exit();
+        _exit(initialProver);
 
         // Try to exit again
         vm.prank(initialProver);
@@ -426,16 +408,111 @@ contract ProverManagerTest is Test {
     }
 
     /// --------------------------------------------------------------------------
+    /// claimProvingVacancy()
+    /// --------------------------------------------------------------------------
+    function test_claimProvingVacancy() public {
+        // First, have the current prover exit
+        _exit(initialProver);
+
+        vm.warp(vm.getBlockTimestamp() + EXIT_DELAY + 1);
+
+        //Submit a publication to advance to the vacant period(period 2)
+        vm.prank(inbox);
+        proverManager.payPublicationFee{value: INITIAL_FEE}(proposer, false);
+
+        // Ensure prover1 has enough funds
+        _deposit(prover1, DEPOSIT_AMOUNT);
+
+        // Claim the vacancy
+        uint256 prover1BalanceBefore = proverManager.balances(prover1);
+        uint256 newFee = 0.2 ether; //arbitrary new fee
+        vm.prank(prover1);
+        proverManager.claimProvingVacancy(newFee);
+
+        // Check that period 2(the vacant period) has been closed correctly
+        ProverManager.Period memory period2 = proverManager.getPeriod(2);
+        assertEq(period2.end, vm.getBlockTimestamp(), "Period 2 end timestamp should be the current timestamp");
+        assertEq(period2.deadline, vm.getBlockTimestamp(), "Period 2 deadline should be the current timestamp");
+
+        // Check that period 3 has been created correctly
+        ProverManager.Period memory period3 = proverManager.getPeriod(3);
+        assertEq(period3.prover, prover1, "Prover1 should be the new prover");
+        assertEq(period3.fee, newFee, "Fee should be set to the new fee");
+        assertEq(period3.stake, LIVENESS_BOND, "Liveness bond should be locked");
+
+        // // Check that prover1's balance was reduced by the liveness bond
+        uint256 prover1BalanceAfter = proverManager.balances(prover1);
+        assertEq(prover1BalanceAfter, prover1BalanceBefore - LIVENESS_BOND, "User balance not deducted correctly");
+    }
+
+    function test_claimProvingVacancy_AdvancesPeriod() public {
+        // First, have the current prover exit to create a vacancy
+        _exit(initialProver);
+
+        vm.warp(vm.getBlockTimestamp() + EXIT_DELAY + 1);
+
+        //Submit a publication to advance to the vacant period(period 2)
+        vm.prank(inbox);
+        proverManager.payPublicationFee{value: INITIAL_FEE}(proposer, false);
+
+        // Ensure prover1 has enough funds
+        _deposit(prover1, DEPOSIT_AMOUNT);
+
+        // Verify the current period before claiming
+        uint256 periodBefore = proverManager.currentPeriodId();
+
+        // Claim the vacancy
+        vm.prank(prover1);
+        proverManager.claimProvingVacancy(0.2 ether);
+
+        // Verify the period does not advance until a new publication is submitted
+        uint256 periodAfter = proverManager.currentPeriodId();
+        assertEq(periodAfter, periodBefore, "Period should not advance before a new publication is submitted");
+
+        // Verify that a new publication advances the period
+        vm.warp(vm.getBlockTimestamp() + 1);
+        _deposit(proposer, INITIAL_FEE);
+        vm.prank(inbox);
+        vm.expectEmit();
+        emit ProverManager.NewPeriod(periodAfter + 1);
+        proverManager.payPublicationFee(proposer, false);
+    }
+
+    function test_claimProvingVacancy_RevertWhen_NoVacancy() public {
+        // Attempt to claim a vacancy when the period is still active
+        _deposit(prover1, DEPOSIT_AMOUNT);
+
+        vm.prank(prover1);
+        vm.expectRevert("No proving vacancy");
+        proverManager.claimProvingVacancy(0.2 ether);
+    }
+
+    function test_claimProvingVacancy_RevertWhen_InsufficientBalance() public {
+        // First, have the current prover exit to create a vacancy
+        _exit(initialProver);
+
+        vm.warp(vm.getBlockTimestamp() + EXIT_DELAY + 1);
+
+        //Submit a publication to advance to the vacant period(period 2)
+        vm.prank(inbox);
+        proverManager.payPublicationFee{value: INITIAL_FEE}(proposer, false);
+
+        // Attempt to claim the vacancy without sufficient balance
+        vm.prank(prover2);
+        vm.expectRevert();
+        proverManager.claimProvingVacancy(0.2 ether);
+    }
+
+    /// --------------------------------------------------------------------------
     /// prove()
     /// --------------------------------------------------------------------------
     function test_prove_OpenPeriod() public {
+        uint256 numRelevantPublications = 2;
         // Setup: Create publications and pay for the fees
-        IPublicationFeed.PublicationHeader memory startHeader = _insertPublication();
-        IPublicationFeed.PublicationHeader memory endHeader = _insertPublication();
-        vm.startPrank(inbox);
-        proverManager.payPublicationFee{value: INITIAL_FEE}(proposer, false);
-        proverManager.payPublicationFee{value: INITIAL_FEE}(proposer, false);
-        vm.stopPrank();
+        IPublicationFeed.PublicationHeader[] memory headers =
+            _insertPublicationsWithFees(numRelevantPublications, INITIAL_FEE);
+        IPublicationFeed.PublicationHeader memory startHeader = headers[0];
+        IPublicationFeed.PublicationHeader memory endHeader = headers[1];
 
         // Create checkpoints for the publications
         ICheckpointTracker.Checkpoint memory startCheckpoint = ICheckpointTracker.Checkpoint({
@@ -446,7 +523,6 @@ contract ProverManagerTest is Test {
             publicationId: endHeader.id,
             commitment: keccak256(abi.encode("commitment2"))
         });
-        uint256 numRelevantPublications = 2;
 
         // // Prove the publications
         uint256 proverBalanceBefore = proverManager.balances(initialProver);
@@ -466,17 +542,15 @@ contract ProverManagerTest is Test {
     }
 
     function test_prove_ClosedPeriod() public {
+        uint256 numRelevantPublications = 2;
         // Setup: Create publications and pay for the fees
-        IPublicationFeed.PublicationHeader memory startHeader = _insertPublication();
-        IPublicationFeed.PublicationHeader memory endHeader = _insertPublication();
-        vm.startPrank(inbox);
-        proverManager.payPublicationFee{value: INITIAL_FEE}(proposer, false);
-        proverManager.payPublicationFee{value: INITIAL_FEE}(proposer, false);
-        vm.stopPrank();
+        IPublicationFeed.PublicationHeader[] memory headers =
+            _insertPublicationsWithFees(numRelevantPublications, INITIAL_FEE);
+        IPublicationFeed.PublicationHeader memory startHeader = headers[0];
+        IPublicationFeed.PublicationHeader memory endHeader = headers[1];
 
         // Exit as the current prover to close the period
-        vm.prank(initialProver);
-        proverManager.exit();
+        _exit(initialProver);
 
         // Warp past the deadline
         vm.warp(vm.getBlockTimestamp() + EXIT_DELAY + PROVING_WINDOW + 1);
@@ -490,7 +564,6 @@ contract ProverManagerTest is Test {
             publicationId: endHeader.id,
             commitment: keccak256(abi.encode("commitment2"))
         });
-        uint256 numRelevantPublications = 2;
 
         // Prove the publications with a different prover
         vm.prank(prover1);
@@ -516,17 +589,14 @@ contract ProverManagerTest is Test {
 
     function test_prove_ClosedPeriod_MultipleCalls() public {
         // Setup: Create publications and pay for the fees
-        IPublicationFeed.PublicationHeader memory startHeader1 = _insertPublication();
-        _insertPublication();
-        IPublicationFeed.PublicationHeader memory startHeader2 = _insertPublication();
-        IPublicationFeed.PublicationHeader memory endHeader2 = _insertPublication();
-        vm.startPrank(inbox);
-        proverManager.payPublicationFee{value: INITIAL_FEE * 4}(proposer, false);
-        vm.stopPrank();
+        uint256 numPublications = 4;
+        IPublicationFeed.PublicationHeader[] memory headers = _insertPublicationsWithFees(numPublications, INITIAL_FEE);
+        IPublicationFeed.PublicationHeader memory startHeader1 = headers[0];
+        IPublicationFeed.PublicationHeader memory startHeader2 = headers[2];
+        IPublicationFeed.PublicationHeader memory endHeader2 = headers[3];
 
         // Exit as the current prover to close the period
-        vm.prank(initialProver);
-        proverManager.exit();
+        _exit(initialProver);
         vm.warp(vm.getBlockTimestamp() + EXIT_DELAY + PROVING_WINDOW + 1);
 
         // Create checkpoints for the publications
@@ -595,8 +665,7 @@ contract ProverManagerTest is Test {
         IPublicationFeed.PublicationHeader memory startHeader = _insertPublication();
 
         // Exit as the current prover to set period end
-        vm.prank(initialProver);
-        proverManager.exit();
+        _exit(initialProver);
 
         // Create a publication after the period ends
         vm.warp(vm.getBlockTimestamp() + EXIT_DELAY + 1);
@@ -641,8 +710,7 @@ contract ProverManagerTest is Test {
         IPublicationFeed.PublicationHeader memory earlyHeader = _insertPublication();
 
         // Exit as the current prover to set period end
-        vm.prank(initialProver);
-        proverManager.exit();
+        _exit(initialProver);
         vm.warp(vm.getBlockTimestamp() + EXIT_DELAY + 1);
 
         // Create a publication in period 2
@@ -664,49 +732,18 @@ contract ProverManagerTest is Test {
     }
 
     /// --------------------------------------------------------------------------
-    /// getCurrentFees()
-    /// --------------------------------------------------------------------------
-
-    function test_getCurrentFees_SamePeriod() public view {
-        (uint256 fee, uint256 delayedFee) = proverManager.getCurrentFees();
-        assertEq(fee, INITIAL_FEE, "Fee should be the initial fee");
-        assertEq(delayedFee, INITIAL_FEE, "Delayed fee should be the initial fee");
-    }
-
-    function test_geCurrentFees_WhenPeriodEnded() public {
-        // Exit as a prover.
-        vm.prank(initialProver);
-        proverManager.exit();
-
-        // Bid as a new prover
-        vm.prank(prover1);
-        proverManager.deposit{value: DEPOSIT_AMOUNT}();
-        uint256 bidFee = INITIAL_FEE * 2;
-        vm.prank(prover1);
-        proverManager.bid(bidFee);
-
-        // Warp to a time after the period has ended.
-        vm.warp(vm.getBlockTimestamp() + EXIT_DELAY + 1);
-        (uint256 fee, uint256 delayedFee) = proverManager.getCurrentFees();
-        assertEq(fee, bidFee, "Fee should be the bid fee");
-        assertEq(delayedFee, bidFee, "Delayed fee should be the bid fee");
-    }
-
-    /// --------------------------------------------------------------------------
     /// finalizePastPeriod()
     /// --------------------------------------------------------------------------
     function test_finalizePastPeriod_WithinDeadline() public {
+        uint256 numRelevantPublications = 2;
         // Setup: Create publications and pay for the fees
-        IPublicationFeed.PublicationHeader memory startHeader = _insertPublication();
-        IPublicationFeed.PublicationHeader memory endHeader = _insertPublication();
-        vm.startPrank(inbox);
-        proverManager.payPublicationFee{value: INITIAL_FEE}(proposer, false);
-        proverManager.payPublicationFee{value: INITIAL_FEE}(proposer, false);
-        vm.stopPrank();
+        IPublicationFeed.PublicationHeader[] memory headers =
+            _insertPublicationsWithFees(numRelevantPublications, INITIAL_FEE);
+        IPublicationFeed.PublicationHeader memory startHeader = headers[0];
+        IPublicationFeed.PublicationHeader memory endHeader = headers[1];
 
         // Exit as the current prover to close the period
-        vm.prank(initialProver);
-        proverManager.exit();
+        _exit(initialProver);
 
         // Warp past the end
         vm.warp(block.timestamp + EXIT_DELAY + 1);
@@ -720,7 +757,6 @@ contract ProverManagerTest is Test {
             publicationId: endHeader.id,
             commitment: keccak256(abi.encode("commitment2"))
         });
-        uint256 numRelevantPublications = 2;
 
         // Prove the publications
         proverManager.prove(
@@ -763,17 +799,16 @@ contract ProverManagerTest is Test {
     }
 
     function test_finalizePastPeriod_PastDeadline() public {
+        uint256 numRelevantPublications = 2;
+
         // Setup: Create publications and pay for the fees
-        IPublicationFeed.PublicationHeader memory startHeader = _insertPublication();
-        IPublicationFeed.PublicationHeader memory endHeader = _insertPublication();
-        vm.startPrank(inbox);
-        proverManager.payPublicationFee{value: INITIAL_FEE}(proposer, false);
-        proverManager.payPublicationFee{value: INITIAL_FEE}(proposer, false);
-        vm.stopPrank();
+        IPublicationFeed.PublicationHeader[] memory headers =
+            _insertPublicationsWithFees(numRelevantPublications, INITIAL_FEE);
+        IPublicationFeed.PublicationHeader memory startHeader = headers[0];
+        IPublicationFeed.PublicationHeader memory endHeader = headers[1];
 
         // Exit as the current prover to close the period
-        vm.prank(initialProver);
-        proverManager.exit();
+        _exit(initialProver);
 
         // Warp past the deadline
         vm.warp(block.timestamp + EXIT_DELAY + PROVING_WINDOW + 1);
@@ -787,7 +822,6 @@ contract ProverManagerTest is Test {
             publicationId: endHeader.id,
             commitment: keccak256(abi.encode("commitment2"))
         });
-        uint256 numRelevantPublications = 2;
 
         // Prove the publications with a different prover
         vm.prank(prover1);
@@ -824,7 +858,7 @@ contract ProverManagerTest is Test {
 
         uint256 initialProverBalanceAfter = proverManager.balances(initialProver);
         uint256 prover1BalanceAfter = proverManager.balances(prover1);
-        uint256 stakeReward = stakeBefore * REWARD_PERCENTAGE / 10000;
+        uint256 stakeReward = _calculatePercentage(stakeBefore, REWARD_PERCENTAGE);
         assertEq(prover1BalanceAfter, prover1BalanceBefore + stakeReward, "Prover1 should receive the remaining stake");
         assertEq(initialProverBalanceAfter, initialProverBalanceBefore, "Initial prover should receive nothing");
     }
@@ -832,8 +866,7 @@ contract ProverManagerTest is Test {
     function test_finalizePastPeriod_RevertWhen_PublicationNotProven() public {
         // Setup: Create publications and exit the period
         IPublicationFeed.PublicationHeader memory header = _insertPublication();
-        vm.prank(initialProver);
-        proverManager.exit();
+        _exit(initialProver);
         vm.warp(block.timestamp + EXIT_DELAY + 1);
 
         // Create a publication after the period ends
@@ -855,8 +888,7 @@ contract ProverManagerTest is Test {
     function test_finalizePastPeriod_RevertWhen_PublicationNotAfterPeriod() public {
         // Setup: Create publications and exit the period
         _insertPublication();
-        vm.prank(initialProver);
-        proverManager.exit();
+        _exit(initialProver);
 
         // Create a publication before the period ends
         vm.warp(block.timestamp + EXIT_DELAY - 1);
@@ -875,106 +907,30 @@ contract ProverManagerTest is Test {
     }
 
     /// --------------------------------------------------------------------------
-    /// claimProvingVacancy()
+    /// getCurrentFees()
     /// --------------------------------------------------------------------------
-    function test_claimProvingVacancy() public {
-        // First, have the current prover exit
-        vm.prank(initialProver);
-        proverManager.exit();
 
-        vm.warp(vm.getBlockTimestamp() + EXIT_DELAY + 1);
-
-        //Submit a publication to advance to the vacant period(period 2)
-        vm.prank(inbox);
-        proverManager.payPublicationFee{value: INITIAL_FEE}(proposer, false);
-
-        // Ensure prover1 has enough funds
-        vm.prank(prover1);
-        proverManager.deposit{value: DEPOSIT_AMOUNT}();
-
-        // Claim the vacancy
-        uint256 prover1BalanceBefore = proverManager.balances(prover1);
-        uint256 newFee = 0.2 ether; //arbitrary new fee
-        vm.prank(prover1);
-        proverManager.claimProvingVacancy(newFee);
-
-        // Check that period 2(the vacant period) has been closed correctly
-        ProverManager.Period memory period2 = proverManager.getPeriod(2);
-        assertEq(period2.end, vm.getBlockTimestamp(), "Period 2 end timestamp should be the current timestamp");
-        assertEq(period2.deadline, vm.getBlockTimestamp(), "Period 2 deadline should be the current timestamp");
-
-        // Check that period 3 has been created correctly
-        ProverManager.Period memory period3 = proverManager.getPeriod(3);
-        assertEq(period3.prover, prover1, "Prover1 should be the new prover");
-        assertEq(period3.fee, newFee, "Fee should be set to the new fee");
-        assertEq(period3.stake, LIVENESS_BOND, "Liveness bond should be locked");
-
-        // // Check that prover1's balance was reduced by the liveness bond
-        uint256 prover1BalanceAfter = proverManager.balances(prover1);
-        assertEq(prover1BalanceAfter, prover1BalanceBefore - LIVENESS_BOND, "User balance not deducted correctly");
+    function test_getCurrentFees_SamePeriod() public view {
+        (uint256 fee, uint256 delayedFee) = proverManager.getCurrentFees();
+        assertEq(fee, INITIAL_FEE, "Fee should be the initial fee");
+        assertEq(delayedFee, INITIAL_FEE, "Delayed fee should be the initial fee");
     }
 
-    function test_claimProvingVacancy_RevertWhen_NoVacancy() public {
-        // Attempt to claim a vacancy when the period is still active
+    function test_geCurrentFees_WhenPeriodEnded() public {
+        // Exit as a prover.
+        _exit(initialProver);
+
+        // Bid as a new prover
+        _deposit(prover1, DEPOSIT_AMOUNT);
+        uint256 bidFee = INITIAL_FEE * 2;
         vm.prank(prover1);
-        proverManager.deposit{value: DEPOSIT_AMOUNT}();
+        proverManager.bid(bidFee);
 
-        vm.prank(prover1);
-        vm.expectRevert("No proving vacancy");
-        proverManager.claimProvingVacancy(0.2 ether);
-    }
-
-    function test_claimProvingVacancy_RevertWhen_InsufficientBalance() public {
-        // First, have the current prover exit to create a vacancy
-        vm.prank(initialProver);
-        proverManager.exit();
-
+        // Warp to a time after the period has ended.
         vm.warp(vm.getBlockTimestamp() + EXIT_DELAY + 1);
-
-        //Submit a publication to advance to the vacant period(period 2)
-        vm.prank(inbox);
-        proverManager.payPublicationFee{value: INITIAL_FEE}(proposer, false);
-
-        // Attempt to claim the vacancy without sufficient balance
-        vm.prank(prover2);
-        vm.expectRevert();
-        proverManager.claimProvingVacancy(0.2 ether);
-    }
-
-    function test_claimProvingVacancy_AdvancesPeriod() public {
-        // First, have the current prover exit to create a vacancy
-        vm.prank(initialProver);
-        proverManager.exit();
-
-        vm.warp(vm.getBlockTimestamp() + EXIT_DELAY + 1);
-
-        //Submit a publication to advance to the vacant period(period 2)
-        vm.prank(inbox);
-        proverManager.payPublicationFee{value: INITIAL_FEE}(proposer, false);
-
-        // Ensure prover1 has enough funds
-        vm.prank(prover1);
-        proverManager.deposit{value: DEPOSIT_AMOUNT}();
-
-        // Verify the current period before claiming
-        uint256 periodBefore = proverManager.currentPeriodId();
-
-        // Claim the vacancy
-        vm.prank(prover1);
-        proverManager.claimProvingVacancy(0.2 ether);
-
-        // Verify the period has been advanced
-        uint256 periodAfter = proverManager.currentPeriodId();
-        assertEq(periodAfter, periodBefore, "Period should not advance when claiming vacancy");
-
-        // Verify that a new publication advances the period
-        vm.warp(vm.getBlockTimestamp() + 1);
-        vm.prank(proposer);
-        proverManager.deposit{value: INITIAL_FEE}();
-        vm.prank(inbox);
-        vm.expectEmit();
-        emit ProverManager.NewPeriod(periodAfter + 1);
-        proverManager.payPublicationFee(proposer, false);
+        (uint256 fee, uint256 delayedFee) = proverManager.getCurrentFees();
+        assertEq(fee, bidFee, "Fee should be the bid fee");
+        assertEq(delayedFee, bidFee, "Delayed fee should be the bid fee");
     }
 
     // -- HELPERS --
@@ -982,6 +938,19 @@ contract ProverManagerTest is Test {
         bytes[] memory emptyAttributes = new bytes[](0);
         IPublicationFeed.PublicationHeader memory header = publicationFeed.publish(emptyAttributes);
         return header;
+    }
+
+    function _insertPublicationsWithFees(uint256 numPublications, uint256 fee)
+        internal
+        returns (IPublicationFeed.PublicationHeader[] memory)
+    {
+        IPublicationFeed.PublicationHeader[] memory headers = new IPublicationFeed.PublicationHeader[](numPublications);
+        for (uint256 i = 0; i < numPublications; i++) {
+            headers[i] = _insertPublication();
+            vm.prank(inbox);
+            proverManager.payPublicationFee{value: fee}(proposer, false);
+        }
+        return headers;
     }
 
     function _createPublicationHeader(uint256 id, uint256 timestamp, bytes32 prevHash, uint256 blockNumber)
@@ -998,5 +967,23 @@ contract ProverManagerTest is Test {
             blockNumber: blockNumber,
             attributesHash: attributesHash
         });
+    }
+
+    function _deposit(address user, uint256 amount) internal {
+        vm.prank(user);
+        proverManager.deposit{value: amount}();
+    }
+
+    function _maxAllowedFee(uint256 fee) internal pure returns (uint256) {
+        return _calculatePercentage(fee, MAX_BID_PERCENTAGE);
+    }
+
+    function _calculatePercentage(uint256 amount, uint256 percentage) internal pure returns (uint256) {
+        return amount * percentage / 10_000;
+    }
+
+    function _exit(address prover) internal {
+        vm.prank(prover);
+        proverManager.exit();
     }
 }
