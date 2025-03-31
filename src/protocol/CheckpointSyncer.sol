@@ -36,6 +36,7 @@ abstract contract CheckpointSyncer is ICheckpointSyncer {
     function syncCheckpoint(uint256 height, bytes32 checkpoint) external virtual onlyTrustedSyncer {
         require(checkpoint != bytes32(0), "Checkpoint cannot be 0");
         //TODO: Should we check height > previous height? would require more storage
+        /// However the calling contracts all check this fact so can skip
         _checkpoints[height] = checkpoint;
         emit CheckpointSynced(checkpoint, uint64(block.chainid), height);
     }
