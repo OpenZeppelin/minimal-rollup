@@ -3,13 +3,14 @@ pragma solidity ^0.8.28;
 
 import {IBlobRefRegistry} from "../../blobs/IBlobRefRegistry.sol";
 
-import {IPublicationFeed} from "../IPublicationFeed.sol";
-
 import {IDelayedInclusionStore} from "../IDelayedInclusionStore.sol";
+import {IPublicationFeed} from "../IPublicationFeed.sol";
+import {DelayedInclusionStore} from "./DelayedInclusionStore.sol";
+
 import {IInbox} from "../IInbox.sol";
 import {ILookahead} from "../ILookahead.sol";
 
-contract TaikoInbox is IInbox {
+contract TaikoInbox is IInbox, DelayedInclusionStore {
     struct Metadata {
         uint256 anchorBlockId;
         bytes32 anchorBlockHash;
@@ -18,8 +19,6 @@ contract TaikoInbox is IInbox {
 
     IPublicationFeed public immutable publicationFeed;
     ILookahead public immutable lookahead;
-    IBlobRefRegistry public immutable blobRefRegistry;
-    IDelayedInclusionStore public immutable delayedInclusionStore;
 
     uint256 public immutable maxAnchorBlockIdOffset;
 
@@ -34,13 +33,11 @@ contract TaikoInbox is IInbox {
         address _publicationFeed,
         address _lookahead,
         address _blobRefRegistry,
-        address _delayedInclusionStore,
-        uint256 _maxAnchorBlockIdOffset
-    ) {
+        uint256 _maxAnchorBlockIdOffset,
+        uint256 _inclusionDelay
+    ) DelayedInclusionStore(_inclusionDelay, _blobRefRegistry) {
         publicationFeed = IPublicationFeed(_publicationFeed);
         lookahead = ILookahead(_lookahead);
-        blobRefRegistry = IBlobRefRegistry(_blobRefRegistry);
-        delayedInclusionStore = IDelayedInclusionStore(_delayedInclusionStore);
         maxAnchorBlockIdOffset = _maxAnchorBlockIdOffset;
     }
 
@@ -69,7 +66,7 @@ contract TaikoInbox is IInbox {
         _lastPublicationId = publicationFeed.publish(attributes).id;
 
         // Publish each delayed inclusion as a separate publication
-        IDelayedInclusionStore.Inclusion[] memory inclusions = delayedInclusionStore.processDueInclusions();
+        IDelayedInclusionStore.Inclusion[] memory inclusions = DelayedInclusionStore.processDueInclusions();
         uint256 nInclusions = inclusions.length;
         // Metadata is the same as the regular publication, so we just set `isDelayedInclusion` to true
         metadata.isDelayedInclusion = true;
