@@ -1,11 +1,15 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
+import {ICheckpointSyncer} from "../ICheckpointSyncer.sol";
+
 contract TaikoAnchor {
     event Anchor(uint256 publicationId, uint256 anchorBlockId, bytes32 anchorBlockHash, bytes32 parentGasUsed);
 
     uint256 public immutable fixedBaseFee;
     address public immutable permittedSender; // 0x0000777735367b36bC9B61C50022d9D0700dB4Ec
+
+    ICheckpointSyncer public immutable checkpointSyncer;
 
     uint256 public lastAnchorBlockId;
     uint256 public lastPublicationId;
@@ -19,7 +23,10 @@ contract TaikoAnchor {
     }
 
     // This constructor is only used in test as the contract will be pre-deployed in the L2 genesis
-    constructor(uint256 _fixedBaseFee, address _permittedSender) {
+    /// @param _fixedBaseFee The fixed base fee for the rollup
+    /// @param _permittedSender The address of the sender that can call the anchor function
+    /// @param _signalService The address of the signal service contract which stores historical blockhashes
+    constructor(uint256 _fixedBaseFee, address _permittedSender, address _signalService) {
         require(_fixedBaseFee > 0, "fixedBaseFee must be greater than 0");
         fixedBaseFee = _fixedBaseFee;
         permittedSender = _permittedSender;
@@ -27,6 +34,7 @@ contract TaikoAnchor {
         uint256 parentId = block.number - 1;
         blockHashes[parentId] = blockhash(parentId);
         (circularBlocksHash,) = _calcCircularBlocksHash(block.number);
+        checkpointSyncer = ICheckpointSyncer(_signalService);
     }
 
     /// @dev The node software will guarantee and the prover will verify the following:
@@ -54,6 +62,8 @@ contract TaikoAnchor {
         if (_anchorBlockId > lastAnchorBlockId) {
             lastAnchorBlockId = _anchorBlockId;
             l1BlockHashes[_anchorBlockId] = _anchorBlockHash;
+            // Sync the anchor block hash to the signal service
+            checkpointSyncer.syncCheckpoint(_anchorBlockId, _anchorBlockHash);
         }
 
         // Store the parent block hash in the _blockhashes mapping
