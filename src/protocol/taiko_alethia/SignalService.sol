@@ -16,8 +16,6 @@ import {ISignalService} from "../ISignalService.sol";
 contract SignalService is ISignalService, ETHBridge, CheckpointSyncer {
     using LibSignal for bytes32;
 
-    constructor(address _checkpointTracker) CheckpointSyncer(_checkpointTracker) {}
-
     /// @inheritdoc ISignalService
     function sendSignal(bytes32 value) external returns (bytes32 slot) {
         slot = value.signal();
@@ -33,13 +31,13 @@ contract SignalService is ISignalService, ETHBridge, CheckpointSyncer {
     /// @inheritdoc ISignalService
     function verifySignal(
         uint64 chainId,
+        uint256 height,
         address sender,
         bytes32 value,
         bytes[] memory accountProof,
         bytes[] memory storageProof
     ) external {
-        _verifySignal(chainId, sender, value, accountProof, storageProof);
-
+        _verifySignal(chainId, height, sender, value, accountProof, storageProof);
         emit SignalVerified(chainId, sender, value);
     }
 
@@ -57,47 +55,28 @@ contract SignalService is ISignalService, ETHBridge, CheckpointSyncer {
     // CHECK: Should this function be non-reentrant?
     /// @inheritdoc ETHBridge
     /// @dev Overrides ETHBridge.claimDeposit to add signal verification logic.
-    function claimDeposit(ETHDeposit memory deposit, bytes[] memory accountProof, bytes[] memory storageProof)
-        external
-        override
-        returns (bytes32 id)
-    {
+    function claimDeposit(
+        ETHDeposit memory deposit,
+        uint256 height,
+        bytes[] memory accountProof,
+        bytes[] memory storageProof
+    ) external override returns (bytes32 id) {
         id = _generateId(deposit);
 
-        _verifySignal(deposit.chainId, deposit.from, id, accountProof, storageProof);
+        _verifySignal(deposit.chainId, height, deposit.from, id, accountProof, storageProof);
 
         super._processClaimDepositWithId(id, deposit);
     }
 
-    function syncCheckpoint(ICheckpointTracker.Checkpoint memory checkpoint, uint64 chainId)
-        public
-        override
-        returns (bytes32 id)
-    {
-        id = super.syncCheckpoint(checkpoint, chainId);
-        id.signal();
-    }
-
-    function verifyCheckpoint(
-        ICheckpointTracker.Checkpoint memory checkpoint,
-        uint64 chainId,
-        bytes[] memory accountProof,
-        bytes[] memory storageProof
-    ) public view override returns (bytes32 id) {
-        id = getCheckpointId(checkpoint, chainId);
-
-        _verifySignal(chainId, checkpointTracker(), id, accountProof, storageProof);
-    }
-
     function _verifySignal(
         uint64 chainId,
+        uint256 height,
         address sender,
         bytes32 value,
         bytes[] memory accountProof,
         bytes[] memory storageProof
     ) internal view {
-        // WARN: THIS IS NOT THE ROOT ITS JUST A PLACE HOLDER
-        bytes32 root = keccak256("root");
+        bytes32 root = checkpointAt(height);
         (bool valid,) = LibSignal.verifySignal(root, chainId, sender, value, accountProof, storageProof);
         require(valid, SignalNotReceived(value));
     }

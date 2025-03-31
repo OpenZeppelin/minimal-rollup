@@ -39,8 +39,10 @@ interface ISignalService {
     /// @dev Signals are not deleted when verified, and can be
     /// verified multiple times by calling this function
     /// @dev see `LibSignal.verifySignal`
+    /// @dev Height refers to the block number / commitmentId where the trusted root is mapped to
     function verifySignal(
         uint64 chainId,
+        uint256 height,
         address sender,
         bytes32 value,
         bytes[] memory accountProof,

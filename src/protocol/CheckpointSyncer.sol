@@ -7,7 +7,7 @@ import {ICheckpointTracker} from "./ICheckpointTracker.sol";
 abstract contract CheckpointSyncer is ICheckpointSyncer {
     address private _trustedSyncer;
 
-    mapping(uint64 height => bytes32 checkpoint) private _checkpoints;
+    mapping(uint256 height => bytes32 checkpoint) private _checkpoints;
 
     /// @dev Reverts if the caller is not the `trustedSyncer`.
     modifier onlyTrustedSyncer() {
@@ -28,16 +28,16 @@ abstract contract CheckpointSyncer is ICheckpointSyncer {
     }
 
     /// @inheritdoc ICheckpointSyncer
-    function checkpointAt(uint64 height) public view virtual returns (bytes32 checkpoint) {
+    function checkpointAt(uint256 height) public view virtual returns (bytes32 checkpoint) {
         return _checkpoints[height];
     }
 
     /// @inheritdoc ICheckpointSyncer
-    function syncCheckpoint(uint64 height, bytes32 checkpoint) external virtual onlyTrustedSyncer {
+    function syncCheckpoint(uint256 height, bytes32 checkpoint) external virtual onlyTrustedSyncer {
         require(checkpoint != bytes32(0), "Checkpoint cannot be 0");
         //TODO: Should we check height > previous height? would require more storage
         _checkpoints[height] = checkpoint;
-        emit CheckpointSynced(checkpoint, uint64(block.chainid));
+        emit CheckpointSynced(checkpoint, uint64(block.chainid), height);
     }
 
     /// @dev Internal helper to validate the trusted syncer.

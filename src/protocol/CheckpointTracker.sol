@@ -78,7 +78,7 @@ contract CheckpointTracker is ICheckpointTracker {
         _provenCheckpoint = end;
 
         // Sync the checkpoint to other chains
-        checkpointSyncer.syncCheckpoint(_provenCheckpoint, block.chainid.toUint64());
+        checkpointSyncer.syncCheckpoint(end.publicationId, end.commitment);
         emit CheckpointUpdated(end);
     }
 

@@ -63,9 +63,13 @@ interface IETHBridge {
     /// @dev Claims an ETH deposit created on `chainId` by the sender (`from`) with `nonce`. The `value` ETH claimed  is
     /// sent to the receiver (`to`) after verifying a storage proof.
     /// @param deposit The ETH deposit
+    /// @param height The `height` of the checkpoint on the source chain (i.e. the block number or commitmentId)
     /// @param accountProof Merkle proof for the contract's account against the state root
     /// @param storageProof Merkle proof for the derived storage slot against the account's storage root
-    function claimDeposit(ETHDeposit memory deposit, bytes[] memory accountProof, bytes[] memory storageProof)
-        external
-        returns (bytes32 id);
+    function claimDeposit(
+        ETHDeposit memory deposit,
+        uint256 height,
+        bytes[] memory accountProof,
+        bytes[] memory storageProof
+    ) external returns (bytes32 id);
 }

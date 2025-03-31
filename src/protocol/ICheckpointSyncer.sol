@@ -10,8 +10,8 @@ import {ICheckpointTracker} from "./ICheckpointTracker.sol";
 /// Only a trusted syncer can sync checkpoints. For example, only the `CheckpointTracker` can sync roots on the L1 and
 /// the anchor can sync blockhash on the L2.
 interface ICheckpointSyncer {
-    /// @dev A new `checkpoint` has been synced for `chainId`.
-    event CheckpointSynced(bytes32 checkpoint, uint64 chainId);
+    /// @dev A new `checkpoint` has been synced for `chainId` at a specified `height`.
+    event CheckpointSynced(bytes32 checkpoint, uint64 chainId, uint256 height);
 
     /// @dev Emitted when the trusted syncer is updated.
     event TrustedSyncerUpdated(address newTrustedSyncer);
@@ -28,10 +28,10 @@ interface ICheckpointSyncer {
 
     /// @dev Returns the checkpoint at the given `height`.
     /// @param height The height of the checkpoint
-    function checkpointAt(uint64 height) external view returns (bytes32 checkpoint);
+    function checkpointAt(uint256 height) external view returns (bytes32 checkpoint);
 
     /// @dev Syncs a checkpoint.
     /// @param height The height of the checkpoint
     /// @param checkpoint The checkpoint to sync
-    function syncCheckpoint(uint64 height, bytes32 checkpoint) external;
+    function syncCheckpoint(uint256 height, bytes32 checkpoint) external;
 }
