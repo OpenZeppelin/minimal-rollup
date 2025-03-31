@@ -4,53 +4,44 @@ pragma solidity ^0.8.28;
 import {ICheckpointSyncer} from "./ICheckpointSyncer.sol";
 import {ICheckpointTracker} from "./ICheckpointTracker.sol";
 
-/// @dev Tracks and synchronizes checkpoints from different chains using their chainId.
 abstract contract CheckpointSyncer is ICheckpointSyncer {
-    address private immutable _checkpointTracker;
+    address private _trustedSyncer;
 
-    /// @dev Sets the checkpoint tracker.
-    constructor(address checkpointTracker_) {
-        checkpointTracker_ = _checkpointTracker;
-    }
+    mapping(uint64 height => bytes32 checkpoint) private _checkpoints;
 
-    function checkpointTracker() public view returns (address) {
-        return _checkpointTracker;
-    }
-
-    /// @inheritdoc ICheckpointSyncer
-    function getCheckpointId(ICheckpointTracker.Checkpoint memory checkpoint, uint64 chainId)
-        public
-        pure
-        virtual
-        returns (bytes32 id)
-    {
-        id = _generateId(checkpoint, chainId);
+    /// @dev Reverts if the caller is not the `trustedSyncer`.
+    modifier onlyTrustedSyncer() {
+        _checkTrustedSyncer(msg.sender);
+        _;
     }
 
     /// @inheritdoc ICheckpointSyncer
-    function syncCheckpoint(ICheckpointTracker.Checkpoint memory checkpoint, uint64 chainId)
-        public
-        virtual
-        returns (bytes32 id)
-    {
-        require(msg.sender == checkpointTracker(), UnauthorizedCheckpointTracker());
-        id = getCheckpointId(checkpoint, chainId);
-        emit CheckpointSynced(checkpoint, chainId);
+    function trustedSyncer() public view virtual returns (address) {
+        return _trustedSyncer;
     }
 
     /// @inheritdoc ICheckpointSyncer
-    function verifyCheckpoint(
-        ICheckpointTracker.Checkpoint memory checkpoint,
-        uint64 chainId,
-        bytes[] memory accountProof,
-        bytes[] memory storageProof
-    ) public view virtual returns (bytes32 id);
+    function setTrustedSyncer(address newTrustedSyncer) external virtual {
+        // WARN: ADD ACCESS CONTROL
+        _trustedSyncer = newTrustedSyncer;
+        emit TrustedSyncerUpdated(newTrustedSyncer);
+    }
 
-    function _generateId(ICheckpointTracker.Checkpoint memory checkpoint, uint64 chainId)
-        internal
-        pure
-        returns (bytes32 id)
-    {
-        return keccak256(abi.encode(chainId, checkpoint));
+    /// @inheritdoc ICheckpointSyncer
+    function checkpointAt(uint64 height) public view virtual returns (bytes32 checkpoint) {
+        return _checkpoints[height];
+    }
+
+    /// @inheritdoc ICheckpointSyncer
+    function syncCheckpoint(uint64 height, bytes32 checkpoint) external virtual onlyTrustedSyncer {
+        require(checkpoint != bytes32(0), "Checkpoint cannot be 0");
+        //TODO: Should we check height > previous height? would require more storage
+        _checkpoints[height] = checkpoint;
+        emit CheckpointSynced(checkpoint, uint64(block.chainid));
+    }
+
+    /// @dev Internal helper to validate the trusted syncer.
+    function _checkTrustedSyncer(address caller) internal view {
+        require(caller == _trustedSyncer, "UnauthorizedCheckpointTracker");
     }
 }
