@@ -44,8 +44,13 @@ contract SignalService is ISignalService, ETHBridge, CheckpointSyncer {
     }
 
     /// @dev Overrides ETHBridge.depositETH to add signaling functionality.
-    function depositETH(uint64 chainId, address to, bytes memory data) public payable override returns (bytes32 id) {
-        id = super.depositETH(chainId, to, data);
+    function depositETH(uint64 chainId, uint256 fee, uint256 gasLimit, address to, bytes memory data)
+        public
+        payable
+        override
+        returns (bytes32 id)
+    {
+        id = super.depositETH(chainId, fee, gasLimit, to, data);
         id.signal();
     }
 

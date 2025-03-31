@@ -4,19 +4,18 @@ pragma solidity ^0.8.28;
 import {LibTrieProof} from "../libs/LibTrieProof.sol";
 
 import {IETHBridge} from "./IETHBridge.sol";
-import {SlotDerivation} from "@openzeppelin/contracts/utils/SlotDerivation.sol";
 import {StorageSlot} from "@openzeppelin/contracts/utils/StorageSlot.sol";
-import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 
 /// @dev Abstract ETH bridging contract to send native ETH to other chains using storage proofs.
 ///
 /// IMPORTANT: No recovery mechanism is implemented in case an account creates a deposit that can't be claimed.
 abstract contract ETHBridge is IETHBridge {
-    using SafeCast for uint256;
     using StorageSlot for bytes32;
-    using SlotDerivation for *;
 
     mapping(bytes32 id => bool) _claimed;
+
+    /// Incremental nonce to generate unique deposit IDs.
+    uint256 private _nonce;
 
     /// @inheritdoc IETHBridge
     function claimed(bytes32 id) public view virtual returns (bool) {
@@ -29,11 +28,31 @@ abstract contract ETHBridge is IETHBridge {
     }
 
     /// @inheritdoc IETHBridge
-    function depositETH(uint64 chainId, address to, bytes memory data) public payable virtual returns (bytes32 id) {
-        address sender = msg.sender;
-        uint64 nonce = _useNonce(sender).toUint64();
-        ETHDeposit memory deposit = ETHDeposit(chainId, nonce, sender, to, msg.value, data);
+    // TODO: Possibly make this accept ETHDEeposit struct as input
+    function depositETH(uint64 chainId, uint256 fee, uint256 gasLimit, address to, bytes memory data)
+        public
+        payable
+        virtual
+        returns (bytes32 id)
+    {
+        // if (gasLimit == 0) {
+        //     if (fee != 0) revert B_INVALID_FEE();
+        // } else if (_invocationGasLimit(_message) == 0) {
+        //     revert B_INVALID_GAS_LIMIT();
+        // }
+
+        // TODO: Make this modifiers?
+        require(to != address(0), "Receiver cannot be zero address");
+
+        // TODO: Check if chainID is 'enabled' i.e. the bridge is enabled for this chain
+        require(chainId != 0 || chainId != block.chainid, "Invalid chain id");
+
+        uint256 amount = msg.value;
+        require(amount > 0 && amount >= fee, "Deposit amount must be greater than fee");
+
+        ETHDeposit memory deposit = ETHDeposit(chainId, _nonce, fee, gasLimit, msg.sender, to, amount, data);
         id = _generateId(deposit);
+        _nonce++;
         emit ETHDepositMade(id, deposit);
     }
 
@@ -69,18 +88,5 @@ abstract contract ETHBridge is IETHBridge {
     /// @param deposit Deposit to generate an ID for
     function _generateId(ETHDeposit memory deposit) internal pure returns (bytes32) {
         return keccak256(abi.encode(deposit));
-    }
-
-    /// @dev Consumes a nonce and returns the current value and increments nonce.
-    function _useNonce(address account) internal returns (uint256) {
-        // For each account, the nonce has an initial value of 0, can only be incremented by one, and cannot be
-        // decremented or reset. This guarantees that the nonce never overflows.
-
-        unchecked {
-            // It is important to do x++ and not ++x here.
-            // slot: keccak256(abi.encode(uint256(keccak256("LibValueTicket.nonces")) - 1)) & ~bytes32(uint256(0xff))
-            return 0x23c95d7a21dec6ba744555d361d2572ad62017f33fd3da51a4ffa8cde254e900.deriveMapping(account)
-                .getUint256Slot().value++;
-        }
     }
 }
