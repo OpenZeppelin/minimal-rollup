@@ -75,7 +75,6 @@ library LibSignal {
     /// @param accountProof Merkle proof for the contract's account against the state root
     /// @param storageProof Merkle proof for the derived storage slot against the account's storage root
     /// @return valid Boolean indicating whether the signal was successfully verified
-    /// @return storageRoot The storage root of the account from the proof
     function verifySignal(
         bytes32 root,
         uint64 chainId,
@@ -83,8 +82,8 @@ library LibSignal {
         bytes32 value,
         bytes[] memory accountProof,
         bytes[] memory storageProof
-    ) internal view returns (bool valid, bytes32 storageRoot) {
-        return LibTrieProof.verifyStorage(
+    ) internal view returns (bool valid) {
+        (valid,) = LibTrieProof.verifyStorage(
             address(this), deriveSlot(chainId, sender, value), value, root, accountProof, storageProof
         );
     }
