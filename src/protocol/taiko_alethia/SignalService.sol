@@ -16,6 +16,8 @@ import {ISignalService} from "../ISignalService.sol";
 contract SignalService is ISignalService, ETHBridge, CommitmentStore {
     using LibSignal for bytes32;
 
+    constructor(address _rollup) CommitmentStore(_rollup) {}
+
     /// @inheritdoc ISignalService
     function sendSignal(bytes32 value) external returns (bytes32 slot) {
         slot = value.signal();

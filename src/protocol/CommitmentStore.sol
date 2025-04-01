@@ -8,9 +8,15 @@ import {ICommitmentStore} from "./ICommitmentStore.sol";
 /// Uses a circular buffer to store commitments, size is defined by `bufferLength`.
 abstract contract CommitmentStore is ICommitmentStore {
     address private _authorizedCommitter;
+    address private immutable _rollup;
 
     mapping(uint256 index => bytes32 commitment) private _commitments;
     uint256 private _latestHeight;
+
+    constructor(address rollup) {
+        require(rollup != address(0), "Empty Rollup");
+        _rollup = rollup;
+    }
 
     /// @dev Reverts if the caller is not the `authorizedCommitter`.
     modifier onlyAuthorizedCommitter() {
@@ -30,7 +36,7 @@ abstract contract CommitmentStore is ICommitmentStore {
 
     /// @inheritdoc ICommitmentStore
     function setAuthorizedCommitter(address newAuthorizedCommitter) external virtual {
-        // WARN: ADD ACCESS CONTROL
+        require(msg.sender == _rollup, "Only Rollup can set authorized committer");
         require(newAuthorizedCommitter != address(0), "Empty Committer");
         _authorizedCommitter = newAuthorizedCommitter;
         emit AuthorizedCommitterUpdated(newAuthorizedCommitter);
