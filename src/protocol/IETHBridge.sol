@@ -12,10 +12,6 @@ interface IETHBridge {
         uint64 chainId;
         // The nonce of the deposit
         uint256 nonce;
-        // fee
-        uint256 fee;
-        // gas limit
-        uint256 gasLimit;
         // The sender of the deposit
         address from;
         // The receiver of the deposit
@@ -52,13 +48,9 @@ interface IETHBridge {
 
     /// @dev Creates an ETH deposit with `msg.value` for the receiver (`to`) to be claimed on the `chainId`.
     /// @param chainId The destination chain id
-    /// @param fee The fee to be paid for the deposit
     /// @param to The receiver of the deposit
     /// @param data Any calldata to be sent to the receiver in case of a contract
-    function depositETH(uint64 chainId, uint256 fee, uint256 gasLimit, address to, bytes memory data)
-        external
-        payable
-        returns (bytes32 id);
+    function depositETH(uint64 chainId, address to, bytes memory data) external payable returns (bytes32 id);
 
     /// @dev Claims an ETH deposit created on `chainId` by the sender (`from`) with `nonce`. The `value` ETH claimed  is
     /// sent to the receiver (`to`) after verifying a storage proof.

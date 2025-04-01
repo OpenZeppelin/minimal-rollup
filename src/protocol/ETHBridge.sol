@@ -15,7 +15,7 @@ abstract contract ETHBridge is IETHBridge {
     mapping(bytes32 id => bool) _claimed;
 
     /// Incremental nonce to generate unique deposit IDs.
-    uint256 private _nonce;
+    uint256 private _globalDepositNonce;
 
     /// @inheritdoc IETHBridge
     function claimed(bytes32 id) public view virtual returns (bool) {
@@ -29,30 +29,10 @@ abstract contract ETHBridge is IETHBridge {
 
     /// @inheritdoc IETHBridge
     // TODO: Possibly make this accept ETHDEeposit struct as input
-    function depositETH(uint64 chainId, uint256 fee, uint256 gasLimit, address to, bytes memory data)
-        public
-        payable
-        virtual
-        returns (bytes32 id)
-    {
-        // if (gasLimit == 0) {
-        //     if (fee != 0) revert B_INVALID_FEE();
-        // } else if (_invocationGasLimit(_message) == 0) {
-        //     revert B_INVALID_GAS_LIMIT();
-        // }
-
-        // TODO: Make this modifiers?
-        require(to != address(0), "Receiver cannot be zero address");
-
-        // TODO: Check if chainID is 'enabled' i.e. the bridge is enabled for this chain
-        require(chainId != 0 || chainId != block.chainid, "Invalid chain id");
-
-        uint256 amount = msg.value;
-        require(amount > 0 && amount >= fee, "Deposit amount must be greater than fee");
-
-        ETHDeposit memory deposit = ETHDeposit(chainId, _nonce, fee, gasLimit, msg.sender, to, amount, data);
+    function depositETH(uint64 chainId, address to, bytes memory data) public payable virtual returns (bytes32 id) {
+        ETHDeposit memory deposit = ETHDeposit(chainId, _globalDepositNonce, msg.sender, to, msg.value, data);
         id = _generateId(deposit);
-        _nonce++;
+        _globalDepositNonce++;
         emit ETHDepositMade(id, deposit);
     }
 
