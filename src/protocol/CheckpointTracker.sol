@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
-import {ICheckpointSyncer} from "./ICheckpointSyncer.sol";
 import {ICheckpointTracker} from "./ICheckpointTracker.sol";
+import {ICommitmentStore} from "./ICommitmentStore.sol";
 import {IPublicationFeed} from "./IPublicationFeed.sol";
 import {IVerifier} from "./IVerifier.sol";
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
@@ -20,7 +20,7 @@ contract CheckpointTracker is ICheckpointTracker {
 
     IPublicationFeed public immutable publicationFeed;
     IVerifier public immutable verifier;
-    ICheckpointSyncer public immutable checkpointSyncer;
+    ICommitmentStore public immutable checkpointSyncer;
     address public proverManager;
 
     /// @param _genesis the checkpoint commitment describing the initial state of the rollup
@@ -40,7 +40,7 @@ contract CheckpointTracker is ICheckpointTracker {
 
         publicationFeed = IPublicationFeed(_publicationFeed);
         verifier = IVerifier(_verifier);
-        checkpointSyncer = ICheckpointSyncer(_signalService);
+        checkpointSyncer = ICommitmentStore(_signalService);
         proverManager = _proverManager;
         Checkpoint memory genesisCheckpoint = Checkpoint({publicationId: 0, commitment: _genesis});
         _provenCheckpoint = genesisCheckpoint;

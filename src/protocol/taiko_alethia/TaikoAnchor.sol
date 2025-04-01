@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
-import {ICheckpointSyncer} from "../ICheckpointSyncer.sol";
+import {ICommitmentStore} from "../ICommitmentStore.sol";
 
 contract TaikoAnchor {
     event Anchor(uint256 publicationId, uint256 anchorBlockId, bytes32 anchorBlockHash, bytes32 parentGasUsed);
@@ -9,7 +9,7 @@ contract TaikoAnchor {
     uint256 public immutable fixedBaseFee;
     address public immutable permittedSender; // 0x0000777735367b36bC9B61C50022d9D0700dB4Ec
 
-    ICheckpointSyncer public immutable checkpointSyncer;
+    ICommitmentStore public immutable checkpointSyncer;
 
     uint256 public lastAnchorBlockId;
     uint256 public lastPublicationId;
@@ -34,7 +34,7 @@ contract TaikoAnchor {
         uint256 parentId = block.number - 1;
         blockHashes[parentId] = blockhash(parentId);
         (circularBlocksHash,) = _calcCircularBlocksHash(block.number);
-        checkpointSyncer = ICheckpointSyncer(_signalService);
+        checkpointSyncer = ICommitmentStore(_signalService);
     }
 
     /// @dev The node software will guarantee and the prover will verify the following:

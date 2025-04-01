@@ -3,7 +3,7 @@ pragma solidity ^0.8.28;
 
 import {LibSignal} from "../../libs/LibSignal.sol";
 import {LibTrieProof} from "../../libs/LibTrieProof.sol";
-import {CheckpointSyncer} from "../CheckpointSyncer.sol";
+import {CommitmentStore} from "../CommitmentStore.sol";
 import {ETHBridge} from "../ETHBridge.sol";
 import {ICheckpointTracker} from "../ICheckpointTracker.sol";
 import {ISignalService} from "../ISignalService.sol";
@@ -12,8 +12,8 @@ import {ISignalService} from "../ISignalService.sol";
 ///
 /// The service defines the minimal logic to broadcast signals through `sendSignal` and verify them with
 /// `verifySignal`. The service is designed to be used in conjunction with the `ETHBridge` contract to
-/// enable cross-chain communication and the CheckpointSyncer to retrieve trusted state roots.
-contract SignalService is ISignalService, ETHBridge, CheckpointSyncer {
+/// enable cross-chain communication and the CommitmentStore to retrieve trusted state roots.
+contract SignalService is ISignalService, ETHBridge, CommitmentStore {
     using LibSignal for bytes32;
 
     /// @inheritdoc ISignalService
