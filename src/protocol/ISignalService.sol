@@ -10,15 +10,14 @@ pragma solidity ^0.8.28;
 /// Signals are broadcast without specific recipients, allowing flexible cross-chain messaging
 interface ISignalService {
     /// @dev Emitted when a signal is sent.
-    /// @param chainId The chain ID of the source chain where the signal was sent
     /// @param sender The address that sent the signal on the source chain
     /// @param value The signal value
-    event SignalSent(address sender, uint256 chainId, bytes32 value);
+    event SignalSent(address indexed sender, bytes32 value);
 
     /// @dev Emitted when a signal is verified.
     /// @param chainId The chain ID of the source chain where the signal was sent
     /// @param value Value that was signaled
-    event SignalVerified(uint64 chainId, address sender, bytes32 value);
+    event SignalVerified(uint64 indexed chainId, address indexed sender, bytes32 value);
 
     /// @dev Error when a signal fails to be verified.
     /// @param value Value that was not verified

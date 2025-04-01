@@ -36,7 +36,7 @@ abstract contract CommitmentStore is ICommitmentStore {
     function storeCommitment(uint256 height, bytes32 commitment) external virtual onlyAuthorizedCommitter {
         require(commitment != bytes32(0), "Commitment cannot be 0");
         _commitments[height] = commitment;
-        emit CommitmentStored(commitment, uint64(block.chainid), height);
+        emit CommitmentStored(uint64(block.chainid), commitment, height);
     }
 
     /// @dev Internal helper to validate the authorizedCommitter.

@@ -12,7 +12,7 @@ import {ICheckpointTracker} from "./ICheckpointTracker.sol";
 /// and the anchor can store block hashes on the L2.
 interface ICommitmentStore {
     /// @dev A new `commitment` has been stored for `chainId` at a specified `height`.
-    event CommitmentStored(bytes32 commitment, uint64 chainId, uint256 height);
+    event CommitmentStored(uint64 indexed chainId, bytes32 commitment, uint256 height);
 
     /// @dev Emitted when the authorized committer is updated.
     event AuthorizedCommitterUpdated(address newAuthorizedCommitter);

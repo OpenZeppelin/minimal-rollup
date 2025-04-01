@@ -19,7 +19,7 @@ contract SignalService is ISignalService, ETHBridge, CommitmentStore {
     /// @inheritdoc ISignalService
     function sendSignal(bytes32 value) external returns (bytes32 slot) {
         slot = value.signal();
-        emit SignalSent(msg.sender, block.chainid, value);
+        emit SignalSent(msg.sender, value);
     }
 
     /// @inheritdoc ISignalService
