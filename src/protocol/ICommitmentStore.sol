@@ -27,6 +27,12 @@ interface ICommitmentStore {
     /// @param newAuthorizedCommitter The new authorized committer address
     function setAuthorizedCommitter(address newAuthorizedCommitter) external;
 
+    /// @dev Returns the latest commitment.
+    function latestCommitment() external view returns (bytes32 commitment);
+
+    /// @dev Returns the latest height.
+    function latestHeight() external view returns (uint256 height);
+
     /// @dev Returns the commitment at the given `height`.
     /// @param height The height of the commitment
     function commitmentAt(uint256 height) external view returns (bytes32 commitment);
