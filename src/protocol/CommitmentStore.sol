@@ -41,6 +41,6 @@ abstract contract CommitmentStore is ICommitmentStore {
 
     /// @dev Internal helper to validate the authorizedCommitter.
     function _checkAuthorizedCommitter(address caller) internal view {
-        require(caller == _authorizedCommitter, UnauthorizedCommitmentStore());
+        require(caller == _authorizedCommitter, UnauthorizedCommitter());
     }
 }

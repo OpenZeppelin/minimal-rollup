@@ -18,7 +18,7 @@ interface ICommitmentStore {
     event AuthorizedCommitterUpdated(address newAuthorizedCommitter);
 
     /// @dev The caller is not a recognized authorized committer.
-    error UnauthorizedCommitmentStore();
+    error UnauthorizedCommitter();
 
     /// @dev Returns the current authorized committer.
     function authorizedCommitter() external view returns (address);

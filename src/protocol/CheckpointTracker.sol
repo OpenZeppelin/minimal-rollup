@@ -20,27 +20,27 @@ contract CheckpointTracker is ICheckpointTracker {
 
     IPublicationFeed public immutable publicationFeed;
     IVerifier public immutable verifier;
-    ICommitmentStore public immutable checkpointSyncer;
+    ICommitmentStore public immutable commitmentStore;
     address public proverManager;
 
     /// @param _genesis the checkpoint commitment describing the initial state of the rollup
     /// @param _publicationFeed the input data source that updates the state of this rollup
     /// @param _verifier a contract that can verify the validity of a transition from one checkpoint to another
     /// @param _proverManager contract responsible for managing the prover auction
-    /// @param _signalService contract responsible for syncing checkpoints to other chains
+    /// @param _commitmentStore contract responsible storing historical commitments
     constructor(
         bytes32 _genesis,
         address _publicationFeed,
         address _verifier,
         address _proverManager,
-        address _signalService
+        address _commitmentStore
     ) {
         // set the genesis checkpoint commitment of the rollup - genesis is trusted to be correct
         require(_genesis != 0, "genesis checkpoint commitment cannot be 0");
 
         publicationFeed = IPublicationFeed(_publicationFeed);
         verifier = IVerifier(_verifier);
-        checkpointSyncer = ICommitmentStore(_signalService);
+        commitmentStore = ICommitmentStore(_commitmentStore);
         proverManager = _proverManager;
         Checkpoint memory genesisCheckpoint = Checkpoint({publicationId: 0, commitment: _genesis});
         _provenCheckpoint = genesisCheckpoint;
@@ -77,8 +77,8 @@ contract CheckpointTracker is ICheckpointTracker {
 
         _provenCheckpoint = end;
 
-        // Sync the checkpoint to other chains
-        checkpointSyncer.syncCheckpoint(end.publicationId, end.commitment);
+        // Stores the state of the other chain
+        commitmentStore.storeCommitment(end.publicationId, end.commitment);
         emit CheckpointUpdated(end);
     }
 
