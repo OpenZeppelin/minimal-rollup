@@ -6,6 +6,7 @@ import "forge-std/Test.sol";
 import {BlobRefRegistry} from "src/blobs/BlobRefRegistry.sol";
 import {IDelayedInclusionStore} from "src/protocol/IDelayedInclusionStore.sol";
 import {DelayedInclusionStore} from "src/protocol/taiko_alethia/DelayedInclusionStore.sol";
+import {Inbox} from "src/protocol/taiko_alethia/TaikoInbox.sol";
 
 /// State where there are no delayed inclusions.
 contract BaseState is Test {

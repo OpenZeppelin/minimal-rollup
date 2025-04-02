@@ -31,29 +31,28 @@ abstract contract DelayedInclusionStore is IDelayedInclusionStore {
     /// wait in the queue to be included expressed in seconds
     uint256 public immutable inclusionDelay;
 
-    IBlobRefRegistry public immutable blobRefRegistry;
-
     /// @param _inclusionDelay The delay before next set of inclusions can be processed.
-    /// @param _blobRefRegistry The address of the blob reference registry contract.
-    constructor(uint256 _inclusionDelay, address _blobRefRegistry) {
+    constructor(uint256 _inclusionDelay) {
         inclusionDelay = _inclusionDelay;
-        blobRefRegistry = IBlobRefRegistry(_blobRefRegistry);
     }
 
     /// @inheritdoc IDelayedInclusionStore
     /// @dev Stores the blob reference as a DueInclusion
     function publishDelayed(uint256[] memory blobIndices) external virtual {
-        (bytes32 refHash,) = blobRefRegistry.registerRef(blobIndices);
+        bytes32 refHash = _getRefHash(blobIndices);
         DueInclusion memory dueInclusion = DueInclusion(refHash, block.timestamp + inclusionDelay);
         _delayedInclusions.push(dueInclusion);
         emit DelayedInclusionStored(msg.sender, dueInclusion);
     }
 
+    function _getRefHash(uint256[] memory blobIndices) internal virtual returns (bytes32);
+
     /// @notice Returns a list of publications that should be processed by the Inbox
     /// @dev Only returns inclusions if the delay period has passed
     /// otherwise returns an empty array.
     /// @dev Can only be called by the inbox contract.
-    function processDueInclusions() internal virtual returns (Inclusion[] memory) {
+    function processDueInclusions() public virtual returns (Inclusion[] memory) {
+        require(msg.sender == address(this), "only inbox can call");
         uint256 len = _delayedInclusions.length;
         uint256 head = _head;
         if (head >= len) {

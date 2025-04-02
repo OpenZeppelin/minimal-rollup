@@ -9,6 +9,7 @@ import {DelayedInclusionStore} from "./DelayedInclusionStore.sol";
 
 import {IInbox} from "../IInbox.sol";
 import {ILookahead} from "../ILookahead.sol";
+import {IProposerFees} from "../IProposerFees.sol";
 
 contract TaikoInbox is IInbox, DelayedInclusionStore {
     struct Metadata {
@@ -19,6 +20,8 @@ contract TaikoInbox is IInbox, DelayedInclusionStore {
 
     IPublicationFeed public immutable publicationFeed;
     ILookahead public immutable lookahead;
+    IBlobRefRegistry public immutable blobRefRegistry;
+    IProposerFees public immutable proposerFees;
 
     uint256 public immutable maxAnchorBlockIdOffset;
 
@@ -34,14 +37,16 @@ contract TaikoInbox is IInbox, DelayedInclusionStore {
         address _lookahead,
         address _blobRefRegistry,
         uint256 _maxAnchorBlockIdOffset,
+        address _proposerFees,
         uint256 _inclusionDelay
-    ) DelayedInclusionStore(_inclusionDelay, _blobRefRegistry) {
+    ) DelayedInclusionStore(_inclusionDelay) {
         publicationFeed = IPublicationFeed(_publicationFeed);
         lookahead = ILookahead(_lookahead);
         maxAnchorBlockIdOffset = _maxAnchorBlockIdOffset;
+        proposerFees = IProposerFees(_proposerFees);
     }
 
-    function publish(uint256 nBlobs, uint64 anchorBlockId) external {
+    function publish(uint256 nBlobs, uint64 anchorBlockId) external payable {
         if (address(lookahead) != address(0)) {
             require(lookahead.isCurrentPreconfer(msg.sender), "not current preconfer");
         }
@@ -63,10 +68,12 @@ contract TaikoInbox is IInbox, DelayedInclusionStore {
         attributes[LAST_PUBLICATION] = abi.encode(_lastPublicationId);
         attributes[BLOB_REFERENCE] = abi.encode(blobRefRegistry.getRef(_buildBlobIndices(nBlobs)));
 
+        (uint256 publicationFee, uint256 delayedPublicationFee) = proposerFees.getCurrentFees();
+        proposerFees.payPublicationFee{value: publicationFee}(msg.sender, false);
         _lastPublicationId = publicationFeed.publish(attributes).id;
 
         // Publish each delayed inclusion as a separate publication
-        IDelayedInclusionStore.Inclusion[] memory inclusions = DelayedInclusionStore.processDueInclusions();
+        IDelayedInclusionStore.Inclusion[] memory inclusions = processDueInclusions();
         uint256 nInclusions = inclusions.length;
         // Metadata is the same as the regular publication, so we just set `isDelayedInclusion` to true
         metadata.isDelayedInclusion = true;
@@ -75,10 +82,16 @@ contract TaikoInbox is IInbox, DelayedInclusionStore {
             attributes[LAST_PUBLICATION] = abi.encode(_lastPublicationId);
             attributes[BLOB_REFERENCE] = abi.encode(inclusions[i]);
 
+            proposerFees.payPublicationFee{value: delayedPublicationFee}(msg.sender, true);
             _lastPublicationId = publicationFeed.publish(attributes).id;
         }
 
         lastPublicationId = uint64(_lastPublicationId);
+    }
+
+    function _getRefHash(uint256[] memory blobIndices) internal override returns (bytes32) {
+        (bytes32 refHash,) = blobRefRegistry.registerRef(blobIndices);
+        return refHash;
     }
 
     function _buildBlobIndices(uint256 nBlobs) private pure returns (uint256[] memory blobIndices) {
