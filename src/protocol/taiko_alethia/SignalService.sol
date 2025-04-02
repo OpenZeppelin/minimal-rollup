@@ -5,7 +5,6 @@ import {LibSignal} from "../../libs/LibSignal.sol";
 import {LibTrieProof} from "../../libs/LibTrieProof.sol";
 import {CommitmentStore} from "../CommitmentStore.sol";
 import {ETHBridge} from "../ETHBridge.sol";
-import {ICheckpointTracker} from "../ICheckpointTracker.sol";
 import {ISignalService} from "../ISignalService.sol";
 
 /// @dev Implementation of a secure cross-chain messaging system for broadcasting arbitrary data (i.e. signals).
@@ -16,7 +15,7 @@ import {ISignalService} from "../ISignalService.sol";
 contract SignalService is ISignalService, ETHBridge, CommitmentStore {
     using LibSignal for bytes32;
 
-    constructor(address _rollup) CommitmentStore(_rollup) {}
+    constructor(address _rollupOperator) CommitmentStore(_rollupOperator) {}
 
     /// @inheritdoc ISignalService
     function sendSignal(bytes32 value) external returns (bytes32 slot) {
@@ -73,6 +72,8 @@ contract SignalService is ISignalService, ETHBridge, CommitmentStore {
         bytes[] memory accountProof,
         bytes[] memory storageProof
     ) internal view {
+        // WARN: commitmentAt(height) might not be the 'state root' of the chain
+        // it could be a block hash, in this case further operations are needed
         bytes32 root = commitmentAt(height);
         bool valid = LibSignal.verifySignal(root, chainId, sender, value, accountProof, storageProof);
         require(valid, SignalNotReceived(value));

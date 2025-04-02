@@ -20,6 +20,21 @@ interface ICommitmentStore {
     /// @dev The caller is not a recognized authorized committer.
     error UnauthorizedCommitter();
 
+    /// @dev The caller is not a recognized rollup operator.
+    error EmptyRollupOperator();
+
+    /// @dev The caller is not the rollup operator.
+    error OnlyRollupOperator();
+
+    /// @dev The trusted committer address is empty.
+    error EmptyCommitter();
+
+    /// @dev The commitment is not found.
+    error CommitmentNotFound();
+
+    /// @dev Height is greater that the latest height.
+    error HeightGreaterThanLatest();
+
     /// @dev Returns the current authorized committer.
     function authorizedCommitter() external view returns (address);
 

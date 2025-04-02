@@ -8,14 +8,15 @@ import {ICommitmentStore} from "./ICommitmentStore.sol";
 /// Uses a circular buffer to store commitments, size is defined by `bufferLength`.
 abstract contract CommitmentStore is ICommitmentStore {
     address private _authorizedCommitter;
-    address private immutable _rollup;
-
-    mapping(uint256 index => bytes32 commitment) private _commitments;
+    address private immutable _rollupOperator;
     uint256 private _latestHeight;
 
-    constructor(address rollup) {
-        require(rollup != address(0), "Empty Rollup");
-        _rollup = rollup;
+    mapping(uint256 index => bytes32 commitment) private _commitments;
+
+    /// @param rollupOperator The address of the rollup operator
+    constructor(address rollupOperator) {
+        require(rollupOperator != address(0), EmptyRollupOperator());
+        _rollupOperator = rollupOperator;
     }
 
     /// @dev Reverts if the caller is not the `authorizedCommitter`.
@@ -36,8 +37,8 @@ abstract contract CommitmentStore is ICommitmentStore {
 
     /// @inheritdoc ICommitmentStore
     function setAuthorizedCommitter(address newAuthorizedCommitter) external virtual {
-        require(msg.sender == _rollup, "Only Rollup can set authorized committer");
-        require(newAuthorizedCommitter != address(0), "Empty Committer");
+        require(msg.sender == _rollupOperator, OnlyRollupOperator());
+        require(newAuthorizedCommitter != address(0), EmptyCommitter());
         _authorizedCommitter = newAuthorizedCommitter;
         emit AuthorizedCommitterUpdated(newAuthorizedCommitter);
     }
@@ -48,22 +49,23 @@ abstract contract CommitmentStore is ICommitmentStore {
     }
 
     /// @inheritdoc ICommitmentStore
-    function latestHeight() public view virtual returns (uint256 height) {
+    function latestHeight() public view virtual returns (uint256) {
         return _latestHeight;
     }
 
     /// @inheritdoc ICommitmentStore
-    function commitmentAt(uint256 height) public view virtual returns (bytes32 commitment) {
+    function commitmentAt(uint256 height) public view virtual returns (bytes32) {
         uint256 latestHeight_ = _latestHeight;
-        require(height <= latestHeight_, "Height is greater than latest height");
+        require(height <= latestHeight_, HeightGreaterThanLatest());
         uint256 _bufferLength = bufferLength();
-        require(latestHeight_ - height <= _bufferLength, "Commitment not found");
+        require(latestHeight_ - height <= _bufferLength, CommitmentNotFound());
         uint256 index = height % _bufferLength;
         return _commitments[index];
     }
 
     /// @inheritdoc ICommitmentStore
     function storeCommitment(uint256 height, bytes32 commitment) external virtual onlyAuthorizedCommitter {
+        // CHECK: These could be skipped as caller always checks them
         require(commitment != bytes32(0), "Commitment cannot be 0");
         require(height > _latestHeight, "Height must be greater than latest height");
 
