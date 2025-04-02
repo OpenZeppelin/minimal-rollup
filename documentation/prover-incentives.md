@@ -60,6 +60,8 @@ Provers earn rewards only for publications proven within their period and regain
 
 If a registered prover fails to deliver a proof within the `livenessWindow`, anyone can call the `evictProver` function, claiming part of the inactive prover's stake and marking them inactive. This flags the prover for slashing and initiates an auction during the `exitDelay` window for selecting a new prover.
 
+![Fallback mechanism](./images/prover-manager-fallback.png)
+
 Unproven publications from the evicted prover become permissionless. The prover who successfully proves them receives part of the evicted prover’s stake; the remainder is burned or sent to the treasury(we plan the stack to support inidivudal rollups to choose how they want to distribute this). Fees for unproven publications go to the new prover, while fees for publications already proven remain with the original prover. Another option was to assign the rights to prove these publications to the prover who wins the auction for the next period, but then we need to handle the fallback mechanism for them as well. For now, we opted for the simpler approach.
 
 ### Dealing with forced inclusions
@@ -83,7 +85,7 @@ The proposed solution is to require the delayed proposer to pay a proving fee, *
 
 ## Alternatives
 
-Is an on-chain incentive mechanism the only solution? No, but it's currently the most practical and can be combined with future approaches. Alternatives explored:
+Is an on-chain incentive mechanism the only solution? No, but it's currently the most practical and can be combined with future approaches. Here are some of the alternatives we explored:
 
 - Off-chain market: Some of the dynamics of the proposed design can be achieved off-chain, but the incentives remain outside of the protocol's control and has some negative externalities described in the [The problem](#the-problem) section.
 
