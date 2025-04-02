@@ -163,7 +163,7 @@ library MerkleTrie {
                     revert("MerkleTrie: received a node with an unknown prefix");
                 }
             } else {
-                revert("MerkleTrie: received an unparseable node");
+                revert("MerkleTrie: received an unparsable node");
             }
         }
 

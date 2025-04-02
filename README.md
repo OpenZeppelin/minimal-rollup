@@ -25,4 +25,4 @@ This repository contains the [smart contracts](src/) and [documentation](documen
 ## Non Goals
 
 1. Synchronous composability: We are realistic about the fact that real time proving will still take some time - so at least for now, the stack is not designed to be synchronous composable, but it is designed to embrace it in the future.
-2. AltDA support: The stack is designed to work only with Ethereum as DA, more especifically blobs. It shouldn't be too hard to extend it to other DA(s), but it is not provided out of the box.
+2. AltDA support: The stack is designed to work only with Ethereum as DA, more specifically blobs. It shouldn't be too hard to extend it to other DA(s), but it is not provided out of the box.

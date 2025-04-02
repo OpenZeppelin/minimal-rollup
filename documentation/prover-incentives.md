@@ -32,7 +32,7 @@ If proposers are sophisticated enough, an off-chain market might develop where m
 We propose an on-chain auction where the protocol maintains visibility and control over incentives.
 
 Anyone can register as a designated prover by specifying their fee **per publication**. The prover offering the lowest fee gains exclusive rights to prove publications until another prover undercuts them with a lower fee. This ensures proposers know the exact cost of proving their publications upfront, eliminating the need for additional capital and improving capital efficiency and participation.
-To prevent bidding wars (i.e., new participants undercutting by just one wei) that can cause unnecesary gas spikes, new provers must offer a fee that is **at least a defined percentage lower** than the current lowest fee.
+To prevent bidding wars (i.e., new participants undercutting by just one wei) that can cause unnecessary gas spikes, new provers must offer a fee that is **at least a defined percentage lower** than the current lowest fee.
 
 *This system functions effectively as a reverse English auction conducted ahead of time.*
 
@@ -81,7 +81,7 @@ The proposed solution is to require the delayed proposer to pay a proving fee, *
 3. **Incentives:** Discourages actors from batching transactions purely to reduce costs.
 
 > [!NOTE]
-> This has not been implemented yet, and pricing delayed publications differently has the practical downside that we need to keep track of inidividual publications fees on the ProverManager contract, which increases storage costs.
+> This has not been implemented yet, and pricing delayed publications differently has the practical downside that we need to keep track of individual publications fees on the ProverManager contract, which increases storage costs.
 
 ## Alternatives
 
@@ -89,4 +89,4 @@ Is an on-chain incentive mechanism the only solution? No, but it's currently the
 
 - Off-chain market: Some of the dynamics of the proposed design can be achieved off-chain, but the incentives remain outside of the protocol's control and has some negative externalities described in the [The problem](#the-problem) section.
 
-- [Aggregation layers](https://ethereum-magicians.org/t/a-simple-l2-security-and-finalization-roadmap/23309#p-56644-h-3-work-on-aggregation-layers-3) can help solve this problem by amortizing the costs among multiple rollups, but we still don't have common standards and a layer that does not introduce new security tradeoffs. Eventually, we want rollups to post proofs to L1 every slot, but we are still away from that. Even when using aggreagaton across multiple rollups, it will be useful to have a mechanism to allow a single prover to generate proofs for multiple consecutive batches.
+- [Aggregation layers](https://ethereum-magicians.org/t/a-simple-l2-security-and-finalization-roadmap/23309#p-56644-h-3-work-on-aggregation-layers-3) can help solve this problem by amortizing the costs among multiple rollups, but we still don't have common standards and a layer that does not introduce new security tradeoffs. Eventually, we want rollups to post proofs to L1 every slot, but we are still away from that. Even when using aggregation across multiple rollups, it will be useful to have a mechanism to allow a single prover to generate proofs for multiple consecutive batches.
