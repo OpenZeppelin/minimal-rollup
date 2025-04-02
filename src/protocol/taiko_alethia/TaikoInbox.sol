@@ -42,6 +42,7 @@ contract TaikoInbox is IInbox, DelayedInclusionStore {
     ) DelayedInclusionStore(_inclusionDelay) {
         publicationFeed = IPublicationFeed(_publicationFeed);
         lookahead = ILookahead(_lookahead);
+        blobRefRegistry = IBlobRefRegistry(_blobRefRegistry);
         maxAnchorBlockIdOffset = _maxAnchorBlockIdOffset;
         proposerFees = IProposerFees(_proposerFees);
     }

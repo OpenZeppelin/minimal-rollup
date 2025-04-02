@@ -52,7 +52,7 @@ abstract contract DelayedInclusionStore is IDelayedInclusionStore {
     /// otherwise returns an empty array.
     /// @dev Can only be called by the inbox contract.
     function processDueInclusions() public virtual returns (Inclusion[] memory) {
-        require(msg.sender == address(this), "only inbox can call");
+        require(msg.sender == address(this), OnlyInbox());
         uint256 len = _delayedInclusions.length;
         uint256 head = _head;
         if (head >= len) {
