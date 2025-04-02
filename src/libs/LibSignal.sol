@@ -12,7 +12,7 @@ import {StorageSlot} from "@openzeppelin/contracts/utils/StorageSlot.sol";
 /// with the `signal` function, allowing to generate a storage proof with an `eth_getProof` RPC call.
 ///
 /// Later, on a destination chain the signal can be proven by providing the proof to `verifySignal` as long as the
-/// state root is trusted (e.g. the L1 state root can made available on the L2 by the proposer).
+/// state root is trusted.
 library LibSignal {
     using StorageSlot for bytes32;
     using SlotDerivation for string;

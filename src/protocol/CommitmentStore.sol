@@ -24,7 +24,7 @@ abstract contract CommitmentStore is ICommitmentStore {
         _;
     }
 
-    /// @notice Returns the size of the circular buffer (can override).
+    /// @notice Returns the size of the circular buffer.
     function bufferLength() public view virtual returns (uint256) {
         return 256;
     }
