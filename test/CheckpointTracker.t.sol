@@ -87,7 +87,7 @@ contract CheckpointTrackerTest is Test {
         assertEq(provenCheckpoint.commitment, end.commitment);
     }
 
-    function test_proveTransition_RevertWhenEndCheckpointIsZero() public {
+    function test_proveTransition_RevertWhenEndCommitmentIsZero() public {
         ICheckpointTracker.Checkpoint memory start =
             ICheckpointTracker.Checkpoint({publicationId: 0, commitment: keccak256(abi.encode("genesis"))});
         ICheckpointTracker.Checkpoint memory end =
