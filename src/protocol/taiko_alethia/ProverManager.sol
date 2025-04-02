@@ -154,6 +154,7 @@ contract ProverManager is IProposerFees, IProverManager {
         uint256 currentPeriod = currentPeriodId;
         Period storage _currentPeriod = _periods[currentPeriod];
         Period storage _nextPeriod = _periods[currentPeriod + 1];
+        bool bondReused = _currentPeriod.prover == msg.sender;
         if (_currentPeriod.end == 0) {
             _ensureSufficientUnderbid(_currentPeriod.fee, offeredFee);
             _closePeriod(_currentPeriod, successionDelay, provingWindow);
@@ -172,7 +173,7 @@ contract ProverManager is IProposerFees, IProverManager {
 
         // Record the next period info
         uint256 _livenessBond = livenessBond;
-        bool bondReused = _updatePeriod(_nextPeriod, msg.sender, offeredFee, _livenessBond);
+        _updatePeriod(_nextPeriod, msg.sender, offeredFee, _livenessBond, bondReused);
 
         emit ProverOffer(msg.sender, currentPeriod + 1, offeredFee, _livenessBond, bondReused);
     }
@@ -309,7 +310,7 @@ contract ProverManager is IProposerFees, IProverManager {
         _closePeriod(period, 0, 0);
 
         Period storage nextPeriod = _periods[periodId + 1];
-        _updatePeriod(nextPeriod, prover, fee, livenessBond);
+        _updatePeriod(nextPeriod, prover, fee, livenessBond, false);
     }
 
     /// @dev Calculates the percentage of a given numerator scaling up to avoid precision loss
@@ -325,24 +326,21 @@ contract ProverManager is IProposerFees, IProverManager {
     /// @param prover The address of the prover
     /// @param fee The fee offered by the prover
     /// @param stake The liveness bond to be staked
-    function _updatePeriod(Period storage period, address prover, uint256 fee, uint256 stake)
+    /// @param bondReused The bond is reused if same prover is continuing from previous period
+    function _updatePeriod(Period storage period, address prover, uint256 fee, uint256 stake, bool bondReused)
         private
-        returns (bool bondReused)
     {
         period.prover = prover;
         period.fee = fee;
 
-        // Reuse bond if same prover is continuing from previous period
-        if (_periods[currentPeriodId].prover == prover) {
+        if (bondReused) {
             // Carry over existing stake — no deduction needed
             period.stake = _periods[currentPeriodId].stake;
-            return true;
         } else {
             // New prover or fresh start — deduct stake from balance
             require(balances[prover] >= stake, "Insufficient balance for bond");
             balances[prover] -= stake;
             period.stake = stake;
-            return false;
         }
     }
 
