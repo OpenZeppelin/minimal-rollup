@@ -152,7 +152,7 @@ contract StaggeredInclusionStateTest is StaggeredInclusionState {
     }
 
     function test_processDueInclusions_SecondPartDue() public {
-        vm.prank(address(inbox));
+       vm.prank(address(inbox));
         vm.warp(timeB + inclusionDelay);
 
         DelayedInclusionStore.Inclusion[] memory inclusions = inbox.processDueInclusions();
