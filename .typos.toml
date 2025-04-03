@@ -1,0 +1,8 @@
+[files]
+extend-exclude = ["lib/", "*.svg", "*.tex" ]
+
+[default.extend-words]
+groth = "groth"
+
+[default.extend-identifiers]
+groth16 = "groth16"
