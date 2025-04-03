@@ -31,21 +31,22 @@ abstract contract DelayedInclusionStore is IDelayedInclusionStore {
     /// wait in the queue to be included expressed in seconds
     uint256 public immutable inclusionDelay;
 
+    IBlobRefRegistry public immutable blobRefRegistry;
+
     /// @param _inclusionDelay The delay before next set of inclusions can be processed.
-    constructor(uint256 _inclusionDelay) {
+    constructor(uint256 _inclusionDelay, address _blobRefRegistry) {
         inclusionDelay = _inclusionDelay;
+        blobRefRegistry = IBlobRefRegistry(_blobRefRegistry);
     }
 
     /// @inheritdoc IDelayedInclusionStore
     /// @dev Stores the blob reference as a DueInclusion
     function publishDelayed(uint256[] memory blobIndices) external virtual {
-        bytes32 refHash = _getRefHash(blobIndices);
+        (bytes32 refHash,) = blobRefRegistry.registerRef(blobIndices);
         DueInclusion memory dueInclusion = DueInclusion(refHash, block.timestamp + inclusionDelay);
         _delayedInclusions.push(dueInclusion);
         emit DelayedInclusionStored(msg.sender, dueInclusion);
     }
-
-    function _getRefHash(uint256[] memory blobIndices) internal virtual returns (bytes32);
 
     /// @notice Returns a list of publications that should be processed by the Inbox
     /// @dev Only returns inclusions if the delay period has passed

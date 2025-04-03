@@ -20,7 +20,6 @@ contract TaikoInbox is IInbox, DelayedInclusionStore {
 
     IPublicationFeed public immutable publicationFeed;
     ILookahead public immutable lookahead;
-    IBlobRefRegistry public immutable blobRefRegistry;
     IProposerFees public immutable proposerFees;
 
     uint256 public immutable maxAnchorBlockIdOffset;
@@ -39,10 +38,9 @@ contract TaikoInbox is IInbox, DelayedInclusionStore {
         uint256 _maxAnchorBlockIdOffset,
         address _proposerFees,
         uint256 _inclusionDelay
-    ) DelayedInclusionStore(_inclusionDelay) {
+    ) DelayedInclusionStore(_inclusionDelay, _blobRefRegistry) {
         publicationFeed = IPublicationFeed(_publicationFeed);
         lookahead = ILookahead(_lookahead);
-        blobRefRegistry = IBlobRefRegistry(_blobRefRegistry);
         maxAnchorBlockIdOffset = _maxAnchorBlockIdOffset;
         proposerFees = IProposerFees(_proposerFees);
     }
@@ -88,11 +86,6 @@ contract TaikoInbox is IInbox, DelayedInclusionStore {
         }
 
         lastPublicationId = uint64(_lastPublicationId);
-    }
-
-    function _getRefHash(uint256[] memory blobIndices) internal override returns (bytes32) {
-        (bytes32 refHash,) = blobRefRegistry.registerRef(blobIndices);
-        return refHash;
     }
 
     function _buildBlobIndices(uint256 nBlobs) private pure returns (uint256[] memory blobIndices) {
