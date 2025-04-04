@@ -12,7 +12,7 @@ import {StorageSlot} from "@openzeppelin/contracts/utils/StorageSlot.sol";
 abstract contract ETHBridge is IETHBridge {
     using StorageSlot for bytes32;
 
-    mapping(bytes32 id => bool) _claimed;
+    mapping(bytes32 id => bool claimed) private _claimed;
 
     /// Incremental nonce to generate unique deposit IDs.
     uint256 private _globalDepositNonce;
