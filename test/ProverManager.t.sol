@@ -512,7 +512,7 @@ contract ProverManagerTest is Test {
         uint256 numRelevantPublications = 2;
         // Setup: Create publications and pay for the fees
         IPublicationFeed.PublicationHeader[] memory headers =
-            _insertPublicationsWithFees(numRelevantPublications, INITIAL_FEE);
+            _insertPublicationsWithFees(numRelevantPublications, INITIAL_FEE, false);
         IPublicationFeed.PublicationHeader memory startHeader = headers[0];
         IPublicationFeed.PublicationHeader memory endHeader = headers[1];
 
@@ -544,11 +544,53 @@ contract ProverManagerTest is Test {
         assertEq(proverBalanceAfter, proverBalanceBefore + INITIAL_FEE * 2, "Prover should receive fees");
     }
 
+    function test_prove_OpenPeriod_DelayedFees() public {
+        uint256 numRegularPublications = 2;
+        uint256 numDelayedPublications = 1;
+
+        // Setup: Create publications and pay for the fees
+        IPublicationFeed.PublicationHeader[] memory headers =
+            _insertPublicationsWithFees(numRegularPublications, INITIAL_FEE, false);
+        IPublicationFeed.PublicationHeader[] memory delayedHeaders =
+            _insertPublicationsWithFees(numDelayedPublications, INITIAL_FEE, true);
+        IPublicationFeed.PublicationHeader memory startHeader = headers[0];
+        IPublicationFeed.PublicationHeader memory endHeader = delayedHeaders[0];
+
+        // Create checkpoints for the publications
+        ICheckpointTracker.Checkpoint memory startCheckpoint = ICheckpointTracker.Checkpoint({
+            publicationId: startHeader.id - 1,
+            commitment: keccak256(abi.encode("commitment1"))
+        });
+        ICheckpointTracker.Checkpoint memory endCheckpoint = ICheckpointTracker.Checkpoint({
+            publicationId: endHeader.id,
+            commitment: keccak256(abi.encode("commitment2"))
+        });
+
+        // // Prove the publications
+        uint256 proverBalanceBefore = proverManager.balances(initialProver);
+
+        proverManager.prove(
+            startCheckpoint,
+            endCheckpoint,
+            startHeader,
+            endHeader,
+            numRegularPublications + numDelayedPublications,
+            numDelayedPublications,
+            "0x", // any proof
+            INITIAL_PERIOD
+        );
+
+        uint256 proverBalanceAfter = proverManager.balances(initialProver);
+        uint256 expectedBalance = proverBalanceBefore + INITIAL_FEE * numRegularPublications
+            + _calculatePercentage(INITIAL_FEE, proverManager.delayedFeePercentage()) * numDelayedPublications;
+        assertEq(proverBalanceAfter, expectedBalance, "Prover should receive fees");
+    }
+
     function test_prove_ClosedPeriod() public {
         uint256 numRelevantPublications = 2;
         // Setup: Create publications and pay for the fees
         IPublicationFeed.PublicationHeader[] memory headers =
-            _insertPublicationsWithFees(numRelevantPublications, INITIAL_FEE);
+            _insertPublicationsWithFees(numRelevantPublications, INITIAL_FEE, false);
         IPublicationFeed.PublicationHeader memory startHeader = headers[0];
         IPublicationFeed.PublicationHeader memory endHeader = headers[1];
 
@@ -594,7 +636,8 @@ contract ProverManagerTest is Test {
     function test_prove_ClosedPeriod_MultipleCalls() public {
         // Setup: Create publications and pay for the fees
         uint256 numPublications = 4;
-        IPublicationFeed.PublicationHeader[] memory headers = _insertPublicationsWithFees(numPublications, INITIAL_FEE);
+        IPublicationFeed.PublicationHeader[] memory headers =
+            _insertPublicationsWithFees(numPublications, INITIAL_FEE, false);
         IPublicationFeed.PublicationHeader memory startHeader1 = headers[0];
         IPublicationFeed.PublicationHeader memory startHeader2 = headers[2];
         IPublicationFeed.PublicationHeader memory endHeader2 = headers[3];
@@ -761,7 +804,7 @@ contract ProverManagerTest is Test {
         uint256 numRelevantPublications = 2;
         // Setup: Create publications and pay for the fees
         IPublicationFeed.PublicationHeader[] memory headers =
-            _insertPublicationsWithFees(numRelevantPublications, INITIAL_FEE);
+            _insertPublicationsWithFees(numRelevantPublications, INITIAL_FEE, false);
         IPublicationFeed.PublicationHeader memory startHeader = headers[0];
         IPublicationFeed.PublicationHeader memory endHeader = headers[1];
 
@@ -827,7 +870,7 @@ contract ProverManagerTest is Test {
 
         // Setup: Create publications and pay for the fees
         IPublicationFeed.PublicationHeader[] memory headers =
-            _insertPublicationsWithFees(numRelevantPublications, INITIAL_FEE);
+            _insertPublicationsWithFees(numRelevantPublications, INITIAL_FEE, false);
         IPublicationFeed.PublicationHeader memory startHeader = headers[0];
         IPublicationFeed.PublicationHeader memory endHeader = headers[1];
 
@@ -969,15 +1012,19 @@ contract ProverManagerTest is Test {
         return header;
     }
 
-    function _insertPublicationsWithFees(uint256 numPublications, uint256 fee)
+    function _insertPublicationsWithFees(uint256 numPublications, uint256 fee, bool delayed)
         internal
         returns (IPublicationFeed.PublicationHeader[] memory)
     {
+        uint256 depositAmount =
+            delayed ? _calculatePercentage(fee, DELAYED_FEE_PERCENTAGE) * numPublications : fee * numPublications;
+        _deposit(proposer, depositAmount);
+
         IPublicationFeed.PublicationHeader[] memory headers = new IPublicationFeed.PublicationHeader[](numPublications);
         for (uint256 i = 0; i < numPublications; i++) {
             headers[i] = _insertPublication();
             vm.prank(inbox);
-            proverManager.payPublicationFee{value: fee}(proposer, false);
+            proverManager.payPublicationFee(proposer, delayed);
         }
         return headers;
     }
