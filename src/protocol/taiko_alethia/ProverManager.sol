@@ -159,27 +159,27 @@ contract ProverManager is IProposerFees, IProverManager {
     /// period is active or not.
     /// An active period is one that doesn't have an `end` timestamp yet.
     function bid(uint256 offeredFee) external {
-        uint256 currentPeriod = currentPeriodId;
-        Period storage _currentPeriod = _periods[currentPeriod];
-        Period storage _nextPeriod = _periods[currentPeriod + 1];
-        if (_currentPeriod.end == 0) {
-            _ensureSufficientUnderbid(_currentPeriod.fee, offeredFee);
-            _closePeriod(_currentPeriod, successionDelay, provingWindow);
+        uint256 currentPeriodId_ = currentPeriodId;
+        Period storage currentPeriod = _periods[currentPeriodId_];
+        Period storage nextPeriod = _periods[currentPeriodId_ + 1];
+        if (currentPeriod.end == 0) {
+            _ensureSufficientUnderbid(currentPeriod.fee, offeredFee);
+            _closePeriod(currentPeriod, successionDelay, provingWindow);
         } else {
-            address _nextProverAddress = _nextPeriod.prover;
-            if (_nextProverAddress != address(0)) {
-                _ensureSufficientUnderbid(_nextPeriod.fee, offeredFee);
+            address nextProverAddress = nextPeriod.prover;
+            if (nextProverAddress != address(0)) {
+                _ensureSufficientUnderbid(nextPeriod.fee, offeredFee);
 
                 // Refund the liveness bond to the losing bid
-                balances[_nextProverAddress] += _nextPeriod.stake;
+                balances[nextProverAddress] += nextPeriod.stake;
             }
         }
 
         // Record the next period info
-        uint256 _livenessBond = livenessBond;
-        _updatePeriod(_nextPeriod, msg.sender, offeredFee, _livenessBond);
+        uint256 livenessBond_ = livenessBond;
+        _updatePeriod(nextPeriod, msg.sender, offeredFee, livenessBond_);
 
-        emit ProverOffer(msg.sender, currentPeriod + 1, offeredFee, _livenessBond);
+        emit ProverOffer(msg.sender, currentPeriodId_ + 1, offeredFee, livenessBond_);
     }
 
     /// @inheritdoc IProverManager
@@ -213,12 +213,12 @@ contract ProverManager is IProposerFees, IProverManager {
     /// @dev The liveness bond can only be withdrawn once the period has been fully proven.
     function exit() external {
         Period storage period = _periods[currentPeriodId];
-        address _prover = period.prover;
-        require(msg.sender == _prover, "Not current prover");
+        address prover = period.prover;
+        require(msg.sender == prover, "Not current prover");
         require(period.end == 0, "Prover already exited");
 
         (uint256 end, uint256 deadline) = _closePeriod(period, exitDelay, provingWindow);
-        emit ProverExited(_prover, end, deadline);
+        emit ProverExited(prover, end, deadline);
     }
 
     /// @inheritdoc IProverManager
@@ -356,15 +356,15 @@ contract ProverManager is IProposerFees, IProverManager {
     /// @dev Sets a period's end and deadline timestamps
     /// @param period The period to finalize
     /// @param endDelay The duration (from now) when the period will end
-    /// @param _provingWindow The duration that proofs can be submitted after the end of the period
+    /// @param provingWindow_ The duration that proofs can be submitted after the end of the period
     /// @return end The period's end timestamp
     /// @return deadline The period's deadline timestamp
-    function _closePeriod(Period storage period, uint256 endDelay, uint256 _provingWindow)
+    function _closePeriod(Period storage period, uint256 endDelay, uint256 provingWindow_)
         private
         returns (uint256 end, uint256 deadline)
     {
         end = block.timestamp + endDelay;
-        deadline = end + _provingWindow;
+        deadline = end + provingWindow_;
         period.end = end;
         period.deadline = deadline;
     }
