@@ -142,13 +142,10 @@ contract ProverManager is IProposerFees, IProverManager {
         uint256 periodId = currentPeriodId;
 
         uint256 periodEnd = _periods[periodId].end;
-        bool newPeriod = periodEnd != 0 && block.timestamp > periodEnd;
-        if (newPeriod) {
+        if (periodEnd != 0 && block.timestamp > periodEnd) {
             // Advance to the next period
             currentPeriodId = ++periodId;
             emit NewPeriod(periodId);
-            // Set the delayed fee percentage for the new period
-            _periods[periodId].delayedFeePercentage = delayedFeePercentage;
         }
 
         // Deduct fee from proposer's balance
@@ -156,8 +153,7 @@ contract ProverManager is IProposerFees, IProverManager {
         if (isDelayed) {
             // If it is a new period, we already have the value of the delayed fee percentage. The compiler should
             // usually be able to optimize this, but to make sure we do it explicitly.
-            uint16 delayedFeePercentage_ = newPeriod ? delayedFeePercentage : _periods[periodId].delayedFeePercentage;
-            fee = _calculatePercentage(fee, delayedFeePercentage_);
+            fee = _calculatePercentage(fee, _periods[periodId].delayedFeePercentage);
         }
         balances[proposer] -= fee;
     }
@@ -246,10 +242,6 @@ contract ProverManager is IProposerFees, IProverManager {
         bytes calldata proof,
         uint256 periodId
     ) external {
-        require(
-            numDelayedPublications <= numPublications, "Number of delayed publications cannot be greater than total"
-        );
-
         Period storage period = _periods[periodId];
         uint256 previousPeriodEnd = periodId > 0 ? _periods[periodId - 1].end : 0;
 
@@ -353,6 +345,7 @@ contract ProverManager is IProposerFees, IProverManager {
     function _updatePeriod(Period storage period, address prover, uint256 fee, uint256 stake) private {
         period.prover = prover;
         period.fee = fee;
+        period.delayedFeePercentage = delayedFeePercentage;
         period.stake = stake; // overwrite previous value. We assume the previous value is zero or already returned
         balances[prover] -= stake;
     }

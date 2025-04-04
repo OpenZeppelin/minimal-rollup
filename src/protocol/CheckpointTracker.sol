@@ -54,6 +54,10 @@ contract CheckpointTracker is ICheckpointTracker {
         );
 
         require(start.publicationId < end.publicationId, "End publication must be after the last proven publication");
+        require(
+            numDelayedPublications <= numPublications,
+            "Number of delayed publications cannot be greater than the total number of publications"
+        );
 
         bytes32 startPublicationHash = publicationFeed.getPublicationHash(start.publicationId);
         bytes32 endPublicationHash = publicationFeed.getPublicationHash(end.publicationId);

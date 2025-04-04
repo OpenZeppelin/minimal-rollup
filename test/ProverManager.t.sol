@@ -18,6 +18,7 @@ contract ProverManagerTest is Test {
     NullVerifier verifier;
     PublicationFeed publicationFeed;
     uint256 constant DEPOSIT_AMOUNT = 2 ether;
+    uint256 constant ZERO_DELAYED_PUBLICATIONS = 0;
 
     // Addresses used for testing.
     address inbox = address(0x100);
@@ -37,6 +38,7 @@ contract ProverManagerTest is Test {
     uint256 constant EVICTOR_INCENTIVE_PERCENTAGE = 500; // 5%
     uint256 constant REWARD_PERCENTAGE = 9000; // 90%
     uint256 constant INITIAL_FEE = 0.1 ether;
+    uint16 constant DELAYED_FEE_PERCENTAGE = 15_000; // 150%
     uint256 constant INITIAL_PERIOD = 1;
 
     function setUp() public {
@@ -55,7 +57,8 @@ contract ProverManagerTest is Test {
             provingWindow: PROVING_WINDOW,
             livenessBond: LIVENESS_BOND,
             evictorIncentivePercentage: EVICTOR_INCENTIVE_PERCENTAGE,
-            rewardPercentage: REWARD_PERCENTAGE
+            rewardPercentage: REWARD_PERCENTAGE,
+            delayedFeePercentage: DELAYED_FEE_PERCENTAGE
         });
 
         // Deploy ProverManager with constructor funds.
@@ -532,6 +535,7 @@ contract ProverManagerTest is Test {
             startHeader,
             endHeader,
             numRelevantPublications,
+            ZERO_DELAYED_PUBLICATIONS,
             "0x", // any proof
             INITIAL_PERIOD
         );
@@ -572,6 +576,7 @@ contract ProverManagerTest is Test {
             startHeader,
             endHeader,
             numRelevantPublications,
+            ZERO_DELAYED_PUBLICATIONS,
             "0x", // any proof
             INITIAL_PERIOD
         );
@@ -612,7 +617,9 @@ contract ProverManagerTest is Test {
 
         // Prove the publications with prover1
         vm.prank(prover1);
-        proverManager.prove(startCheckpoint, endCheckpoint, startHeader1, endHeader2, 2, "0x", INITIAL_PERIOD);
+        proverManager.prove(
+            startCheckpoint, endCheckpoint, startHeader1, endHeader2, 2, ZERO_DELAYED_PUBLICATIONS, "0x", INITIAL_PERIOD
+        );
 
         // Prove the other publications with prover2
         startCheckpoint = ICheckpointTracker.Checkpoint({
@@ -624,7 +631,9 @@ contract ProverManagerTest is Test {
             commitment: keccak256(abi.encode("commitment4"))
         });
         vm.prank(prover2);
-        proverManager.prove(startCheckpoint, endCheckpoint, startHeader2, endHeader2, 2, "0x", INITIAL_PERIOD);
+        proverManager.prove(
+            startCheckpoint, endCheckpoint, startHeader2, endHeader2, 2, ZERO_DELAYED_PUBLICATIONS, "0x", INITIAL_PERIOD
+        );
 
         // Verify prover1 received the fees
         uint256 prover1BalanceAfter = proverManager.balances(prover1);
@@ -656,7 +665,9 @@ contract ProverManagerTest is Test {
 
         // Attempt to prove with mismatched end checkpoint
         vm.expectRevert("Last publication does not match end checkpoint");
-        proverManager.prove(startCheckpoint, endCheckpoint, startHeader, endHeader, 2, "0x", INITIAL_PERIOD);
+        proverManager.prove(
+            startCheckpoint, endCheckpoint, startHeader, endHeader, 2, ZERO_DELAYED_PUBLICATIONS, "0x", INITIAL_PERIOD
+        );
     }
 
     function test_prove_RevertWhen_LastPublicationAfterPeriodEnd() public {
@@ -682,7 +693,9 @@ contract ProverManagerTest is Test {
 
         // Attempt to prove with publication after period end
         vm.expectRevert("Last publication is after the period");
-        proverManager.prove(startCheckpoint, endCheckpoint, startHeader, lateHeader, 2, "0x", INITIAL_PERIOD);
+        proverManager.prove(
+            startCheckpoint, endCheckpoint, startHeader, lateHeader, 2, ZERO_DELAYED_PUBLICATIONS, "0x", INITIAL_PERIOD
+        );
     }
 
     function test_prove_RevertWhen_FirstPublicationNotAfterStartCheckpoint() public {
@@ -701,7 +714,9 @@ contract ProverManagerTest is Test {
         });
 
         vm.expectRevert("First publication not immediately after start checkpoint");
-        proverManager.prove(startCheckpoint, endCheckpoint, firstHeader, lastHeader, 2, "0x", INITIAL_PERIOD);
+        proverManager.prove(
+            startCheckpoint, endCheckpoint, firstHeader, lastHeader, 2, ZERO_DELAYED_PUBLICATIONS, "0x", INITIAL_PERIOD
+        );
     }
 
     function test_prove_RevertWhen_FirstPublicationBeforePeriod() public {
@@ -727,7 +742,16 @@ contract ProverManagerTest is Test {
 
         // Attempt to prove with first publication before period 2
         vm.expectRevert("First publication is before the period");
-        proverManager.prove(startCheckpoint, endCheckpoint, earlyHeader, lateHeader, 2, "0x", INITIAL_PERIOD + 1);
+        proverManager.prove(
+            startCheckpoint,
+            endCheckpoint,
+            earlyHeader,
+            lateHeader,
+            2,
+            ZERO_DELAYED_PUBLICATIONS,
+            "0x",
+            INITIAL_PERIOD + 1
+        );
     }
 
     /// --------------------------------------------------------------------------
@@ -764,6 +788,7 @@ contract ProverManagerTest is Test {
             startHeader,
             endHeader,
             numRelevantPublications,
+            ZERO_DELAYED_PUBLICATIONS,
             "0x", // any proof
             INITIAL_PERIOD
         );
@@ -830,6 +855,7 @@ contract ProverManagerTest is Test {
             startHeader,
             endHeader,
             numRelevantPublications,
+            ZERO_DELAYED_PUBLICATIONS,
             "0x", // any proof
             INITIAL_PERIOD
         );
@@ -912,7 +938,11 @@ contract ProverManagerTest is Test {
     function test_getCurrentFees_SamePeriod() public view {
         (uint256 fee, uint256 delayedFee) = proverManager.getCurrentFees();
         assertEq(fee, INITIAL_FEE, "Fee should be the initial fee");
-        assertEq(delayedFee, INITIAL_FEE, "Delayed fee should be the initial fee");
+        assertEq(
+            delayedFee,
+            _calculatePercentage(INITIAL_FEE, DELAYED_FEE_PERCENTAGE),
+            "Delayed fee should be the initial fee"
+        );
     }
 
     function test_geCurrentFees_WhenPeriodEnded() public {
@@ -929,7 +959,7 @@ contract ProverManagerTest is Test {
         vm.warp(vm.getBlockTimestamp() + EXIT_DELAY + 1);
         (uint256 fee, uint256 delayedFee) = proverManager.getCurrentFees();
         assertEq(fee, bidFee, "Fee should be the bid fee");
-        assertEq(delayedFee, bidFee, "Delayed fee should be the bid fee");
+        assertEq(delayedFee, _calculatePercentage(bidFee, DELAYED_FEE_PERCENTAGE), "Delayed fee should be the bid fee");
     }
 
     // -- HELPERS --
