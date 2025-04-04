@@ -51,9 +51,7 @@ abstract contract DelayedInclusionStore is IDelayedInclusionStore {
     /// @notice Returns a list of publications that should be processed by the Inbox
     /// @dev Only returns inclusions if the delay period has passed
     /// otherwise returns an empty array.
-    /// @dev Can only be called by the inbox contract.
-    function processDueInclusions() public virtual returns (Inclusion[] memory) {
-        require(msg.sender == address(this), OnlyInbox());
+    function processDueInclusions() internal virtual returns (Inclusion[] memory) {
         uint256 len = _delayedInclusions.length;
         uint256 head = _head;
         if (head >= len) {
