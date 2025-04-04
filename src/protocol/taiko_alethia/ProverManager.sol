@@ -6,7 +6,7 @@ import {IProposerFees} from "../IProposerFees.sol";
 import {IProverManager} from "../IProverManager.sol";
 import {IPublicationFeed} from "../IPublicationFeed.sol";
 
-contract ProverManager is IProposerFees, IProverManager {
+abstract contract ProverManager is IProposerFees, IProverManager {
     // TODO: Optimize storage by packing the struct. Things like `fee` and `delayedFeePercentage` should be packed
     // together.
     struct Period {
@@ -19,53 +19,9 @@ contract ProverManager is IProposerFees, IProverManager {
         bool pastDeadline; // whether the proof came after the deadline
     }
 
-    /// @dev This struct is necessary to pass it to the constructor and avoid stack too deep errors
-    /// When some values in the contract stop being immutable, we may change this to be more efficient
-    struct ProverManagerConfig {
-        uint256 maxBidPercentage;
-        uint256 livenessWindow;
-        uint256 successionDelay;
-        uint256 exitDelay;
-        uint256 provingWindow;
-        uint256 livenessBond;
-        uint256 evictorIncentivePercentage;
-        uint256 rewardPercentage;
-        uint16 delayedFeePercentage;
-    }
-
     address public immutable inbox;
     ICheckpointTracker public immutable checkpointTracker;
     IPublicationFeed public immutable publicationFeed;
-
-    // -- Configuration parameters --
-    /// @notice The maximum percentage (in bps) of the previous bid a prover can offer and still have a successful bid
-    /// @dev This is used to prevent gas wars where the new prover undercuts the current prover by just a few wei
-    uint256 public immutable maxBidPercentage;
-    /// @notice The time window after which a publication is considered old enough and if the prover hasn't proven it
-    /// yet can be evicted
-    uint256 public immutable livenessWindow;
-    /// @notice Time delay before a new prover takes over after a successful bid
-    /// @dev The reason we don't allow this to happen immediately is to allow enough time for other provers to bid,
-    /// prepare their hardware and to ensure no prover's window is too short
-    uint256 public immutable successionDelay;
-    /// @notice The delay after which the current prover can exit, or is removed if evicted because they are inactive
-    /// @dev The reason we don't allow this to happen immediately is to allow enough time for other provers to bid
-    /// and to prepare their hardware
-    uint256 public immutable exitDelay;
-    ///@notice The time window for a prover to submit a valid proof after their period ends
-    uint256 public immutable provingWindow;
-    /// @notice The minimum stake required to be a prover
-    /// @dev This should be enough to cover the cost of a new prover if the current prover becomes inactive
-    uint256 public immutable livenessBond;
-    /// @notice The percentage (in bps) of the liveness bond that the evictor gets as an incentive
-    uint256 public immutable evictorIncentivePercentage;
-    /// @notice The percentage (in bps) of the remaining liveness bond rewarded to the prover who proves the final
-    /// publication after the deadline
-    uint256 public immutable rewardPercentage;
-    /// @notice The percentage (in bps) of the fee that is charged for delayed publications
-    /// @dev It is recommended to set this to >10,000 bps since delayed publications should usually be charged at a
-    /// higher rate
-    uint16 public immutable delayedFeePercentage;
 
     /// @notice Common balances for proposers and provers
     mapping(address user => uint256 balance) public balances;
@@ -86,18 +42,8 @@ contract ProverManager is IProposerFees, IProverManager {
         address _checkpointTracker,
         address _publicationFeed,
         address _initialProver,
-        uint256 _initialFee,
-        ProverManagerConfig memory _config
+        uint256 _initialFee
     ) payable {
-        maxBidPercentage = _config.maxBidPercentage;
-        livenessWindow = _config.livenessWindow;
-        successionDelay = _config.successionDelay;
-        exitDelay = _config.exitDelay;
-        provingWindow = _config.provingWindow;
-        livenessBond = _config.livenessBond;
-        evictorIncentivePercentage = _config.evictorIncentivePercentage;
-        rewardPercentage = _config.rewardPercentage;
-        delayedFeePercentage = _config.delayedFeePercentage;
         inbox = _inbox;
         checkpointTracker = ICheckpointTracker(_checkpointTracker);
         publicationFeed = IPublicationFeed(_publicationFeed);
@@ -164,7 +110,7 @@ contract ProverManager is IProposerFees, IProverManager {
         Period storage nextPeriod = _periods[currentPeriodId_ + 1];
         if (currentPeriod.end == 0) {
             _ensureSufficientUnderbid(currentPeriod.fee, offeredFee);
-            _closePeriod(currentPeriod, successionDelay, provingWindow);
+            _closePeriod(currentPeriod, _successionDelay(), _provingWindow());
         } else {
             address nextProverAddress = nextPeriod.prover;
             if (nextProverAddress != address(0)) {
@@ -176,7 +122,7 @@ contract ProverManager is IProposerFees, IProverManager {
         }
 
         // Record the next period info
-        uint256 livenessBond_ = livenessBond;
+        uint256 livenessBond_ = _livenessBond();
         _updatePeriod(nextPeriod, msg.sender, offeredFee, livenessBond_);
 
         emit ProverOffer(msg.sender, currentPeriodId_ + 1, offeredFee, livenessBond_);
@@ -189,7 +135,7 @@ contract ProverManager is IProposerFees, IProverManager {
         require(publicationFeed.validateHeader(publicationHeader), "Invalid publication");
 
         uint256 publicationTimestamp = publicationHeader.timestamp;
-        require(publicationTimestamp + livenessWindow < block.timestamp, "Publication is not old enough");
+        require(publicationTimestamp + _livenessWindow() < block.timestamp, "Publication is not old enough");
 
         Period storage period = _periods[currentPeriodId];
         require(period.end == 0, "Proving period is not active");
@@ -198,10 +144,10 @@ contract ProverManager is IProposerFees, IProverManager {
         require(publicationHeader.id > lastProven.publicationId, "Publication has been proven");
 
         // We use this to mark the prover as evicted
-        (uint256 end,) = _closePeriod(period, exitDelay, 0);
+        (uint256 end,) = _closePeriod(period, _exitDelay(), 0);
 
         // Reward the evictor and slash the prover
-        uint256 evictorIncentive = _calculatePercentage(period.stake, evictorIncentivePercentage);
+        uint256 evictorIncentive = _calculatePercentage(period.stake, _evictorIncentivePercentage());
         balances[msg.sender] += evictorIncentive;
         period.stake -= evictorIncentive;
 
@@ -217,7 +163,7 @@ contract ProverManager is IProposerFees, IProverManager {
         require(msg.sender == prover, "Not current prover");
         require(period.end == 0, "Prover already exited");
 
-        (uint256 end, uint256 deadline) = _closePeriod(period, exitDelay, provingWindow);
+        (uint256 end, uint256 deadline) = _closePeriod(period, _exitDelay(), _provingWindow());
         emit ProverExited(prover, end, deadline);
     }
 
@@ -282,7 +228,7 @@ contract ProverManager is IProposerFees, IProverManager {
         require(provenPublication.timestamp > period.end, "Publication must be after period");
 
         uint256 stake = period.stake;
-        balances[period.prover] += period.pastDeadline ? _calculatePercentage(stake, rewardPercentage) : stake;
+        balances[period.prover] += period.pastDeadline ? _calculatePercentage(stake, _rewardPercentage()) : stake;
         period.stake = 0;
     }
 
@@ -306,6 +252,52 @@ contract ProverManager is IProposerFees, IProverManager {
         return _periods[periodId];
     }
 
+    /// @dev Ensure the offered fee is low enough. It must be at most `maxBidPercentage` of the fee it is outbidding
+    /// @param fee The fee to be outbid (either the current period's fee or next period's winning fee)
+    /// @param offeredFee The new bid
+    function _ensureSufficientUnderbid(uint256 fee, uint256 offeredFee) internal view virtual {
+        uint256 requiredMaxFee = _calculatePercentage(fee, _maxBidPercentage());
+        require(offeredFee <= requiredMaxFee, "Offered fee not low enough");
+    }
+
+    /// @dev Returns the maximum percentage (in bps) of the previous bid a prover can offer and still have a successful
+    /// bid
+    /// @return _ The maximum bid percentage value
+    function _maxBidPercentage() internal view virtual returns (uint256);
+
+    /// @dev Returns the time window after which a publication is considered old enough for prover eviction
+    /// @return _ The liveness window value in seconds
+    function _livenessWindow() internal view virtual returns (uint256);
+
+    /// @dev Returns the time delay before a new prover takes over after a successful bid
+    /// @return _ The succession delay value in seconds
+    function _successionDelay() internal view virtual returns (uint256);
+
+    /// @dev Returns the delay after which the current prover can exit, or is removed if evicted
+    /// @return _ The exit delay value in seconds
+    function _exitDelay() internal view virtual returns (uint256);
+
+    /// @dev Returns the time window for a prover to submit a valid proof after their period ends
+    /// @return _ The proving window value in seconds
+    function _provingWindow() internal view virtual returns (uint256);
+
+    /// @dev Returns the minimum stake required to be a prover
+    /// @return _ The liveness bond value in wei
+    function _livenessBond() internal view virtual returns (uint256);
+
+    /// @dev Returns the percentage (in bps) of the liveness bond that the evictor gets as an incentive
+    /// @return _ The evictor incentive percentage
+    function _evictorIncentivePercentage() internal view virtual returns (uint256);
+
+    /// @dev Returns the percentage (in bps) of the remaining liveness bond rewarded to the prover
+    /// @return _ The reward percentage
+    function _rewardPercentage() internal view virtual returns (uint256);
+
+    /// @dev The percentage (in bps) of the fee that is charged for delayed publications
+    /// @dev It is recommended to set this to >10,000 bps since delayed publications should usually be charged at a
+    /// higher rate
+    function _delayedFeePercentage() internal view virtual returns (uint16);
+
     /// @dev Increases `user`'s balance by `amount`
     function _deposit(address user, uint256 amount) private {
         balances[user] += amount;
@@ -321,7 +313,7 @@ contract ProverManager is IProposerFees, IProverManager {
         _closePeriod(period, 0, 0);
 
         Period storage nextPeriod = _periods[periodId + 1];
-        _updatePeriod(nextPeriod, prover, fee, livenessBond);
+        _updatePeriod(nextPeriod, prover, fee, _livenessBond());
     }
 
     /// @dev Calculates the percentage of a given numerator scaling up to avoid precision loss
@@ -340,17 +332,9 @@ contract ProverManager is IProposerFees, IProverManager {
     function _updatePeriod(Period storage period, address prover, uint256 fee, uint256 stake) private {
         period.prover = prover;
         period.fee = fee;
-        period.delayedFeePercentage = delayedFeePercentage;
+        period.delayedFeePercentage = _delayedFeePercentage();
         period.stake = stake; // overwrite previous value. We assume the previous value is zero or already returned
         balances[prover] -= stake;
-    }
-
-    /// @dev Ensure the offered fee is low enough. It must be at most `maxBidPercentage` of the fee it is outbidding
-    /// @param fee The fee to be outbid (either the current period's fee or next period's winning fee)
-    /// @param offeredFee The new bid
-    function _ensureSufficientUnderbid(uint256 fee, uint256 offeredFee) private view {
-        uint256 requiredMaxFee = _calculatePercentage(fee, maxBidPercentage);
-        require(offeredFee <= requiredMaxFee, "Offered fee not low enough");
     }
 
     /// @dev Sets a period's end and deadline timestamps
