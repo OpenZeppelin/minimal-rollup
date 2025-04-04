@@ -3,10 +3,14 @@ pragma solidity ^0.8.28;
 
 import {ICheckpointTracker} from "./ICheckpointTracker.sol";
 import {ICommitmentStore} from "./ICommitmentStore.sol";
+
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 
 /// @dev Base contract for storing commitments.
 abstract contract CommitmentStore is ICommitmentStore, Ownable {
+    using SafeCast for uint256;
+
     address private _authorizedCommitter;
 
     mapping(uint256 height => bytes32 commitment) private _commitments;
@@ -40,7 +44,7 @@ abstract contract CommitmentStore is ICommitmentStore, Ownable {
     /// @inheritdoc ICommitmentStore
     function storeCommitment(uint256 height, bytes32 commitment) external virtual onlyAuthorizedCommitter {
         _commitments[height] = commitment;
-        emit CommitmentStored(uint64(block.chainid), commitment, height);
+        emit CommitmentStored(block.chainid.toUint64(), commitment, height);
     }
 
     /// @dev Internal helper to validate the authorizedCommitter.

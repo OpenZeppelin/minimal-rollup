@@ -8,7 +8,7 @@ import {ICheckpointTracker} from "src/protocol/ICheckpointTracker.sol";
 import {ICommitmentStore} from "src/protocol/ICommitmentStore.sol";
 import {PublicationFeed} from "src/protocol/PublicationFeed.sol";
 
-import {SignalService} from "src/protocol/taiko_alethia/SignalService.sol";
+import {SignalService} from "src/protocol/SignalService.sol";
 import {NullVerifier} from "test/mocks/NullVerifier.sol";
 
 contract CheckpointTrackerTest is Test {

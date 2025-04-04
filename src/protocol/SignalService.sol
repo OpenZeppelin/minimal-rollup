@@ -1,17 +1,21 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
-import {LibSignal} from "../../libs/LibSignal.sol";
-import {LibTrieProof} from "../../libs/LibTrieProof.sol";
-import {CommitmentStore} from "../CommitmentStore.sol";
-import {ETHBridge} from "../ETHBridge.sol";
-import {ISignalService} from "../ISignalService.sol";
+import {LibSignal} from "../libs/LibSignal.sol";
+import {LibTrieProof} from "../libs/LibTrieProof.sol";
+import {CommitmentStore} from "./CommitmentStore.sol";
+import {ETHBridge} from "./ETHBridge.sol";
+import {ISignalService} from "./ISignalService.sol";
 
-/// @dev Implementation of a secure cross-chain messaging system for broadcasting arbitrary data (i.e. signals).
+/// @dev SignalService combines secure cross-chain messaging with native token bridging.
 ///
-/// The service defines the minimal logic to broadcast signals through `sendSignal` and verify them with
-/// `verifySignal`. The service is designed to be used in conjunction with the `ETHBridge` contract to
-/// enable cross-chain communication and the CommitmentStore to retrieve trusted state roots.
+/// This contract allows sending arbitrary data as signals via `sendSignal`, verifying signals from other chains using
+/// `verifySignal`, and bridging native ETH with built-in signal generation and verification. It integrates:
+/// - `CommitmentStore` to access trusted state roots,
+/// - `ETHBridge` for native ETH bridging with deposit and claim flows,
+/// - `LibSignal` for signal hashing, storage, and verification logic.
+///
+/// Signals stored can not be deleted and can be verified multiple times.
 contract SignalService is ISignalService, ETHBridge, CommitmentStore {
     using LibSignal for bytes32;
 

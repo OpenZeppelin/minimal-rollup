@@ -5,10 +5,8 @@ import {ICheckpointTracker} from "./ICheckpointTracker.sol";
 import {ICommitmentStore} from "./ICommitmentStore.sol";
 import {IPublicationFeed} from "./IPublicationFeed.sol";
 import {IVerifier} from "./IVerifier.sol";
-import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 
 contract CheckpointTracker is ICheckpointTracker {
-    using SafeCast for uint256;
     /// @notice The current proven checkpoint representing the latest verified state of the rollup
     /// @dev Previous checkpoints are not stored here but are synchronized to the `SignalService`
     /// @dev A checkpoint commitment is any value (typically a state root) that uniquely identifies
