@@ -56,12 +56,8 @@ interface IETHBridge {
     /// sent to the receiver (`to`) after verifying a storage proof.
     /// @param deposit The ETH deposit
     /// @param height The `height` of the checkpoint on the source chain (i.e. the block number or commitmentId)
-    /// @param accountProof Merkle proof for the contract's account against the state root
-    /// @param storageProof Merkle proof for the derived storage slot against the account's storage root
-    function claimDeposit(
-        ETHDeposit memory deposit,
-        uint256 height,
-        bytes[] memory accountProof,
-        bytes[] memory storageProof
-    ) external returns (bytes32 id);
+    /// @param proof Encoded proof of the storage slot where the deposit is stored
+    function claimDeposit(ETHDeposit memory deposit, uint256 height, bytes memory proof)
+        external
+        returns (bytes32 id);
 }

@@ -34,15 +34,8 @@ contract SignalService is ISignalService, ETHBridge, CommitmentStore {
     }
 
     /// @inheritdoc ISignalService
-    function verifySignal(
-        uint64 chainId,
-        uint256 height,
-        address sender,
-        bytes32 value,
-        bytes[] memory accountProof,
-        bytes[] memory storageProof
-    ) external {
-        _verifySignal(chainId, height, sender, value, accountProof, storageProof);
+    function verifySignal(uint64 chainId, uint256 height, address sender, bytes32 value, bytes memory proof) external {
+        _verifySignal(chainId, height, sender, value, proof);
         emit SignalVerified(chainId, sender, value);
     }
 
@@ -55,29 +48,40 @@ contract SignalService is ISignalService, ETHBridge, CommitmentStore {
     // CHECK: Should this function be non-reentrant?
     /// @inheritdoc ETHBridge
     /// @dev Overrides ETHBridge.claimDeposit to add signal verification logic.
-    function claimDeposit(
-        ETHDeposit memory deposit,
-        uint256 height,
-        bytes[] memory accountProof,
-        bytes[] memory storageProof
-    ) external override returns (bytes32 id) {
+    function claimDeposit(ETHDeposit memory deposit, uint256 height, bytes memory proof)
+        external
+        override
+        returns (bytes32 id)
+    {
         id = _generateId(deposit);
 
-        _verifySignal(deposit.chainId, height, deposit.from, id, accountProof, storageProof);
+        _verifySignal(deposit.chainId, height, deposit.from, id, proof);
 
         super._processClaimDepositWithId(id, deposit);
     }
 
-    function _verifySignal(
-        uint64 chainId,
-        uint256 height,
-        address sender,
-        bytes32 value,
-        bytes[] memory accountProof,
-        bytes[] memory storageProof
-    ) internal view {
+    function _verifySignal(uint64 chainId, uint256 height, address sender, bytes32 value, bytes memory proof)
+        internal
+        view
+        virtual
+    {
+        // TODO: commitmentAt(height) might not be the 'state root' of the chain
+        // For now it could be the block hash or other hashed value
+        // further work is needed to ensure we get the 'state root' of the chain
         bytes32 root = commitmentAt(height);
-        bool valid = LibSignal.verifySignal(root, chainId, sender, value, accountProof, storageProof);
+
+        SignalProof memory signalProof = abi.decode(proof, (SignalProof));
+        bytes[] memory accountProof = signalProof.accountProof;
+        bytes[] memory storageProof = signalProof.storageProof;
+        bool valid;
+        // If the account proof is empty we assume `root` is the root of the signal tree
+        if (accountProof.length == 0) {
+            // Only verifies a state proof not full storage proof
+            valid = LibSignal.verifySignal(root, chainId, sender, value, storageProof);
+            require(valid, SignalNotReceived(chainId, value));
+            return;
+        }
+        valid = LibSignal.verifySignal(root, chainId, sender, value, accountProof, storageProof);
         require(valid, SignalNotReceived(chainId, value));
     }
 }

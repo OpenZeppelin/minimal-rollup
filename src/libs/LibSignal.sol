@@ -87,4 +87,12 @@ library LibSignal {
             address(this), deriveSlot(chainId, sender, value), value, root, accountProof, storageProof
         );
     }
+
+    function verifySignal(bytes32 root, uint64 chainId, address sender, bytes32 value, bytes[] memory storageProof)
+        internal
+        pure
+        returns (bool valid)
+    {
+        valid = LibTrieProof.verifyState(LibSignal.deriveSlot(chainId, sender, value), value, root, storageProof);
+    }
 }

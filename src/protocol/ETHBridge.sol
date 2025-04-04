@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
-import {LibTrieProof} from "../libs/LibTrieProof.sol";
-
 import {IETHBridge} from "./IETHBridge.sol";
 import {StorageSlot} from "@openzeppelin/contracts/utils/StorageSlot.sol";
 
@@ -39,12 +37,10 @@ abstract contract ETHBridge is IETHBridge {
     }
 
     /// @inheritdoc IETHBridge
-    function claimDeposit(
-        ETHDeposit memory deposit,
-        uint256 height,
-        bytes[] memory accountProof,
-        bytes[] memory storageProof
-    ) external virtual returns (bytes32 id);
+    function claimDeposit(ETHDeposit memory deposit, uint256 height, bytes memory proof)
+        external
+        virtual
+        returns (bytes32 id);
 
     /// @dev Processes deposit claim by id.
     /// @param id Identifier of the deposit

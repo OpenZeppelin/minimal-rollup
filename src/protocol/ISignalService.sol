@@ -9,6 +9,11 @@ pragma solidity ^0.8.28;
 ///
 /// Signals are broadcast without specific recipients, allowing flexible cross-chain messaging
 interface ISignalService {
+    struct SignalProof {
+        bytes[] accountProof;
+        bytes[] storageProof;
+    }
+
     /// @dev Emitted when a signal is sent.
     /// @param sender The address that sent the signal on the source chain
     /// @param value The signal value
@@ -43,14 +48,6 @@ interface ISignalService {
     /// @param height This refers to the block number / commitmentId where the trusted root is mapped to
     /// @param sender The address that originally sent the signal on the source chain
     /// @param value The signal value to verify
-    /// @param accountProof Merkle proof for the contract's account against the state root
-    /// @param storageProof Merkle proof for the derived storage slot against the account's storage root
-    function verifySignal(
-        uint64 chainId,
-        uint256 height,
-        address sender,
-        bytes32 value,
-        bytes[] memory accountProof,
-        bytes[] memory storageProof
-    ) external;
+    /// @param proof The encoded value of the SignalProof struct
+    function verifySignal(uint64 chainId, uint256 height, address sender, bytes32 value, bytes memory proof) external;
 }
