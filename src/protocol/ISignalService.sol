@@ -16,12 +16,14 @@ interface ISignalService {
 
     /// @dev Emitted when a signal is verified.
     /// @param chainId The chain ID of the source chain where the signal was sent
+    /// @param sender The address of the sender on the source chain
     /// @param value Value that was signaled
     event SignalVerified(uint64 indexed chainId, address indexed sender, bytes32 value);
 
     /// @dev Error when a signal fails to be verified.
     /// @param value Value that was not verified
-    error SignalNotReceived(bytes32 value);
+    /// @param chainId The chain ID of the source chain where the signal was sent
+    error SignalNotReceived(uint64 chainId, bytes32 value);
 
     /// @dev Stores a data signal and returns its storage location.
     /// @param value Data to be stored (signalled)
@@ -37,7 +39,6 @@ interface ISignalService {
     /// @dev Verifies if the signal can be proved to be part of a merkle tree
     /// @dev Signals are not deleted when verified, and can be
     /// verified multiple times by calling this function
-    /// @dev see `LibSignal.verifySignal`
     /// @param chainId The chain ID of the source chain where the signal was sent
     /// @param height This refers to the block number / commitmentId where the trusted root is mapped to
     /// @param sender The address that originally sent the signal on the source chain

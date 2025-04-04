@@ -72,10 +72,8 @@ contract SignalService is ISignalService, ETHBridge, CommitmentStore {
         bytes[] memory accountProof,
         bytes[] memory storageProof
     ) internal view {
-        // WARN: commitmentAt(height) might not be the 'state root' of the chain
-        // it could be a block hash, in this case further operations are needed
         bytes32 root = commitmentAt(height);
         bool valid = LibSignal.verifySignal(root, chainId, sender, value, accountProof, storageProof);
-        require(valid, SignalNotReceived(value));
+        require(valid, SignalNotReceived(chainId, value));
     }
 }
