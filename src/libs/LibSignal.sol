@@ -88,11 +88,18 @@ library LibSignal {
         );
     }
 
-    function verifySignal(bytes32 root, uint64 chainId, address sender, bytes32 value, bytes[] memory storageProof)
+    /// @dev Verifies a value in Merkle-Patricia trie using inclusion proof
+    /// @param root The state root from the source chain to verify against
+    /// @param chainId The chain ID of the source chain where the signal was sent
+    /// @param sender The address that originally sent the signal on the source chain
+    /// @param value The signal value to verify
+    /// @param stateProof Merkle proof for the derived storage slot against the account's storage root
+    /// @return valid Boolean indicating whether the signal was successfully verified
+    function verifySignal(bytes32 root, uint64 chainId, address sender, bytes32 value, bytes[] memory stateProof)
         internal
         pure
         returns (bool valid)
     {
-        valid = LibTrieProof.verifyState(LibSignal.deriveSlot(chainId, sender, value), value, root, storageProof);
+        valid = LibTrieProof.verifyState(LibSignal.deriveSlot(chainId, sender, value), value, root, stateProof);
     }
 }
