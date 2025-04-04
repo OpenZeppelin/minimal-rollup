@@ -6,7 +6,7 @@ interface IProposerFees {
     /// the Inbox contract.
     /// @param proposer The address of the proposer
     /// @param isDelayed Whether the publication is a delayed publication
-    function payPublicationFee(address proposer, bool isDelayed) external payable;
+    function payPublicationFee(address proposer, bool isDelayed) external;
 
     /// @notice Returns the current fees for a period
     /// @return fee The fee for a regular publication

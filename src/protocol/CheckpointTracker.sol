@@ -39,6 +39,7 @@ contract CheckpointTracker is ICheckpointTracker {
         Checkpoint calldata start,
         Checkpoint calldata end,
         uint256 numPublications,
+        uint256 numDelayedPublications,
         bytes calldata proof
     ) external {
         require(
@@ -53,13 +54,23 @@ contract CheckpointTracker is ICheckpointTracker {
         );
 
         require(start.publicationId < end.publicationId, "End publication must be after the last proven publication");
+        require(
+            numDelayedPublications <= numPublications,
+            "Number of delayed publications cannot be greater than the total number of publications"
+        );
 
         bytes32 startPublicationHash = publicationFeed.getPublicationHash(start.publicationId);
         bytes32 endPublicationHash = publicationFeed.getPublicationHash(end.publicationId);
         require(endPublicationHash != 0, "End publication does not exist");
 
         verifier.verifyProof(
-            startPublicationHash, endPublicationHash, start.commitment, end.commitment, numPublications, proof
+            startPublicationHash,
+            endPublicationHash,
+            start.commitment,
+            end.commitment,
+            numPublications,
+            numDelayedPublications,
+            proof
         );
 
         _provenCheckpoint = end;

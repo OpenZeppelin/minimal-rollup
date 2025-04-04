@@ -39,6 +39,7 @@ interface IProverManager {
     /// @param lastPub The last publication header in the transition
     /// @param numPublications The number of publications to process. This is not implied by the start/end publication
     /// ids because the `PublicationFeed` is shared and may contain publications not relevant for this rollup
+    /// @param numDelayedPublications The number of delayed publications from the total of `numPublications`
     /// @param proof Arbitrary data passed to the `verifier` contract to confirm the transition validity
     /// @param periodId The id of the period for which the proof is submitted
     function prove(
@@ -47,6 +48,7 @@ interface IProverManager {
         IPublicationFeed.PublicationHeader calldata firstPub,
         IPublicationFeed.PublicationHeader calldata lastPub,
         uint256 numPublications,
+        uint256 numDelayedPublications,
         bytes calldata proof,
         uint256 periodId
     ) external;

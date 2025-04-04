@@ -67,8 +67,7 @@ contract TaikoInbox is IInbox, DelayedInclusionStore {
         attributes[LAST_PUBLICATION] = abi.encode(_lastPublicationId);
         attributes[BLOB_REFERENCE] = abi.encode(blobRefRegistry.getRef(_buildBlobIndices(nBlobs)));
 
-        (uint256 publicationFee, uint256 delayedPublicationFee) = proposerFees.getCurrentFees();
-        proposerFees.payPublicationFee{value: publicationFee}(msg.sender, false);
+        proposerFees.payPublicationFee(msg.sender, false);
         _lastPublicationId = publicationFeed.publish(attributes).id;
 
         // Publish each delayed inclusion as a separate publication
@@ -81,7 +80,7 @@ contract TaikoInbox is IInbox, DelayedInclusionStore {
             attributes[LAST_PUBLICATION] = abi.encode(_lastPublicationId);
             attributes[BLOB_REFERENCE] = abi.encode(inclusions[i]);
 
-            proposerFees.payPublicationFee{value: delayedPublicationFee}(msg.sender, true);
+            proposerFees.payPublicationFee(msg.sender, true);
             _lastPublicationId = publicationFeed.publish(attributes).id;
         }
 
