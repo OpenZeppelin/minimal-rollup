@@ -7,10 +7,13 @@ import {IProverManager} from "../IProverManager.sol";
 import {IPublicationFeed} from "../IPublicationFeed.sol";
 
 contract ProverManager is IProposerFees, IProverManager {
+    // TODO: Optimize storage by packing the struct. Things like `fee` and `delayedFeePercentage` should be packed
+    // together.
     struct Period {
         address prover;
         uint256 stake; // stake the prover locked to register
         uint256 fee; // per-publication fee (in wei)
+        uint16 delayedFeePercentage; // the percentage (in bps) of the fee that is charged for delayed publications.
         uint256 end; // the end of the period(this may happen because the prover exits, is evicted or outbid)
         uint256 deadline; // the time by which the prover needs to submit a proof
         bool pastDeadline; // whether the proof came after the deadline
@@ -27,6 +30,7 @@ contract ProverManager is IProposerFees, IProverManager {
         uint256 livenessBond;
         uint256 evictorIncentivePercentage;
         uint256 rewardPercentage;
+        uint16 delayedFeePercentage;
     }
 
     address public immutable inbox;
@@ -58,6 +62,10 @@ contract ProverManager is IProposerFees, IProverManager {
     /// @notice The percentage (in bps) of the remaining liveness bond rewarded to the prover who proves the final
     /// publication after the deadline
     uint256 public immutable rewardPercentage;
+    /// @notice The percentage (in bps) of the fee that is charged for delayed publications
+    /// @dev It is recommended to set this to >10,000 bps since delayed publications should usually be charged at a
+    /// higher rate
+    uint16 public immutable delayedFeePercentage;
 
     /// @notice Common balances for proposers and provers
     mapping(address user => uint256 balance) public balances;
@@ -89,6 +97,7 @@ contract ProverManager is IProposerFees, IProverManager {
         livenessBond = _config.livenessBond;
         evictorIncentivePercentage = _config.evictorIncentivePercentage;
         rewardPercentage = _config.rewardPercentage;
+        delayedFeePercentage = _config.delayedFeePercentage;
         inbox = _inbox;
         checkpointTracker = ICheckpointTracker(_checkpointTracker);
         publicationFeed = IPublicationFeed(_publicationFeed);
@@ -122,7 +131,6 @@ contract ProverManager is IProposerFees, IProverManager {
 
     /// @inheritdoc IProposerFees
     /// @dev This function advances to the next period if the current period has ended.
-    // TODO: deal with delayed publications
     function payPublicationFee(address proposer, bool isDelayed) external payable {
         require(msg.sender == inbox, "Only the Inbox contract can call this function");
 
@@ -134,14 +142,24 @@ contract ProverManager is IProposerFees, IProverManager {
         uint256 periodId = currentPeriodId;
 
         uint256 periodEnd = _periods[periodId].end;
-        if (periodEnd != 0 && block.timestamp > periodEnd) {
+        bool newPeriod = periodEnd != 0 && block.timestamp > periodEnd;
+        if (newPeriod) {
             // Advance to the next period
             currentPeriodId = ++periodId;
             emit NewPeriod(periodId);
+            // Set the delayed fee percentage for the new period
+            _periods[periodId].delayedFeePercentage = delayedFeePercentage;
         }
 
         // Deduct fee from proposer's balance
-        balances[proposer] -= _periods[periodId].fee;
+        uint256 fee = _periods[periodId].fee;
+        if (isDelayed) {
+            // If it is a new period, we already have the value of the delayed fee percentage. The compiler should
+            // usually be able to optimize this, but to make sure we do it explicitly.
+            uint16 delayedFeePercentage_ = newPeriod ? delayedFeePercentage : _periods[periodId].delayedFeePercentage;
+            fee = _calculatePercentage(fee, delayedFeePercentage_);
+        }
+        balances[proposer] -= fee;
     }
 
     /// @inheritdoc IProverManager
@@ -224,9 +242,14 @@ contract ProverManager is IProposerFees, IProverManager {
         IPublicationFeed.PublicationHeader calldata firstPub,
         IPublicationFeed.PublicationHeader calldata lastPub,
         uint256 numPublications,
+        uint256 numDelayedPublications,
         bytes calldata proof,
         uint256 periodId
     ) external {
+        require(
+            numDelayedPublications <= numPublications, "Number of delayed publications cannot be greater than total"
+        );
+
         Period storage period = _periods[periodId];
         uint256 previousPeriodEnd = periodId > 0 ? _periods[periodId - 1].end : 0;
 
@@ -238,7 +261,7 @@ contract ProverManager is IProposerFees, IProverManager {
         require(start.publicationId + 1 == firstPub.id, "First publication not immediately after start checkpoint");
         require(firstPub.timestamp > previousPeriodEnd, "First publication is before the period");
 
-        checkpointTracker.proveTransition(start, end, numPublications, proof);
+        checkpointTracker.proveTransition(start, end, numPublications, numDelayedPublications, proof);
 
         bool isPastDeadline = block.timestamp > period.deadline && period.deadline != 0;
         if (isPastDeadline) {
@@ -247,7 +270,17 @@ contract ProverManager is IProposerFees, IProverManager {
             period.prover = msg.sender;
             period.pastDeadline = true;
         }
-        balances[period.prover] += numPublications * period.fee;
+        uint256 baseFee = period.fee;
+        uint256 regularPubFee = (numPublications - numDelayedPublications) * baseFee;
+
+        uint256 delayedPubFee;
+
+        if (numDelayedPublications > 0) {
+            uint256 delayedFee = _calculatePercentage(baseFee, period.delayedFeePercentage);
+            delayedPubFee = numDelayedPublications * delayedFee;
+        }
+
+        balances[period.prover] += regularPubFee + delayedPubFee;
     }
 
     /// @inheritdoc IProverManager
@@ -274,9 +307,9 @@ contract ProverManager is IProposerFees, IProverManager {
             currentPeriod++;
         }
 
-        uint256 publicationFee = _periods[currentPeriod].fee;
-        // TODO: implement delayed fee once we decide how to handle delayed publications
-        return (publicationFee, publicationFee);
+        Period storage period = _periods[currentPeriod];
+        fee = period.fee;
+        delayedFee = _calculatePercentage(fee, period.delayedFeePercentage);
     }
 
     /// @notice Returns the period for a given period id
