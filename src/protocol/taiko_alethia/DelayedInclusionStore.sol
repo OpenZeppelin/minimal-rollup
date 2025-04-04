@@ -10,7 +10,7 @@ import {IDelayedInclusionStore} from "../IDelayedInclusionStore.sol";
 /// The contract is designed to be used in conjunction with a rollup's inbox contract.
 /// Delayed inclusions are added to a queue using the `publishDelayed` function and are processed by
 /// calling the `processDueInclusions` function.
-contract DelayedInclusionStore is IDelayedInclusionStore {
+abstract contract DelayedInclusionStore is IDelayedInclusionStore {
     struct DueInclusion {
         bytes32 blobRefHash;
         uint256 due;
@@ -31,33 +31,27 @@ contract DelayedInclusionStore is IDelayedInclusionStore {
     /// wait in the queue to be included expressed in seconds
     uint256 public immutable inclusionDelay;
 
-    address public immutable inbox;
-
     IBlobRefRegistry public immutable blobRefRegistry;
 
     /// @param _inclusionDelay The delay before next set of inclusions can be processed.
-    /// @param _blobRefRegistry The address of the blob reference registry contract.
-    /// @param _taikoInbox The address of the Taiko's inbox contract responsible for processing inclusions.
-    constructor(uint256 _inclusionDelay, address _blobRefRegistry, address _taikoInbox) {
+    constructor(uint256 _inclusionDelay, address _blobRefRegistry) {
         inclusionDelay = _inclusionDelay;
-        inbox = _taikoInbox;
         blobRefRegistry = IBlobRefRegistry(_blobRefRegistry);
     }
 
     /// @inheritdoc IDelayedInclusionStore
     /// @dev Stores the blob reference as a DueInclusion
-    function publishDelayed(uint256[] memory blobIndices) external {
+    function publishDelayed(uint256[] memory blobIndices) external virtual {
         (bytes32 refHash,) = blobRefRegistry.registerRef(blobIndices);
         DueInclusion memory dueInclusion = DueInclusion(refHash, block.timestamp + inclusionDelay);
         _delayedInclusions.push(dueInclusion);
         emit DelayedInclusionStored(msg.sender, dueInclusion);
     }
 
-    /// @inheritdoc IDelayedInclusionStore
+    /// @notice Returns a list of publications that should be processed by the Inbox
     /// @dev Only returns inclusions if the delay period has passed
     /// otherwise returns an empty array.
-    /// @dev Can only be called by the inbox contract.
-    function processDueInclusions() external returns (Inclusion[] memory) {
+    function processDueInclusions() internal virtual returns (Inclusion[] memory) {
         uint256 len = _delayedInclusions.length;
         uint256 head = _head;
         if (head >= len) {
@@ -82,10 +76,6 @@ contract DelayedInclusionStore is IDelayedInclusionStore {
         if (count == 0) {
             return new Inclusion[](0);
         }
-
-        // We only check msg.sender here to avoid the gas cost when the
-        // return is empty and there are no state changes
-        require(msg.sender == inbox, "Only inbox can process inclusions");
 
         Inclusion[] memory inclusions = new Inclusion[](count);
         for (uint256 i = 0; i < count; ++i) {

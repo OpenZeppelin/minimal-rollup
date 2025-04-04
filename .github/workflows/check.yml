@@ -1,0 +1,26 @@
+name: check
+# This workflow runs whenever a PR is opened or updated, or a commit is pushed to main or a release branch
+# It does checks that are not core to the smart contracts, such as checking for typos
+
+permissions:
+  contents: read
+
+on:
+  push:
+    branches: [main, release/*]
+  pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.run_id }}
+  cancel-in-progress: true
+
+jobs:
+  typos:
+    runs-on: ubuntu-latest
+    name: typos
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Check spelling of files in the workspace
+        uses: crate-ci/typos@v1
