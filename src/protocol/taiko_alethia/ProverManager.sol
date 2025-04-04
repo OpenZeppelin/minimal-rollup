@@ -131,13 +131,8 @@ contract ProverManager is IProposerFees, IProverManager {
 
     /// @inheritdoc IProposerFees
     /// @dev This function advances to the next period if the current period has ended.
-    function payPublicationFee(address proposer, bool isDelayed) external payable {
+    function payPublicationFee(address proposer, bool isDelayed) external {
         require(msg.sender == inbox, "Only the Inbox contract can call this function");
-
-        // Accept additional deposit if sent
-        if (msg.value > 0) {
-            _deposit(proposer, msg.value);
-        }
 
         uint256 periodId = currentPeriodId;
 

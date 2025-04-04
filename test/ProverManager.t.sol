@@ -75,10 +75,14 @@ contract ProverManagerTest is Test {
         // Fund the Inbox contract.
         vm.deal(inbox, 10 ether);
 
+        // Deposit enough as a proposer to pay for publications
+        vm.prank(proposer);
+        proverManager.deposit{value: INITIAL_FEE * 10}();
+
         // Create a publication to trigger the new period
         vm.warp(vm.getBlockTimestamp() + 1);
         vm.prank(inbox);
-        proverManager.payPublicationFee{value: INITIAL_FEE}(proposer, false);
+        proverManager.payPublicationFee(proposer, false);
     }
 
     /// --------------------------------------------------------------------------
@@ -126,21 +130,10 @@ contract ProverManagerTest is Test {
         uint256 balanceBefore = proverManager.balances(proposer);
         // Call payPublicationFee from the inbox.
         vm.prank(inbox);
-        proverManager.payPublicationFee{value: 0}(proposer, false);
+        proverManager.payPublicationFee(proposer, false);
 
         uint256 balanceAfter = proverManager.balances(proposer);
         assertEq(balanceAfter, balanceBefore - INITIAL_FEE, "Publication fee not deducted properly");
-    }
-
-    function test_payPublicationFee_AllowsToSendEth() public {
-        // Call payPublicationFee from the inbox.
-        vm.prank(inbox);
-        vm.expectEmit();
-        emit ProverManager.Deposit(proposer, DEPOSIT_AMOUNT);
-        proverManager.payPublicationFee{value: DEPOSIT_AMOUNT}(proposer, false);
-
-        uint256 balanceAfter = proverManager.balances(proposer);
-        assertEq(balanceAfter, DEPOSIT_AMOUNT - INITIAL_FEE, "Publication fee not deducted properly");
     }
 
     function test_payPublicationFee_AdvancesPeriod() public {
@@ -157,7 +150,7 @@ contract ProverManagerTest is Test {
         vm.prank(inbox);
         vm.expectEmit();
         emit ProverManager.NewPeriod(2);
-        proverManager.payPublicationFee{value: INITIAL_FEE}(proposer, false);
+        proverManager.payPublicationFee(proposer, false);
     }
 
     function test_payPublicationFee_RevertWhen_NotInbox() public {
@@ -420,7 +413,7 @@ contract ProverManagerTest is Test {
 
         //Submit a publication to advance to the vacant period(period 2)
         vm.prank(inbox);
-        proverManager.payPublicationFee{value: INITIAL_FEE}(proposer, false);
+        proverManager.payPublicationFee(proposer, false);
 
         // Ensure prover1 has enough funds
         _deposit(prover1, DEPOSIT_AMOUNT);
@@ -455,7 +448,7 @@ contract ProverManagerTest is Test {
 
         //Submit a publication to advance to the vacant period(period 2)
         vm.prank(inbox);
-        proverManager.payPublicationFee{value: INITIAL_FEE}(proposer, false);
+        proverManager.payPublicationFee(proposer, false);
 
         // Ensure prover1 has enough funds
         _deposit(prover1, DEPOSIT_AMOUNT);
@@ -497,7 +490,7 @@ contract ProverManagerTest is Test {
 
         //Submit a publication to advance to the vacant period(period 2)
         vm.prank(inbox);
-        proverManager.payPublicationFee{value: INITIAL_FEE}(proposer, false);
+        proverManager.payPublicationFee(proposer, false);
 
         // Attempt to claim the vacancy without sufficient balance
         vm.prank(prover2);
