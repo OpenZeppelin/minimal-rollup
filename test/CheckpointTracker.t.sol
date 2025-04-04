@@ -4,15 +4,21 @@ pragma solidity ^0.8.28;
 import {Test, console} from "forge-std/Test.sol";
 import {CheckpointTracker} from "src/protocol/CheckpointTracker.sol";
 import {ICheckpointTracker} from "src/protocol/ICheckpointTracker.sol";
+
+import {ICommitmentStore} from "src/protocol/ICommitmentStore.sol";
 import {PublicationFeed} from "src/protocol/PublicationFeed.sol";
+
+import {SignalService} from "src/protocol/SignalService.sol";
 import {NullVerifier} from "test/mocks/NullVerifier.sol";
 
 contract CheckpointTrackerTest is Test {
     CheckpointTracker tracker;
     NullVerifier verifier;
     PublicationFeed feed;
+    SignalService signalService;
     // For the unit tests, we do it without a prover manager
     address proverManager = address(0);
+    address rollupOperator = makeAddr("rollup");
 
     // Sample data
     bytes32[] pubHashes;
@@ -30,8 +36,13 @@ contract CheckpointTrackerTest is Test {
         feed = new PublicationFeed();
         createSampleFeed();
 
-        tracker =
-            new CheckpointTracker(keccak256(abi.encode("genesis")), address(feed), address(verifier), proverManager);
+        signalService = new SignalService(rollupOperator);
+
+        tracker = new CheckpointTracker(
+            keccak256(abi.encode("genesis")), address(feed), address(verifier), proverManager, address(signalService)
+        );
+        vm.prank(rollupOperator);
+        ICommitmentStore(address(signalService)).setAuthorizedCommitter(address(tracker));
         proof = abi.encode("proof");
     }
 
@@ -45,7 +56,7 @@ contract CheckpointTrackerTest is Test {
 
     function test_constructor_RevertWhenGenesisIsZero() public {
         vm.expectRevert("genesis checkpoint commitment cannot be 0");
-        new CheckpointTracker(bytes32(0), address(feed), address(verifier), proverManager);
+        new CheckpointTracker(bytes32(0), address(feed), address(verifier), proverManager, address(signalService));
     }
 
     function test_constructor_EmitsEvent() public {
@@ -55,7 +66,9 @@ contract CheckpointTrackerTest is Test {
 
         vm.expectEmit();
         emit ICheckpointTracker.CheckpointUpdated(genesisCheckpoint);
-        new CheckpointTracker(genesisCommitment, address(feed), address(verifier), proverManager);
+        new CheckpointTracker(
+            genesisCommitment, address(feed), address(verifier), proverManager, address(signalService)
+        );
     }
 
     function test_proveTransition_SuccessfulTransition() public {
