@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
-import {ICheckpointTracker} from "../ICheckpointTracker.sol";
-import {IProposerFees} from "../IProposerFees.sol";
-import {IProverManager} from "../IProverManager.sol";
-import {IPublicationFeed} from "../IPublicationFeed.sol";
+import {ICheckpointTracker} from "./ICheckpointTracker.sol";
+import {IProposerFees} from "./IProposerFees.sol";
+import {IProverManager} from "./IProverManager.sol";
+import {IPublicationFeed} from "./IPublicationFeed.sol";
 
-abstract contract ProverManager is IProposerFees, IProverManager {
+abstract contract BaseProverManager is IProposerFees, IProverManager {
     // TODO: Optimize storage by packing the struct. Things like `fee` and `delayedFeePercentage` should be packed
     // together.
     struct Period {
@@ -42,36 +42,24 @@ abstract contract ProverManager is IProposerFees, IProverManager {
         address _checkpointTracker,
         address _publicationFeed,
         address _initialProver,
-        uint256 _initialFee
-    ) payable {
+        uint256 _initialFee,
+        uint256 _initialDeposit
+    ) {
         inbox = _inbox;
         checkpointTracker = ICheckpointTracker(_checkpointTracker);
         publicationFeed = IPublicationFeed(_publicationFeed);
 
         // Close the first period so every period has a previous one (and an implicit start timestamp)
         // The initial fee and prover will take effect in the block after this one
-        _deposit(_initialProver, msg.value);
+        _deposit(_initialProver, _initialDeposit);
         _claimProvingVacancy(_initialFee, _initialProver);
-    }
-
-    /// @notice Deposit ETH into the contract. The deposit can be used both for opting in as a prover or proposer
-    function deposit() external payable {
-        _deposit(msg.sender, msg.value);
     }
 
     /// @notice Withdraw available(unlocked) funds.
     /// @param amount The amount to withdraw
     function withdraw(uint256 amount) external {
         balances[msg.sender] -= amount;
-
-        address to = msg.sender;
-        bool ok;
-        // Using assembly to avoid memory allocation costs; only the call's success matters to ensure funds are sent.
-        assembly ("memory-safe") {
-            ok := call(gas(), to, amount, 0, 0, 0, 0)
-        }
-        require(ok, "Withdraw failed");
-
+        _transferOut(msg.sender, amount);
         emit Withdrawal(msg.sender, amount);
     }
 
@@ -298,11 +286,14 @@ abstract contract ProverManager is IProposerFees, IProverManager {
     /// higher rate
     function _delayedFeePercentage() internal view virtual returns (uint16);
 
-    /// @dev Increases `user`'s balance by `amount`
-    function _deposit(address user, uint256 amount) private {
+    /// @dev Increases `user`'s balance by `amount` and emits a `Deposit` event
+    function _deposit(address user, uint256 amount) internal {
         balances[user] += amount;
         emit Deposit(user, amount);
     }
+
+    /// @dev Implements currency-specific transfer logic for withdrawals
+    function _transferOut(address to, uint256 amount) internal virtual;
 
     /// @dev implementation of IProverManager.claimProvingVacancy with the option to specify a prover
     /// This lets the constructor claim the first vacancy on behalf of _initialProver
