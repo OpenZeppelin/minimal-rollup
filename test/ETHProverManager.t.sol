@@ -76,7 +76,7 @@ contract ETHProverManagerMock is ETHProverManager {
 
 contract ETHProverManagerTest is BaseProverManagerTest {
     // Holds a reference to `proverManager` but with the type ETHProverManager to be
-    // able to call functions that are specifc to the ETHProverManager(i.e. `deposit`)
+    // able to call functions that are specific to the ETHProverManager(i.e. `deposit`)
     ETHProverManager ethProverManager;
 
     function setUp() public override {
