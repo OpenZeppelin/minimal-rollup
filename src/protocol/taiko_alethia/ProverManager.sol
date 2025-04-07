@@ -78,6 +78,8 @@ contract ProverManager is IProposerFees, IProverManager {
     /// @dev Periods represent proving windows
     mapping(uint256 periodId => Period) private _periods;
 
+    /// @dev Initializes the contract state and deposits the initial prover's liveness bond.
+    /// The constructor also calls `_claimProvingVacancy`. Publications will actually start in period 1.
     /// @param _inbox The address of the inbox contract
     /// @param _checkpointTracker The address of the checkpoint tracker contract
     /// @param _publicationFeed The address of the publication feed contract
