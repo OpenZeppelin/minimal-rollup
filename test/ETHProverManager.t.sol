@@ -108,6 +108,14 @@ contract ETHProverManagerTest is BaseProverManagerTest {
         proverManager.payPublicationFee(proposer, false);
     }
 
+    function test_setUp_EthBalance() public {
+        // Test that the contract holds the correct amount of ETH after setup
+        uint256 expectedBalance = LIVENESS_BOND + (INITIAL_FEE * 10); // Initial liveness bond + proposer deposit
+        uint256 actualBalance = address(proverManager).balance;
+
+        assertEq(actualBalance, expectedBalance, "Contract does not hold the correct ETH balance");
+    }
+
     function test_deposit() public {
         vm.prank(prover1);
         vm.expectEmit();
