@@ -12,7 +12,7 @@ abstract contract ETHProverManager is BaseProverManager {
         address _checkpointTracker,
         address _publicationFeed,
         address _initialProver,
-        uint256 _initialFee
+        uint96 _initialFee
     ) payable BaseProverManager(_inbox, _checkpointTracker, _publicationFeed, _initialProver, _initialFee, msg.value) {
         require(
             msg.value >= _livenessBond(),

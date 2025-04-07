@@ -7,7 +7,7 @@ import {IPublicationFeed} from "./IPublicationFeed.sol";
 interface IProverManager {
     /// @notice Bid to become the prover for the next period
     /// @param offeredFee The fee you are willing to charge for proving each publication
-    function bid(uint256 offeredFee) external;
+    function bid(uint96 offeredFee) external;
 
     /// @notice The current prover can signal exit to eventually pull out their liveness bond.
     function exit() external;
@@ -22,7 +22,7 @@ interface IProverManager {
     /// This function allows anyone to start a new period with a new fee. Note that the new prover will still need to
     // ensure the previous publications are proven before proving their own. Nevertheless, we start a new period so
     // they cannot be evicted based on publications that occurred before they agreed to prove
-    function claimProvingVacancy(uint256 fee) external;
+    function claimProvingVacancy(uint96 fee) external;
 
     /// @notice Evicts a prover that has been inactive, marking the prover for slashing
     /// @param publicationHeader The publication header that the caller is claiming is too old and hasn't been proven

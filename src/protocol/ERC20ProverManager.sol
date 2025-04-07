@@ -19,7 +19,7 @@ abstract contract ERC20ProverManager is BaseProverManager {
         address _checkpointTracker,
         address _publicationFeed,
         address _initialProver,
-        uint256 _initialFee,
+        uint96 _initialFee,
         address _token,
         uint256 _initialDeposit
     ) BaseProverManager(_inbox, _checkpointTracker, _publicationFeed, _initialProver, _initialFee, _initialDeposit) {
