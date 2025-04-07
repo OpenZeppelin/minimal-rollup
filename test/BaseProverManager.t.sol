@@ -13,15 +13,15 @@ import {MockCheckpointTracker} from "test/mocks/MockCheckpointTracker.sol";
 import {NullVerifier} from "test/mocks/NullVerifier.sol";
 
 // Configuration parameters.
-uint256 constant MAX_BID_PERCENTAGE = 9500; // 95%
-uint256 constant LIVENESS_WINDOW = 60; // 60 seconds
-uint256 constant SUCCESSION_DELAY = 10;
-uint256 constant EXIT_DELAY = 10;
-uint256 constant PROVING_WINDOW = 30;
-uint256 constant LIVENESS_BOND = 1 ether;
-uint256 constant EVICTOR_INCENTIVE_PERCENTAGE = 500; // 5%
-uint256 constant REWARD_PERCENTAGE = 9000; // 90%
-uint256 constant INITIAL_FEE = 0.1 ether;
+uint16 constant MAX_BID_PERCENTAGE = 9500; // 95%
+uint40 constant LIVENESS_WINDOW = 60; // 60 seconds
+uint40 constant SUCCESSION_DELAY = 10;
+uint40 constant EXIT_DELAY = 10;
+uint40 constant PROVING_WINDOW = 30;
+uint96 constant LIVENESS_BOND = 1 ether;
+uint16 constant EVICTOR_INCENTIVE_PERCENTAGE = 500; // 5%
+uint16 constant REWARD_PERCENTAGE = 9000; // 90%
+uint96 constant INITIAL_FEE = 0.1 ether;
 uint16 constant DELAYED_FEE_PERCENTAGE = 15_000; // 150%
 uint256 constant INITIAL_PERIOD = 1;
 
@@ -92,7 +92,7 @@ abstract contract BaseProverManagerTest is Test {
         // prover1 deposits sufficient funds
         _deposit(prover1, DEPOSIT_AMOUNT);
 
-        uint256 maxAllowedFee = _maxAllowedFee(INITIAL_FEE);
+        uint96 maxAllowedFee = _maxAllowedFee(INITIAL_FEE);
 
         vm.prank(prover1);
         vm.expectEmit();
@@ -117,7 +117,7 @@ abstract contract BaseProverManagerTest is Test {
         // First, have prover1 make a successful bid
         _deposit(prover1, DEPOSIT_AMOUNT);
 
-        uint256 firstBidFee = _maxAllowedFee(INITIAL_FEE);
+        uint96 firstBidFee = _maxAllowedFee(INITIAL_FEE);
         vm.prank(prover1);
         proverManager.bid(firstBidFee);
 
@@ -125,7 +125,7 @@ abstract contract BaseProverManagerTest is Test {
         _deposit(prover2, DEPOSIT_AMOUNT);
 
         // Calculate required fee for second bid
-        uint256 secondBidFee = _maxAllowedFee(firstBidFee);
+        uint96 secondBidFee = _maxAllowedFee(firstBidFee);
 
         vm.prank(prover2);
         vm.expectEmit();
@@ -153,7 +153,7 @@ abstract contract BaseProverManagerTest is Test {
         uint256 timestampBefore = vm.getBlockTimestamp();
 
         // Make a bid that will outbid the current prover
-        uint256 bidFee = _maxAllowedFee(INITIAL_FEE);
+        uint96 bidFee = _maxAllowedFee(INITIAL_FEE);
         vm.prank(prover1);
         proverManager.bid(bidFee);
 
@@ -172,15 +172,15 @@ abstract contract BaseProverManagerTest is Test {
         // First, have prover1 make a successful bid
         _deposit(prover1, DEPOSIT_AMOUNT);
 
-        uint256 firstBidFee = _maxAllowedFee(INITIAL_FEE);
+        uint96 firstBidFee = _maxAllowedFee(INITIAL_FEE);
         vm.prank(prover1);
         proverManager.bid(firstBidFee);
 
         // Now have prover2 try to bid with insufficient undercut
         _deposit(prover2, DEPOSIT_AMOUNT);
 
-        uint256 maxFee = _maxAllowedFee(firstBidFee);
-        uint256 insufficientlyReducedFee = maxFee + 1;
+        uint96 maxFee = _maxAllowedFee(firstBidFee);
+        uint96 insufficientlyReducedFee = maxFee + 1;
 
         vm.prank(prover2);
         vm.expectRevert("Offered fee not low enough");
@@ -199,8 +199,8 @@ abstract contract BaseProverManagerTest is Test {
         _deposit(prover1, DEPOSIT_AMOUNT);
 
         // Calculate a fee that's not low enough
-        uint256 maxFee = _maxAllowedFee(INITIAL_FEE);
-        uint256 insufficientlyReducedFee = maxFee + 1;
+        uint96 maxFee = _maxAllowedFee(INITIAL_FEE);
+        uint96 insufficientlyReducedFee = maxFee + 1;
 
         vm.prank(prover1);
         vm.expectRevert("Offered fee not low enough");
@@ -347,7 +347,7 @@ abstract contract BaseProverManagerTest is Test {
 
         // Claim the vacancy
         uint256 prover1BalanceBefore = proverManager.balances(prover1);
-        uint256 newFee = 0.2 ether; //arbitrary new fee
+        uint96 newFee = uint96(0.2 ether); //arbitrary new fee
         vm.prank(prover1);
         proverManager.claimProvingVacancy(newFee);
 
@@ -914,15 +914,19 @@ abstract contract BaseProverManagerTest is Test {
 
         // Bid as a new prover
         _deposit(prover1, DEPOSIT_AMOUNT);
-        uint256 bidFee = INITIAL_FEE * 2;
+        uint96 bidFee = uint96(INITIAL_FEE * 2);
         vm.prank(prover1);
         proverManager.bid(bidFee);
 
         // Warp to a time after the period has ended.
         vm.warp(vm.getBlockTimestamp() + EXIT_DELAY + 1);
-        (uint256 fee, uint256 delayedFee) = proverManager.getCurrentFees();
+        (uint96 fee, uint96 delayedFee) = proverManager.getCurrentFees();
         assertEq(fee, bidFee, "Fee should be the bid fee");
-        assertEq(delayedFee, _calculatePercentage(bidFee, DELAYED_FEE_PERCENTAGE), "Delayed fee should be the bid fee");
+        assertEq(
+            delayedFee,
+            uint96(_calculatePercentage(bidFee, DELAYED_FEE_PERCENTAGE)),
+            "Delayed fee should be the bid fee"
+        );
     }
 
     // -- HELPERS --
@@ -967,11 +971,11 @@ abstract contract BaseProverManagerTest is Test {
 
     function _deposit(address user, uint256 amount) internal virtual;
 
-    function _maxAllowedFee(uint256 fee) internal pure returns (uint256) {
-        return _calculatePercentage(fee, MAX_BID_PERCENTAGE);
+    function _maxAllowedFee(uint96 fee) internal pure returns (uint96) {
+        return uint96(_calculatePercentage(fee, MAX_BID_PERCENTAGE));
     }
 
-    function _calculatePercentage(uint256 amount, uint256 percentage) internal pure returns (uint256) {
+    function _calculatePercentage(uint256 amount, uint16 percentage) internal pure returns (uint256) {
         return amount * percentage / 10_000;
     }
 

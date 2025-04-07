@@ -38,7 +38,7 @@ contract ERC20ProverManagerMock is ERC20ProverManager {
         address _checkpointTracker,
         address _publicationFeed,
         address _initialProver,
-        uint256 _initialFee,
+        uint96 _initialFee,
         address _token,
         uint256 _initialDeposit
     )
@@ -53,35 +53,35 @@ contract ERC20ProverManagerMock is ERC20ProverManager {
         )
     {}
 
-    function _maxBidPercentage() internal view virtual override returns (uint256) {
+    function _maxBidPercentage() internal view virtual override returns (uint16) {
         return MAX_BID_PERCENTAGE;
     }
 
-    function _livenessWindow() internal view virtual override returns (uint256) {
+    function _livenessWindow() internal view virtual override returns (uint40) {
         return LIVENESS_WINDOW;
     }
 
-    function _successionDelay() internal view virtual override returns (uint256) {
+    function _successionDelay() internal view virtual override returns (uint40) {
         return SUCCESSION_DELAY;
     }
 
-    function _exitDelay() internal view virtual override returns (uint256) {
+    function _exitDelay() internal view virtual override returns (uint40) {
         return EXIT_DELAY;
     }
 
-    function _provingWindow() internal view virtual override returns (uint256) {
+    function _provingWindow() internal view virtual override returns (uint40) {
         return PROVING_WINDOW;
     }
 
-    function _livenessBond() internal view virtual override returns (uint256) {
+    function _livenessBond() internal view virtual override returns (uint96) {
         return LIVENESS_BOND;
     }
 
-    function _evictorIncentivePercentage() internal view virtual override returns (uint256) {
+    function _evictorIncentivePercentage() internal view virtual override returns (uint16) {
         return EVICTOR_INCENTIVE_PERCENTAGE;
     }
 
-    function _rewardPercentage() internal view virtual override returns (uint256) {
+    function _rewardPercentage() internal view virtual override returns (uint16) {
         return REWARD_PERCENTAGE;
     }
 
@@ -169,7 +169,7 @@ contract ERC20ProverManagerTest is BaseProverManagerTest {
         proverManager.payPublicationFee(proposer, false);
     }
 
-    function test_setUp_TokenBalance() public {
+    function test_setUp_TokenBalance() public view {
         // Test that the contract holds the correct amount of tokens after setup
         uint256 expectedBalance = LIVENESS_BOND + (INITIAL_FEE * 10); // Initial liveness bond + proposer deposit
         uint256 actualBalance = mockToken.balanceOf(address(proverManager));
