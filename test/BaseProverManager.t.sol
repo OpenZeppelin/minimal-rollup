@@ -3,7 +3,7 @@ pragma solidity ^0.8.28;
 
 import "forge-std/Test.sol";
 
-import {ProverManager} from "../src/protocol/taiko_alethia/ProverManager.sol";
+import {BaseProverManager} from "../src/protocol/BaseProverManager.sol";
 
 import {ICheckpointTracker} from "src/protocol/ICheckpointTracker.sol";
 import {IPublicationFeed} from "src/protocol/IPublicationFeed.sol";
@@ -12,8 +12,21 @@ import {PublicationFeed} from "src/protocol/PublicationFeed.sol";
 import {MockCheckpointTracker} from "test/mocks/MockCheckpointTracker.sol";
 import {NullVerifier} from "test/mocks/NullVerifier.sol";
 
-contract ProverManagerTest is Test {
-    ProverManager proverManager;
+// Configuration parameters.
+uint256 constant MAX_BID_PERCENTAGE = 9500; // 95%
+uint256 constant LIVENESS_WINDOW = 60; // 60 seconds
+uint256 constant SUCCESSION_DELAY = 10;
+uint256 constant EXIT_DELAY = 10;
+uint256 constant PROVING_WINDOW = 30;
+uint256 constant LIVENESS_BOND = 1 ether;
+uint256 constant EVICTOR_INCENTIVE_PERCENTAGE = 500; // 5%
+uint256 constant REWARD_PERCENTAGE = 9000; // 90%
+uint256 constant INITIAL_FEE = 0.1 ether;
+uint16 constant DELAYED_FEE_PERCENTAGE = 15_000; // 150%
+uint256 constant INITIAL_PERIOD = 1;
+
+abstract contract BaseProverManagerTest is Test {
+    BaseProverManager proverManager;
     MockCheckpointTracker checkpointTracker;
     NullVerifier verifier;
     PublicationFeed publicationFeed;
@@ -28,95 +41,9 @@ contract ProverManagerTest is Test {
     address proposer = address(0x202);
     address evictor = address(0x203);
 
-    // Configuration parameters.
-    uint256 constant MAX_BID_PERCENTAGE = 9500; // 95%
-    uint256 constant LIVENESS_WINDOW = 60; // 60 seconds
-    uint256 constant SUCCESSION_DELAY = 10;
-    uint256 constant EXIT_DELAY = 10;
-    uint256 constant PROVING_WINDOW = 30;
-    uint256 constant LIVENESS_BOND = 1 ether;
-    uint256 constant EVICTOR_INCENTIVE_PERCENTAGE = 500; // 5%
-    uint256 constant REWARD_PERCENTAGE = 9000; // 90%
-    uint256 constant INITIAL_FEE = 0.1 ether;
-    uint16 constant DELAYED_FEE_PERCENTAGE = 15_000; // 150%
-    uint256 constant INITIAL_PERIOD = 1;
-
-    function setUp() public {
+    function setUp() public virtual {
         checkpointTracker = new MockCheckpointTracker();
         publicationFeed = new PublicationFeed();
-
-        // Fund the initial prover so the constructor can receive the required livenessBond.
-        vm.deal(initialProver, 10 ether);
-
-        // Create the config struct for the constructor
-        ProverManager.ProverManagerConfig memory config = ProverManager.ProverManagerConfig({
-            maxBidPercentage: MAX_BID_PERCENTAGE,
-            livenessWindow: LIVENESS_WINDOW,
-            successionDelay: SUCCESSION_DELAY,
-            exitDelay: EXIT_DELAY,
-            provingWindow: PROVING_WINDOW,
-            livenessBond: LIVENESS_BOND,
-            evictorIncentivePercentage: EVICTOR_INCENTIVE_PERCENTAGE,
-            rewardPercentage: REWARD_PERCENTAGE,
-            delayedFeePercentage: DELAYED_FEE_PERCENTAGE
-        });
-
-        // Deploy ProverManager with constructor funds.
-        proverManager = new ProverManager{value: LIVENESS_BOND}(
-            inbox, address(checkpointTracker), address(publicationFeed), initialProver, INITIAL_FEE, config
-        );
-
-        // Fund test users.
-        vm.deal(prover1, 10 ether);
-        vm.deal(prover2, 10 ether);
-        vm.deal(evictor, 10 ether);
-        vm.deal(proposer, 10 ether);
-
-        // Fund the Inbox contract.
-        vm.deal(inbox, 10 ether);
-
-        // Deposit enough as a proposer to pay for publications
-        vm.prank(proposer);
-        proverManager.deposit{value: INITIAL_FEE * 10}();
-
-        // Create a publication to trigger the new period
-        vm.warp(vm.getBlockTimestamp() + 1);
-        vm.prank(inbox);
-        proverManager.payPublicationFee(proposer, false);
-    }
-
-    /// --------------------------------------------------------------------------
-    /// Deposit and Withdraw
-    /// --------------------------------------------------------------------------
-    function test_deposit() public {
-        vm.prank(prover1);
-        vm.expectEmit();
-        emit ProverManager.Deposit(prover1, DEPOSIT_AMOUNT);
-        proverManager.deposit{value: DEPOSIT_AMOUNT}();
-
-        uint256 bal = proverManager.balances(prover1);
-        assertEq(bal, DEPOSIT_AMOUNT, "Deposit did not update balance correctly");
-    }
-
-    function test_withdraw() public {
-        uint256 withdrawAmount = 0.5 ether;
-        _deposit(prover1, DEPOSIT_AMOUNT);
-
-        // Withdraw 0.5 ether.
-        uint256 balanceBefore = prover1.balance;
-        vm.prank(prover1);
-        vm.expectEmit();
-        emit ProverManager.Withdrawal(prover1, withdrawAmount);
-        proverManager.withdraw(withdrawAmount);
-        uint256 balanceAfter = prover1.balance;
-
-        assertEq(
-            proverManager.balances(prover1),
-            DEPOSIT_AMOUNT - withdrawAmount,
-            "Withdrawal did not update balance correctly"
-        );
-        // Allow a small tolerance for gas.
-        assertApproxEqAbs(balanceAfter, balanceBefore + withdrawAmount, 1e15);
     }
 
     /// --------------------------------------------------------------------------
@@ -149,7 +76,7 @@ contract ProverManagerTest is Test {
         // Call payPublicationFee from the inbox and check that the period has been advanced.
         vm.prank(inbox);
         vm.expectEmit();
-        emit ProverManager.NewPeriod(2);
+        emit BaseProverManager.NewPeriod(2);
         proverManager.payPublicationFee(proposer, false);
     }
 
@@ -169,11 +96,11 @@ contract ProverManagerTest is Test {
 
         vm.prank(prover1);
         vm.expectEmit();
-        emit ProverManager.ProverOffer(prover1, 2, maxAllowedFee, LIVENESS_BOND);
+        emit BaseProverManager.ProverOffer(prover1, 2, maxAllowedFee, LIVENESS_BOND);
         proverManager.bid(maxAllowedFee);
 
         // Check that period 2 has been created
-        ProverManager.Period memory period = proverManager.getPeriod(2);
+        BaseProverManager.Period memory period = proverManager.getPeriod(2);
 
         assertEq(period.prover, prover1, "Bid not recorded for new period");
         assertEq(period.fee, maxAllowedFee, "Offered fee not set correctly");
@@ -202,11 +129,11 @@ contract ProverManagerTest is Test {
 
         vm.prank(prover2);
         vm.expectEmit();
-        emit ProverManager.ProverOffer(prover2, 2, secondBidFee, LIVENESS_BOND);
+        emit BaseProverManager.ProverOffer(prover2, 2, secondBidFee, LIVENESS_BOND);
         proverManager.bid(secondBidFee);
 
         // Check that period 2 now has prover2 as the prover
-        ProverManager.Period memory period = proverManager.getPeriod(2);
+        BaseProverManager.Period memory period = proverManager.getPeriod(2);
         assertEq(period.prover, prover2, "Prover2 should now be the next prover");
         assertEq(period.fee, secondBidFee, "Fee should be updated to prover2's bid");
 
@@ -230,7 +157,7 @@ contract ProverManagerTest is Test {
         vm.prank(prover1);
         proverManager.bid(bidFee);
 
-        ProverManager.Period memory period = proverManager.getPeriod(1);
+        BaseProverManager.Period memory period = proverManager.getPeriod(1);
         assertEq(
             period.end,
             timestampBefore + SUCCESSION_DELAY,
@@ -287,7 +214,7 @@ contract ProverManagerTest is Test {
         IPublicationFeed.PublicationHeader memory header = _insertPublication();
 
         // Capture current period stake before eviction
-        ProverManager.Period memory periodBefore = proverManager.getPeriod(1);
+        BaseProverManager.Period memory periodBefore = proverManager.getPeriod(1);
         uint256 stakeBefore = periodBefore.stake;
         uint256 incentive = _calculatePercentage(stakeBefore, EVICTOR_INCENTIVE_PERCENTAGE);
 
@@ -295,13 +222,13 @@ contract ProverManagerTest is Test {
         vm.warp(vm.getBlockTimestamp() + LIVENESS_WINDOW + 1);
         vm.prank(evictor);
         vm.expectEmit();
-        emit ProverManager.ProverEvicted(
+        emit BaseProverManager.ProverEvicted(
             initialProver, evictor, vm.getBlockTimestamp() + EXIT_DELAY, stakeBefore - incentive
         );
         proverManager.evictProver(header);
 
         // Verify period 1 is marked as evicted and its stake reduced
-        ProverManager.Period memory periodAfter = proverManager.getPeriod(1);
+        BaseProverManager.Period memory periodAfter = proverManager.getPeriod(1);
         assertEq(periodAfter.deadline, vm.getBlockTimestamp() + EXIT_DELAY, "Prover should be evicted");
         assertEq(periodAfter.end, vm.getBlockTimestamp() + EXIT_DELAY, "Period end not set correctly");
         assertEq(periodAfter.stake, stakeBefore - incentive, "Stake not reduced correctly");
@@ -372,13 +299,13 @@ contract ProverManagerTest is Test {
         // initialProver is the prover for period 1
         vm.prank(initialProver);
         vm.expectEmit();
-        emit ProverManager.ProverExited(
+        emit BaseProverManager.ProverExited(
             initialProver, vm.getBlockTimestamp() + EXIT_DELAY, vm.getBlockTimestamp() + EXIT_DELAY + PROVING_WINDOW
         );
         proverManager.exit();
 
         // Check that period 1 now has an end time and deadline set
-        ProverManager.Period memory period = proverManager.getPeriod(1);
+        BaseProverManager.Period memory period = proverManager.getPeriod(1);
         assertEq(period.end, vm.getBlockTimestamp() + EXIT_DELAY, "Exit did not set period end correctly");
         assertEq(
             period.deadline, vm.getBlockTimestamp() + EXIT_DELAY + PROVING_WINDOW, "Proving deadline not set correctly"
@@ -425,12 +352,12 @@ contract ProverManagerTest is Test {
         proverManager.claimProvingVacancy(newFee);
 
         // Check that period 2(the vacant period) has been closed correctly
-        ProverManager.Period memory period2 = proverManager.getPeriod(2);
+        BaseProverManager.Period memory period2 = proverManager.getPeriod(2);
         assertEq(period2.end, vm.getBlockTimestamp(), "Period 2 end timestamp should be the current timestamp");
         assertEq(period2.deadline, vm.getBlockTimestamp(), "Period 2 deadline should be the current timestamp");
 
         // Check that period 3 has been created correctly
-        ProverManager.Period memory period3 = proverManager.getPeriod(3);
+        BaseProverManager.Period memory period3 = proverManager.getPeriod(3);
         assertEq(period3.prover, prover1, "Prover1 should be the new prover");
         assertEq(period3.fee, newFee, "Fee should be set to the new fee");
         assertEq(period3.stake, LIVENESS_BOND, "Liveness bond should be locked");
@@ -469,7 +396,7 @@ contract ProverManagerTest is Test {
         _deposit(proposer, INITIAL_FEE);
         vm.prank(inbox);
         vm.expectEmit();
-        emit ProverManager.NewPeriod(periodAfter + 1);
+        emit BaseProverManager.NewPeriod(periodAfter + 1);
         proverManager.payPublicationFee(proposer, false);
     }
 
@@ -575,7 +502,7 @@ contract ProverManagerTest is Test {
 
         uint256 proverBalanceAfter = proverManager.balances(initialProver);
         uint256 expectedBalance = proverBalanceBefore + INITIAL_FEE * numRegularPublications
-            + _calculatePercentage(INITIAL_FEE, proverManager.delayedFeePercentage()) * numDelayedPublications;
+            + _calculatePercentage(INITIAL_FEE, DELAYED_FEE_PERCENTAGE) * numDelayedPublications;
         assertEq(proverBalanceAfter, expectedBalance, "Prover should receive fees");
     }
 
@@ -617,7 +544,7 @@ contract ProverManagerTest is Test {
         );
 
         // Verify period 1 has been updated
-        ProverManager.Period memory periodAfter = proverManager.getPeriod(1);
+        BaseProverManager.Period memory periodAfter = proverManager.getPeriod(1);
         assertEq(periodAfter.prover, prover1, "Prover should be updated to the new prover");
         assertTrue(periodAfter.pastDeadline, "Period should be marked as past deadline");
 
@@ -680,7 +607,7 @@ contract ProverManagerTest is Test {
         assertEq(prover2BalanceAfter, INITIAL_FEE * 2, "Prover2 should receive the fees");
 
         // Verify the period is marked as past deadline
-        ProverManager.Period memory periodAfter = proverManager.getPeriod(1);
+        BaseProverManager.Period memory periodAfter = proverManager.getPeriod(1);
         assertTrue(periodAfter.pastDeadline, "Period should be marked as past deadline");
     }
 
@@ -847,7 +774,7 @@ contract ProverManagerTest is Test {
         proverManager.finalizePastPeriod(INITIAL_PERIOD, afterPeriodHeader);
 
         // Verify a portion of the stake was transferred to the prover
-        ProverManager.Period memory periodAfter = proverManager.getPeriod(INITIAL_PERIOD);
+        BaseProverManager.Period memory periodAfter = proverManager.getPeriod(INITIAL_PERIOD);
         assertEq(periodAfter.stake, 0, "Stake should be zero after finalization");
 
         uint256 initialProverBalanceAfter = proverManager.balances(initialProver);
@@ -914,7 +841,7 @@ contract ProverManagerTest is Test {
         proverManager.finalizePastPeriod(INITIAL_PERIOD, afterPeriodHeader);
 
         // Verify a portion of the stake was transferred to prover1
-        ProverManager.Period memory periodAfter = proverManager.getPeriod(INITIAL_PERIOD);
+        BaseProverManager.Period memory periodAfter = proverManager.getPeriod(INITIAL_PERIOD);
         assertEq(periodAfter.stake, 0, "Stake should be zero after finalization");
 
         uint256 initialProverBalanceAfter = proverManager.balances(initialProver);
@@ -1038,10 +965,7 @@ contract ProverManagerTest is Test {
         });
     }
 
-    function _deposit(address user, uint256 amount) internal {
-        vm.prank(user);
-        proverManager.deposit{value: amount}();
-    }
+    function _deposit(address user, uint256 amount) internal virtual;
 
     function _maxAllowedFee(uint256 fee) internal pure returns (uint256) {
         return _calculatePercentage(fee, MAX_BID_PERCENTAGE);
