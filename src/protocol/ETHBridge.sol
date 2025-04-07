@@ -4,7 +4,7 @@ pragma solidity ^0.8.28;
 import {IETHBridge} from "./IETHBridge.sol";
 import {StorageSlot} from "@openzeppelin/contracts/utils/StorageSlot.sol";
 
-/// @dev Abstract ETH bridging contract to send native ETH to other chains using storage proofs.
+/// @dev Abstract ETH bridging contract to send native ETH between L1 <-> L2 using storage proofs.
 ///
 /// IMPORTANT: No recovery mechanism is implemented in case an account creates a deposit that can't be claimed.
 abstract contract ETHBridge is IETHBridge {
@@ -21,19 +21,19 @@ abstract contract ETHBridge is IETHBridge {
     }
 
     /// @inheritdoc IETHBridge
-    function getDepositId(ETHDeposit memory deposit) public view virtual returns (bytes32 id) {
-        return _generateId(deposit);
+    function getDepositId(ETHDeposit memory ethDeposit) public view virtual returns (bytes32 id) {
+        return _generateId(ethDeposit);
     }
 
     /// @inheritdoc IETHBridge
     // TODO: Possibly make this accept ETHDEeposit struct as input
-    function depositETH(uint64 chainId, address to, bytes memory data) public payable virtual returns (bytes32 id) {
-        ETHDeposit memory deposit = ETHDeposit(chainId, _globalDepositNonce, msg.sender, to, msg.value, data);
-        id = _generateId(deposit);
+    function deposit(address to, bytes memory data) public payable virtual returns (bytes32 id) {
+        ETHDeposit memory ethDeposit = ETHDeposit(_globalDepositNonce, msg.sender, to, msg.value, data);
+        id = _generateId(ethDeposit);
         unchecked {
             ++_globalDepositNonce;
         }
-        emit ETHDepositMade(id, deposit);
+        emit DepositMade(id, ethDeposit);
     }
 
     /// @inheritdoc IETHBridge
@@ -44,12 +44,12 @@ abstract contract ETHBridge is IETHBridge {
 
     /// @dev Processes deposit claim by id.
     /// @param id Identifier of the deposit
-    /// @param deposit Deposit to process
-    function _processClaimDepositWithId(bytes32 id, ETHDeposit memory deposit) internal virtual {
+    /// @param ethDeposit Deposit to process
+    function _processClaimDepositWithId(bytes32 id, ETHDeposit memory ethDeposit) internal virtual {
         require(!claimed(id), AlreadyClaimed());
         _claimed[id] = true;
-        _sendETH(deposit.to, deposit.amount, deposit.data);
-        emit ETHDepositClaimed(id, deposit);
+        _sendETH(ethDeposit.to, ethDeposit.amount, ethDeposit.data);
+        emit DepositClaimed(id, ethDeposit);
     }
 
     /// @dev Function to transfer ETH to the receiver but ignoring the returndata.
@@ -62,8 +62,8 @@ abstract contract ETHBridge is IETHBridge {
     }
 
     /// @dev Generates a unique ID for a deposit.
-    /// @param deposit Deposit to generate an ID for
-    function _generateId(ETHDeposit memory deposit) internal pure returns (bytes32) {
-        return keccak256(abi.encode(deposit));
+    /// @param ethDeposit Deposit to generate an ID for
+    function _generateId(ETHDeposit memory ethDeposit) internal pure returns (bytes32) {
+        return keccak256(abi.encode(ethDeposit));
     }
 }

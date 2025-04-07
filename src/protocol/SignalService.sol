@@ -34,37 +34,33 @@ contract SignalService is ISignalService, ETHBridge, CommitmentStore {
     }
 
     /// @inheritdoc ISignalService
-    function verifySignal(uint64 chainId, uint256 height, address sender, bytes32 value, bytes memory proof) external {
-        _verifySignal(chainId, height, sender, value, proof);
-        emit SignalVerified(chainId, sender, value);
+    function verifySignal(uint256 height, address sender, bytes32 value, bytes memory proof) external {
+        _verifySignal(height, sender, value, proof);
+        emit SignalVerified(sender, value);
     }
 
     /// @dev Overrides ETHBridge.depositETH to add signaling functionality.
-    function depositETH(uint64 chainId, address to, bytes memory data) public payable override returns (bytes32 id) {
-        id = super.depositETH(chainId, to, data);
+    function deposit(address to, bytes memory data) public payable override returns (bytes32 id) {
+        id = super.deposit(to, data);
         id.signal();
     }
 
     // CHECK: Should this function be non-reentrant?
     /// @inheritdoc ETHBridge
     /// @dev Overrides ETHBridge.claimDeposit to add signal verification logic.
-    function claimDeposit(ETHDeposit memory deposit, uint256 height, bytes memory proof)
+    function claimDeposit(ETHDeposit memory ethDeposit, uint256 height, bytes memory proof)
         external
         override
         returns (bytes32 id)
     {
-        id = _generateId(deposit);
+        id = _generateId(ethDeposit);
 
-        _verifySignal(deposit.chainId, height, deposit.from, id, proof);
+        _verifySignal(height, ethDeposit.from, id, proof);
 
-        super._processClaimDepositWithId(id, deposit);
+        super._processClaimDepositWithId(id, ethDeposit);
     }
 
-    function _verifySignal(uint64 chainId, uint256 height, address sender, bytes32 value, bytes memory proof)
-        internal
-        view
-        virtual
-    {
+    function _verifySignal(uint256 height, address sender, bytes32 value, bytes memory proof) internal view virtual {
         // TODO: commitmentAt(height) might not be the 'state root' of the chain
         // For now it could be the block hash or other hashed value
         // further work is needed to ensure we get the 'state root' of the chain
@@ -77,11 +73,11 @@ contract SignalService is ISignalService, ETHBridge, CommitmentStore {
         // If the account proof is empty we assume `root` is the root of the signal tree
         if (accountProof.length == 0) {
             // Only verifies a state proof not full storage proof
-            valid = LibSignal.verifySignal(root, chainId, sender, value, storageProof);
-            require(valid, SignalNotReceived(chainId, value));
+            valid = LibSignal.verifySignal(root, sender, value, storageProof);
+            require(valid, SignalNotReceived(value));
             return;
         }
-        valid = LibSignal.verifySignal(root, chainId, sender, value, accountProof, storageProof);
-        require(valid, SignalNotReceived(chainId, value));
+        valid = LibSignal.verifySignal(root, sender, value, accountProof, storageProof);
+        require(valid, SignalNotReceived(value));
     }
 }
