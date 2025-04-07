@@ -11,12 +11,16 @@ contract ProverManager is IProposerFees, IProverManager {
     // together.
     struct Period {
         address prover;
-        uint256 stake; // stake the prover locked to register
-        uint256 fee; // per-publication fee (in wei)
-        uint16 delayedFeePercentage; // the percentage (in bps) of the fee that is charged for delayed publications.
-        uint256 end; // the end of the period(this may happen because the prover exits, is evicted or outbid)
-        uint256 deadline; // the time by which the prover needs to submit a proof
-        bool pastDeadline; // whether the proof came after the deadline
+        uint256 stake;
+        // the fee that the prover is willing to charge for proving each publication
+        uint256 fee;
+        // the percentage (in bps) of the fee that is charged for delayed publications.
+        uint16 delayedFeePercentage;
+        uint256 end;
+        // the time by which the prover needs to submit a proof
+        uint256 deadline;
+        // whether the proof came after the deadline
+        bool pastDeadline;
     }
 
     /// @dev This struct is necessary to pass it to the constructor and avoid stack too deep errors
@@ -73,13 +77,6 @@ contract ProverManager is IProposerFees, IProverManager {
     uint256 public currentPeriodId;
     /// @dev Periods represent proving windows
     mapping(uint256 periodId => Period) private _periods;
-
-    event Deposit(address indexed user, uint256 amount);
-    event Withdrawal(address indexed user, uint256 amount);
-    event ProverOffer(address indexed proposer, uint256 period, uint256 fee, uint256 stake);
-    event ProverEvicted(address indexed prover, address indexed evictor, uint256 periodEnd, uint256 livenessBond);
-    event ProverExited(address indexed prover, uint256 periodEnd, uint256 provingDeadline);
-    event NewPeriod(uint256 period);
 
     constructor(
         address _inbox,
@@ -312,8 +309,10 @@ contract ProverManager is IProposerFees, IProverManager {
         emit Deposit(user, amount);
     }
 
-    /// @dev implementation of IProverManager.claimProvingVacancy with the option to specify a prover
-    /// This lets the constructor claim the first vacancy on behalf of _initialProver
+    /// @dev implementation of `IProverManager.claimProvingVacancy` with the option to specify a prover
+    /// This also lets the constructor claim the first vacancy on behalf of _initialProver
+    /// @param fee The fee to be set for the new period
+    /// @param prover The address of the prover to be set for the new period
     function _claimProvingVacancy(uint256 fee, address prover) private {
         uint256 periodId = currentPeriodId;
         Period storage period = _periods[periodId];

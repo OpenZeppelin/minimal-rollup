@@ -3,6 +3,8 @@ pragma solidity ^0.8.28;
 
 import "forge-std/Test.sol";
 
+import {IProposerFees} from "../src/protocol/IProposerFees.sol";
+import {IProverManager} from "../src/protocol/IProverManager.sol";
 import {ProverManager} from "../src/protocol/taiko_alethia/ProverManager.sol";
 
 import {ICheckpointTracker} from "src/protocol/ICheckpointTracker.sol";
@@ -91,7 +93,7 @@ contract ProverManagerTest is Test {
     function test_deposit() public {
         vm.prank(prover1);
         vm.expectEmit();
-        emit ProverManager.Deposit(prover1, DEPOSIT_AMOUNT);
+        emit IProposerFees.Deposit(prover1, DEPOSIT_AMOUNT);
         proverManager.deposit{value: DEPOSIT_AMOUNT}();
 
         uint256 bal = proverManager.balances(prover1);
@@ -106,7 +108,7 @@ contract ProverManagerTest is Test {
         uint256 balanceBefore = prover1.balance;
         vm.prank(prover1);
         vm.expectEmit();
-        emit ProverManager.Withdrawal(prover1, withdrawAmount);
+        emit IProposerFees.Withdrawal(prover1, withdrawAmount);
         proverManager.withdraw(withdrawAmount);
         uint256 balanceAfter = prover1.balance;
 
@@ -149,7 +151,7 @@ contract ProverManagerTest is Test {
         // Call payPublicationFee from the inbox and check that the period has been advanced.
         vm.prank(inbox);
         vm.expectEmit();
-        emit ProverManager.NewPeriod(2);
+        emit IProverManager.NewPeriod(2);
         proverManager.payPublicationFee(proposer, false);
     }
 
@@ -169,7 +171,7 @@ contract ProverManagerTest is Test {
 
         vm.prank(prover1);
         vm.expectEmit();
-        emit ProverManager.ProverOffer(prover1, 2, maxAllowedFee, LIVENESS_BOND);
+        emit IProverManager.ProverOffer(prover1, 2, maxAllowedFee, LIVENESS_BOND);
         proverManager.bid(maxAllowedFee);
 
         // Check that period 2 has been created
@@ -202,7 +204,7 @@ contract ProverManagerTest is Test {
 
         vm.prank(prover2);
         vm.expectEmit();
-        emit ProverManager.ProverOffer(prover2, 2, secondBidFee, LIVENESS_BOND);
+        emit IProverManager.ProverOffer(prover2, 2, secondBidFee, LIVENESS_BOND);
         proverManager.bid(secondBidFee);
 
         // Check that period 2 now has prover2 as the prover
@@ -295,7 +297,7 @@ contract ProverManagerTest is Test {
         vm.warp(vm.getBlockTimestamp() + LIVENESS_WINDOW + 1);
         vm.prank(evictor);
         vm.expectEmit();
-        emit ProverManager.ProverEvicted(
+        emit IProverManager.ProverEvicted(
             initialProver, evictor, vm.getBlockTimestamp() + EXIT_DELAY, stakeBefore - incentive
         );
         proverManager.evictProver(header);
@@ -372,7 +374,7 @@ contract ProverManagerTest is Test {
         // initialProver is the prover for period 1
         vm.prank(initialProver);
         vm.expectEmit();
-        emit ProverManager.ProverExited(
+        emit IProverManager.ProverExited(
             initialProver, vm.getBlockTimestamp() + EXIT_DELAY, vm.getBlockTimestamp() + EXIT_DELAY + PROVING_WINDOW
         );
         proverManager.exit();
@@ -469,7 +471,7 @@ contract ProverManagerTest is Test {
         _deposit(proposer, INITIAL_FEE);
         vm.prank(inbox);
         vm.expectEmit();
-        emit ProverManager.NewPeriod(periodAfter + 1);
+        emit IProverManager.NewPeriod(periodAfter + 1);
         proverManager.payPublicationFee(proposer, false);
     }
 
