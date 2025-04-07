@@ -78,6 +78,12 @@ contract ProverManager is IProposerFees, IProverManager {
     /// @dev Periods represent proving windows
     mapping(uint256 periodId => Period) private _periods;
 
+    /// @param _inbox The address of the inbox contract
+    /// @param _checkpointTracker The address of the checkpoint tracker contract
+    /// @param _publicationFeed The address of the publication feed contract
+    /// @param _initialProver The address that will be designated as the initial prover
+    /// @param _initialFee The fee for the initial period
+    /// @param _config The configuration struct for the contract
     constructor(
         address _inbox,
         address _checkpointTracker,
