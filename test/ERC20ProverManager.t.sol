@@ -6,6 +6,7 @@ import "forge-std/Test.sol";
 import {BaseProverManager} from "../src/protocol/BaseProverManager.sol";
 import {ERC20ProverManager} from "../src/protocol/ERC20ProverManager.sol";
 
+import {IProposerFees} from "../src/protocol/IProposerFees.sol";
 import {ICheckpointTracker} from "src/protocol/ICheckpointTracker.sol";
 import {IPublicationFeed} from "src/protocol/IPublicationFeed.sol";
 import {PublicationFeed} from "src/protocol/PublicationFeed.sol";
@@ -193,7 +194,7 @@ contract ERC20ProverManagerTest is BaseProverManagerTest {
     function test_deposit() public {
         vm.prank(prover1);
         vm.expectEmit();
-        emit BaseProverManager.Deposit(prover1, DEPOSIT_AMOUNT);
+        emit IProposerFees.Deposit(prover1, DEPOSIT_AMOUNT);
         erc20ProverManager.deposit(DEPOSIT_AMOUNT);
 
         uint256 bal = proverManager.balances(prover1);
@@ -251,7 +252,7 @@ contract ERC20ProverManagerTest is BaseProverManagerTest {
         // Withdraw tokens
         vm.prank(prover1);
         vm.expectEmit();
-        emit BaseProverManager.Withdrawal(prover1, withdrawAmount);
+        emit IProposerFees.Withdrawal(prover1, withdrawAmount);
         proverManager.withdraw(withdrawAmount);
 
         // Get the token balance after withdrawal

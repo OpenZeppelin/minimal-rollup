@@ -4,6 +4,8 @@ pragma solidity ^0.8.28;
 import "forge-std/Test.sol";
 
 import {BaseProverManager} from "../src/protocol/BaseProverManager.sol";
+import {IProposerFees} from "../src/protocol/IProposerFees.sol";
+import {IProverManager} from "../src/protocol/IProverManager.sol";
 
 import {ICheckpointTracker} from "src/protocol/ICheckpointTracker.sol";
 import {IPublicationFeed} from "src/protocol/IPublicationFeed.sol";
@@ -76,7 +78,7 @@ abstract contract BaseProverManagerTest is Test {
         // Call payPublicationFee from the inbox and check that the period has been advanced.
         vm.prank(inbox);
         vm.expectEmit();
-        emit BaseProverManager.NewPeriod(2);
+        emit IProverManager.NewPeriod(2);
         proverManager.payPublicationFee(proposer, false);
     }
 
@@ -96,7 +98,7 @@ abstract contract BaseProverManagerTest is Test {
 
         vm.prank(prover1);
         vm.expectEmit();
-        emit BaseProverManager.ProverOffer(prover1, 2, maxAllowedFee, LIVENESS_BOND);
+        emit IProverManager.ProverOffer(prover1, 2, maxAllowedFee, LIVENESS_BOND);
         proverManager.bid(maxAllowedFee);
 
         // Check that period 2 has been created
@@ -129,7 +131,7 @@ abstract contract BaseProverManagerTest is Test {
 
         vm.prank(prover2);
         vm.expectEmit();
-        emit BaseProverManager.ProverOffer(prover2, 2, secondBidFee, LIVENESS_BOND);
+        emit IProverManager.ProverOffer(prover2, 2, secondBidFee, LIVENESS_BOND);
         proverManager.bid(secondBidFee);
 
         // Check that period 2 now has prover2 as the prover
@@ -222,7 +224,7 @@ abstract contract BaseProverManagerTest is Test {
         vm.warp(vm.getBlockTimestamp() + LIVENESS_WINDOW + 1);
         vm.prank(evictor);
         vm.expectEmit();
-        emit BaseProverManager.ProverEvicted(
+        emit IProverManager.ProverEvicted(
             initialProver, evictor, vm.getBlockTimestamp() + EXIT_DELAY, stakeBefore - incentive
         );
         proverManager.evictProver(header);
@@ -299,7 +301,7 @@ abstract contract BaseProverManagerTest is Test {
         // initialProver is the prover for period 1
         vm.prank(initialProver);
         vm.expectEmit();
-        emit BaseProverManager.ProverExited(
+        emit IProverManager.ProverExited(
             initialProver, vm.getBlockTimestamp() + EXIT_DELAY, vm.getBlockTimestamp() + EXIT_DELAY + PROVING_WINDOW
         );
         proverManager.exit();
@@ -396,7 +398,7 @@ abstract contract BaseProverManagerTest is Test {
         _deposit(proposer, INITIAL_FEE);
         vm.prank(inbox);
         vm.expectEmit();
-        emit BaseProverManager.NewPeriod(periodAfter + 1);
+        emit IProverManager.NewPeriod(periodAfter + 1);
         proverManager.payPublicationFee(proposer, false);
     }
 

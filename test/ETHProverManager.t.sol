@@ -5,6 +5,7 @@ import "forge-std/Test.sol";
 
 import {BaseProverManager} from "../src/protocol/BaseProverManager.sol";
 import {ETHProverManager} from "../src/protocol/ETHProverManager.sol";
+import {IProposerFees} from "../src/protocol/IProposerFees.sol";
 
 import {ICheckpointTracker} from "src/protocol/ICheckpointTracker.sol";
 import {IPublicationFeed} from "src/protocol/IPublicationFeed.sol";
@@ -119,7 +120,7 @@ contract ETHProverManagerTest is BaseProverManagerTest {
     function test_deposit() public {
         vm.prank(prover1);
         vm.expectEmit();
-        emit BaseProverManager.Deposit(prover1, DEPOSIT_AMOUNT);
+        emit IProposerFees.Deposit(prover1, DEPOSIT_AMOUNT);
         ethProverManager.deposit{value: DEPOSIT_AMOUNT}();
 
         uint256 bal = proverManager.balances(prover1);
@@ -134,7 +135,7 @@ contract ETHProverManagerTest is BaseProverManagerTest {
         uint256 balanceBefore = prover1.balance;
         vm.prank(prover1);
         vm.expectEmit();
-        emit BaseProverManager.Withdrawal(prover1, withdrawAmount);
+        emit IProposerFees.Withdrawal(prover1, withdrawAmount);
         proverManager.withdraw(withdrawAmount);
         uint256 balanceAfter = prover1.balance;
 

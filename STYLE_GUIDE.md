@@ -53,6 +53,7 @@ This guide is not intended to be comprehensive, but rather to provide a starting
 1. Events and structs when part of the contract's public API should be defined in the contract interface.
 
     If they are an implementation detail, or emitted by a specific implementation, they should instead be defined in the contract itself, and not part of the interface.
+
     ```solidity
     interface IMyContract {
         // These event and struct are part of the interface
@@ -116,6 +117,17 @@ This guide is not intended to be comprehensive, but rather to provide a starting
     function withdraw(uint256 amount) external {
         require(amount <= balance, "Insufficient balance");
         balance -= amount;
+    }
+    ```
+
+1. Constructors should have natspec, but it can be simpler than other functions. If the constructor simply assigns values to state variables, specifying the parameters is sufficient.
+
+    ```solidity
+    /// @param _inclusionDelay The delay before next set of inclusions can be processed.
+    /// @param _blobRefRegistry The address of the blob reference registry.
+    constructor(uint256 _inclusionDelay, address _blobRefRegistry) {
+        inclusionDelay = _inclusionDelay;
+        blobRefRegistry = IBlobRefRegistry(_blobRefRegistry);
     }
     ```
 
