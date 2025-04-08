@@ -9,6 +9,14 @@ import {SignalService} from "src/protocol/SignalService.sol";
 import {MockAnchor} from "test/mocks/MockAnchor.sol";
 import {MockCheckpointTracker} from "test/mocks/MockCheckpointTracker.sol";
 
+/// @notice These tessts are simulating cross-chain signaling between L1 and L2.
+/// They use fork testing to simulate L1 and L2 chains. You must therefore run the tests
+/// with two anvil nodes running in the background. One on port 8545 (L1) and one on port 8546 (L2).
+/// command to run anvil:
+/// anvil --port 8545
+/// anvil --port 8546
+/// These tests will not run if BOTH anvil nodes are not running.
+
 /// State where there are no signals.
 contract BaseState is Test {
     SignalService L1signalService;
@@ -20,17 +28,20 @@ contract BaseState is Test {
     uint256 public L2Fork;
 
     address public rollupOperator = vm.addr(0x1234);
+    // Default sender is account[0] of an anvil node
+    // This is needed to get deterministic addresses for the contracts that match
+    // the storage proofs generated in scripts/generate_signal_proofs.sh
     address defaultSender = address(0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266);
 
     function setUp() public virtual {
-        L1Fork = vm.createFork("http://localhost:8545");
+        L1Fork = vm.createFork("L1");
         vm.selectFork(L1Fork);
 
         vm.prank(defaultSender);
         L1signalService = new SignalService(rollupOperator);
         checkpointTracker = new MockCheckpointTracker(address(L1signalService));
 
-        L2Fork = vm.createFork("http://localhost:8546");
+        L2Fork = vm.createFork("L2");
         vm.selectFork(L2Fork);
         vm.prank(defaultSender);
         L2signalService = new SignalService(rollupOperator);
@@ -49,14 +60,16 @@ contract BaseState is Test {
 
 // State where a signal is sent from L1 to L2.
 contract SendL1SignalState is BaseState {
+    uint256 public value = 0x1234;
     // 0xe321d900f3fd366734e2d071e30949ded20c27fd638f1a059390091c643b62c5
-    bytes32 public value = keccak256(abi.encode(0x1234));
+    bytes32 public signal = keccak256(abi.encode(value));
     bytes32 public stateRoot = hex"863fb52dc6f4397decb2baaf29af5abf224c675e08ade3623eaf050ac418ee97";
 
     function setUp() public virtual override {
         super.setUp();
+        vm.selectFork(L1Fork);
         vm.prank(defaultSender);
-        L1signalService.sendSignal(value);
+        L1signalService.sendSignal(signal);
     }
 
     function getStorageProof() public pure returns (bytes[] memory) {
@@ -82,10 +95,11 @@ contract SendL1SignalState is BaseState {
 
 contract SendL1SignalTest is SendL1SignalState {
     function test_sendL1Signal() public {
+        vm.selectFork(L2Fork);
         ISignalService.SignalProof memory signalProof = ISignalService.SignalProof(getAccountProof(), getStorageProof());
         bytes memory encodedProof = abi.encode(signalProof);
         uint256 height = 1;
         anchor.anchor(height, stateRoot);
-        L2signalService.verifySignal(height, defaultSender, value, encodedProof);
+        L2signalService.verifySignal(height, defaultSender, signal, encodedProof);
     }
 }

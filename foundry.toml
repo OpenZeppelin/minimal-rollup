@@ -4,6 +4,7 @@ out = "out"
 libs = ["lib"]
 evm_version = "cancun"
 always_use_create_2_factory = true
+rpc_endpoints = { L1 = "http://localhost:8545", L2 = "http://localhost:8546" }
 
 [fmt]
 sort_imports = true
