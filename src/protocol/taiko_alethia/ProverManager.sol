@@ -7,13 +7,20 @@ import {IProverManager} from "../IProverManager.sol";
 import {IPublicationFeed} from "../IPublicationFeed.sol";
 
 contract ProverManager is IProposerFees, IProverManager {
+    // TODO: Optimize storage by packing the struct. Things like `fee` and `delayedFeePercentage` should be packed
+    // together.
     struct Period {
         address prover;
-        uint256 stake; // stake the prover locked to register
-        uint256 fee; // per-publication fee (in wei)
-        uint256 end; // the end of the period(this may happen because the prover exits, is evicted or outbid)
-        uint256 deadline; // the time by which the prover needs to submit a proof
-        bool pastDeadline; // whether the proof came after the deadline
+        uint256 stake;
+        // the fee that the prover is willing to charge for proving each publication
+        uint256 fee;
+        // the percentage (in bps) of the fee that is charged for delayed publications.
+        uint16 delayedFeePercentage;
+        uint256 end;
+        // the time by which the prover needs to submit a proof
+        uint256 deadline;
+        // whether the proof came after the deadline
+        bool pastDeadline;
     }
 
     /// @dev This struct is necessary to pass it to the constructor and avoid stack too deep errors
@@ -27,6 +34,7 @@ contract ProverManager is IProposerFees, IProverManager {
         uint256 livenessBond;
         uint256 evictorIncentivePercentage;
         uint256 rewardPercentage;
+        uint16 delayedFeePercentage;
     }
 
     address public immutable inbox;
@@ -58,6 +66,10 @@ contract ProverManager is IProposerFees, IProverManager {
     /// @notice The percentage (in bps) of the remaining liveness bond rewarded to the prover who proves the final
     /// publication after the deadline
     uint256 public immutable rewardPercentage;
+    /// @notice The percentage (in bps) of the fee that is charged for delayed publications
+    /// @dev It is recommended to set this to >10,000 bps since delayed publications should usually be charged at a
+    /// higher rate
+    uint16 public immutable delayedFeePercentage;
 
     /// @notice Common balances for proposers and provers
     mapping(address user => uint256 balance) public balances;
@@ -66,13 +78,14 @@ contract ProverManager is IProposerFees, IProverManager {
     /// @dev Periods represent proving windows
     mapping(uint256 periodId => Period) private _periods;
 
-    event Deposit(address indexed user, uint256 amount);
-    event Withdrawal(address indexed user, uint256 amount);
-    event ProverOffer(address indexed proposer, uint256 period, uint256 fee, uint256 stake);
-    event ProverEvicted(address indexed prover, address indexed evictor, uint256 periodEnd, uint256 livenessBond);
-    event ProverExited(address indexed prover, uint256 periodEnd, uint256 provingDeadline);
-    event NewPeriod(uint256 period);
-
+    /// @dev Initializes the contract state and deposits the initial prover's liveness bond.
+    /// The constructor also calls `_claimProvingVacancy`. Publications will actually start in period 1.
+    /// @param _inbox The address of the inbox contract
+    /// @param _checkpointTracker The address of the checkpoint tracker contract
+    /// @param _publicationFeed The address of the publication feed contract
+    /// @param _initialProver The address that will be designated as the initial prover
+    /// @param _initialFee The fee for the initial period
+    /// @param _config The configuration struct for the contract
     constructor(
         address _inbox,
         address _checkpointTracker,
@@ -89,6 +102,7 @@ contract ProverManager is IProposerFees, IProverManager {
         livenessBond = _config.livenessBond;
         evictorIncentivePercentage = _config.evictorIncentivePercentage;
         rewardPercentage = _config.rewardPercentage;
+        delayedFeePercentage = _config.delayedFeePercentage;
         inbox = _inbox;
         checkpointTracker = ICheckpointTracker(_checkpointTracker);
         publicationFeed = IPublicationFeed(_publicationFeed);
@@ -122,14 +136,8 @@ contract ProverManager is IProposerFees, IProverManager {
 
     /// @inheritdoc IProposerFees
     /// @dev This function advances to the next period if the current period has ended.
-    // TODO: deal with delayed publications
-    function payPublicationFee(address proposer, bool isDelayed) external payable {
+    function payPublicationFee(address proposer, bool isDelayed) external {
         require(msg.sender == inbox, "Only the Inbox contract can call this function");
-
-        // Accept additional deposit if sent
-        if (msg.value > 0) {
-            _deposit(proposer, msg.value);
-        }
 
         uint256 periodId = currentPeriodId;
 
@@ -141,7 +149,13 @@ contract ProverManager is IProposerFees, IProverManager {
         }
 
         // Deduct fee from proposer's balance
-        balances[proposer] -= _periods[periodId].fee;
+        uint256 fee = _periods[periodId].fee;
+        if (isDelayed) {
+            // If it is a new period, we already have the value of the delayed fee percentage. The compiler should
+            // usually be able to optimize this, but to make sure we do it explicitly.
+            fee = _calculatePercentage(fee, _periods[periodId].delayedFeePercentage);
+        }
+        balances[proposer] -= fee;
     }
 
     /// @inheritdoc IProverManager
@@ -150,27 +164,27 @@ contract ProverManager is IProposerFees, IProverManager {
     /// period is active or not.
     /// An active period is one that doesn't have an `end` timestamp yet.
     function bid(uint256 offeredFee) external {
-        uint256 currentPeriod = currentPeriodId;
-        Period storage _currentPeriod = _periods[currentPeriod];
-        Period storage _nextPeriod = _periods[currentPeriod + 1];
-        if (_currentPeriod.end == 0) {
-            _ensureSufficientUnderbid(_currentPeriod.fee, offeredFee);
-            _closePeriod(_currentPeriod, successionDelay, provingWindow);
+        uint256 currentPeriodId_ = currentPeriodId;
+        Period storage currentPeriod = _periods[currentPeriodId_];
+        Period storage nextPeriod = _periods[currentPeriodId_ + 1];
+        if (currentPeriod.end == 0) {
+            _ensureSufficientUnderbid(currentPeriod.fee, offeredFee);
+            _closePeriod(currentPeriod, successionDelay, provingWindow);
         } else {
-            address _nextProverAddress = _nextPeriod.prover;
-            if (_nextProverAddress != address(0)) {
-                _ensureSufficientUnderbid(_nextPeriod.fee, offeredFee);
+            address nextProverAddress = nextPeriod.prover;
+            if (nextProverAddress != address(0)) {
+                _ensureSufficientUnderbid(nextPeriod.fee, offeredFee);
 
                 // Refund the liveness bond to the losing bid
-                balances[_nextProverAddress] += _nextPeriod.stake;
+                balances[nextProverAddress] += nextPeriod.stake;
             }
         }
 
         // Record the next period info
-        uint256 _livenessBond = livenessBond;
-        _updatePeriod(_nextPeriod, msg.sender, offeredFee, _livenessBond);
+        uint256 livenessBond_ = livenessBond;
+        _updatePeriod(nextPeriod, msg.sender, offeredFee, livenessBond_);
 
-        emit ProverOffer(msg.sender, currentPeriod + 1, offeredFee, _livenessBond);
+        emit ProverOffer(msg.sender, currentPeriodId_ + 1, offeredFee, livenessBond_);
     }
 
     /// @inheritdoc IProverManager
@@ -204,12 +218,12 @@ contract ProverManager is IProposerFees, IProverManager {
     /// @dev The liveness bond can only be withdrawn once the period has been fully proven.
     function exit() external {
         Period storage period = _periods[currentPeriodId];
-        address _prover = period.prover;
-        require(msg.sender == _prover, "Not current prover");
+        address prover = period.prover;
+        require(msg.sender == prover, "Not current prover");
         require(period.end == 0, "Prover already exited");
 
         (uint256 end, uint256 deadline) = _closePeriod(period, exitDelay, provingWindow);
-        emit ProverExited(_prover, end, deadline);
+        emit ProverExited(prover, end, deadline);
     }
 
     /// @inheritdoc IProverManager
@@ -224,6 +238,7 @@ contract ProverManager is IProposerFees, IProverManager {
         IPublicationFeed.PublicationHeader calldata firstPub,
         IPublicationFeed.PublicationHeader calldata lastPub,
         uint256 numPublications,
+        uint256 numDelayedPublications,
         bytes calldata proof,
         uint256 periodId
     ) external {
@@ -238,7 +253,7 @@ contract ProverManager is IProposerFees, IProverManager {
         require(start.publicationId + 1 == firstPub.id, "First publication not immediately after start checkpoint");
         require(firstPub.timestamp > previousPeriodEnd, "First publication is before the period");
 
-        checkpointTracker.proveTransition(start, end, numPublications, proof);
+        checkpointTracker.proveTransition(start, end, numPublications, numDelayedPublications, proof);
 
         bool isPastDeadline = block.timestamp > period.deadline && period.deadline != 0;
         if (isPastDeadline) {
@@ -247,7 +262,17 @@ contract ProverManager is IProposerFees, IProverManager {
             period.prover = msg.sender;
             period.pastDeadline = true;
         }
-        balances[period.prover] += numPublications * period.fee;
+        uint256 baseFee = period.fee;
+        uint256 regularPubFee = (numPublications - numDelayedPublications) * baseFee;
+
+        uint256 delayedPubFee;
+
+        if (numDelayedPublications > 0) {
+            uint256 delayedFee = _calculatePercentage(baseFee, period.delayedFeePercentage);
+            delayedPubFee = numDelayedPublications * delayedFee;
+        }
+
+        balances[period.prover] += regularPubFee + delayedPubFee;
     }
 
     /// @inheritdoc IProverManager
@@ -274,9 +299,9 @@ contract ProverManager is IProposerFees, IProverManager {
             currentPeriod++;
         }
 
-        uint256 publicationFee = _periods[currentPeriod].fee;
-        // TODO: implement delayed fee once we decide how to handle delayed publications
-        return (publicationFee, publicationFee);
+        Period storage period = _periods[currentPeriod];
+        fee = period.fee;
+        delayedFee = _calculatePercentage(fee, period.delayedFeePercentage);
     }
 
     /// @notice Returns the period for a given period id
@@ -292,8 +317,10 @@ contract ProverManager is IProposerFees, IProverManager {
         emit Deposit(user, amount);
     }
 
-    /// @dev implementation of IProverManager.claimProvingVacancy with the option to specify a prover
-    /// This lets the constructor claim the first vacancy on behalf of _initialProver
+    /// @dev implementation of `IProverManager.claimProvingVacancy` with the option to specify a prover
+    /// This also lets the constructor claim the first vacancy on behalf of _initialProver
+    /// @param fee The fee to be set for the new period
+    /// @param prover The address of the prover to be set for the new period
     function _claimProvingVacancy(uint256 fee, address prover) private {
         uint256 periodId = currentPeriodId;
         Period storage period = _periods[periodId];
@@ -320,6 +347,7 @@ contract ProverManager is IProposerFees, IProverManager {
     function _updatePeriod(Period storage period, address prover, uint256 fee, uint256 stake) private {
         period.prover = prover;
         period.fee = fee;
+        period.delayedFeePercentage = delayedFeePercentage;
         period.stake = stake; // overwrite previous value. We assume the previous value is zero or already returned
         balances[prover] -= stake;
     }
@@ -335,15 +363,15 @@ contract ProverManager is IProposerFees, IProverManager {
     /// @dev Sets a period's end and deadline timestamps
     /// @param period The period to finalize
     /// @param endDelay The duration (from now) when the period will end
-    /// @param _provingWindow The duration that proofs can be submitted after the end of the period
+    /// @param provingWindow_ The duration that proofs can be submitted after the end of the period
     /// @return end The period's end timestamp
     /// @return deadline The period's deadline timestamp
-    function _closePeriod(Period storage period, uint256 endDelay, uint256 _provingWindow)
+    function _closePeriod(Period storage period, uint256 endDelay, uint256 provingWindow_)
         private
         returns (uint256 end, uint256 deadline)
     {
         end = block.timestamp + endDelay;
-        deadline = end + _provingWindow;
+        deadline = end + provingWindow_;
         period.end = end;
         period.deadline = deadline;
     }
