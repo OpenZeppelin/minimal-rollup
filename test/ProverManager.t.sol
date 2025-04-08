@@ -8,6 +8,7 @@ import {ProverManager} from "../src/protocol/taiko_alethia/ProverManager.sol";
 import {ICheckpointTracker} from "src/protocol/ICheckpointTracker.sol";
 import {IPublicationFeed} from "src/protocol/IPublicationFeed.sol";
 import {PublicationFeed} from "src/protocol/PublicationFeed.sol";
+import {SignalService} from "src/protocol/SignalService.sol";
 
 import {MockCheckpointTracker} from "test/mocks/MockCheckpointTracker.sol";
 import {NullVerifier} from "test/mocks/NullVerifier.sol";
@@ -17,16 +18,17 @@ contract ProverManagerTest is Test {
     MockCheckpointTracker checkpointTracker;
     NullVerifier verifier;
     PublicationFeed publicationFeed;
+    SignalService signalService;
     uint256 constant DEPOSIT_AMOUNT = 2 ether;
 
     // Addresses used for testing.
-    address inbox = address(0x100);
-    address initialProver = address(0x101);
-    address prover1 = address(0x200);
-    address prover2 = address(0x201);
-    address proposer = address(0x202);
-    address evictor = address(0x203);
-    address commitmentStore = address(0);
+    address inbox = vm.addr(0x100);
+    address initialProver = vm.addr(0x101);
+    address prover1 = vm.addr(0x200);
+    address prover2 = vm.addr(0x201);
+    address proposer = vm.addr(0x202);
+    address evictor = vm.addr(0x203);
+    address rollupOperator = vm.addr(0x204);
 
     // Configuration parameters.
     uint256 constant MAX_BID_PERCENTAGE = 9500; // 95%
@@ -41,8 +43,11 @@ contract ProverManagerTest is Test {
     uint256 constant INITIAL_PERIOD = 1;
 
     function setUp() public {
-        checkpointTracker = new MockCheckpointTracker(commitmentStore);
+        signalService = new SignalService(rollupOperator);
+        checkpointTracker = new MockCheckpointTracker(address(signalService));
         publicationFeed = new PublicationFeed();
+        vm.prank(rollupOperator);
+        signalService.setAuthorizedCommitter(address(checkpointTracker));
 
         // Fund the initial prover so the constructor can receive the required livenessBond.
         vm.deal(initialProver, 10 ether);
