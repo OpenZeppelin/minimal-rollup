@@ -26,6 +26,7 @@ contract ProverManagerTest is Test {
     address prover2 = address(0x201);
     address proposer = address(0x202);
     address evictor = address(0x203);
+    address commitmentStore = address(0);
 
     // Configuration parameters.
     uint256 constant MAX_BID_PERCENTAGE = 9500; // 95%
@@ -40,7 +41,7 @@ contract ProverManagerTest is Test {
     uint256 constant INITIAL_PERIOD = 1;
 
     function setUp() public {
-        checkpointTracker = new MockCheckpointTracker();
+        checkpointTracker = new MockCheckpointTracker(commitmentStore);
         publicationFeed = new PublicationFeed();
 
         // Fund the initial prover so the constructor can receive the required livenessBond.
