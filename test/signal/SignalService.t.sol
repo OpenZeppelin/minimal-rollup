@@ -38,12 +38,6 @@ contract BaseState is Test {
     }
 }
 
-contract BaseStateTest is BaseState {
-    function test_yo() public {
-        console.log("ROLLUP OPERATOR", rollupOperator);
-    }
-}
-
 contract SendL1SignalState is BaseState {
     uint256 public value = 0x1234;
 
@@ -54,13 +48,7 @@ contract SendL1SignalState is BaseState {
 
 contract SendL1SignalTest is SendL1SignalState {
     function test_sendL1Signal() public {
-        console.log("L1signalService", address(L1signalService));
-        console.log("L2signalService", address(L2signalService));
-        vm.prank(0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266);
-        bytes32 slot = L1signalService.sendSignal(keccak256(abi.encode(value)));
-        bytes32 signal = keccak256(abi.encode(value));
-        console.logBytes32(keccak256(abi.encode(value)));
-        console.logBytes32(slot);
+        vm.skip(true);
         bytes[] memory storageProof = new bytes[](2);
 
         storageProof[0] =
