@@ -5,6 +5,30 @@ import {ICheckpointTracker} from "./ICheckpointTracker.sol";
 import {IPublicationFeed} from "./IPublicationFeed.sol";
 
 interface IProverManager {
+    /// @notice Emitted when a prover bids to prove a period
+    /// @param prover The address of the prover that made the bid
+    /// @param period The period that the prover is bidding to prove
+    /// @param fee The fee that the prover is willing to charge for proving each publication
+    /// @param stake The stake that the prover is going to put as stake for the period
+    event ProverOffer(address indexed prover, uint256 period, uint256 fee, uint256 stake);
+
+    /// @notice Emitted when a prover is evicted from the prover role
+    /// @param prover The address of the prover that was evicted
+    /// @param evictor The address that evicted the prover
+    /// @param periodEnd The end of the period that the prover was evicted from
+    /// @param livenessBond The liveness bond that the prover had originally put up
+    event ProverEvicted(address indexed prover, address indexed evictor, uint256 periodEnd, uint256 livenessBond);
+
+    /// @notice Emitted when a prover exits the prover role
+    /// @param prover The address of the prover that exited
+    /// @param periodEnd The end of the period that the prover exited from
+    /// @param provingDeadline The deadline for the prover to prove the period
+    event ProverExited(address indexed prover, uint256 periodEnd, uint256 provingDeadline);
+
+    /// @notice Emitted when a new period starts
+    /// @param period The id of the new period
+    event NewPeriod(uint256 period);
+
     /// @notice Bid to become the prover for the next period
     /// @param offeredFee The fee you are willing to charge for proving each publication
     function bid(uint256 offeredFee) external;
