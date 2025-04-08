@@ -44,7 +44,7 @@ abstract contract CommitmentStore is ICommitmentStore, Ownable {
     /// @inheritdoc ICommitmentStore
     function storeCommitment(uint256 height, bytes32 commitment) external virtual onlyAuthorizedCommitter {
         _commitments[height] = commitment;
-        emit CommitmentStored(block.chainid.toUint64(), commitment, height);
+        emit CommitmentStored(height, commitment);
     }
 
     /// @dev Internal helper to validate the authorizedCommitter.
