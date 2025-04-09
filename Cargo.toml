@@ -7,6 +7,10 @@ edition = "2021"
 name = "signal_slot"
 path = "offchain/signal_slot.rs"
 
+[[bin]]
+name = "signal_proof"
+path = "offchain/signal_proof.rs"
+
 [dependencies]
 alloy = { version = "0.13.0", features = ["node-bindings"] }
 eyre = "0.6.12"
