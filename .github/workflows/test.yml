@@ -39,6 +39,11 @@ jobs:
           forge build --sizes
         id: build
 
+      - name: Install Just
+        uses: taiki-e/install-action@just
+        run: |
+          just start-anvil
+
       - name: Run Forge tests
         run: |
           forge test -vvv
