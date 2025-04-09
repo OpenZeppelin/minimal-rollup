@@ -41,6 +41,8 @@ jobs:
 
       - name: Install Just
         uses: taiki-e/install-action@just
+
+      - name: Run Anvil Nodes
         run: |
           just start-anvil
 
