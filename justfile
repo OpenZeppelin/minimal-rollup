@@ -16,4 +16,4 @@ get-signal-proof signal sender:
 
 # Run the storage slot for a signal and sender
 get-signal-slot signal sender:
-    cargo run --bin signal-slot {{signal}} {{sender}}
+    cargo run --bin signal_slot {{signal}} {{sender}}
