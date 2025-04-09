@@ -95,6 +95,8 @@ contract SendL1SignalState is BaseState {
 
 contract SendL1SignalTest is SendL1SignalState {
     function test_sendL1Signal() public {
+        bytes32 packed = keccak256(abi.encodePacked(0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266, signal));
+        console.logBytes32(packed);
         vm.selectFork(L2Fork);
         ISignalService.SignalProof memory signalProof = ISignalService.SignalProof(getAccountProof(), getStorageProof());
         bytes memory encodedProof = abi.encode(signalProof);
