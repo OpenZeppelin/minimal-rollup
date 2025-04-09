@@ -75,6 +75,7 @@ async fn main() -> Result<()> {
         .await?;
 
     println!("State Root: {:?}", state_root);
+    println!("Storage Root: {:?}", proof.storage_hash);
     println!("Account Proof: {}", to_string_pretty(&proof.account_proof)?);
     println!("Storage Proof: {}", to_string_pretty(&proof.storage_proof)?);
     Ok(())

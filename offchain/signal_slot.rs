@@ -28,7 +28,7 @@ pub fn get_signal_slot(signal: &B256, sender: &Address) -> B256 {
 fn main() -> Result<()> {
     let args: Vec<String> = env::args().collect();
     if args.len() != 3 {
-        return Err(eyre!("Usage: cargo run --bin script.rs <signal (0x...)>"));
+        return Err(eyre!("Usage: cargo run --bin signal_slot <signal (0x...)>"));
     }
 
     let signal_str = &args[1];
