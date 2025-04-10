@@ -1,13 +1,15 @@
 use alloy::{
     node_bindings::Anvil,
-    primitives::{address, Address, B256},
+    primitives::{address, Address, FixedBytes, B256},
     providers::{Provider, ProviderBuilder},
+    rpc::types::EIP1186AccountProofResponse,
     signers::local::PrivateKeySigner,
     sol,
 };
 use eyre::{eyre, Result};
 use serde_json::to_string_pretty;
 use std::env;
+use SignalService::SignalServiceInstance;
 
 mod signal_slot;
 use signal_slot::get_signal_slot;
@@ -45,18 +47,40 @@ fn prompt_sender_and_signal() -> Result<(B256, Address)> {
     Ok((signal, sender))
 }
 
+fn get_provider() -> Result<impl Provider> {
+    let anvil = Anvil::new().block_time(BLOCK_TIME).try_spawn()?;
+    let signer: PrivateKeySigner = anvil.keys()[0].clone().into();
+    let rpc_url = anvil.endpoint_url();
+    Ok(ProviderBuilder::new().wallet(signer).on_http(rpc_url))
+}
+
+async fn get_proofs(
+    provider: &impl Provider,
+    signal: &B256,
+    sender: &Address,
+    signal_service: &SignalServiceInstance<(), &impl Provider>,
+) -> Result<(FixedBytes<32>, EIP1186AccountProofResponse)> {
+    let state_root = provider
+        .get_block_by_number(alloy::eips::BlockNumberOrTag::Latest)
+        .await?
+        .unwrap()
+        .header
+        .state_root;
+
+    let slot = get_signal_slot(&signal, &sender);
+    let proof = provider
+        .get_proof(signal_service.address().to_owned(), vec![slot])
+        .await?;
+
+    Ok((state_root, proof))
+}
+
 #[tokio::main]
 async fn main() -> Result<()> {
     println!();
     let (signal, sender) = prompt_sender_and_signal()?;
 
-    let anvil = Anvil::new().block_time(BLOCK_TIME).try_spawn()?;
-    let signer: PrivateKeySigner = anvil.keys()[0].clone().into();
-
-    let slot = get_signal_slot(&signal, &sender);
-
-    let rpc_url = anvil.endpoint_url();
-    let provider = ProviderBuilder::new().wallet(signer).on_http(rpc_url);
+    let provider = get_provider()?;
 
     let contract = SignalService::deploy(&provider, ROLLUP_OPERATOR).await?;
 
@@ -65,16 +89,7 @@ async fn main() -> Result<()> {
     let builder = contract.sendSignal(signal);
     builder.send().await?.watch().await?;
 
-    let state_root = provider
-        .get_block_by_number(alloy::eips::BlockNumberOrTag::Latest)
-        .await?
-        .unwrap()
-        .header
-        .state_root;
-
-    let proof = provider
-        .get_proof(contract.address().to_owned(), vec![slot])
-        .await?;
+    let (state_root, proof) = get_proofs(&provider, &signal, &sender, &contract).await?;
 
     println!("State Root: {}", state_root.to_string());
     println!("Storage Root: {}", proof.storage_hash.to_string());
