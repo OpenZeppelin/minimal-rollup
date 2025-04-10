@@ -84,6 +84,6 @@ library LibSignal {
         pure
         returns (bool valid)
     {
-        valid = LibTrieProof.verifyState(LibSignal.deriveSlot(sender, value), value, root, stateProof);
+        valid = LibTrieProof.verifyState(deriveSlot(sender, value), value, root, stateProof);
     }
 }
