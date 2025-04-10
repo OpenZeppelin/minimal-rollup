@@ -2,14 +2,11 @@
 pragma solidity ^0.8.28;
 
 import {IETHBridge} from "./IETHBridge.sol";
-import {StorageSlot} from "@openzeppelin/contracts/utils/StorageSlot.sol";
 
 /// @dev Abstract ETH bridging contract to send native ETH between L1 <-> L2 using storage proofs.
 ///
 /// IMPORTANT: No recovery mechanism is implemented in case an account creates a deposit that can't be claimed.
 abstract contract ETHBridge is IETHBridge {
-    using StorageSlot for bytes32;
-
     mapping(bytes32 id => bool claimed) private _claimed;
 
     /// Incremental nonce to generate unique deposit IDs.
