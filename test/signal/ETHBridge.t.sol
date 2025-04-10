@@ -7,6 +7,8 @@ import "forge-std/Test.sol";
 import {BaseState} from "./SignalService.t.sol";
 
 import {ETHBridge} from "src/protocol/ETHBridge.sol";
+
+import {IETHBridge} from "src/protocol/IETHBridge.sol";
 import {ISignalService} from "src/protocol/ISignalService.sol";
 
 // represents state where a deposit is made on L1
@@ -14,6 +16,7 @@ import {ISignalService} from "src/protocol/ISignalService.sol";
 contract BridgeETHState is BaseState {
     bytes32 public depositIdOne;
     uint256 public depositAmount = 4 ether;
+    ETHBridge.ETHDeposit public depositOne;
 
     function setUp() public virtual override {
         super.setUp();
@@ -21,7 +24,12 @@ contract BridgeETHState is BaseState {
 
         vm.prank(defaultSender);
         bytes memory emptyData = "";
+        vm.recordLogs();
         depositIdOne = L1signalService.deposit{value: depositAmount}(defaultSender, emptyData);
+
+        Vm.Log[] memory entries = vm.getRecordedLogs();
+
+        depositOne = abi.decode(entries[0].data, (IETHBridge.ETHDeposit));
     }
 }
 
@@ -80,14 +88,7 @@ contract ClaimDepositTest is CommitmentStoredState {
         ISignalService.SignalProof memory signalProof = ISignalService.SignalProof(accountProof, storageProof);
         bytes memory encodedProof = abi.encode(signalProof);
 
-        ETHBridge.ETHDeposit memory ethDeposit;
-        ethDeposit.nonce = 0;
-        ethDeposit.from = defaultSender;
-        ethDeposit.to = defaultSender;
-        ethDeposit.amount = depositAmount;
-        ethDeposit.data = "";
-
-        L2signalService.claimDeposit(ethDeposit, commimentHeight, encodedProof);
+        L2signalService.claimDeposit(depositOne, commimentHeight, encodedProof);
 
         assertEq(address(L2signalService).balance, ETHBridgeInitBalance - depositAmount);
         assertEq(defaultSender.balance, senderBalanceL2 + depositAmount);

@@ -55,7 +55,6 @@ contract SignalService is ISignalService, ETHBridge, CommitmentStore {
     {
         // TODO: Maybe this function should accept a depositID ?
         // maybe slightly more gas efficient
-        // Also as of now there is no way to reconstruct the ethdeposit struct (uses a hidden global nonce)
         id = _generateId(ethDeposit);
 
         _verifySignal(height, ethDeposit.from, id, proof);
