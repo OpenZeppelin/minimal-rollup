@@ -15,7 +15,7 @@ import {ISignalService} from "./ISignalService.sol";
 /// - `ETHBridge` for native ETH bridging with deposit and claim flows,
 /// - `LibSignal` for signal hashing, storage, and verification logic.
 ///
-/// Signals stored can not be deleted and can be verified multiple times.
+/// Signals stored cannot be deleted and can be verified multiple times.
 contract SignalService is ISignalService, ETHBridge, CommitmentStore {
     using LibSignal for bytes32;
 
