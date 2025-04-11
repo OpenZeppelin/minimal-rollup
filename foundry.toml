@@ -3,6 +3,7 @@ src = "src"
 out = "out"
 libs = ["lib"]
 evm_version = "cancun"
+always_use_create_2_factory = true # Use Foundry's create2 factory in tests(https://github.com/foundry-rs/foundry/pull/6656)
 
 [fmt]
 sort_imports = true
