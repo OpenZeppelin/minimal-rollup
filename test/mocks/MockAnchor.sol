@@ -10,7 +10,7 @@ contract MockAnchor {
         commitmentStore = ICommitmentStore(_commitmentStore);
     }
 
-    /// @notice Anchore doesnt do anything, it just stores the commitment
+    /// @notice Anchor doesnt do anything, it just stores the commitment
     function anchor(uint256 _anchorBlockId, bytes32 _anchorBlockHash) external {
         // WARN: Here we are committing the L1 state root not block hash
         commitmentStore.storeCommitment(_anchorBlockId, _anchorBlockHash);
