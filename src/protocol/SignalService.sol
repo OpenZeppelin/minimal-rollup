@@ -30,7 +30,7 @@ contract SignalService is ISignalService, ETHBridge, CommitmentStore {
     /// @inheritdoc ISignalService
     function isSignalStored(bytes32 value, address sender) external view returns (bool) {
         // This will return `false` when the signal itself is 0
-        return LibSignal.signaled(sender, value);
+        return value.signaled(sender);
     }
 
     /// @inheritdoc ISignalService
@@ -65,19 +65,10 @@ contract SignalService is ISignalService, ETHBridge, CommitmentStore {
         // For now it could be the block hash or other hashed value
         // further work is needed to ensure we get the 'state root' of the chain
         bytes32 root = commitmentAt(height);
-
         SignalProof memory signalProof = abi.decode(proof, (SignalProof));
         bytes[] memory accountProof = signalProof.accountProof;
         bytes[] memory storageProof = signalProof.storageProof;
-        bool valid;
-        // If the account proof is empty we assume `root` is the root of the signal tree
-        if (accountProof.length == 0) {
-            // Only verifies a state proof not full storage proof
-            valid = LibSignal.verifySignal(root, sender, value, storageProof);
-            require(valid, SignalNotReceived(value));
-            return;
-        }
-        valid = LibSignal.verifySignal(root, sender, value, accountProof, storageProof);
+        bool valid = value.verifySignal(sender, root, accountProof, storageProof);
         require(valid, SignalNotReceived(value));
     }
 }

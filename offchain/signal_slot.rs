@@ -20,7 +20,7 @@ pub fn erc7201_slot(namespace: &Vec<u8>) -> B256 {
 }
 
 pub fn get_signal_slot(signal: &B256, sender: &Address) -> B256 {
-    let namespace = (sender, signal).abi_encode_packed();
+    let namespace = (signal, sender).abi_encode_packed();
     return erc7201_slot(namespace.as_ref());
 }
 
