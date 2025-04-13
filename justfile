@@ -10,10 +10,10 @@ stop-anvil:
     lsof -ti:8545 | xargs -r kill
     lsof -ti:8546 | xargs -r kill
 
-# Get signal proof for a signal and sender
-get-signal-proof signal sender:
-    cargo run --bin signal_proof {{signal}} {{sender}}
+# Get signal proof for a signal, sender and namespace (1: default signal , 2: eth deposit)
+get-signal-proof signal sender namespace:
+    cargo run --bin signal_proof {{signal}} {{sender}} {{namespace}}
 
-# Run the storage slot for a signal and sender
-get-signal-slot signal sender:
-    cargo run --bin signal_slot {{signal}} {{sender}}
+# Get signal slot for a signal, sender and namespace (1: default signal , 2: eth deposit)
+get-signal-slot signal sender namespace:
+    cargo run --bin signal_slot {{signal}} {{sender}} {{namespace}}

@@ -26,7 +26,6 @@ abstract contract ETHBridge is IETHBridge {
     }
 
     /// @inheritdoc IETHBridge
-    // TODO: Possibly make this accept ETHDEeposit struct as input
     function deposit(address to, bytes memory data) public payable virtual returns (bytes32 id) {
         ETHDeposit memory ethDeposit = ETHDeposit(_globalDepositNonce, msg.sender, to, msg.value, data);
         id = _generateId(ethDeposit);

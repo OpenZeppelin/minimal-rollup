@@ -40,7 +40,7 @@ library LibSignal {
         return deriveSlot(value, account, namespace).getBytes32Slot().value != 0;
     }
 
-    /// @dev Signal a `value` at a namespaced slot for the current `msg.sender`
+    /// @dev Signal a `value` at a namespaced slot for the current `msg.sender` and namespace.
     function signal(bytes32 value) internal returns (bytes32) {
         return signal(value, msg.sender, SIGNAL_NAMESPACE);
     }
@@ -52,19 +52,19 @@ library LibSignal {
         return slot;
     }
 
-    /// @dev Returns the storage slot for a signal. Namespaced to the msg.sender and value.
+    /// @dev Returns the storage slot for a signal. Namespaced to the msg.sender, value and namespace.
     function deriveSlot(bytes32 value, bytes32 namespace) internal view returns (bytes32) {
         return deriveSlot(value, msg.sender, namespace);
     }
 
-    /// @dev Returns the storage slot for a signal. Namespaced to the current account and value.
+    /// @dev Returns the storage slot for a signal. Namespaced to the current account and value and namespace.
     function deriveSlot(bytes32 value, address account, bytes32 namespace) internal pure returns (bytes32) {
         return string(abi.encodePacked(value, account, namespace)).erc7201Slot();
     }
 
     /// @dev Performs a storage proof verification for a signal stored on the contract using this library
     /// @param value The signal value to verify
-    ///
+    /// @param namespace The namespace of the signal
     /// @param sender The address that originally sent the signal on the source chain
     /// @param root The state root from the source chain to verify against
     /// @param accountProof Merkle proof for the contract's account against the state root

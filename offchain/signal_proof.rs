@@ -1,6 +1,6 @@
 use alloy::{
     node_bindings::Anvil,
-    primitives::{address, Address, FixedBytes, B256},
+    primitives::{address, bytes, Address, Bytes, FixedBytes, B256, U256},
     providers::{Provider, ProviderBuilder},
     rpc::types::EIP1186AccountProofResponse,
     signers::local::PrivateKeySigner,
@@ -12,7 +12,7 @@ use std::env;
 use SignalService::SignalServiceInstance;
 
 mod signal_slot;
-use signal_slot::get_signal_slot;
+use signal_slot::{get_signal_slot, NameSpaceConst};
 
 const BLOCK_TIME: u64 = 1;
 // NOTE: This needs to match the address of the rollup operator in the tests
@@ -26,11 +26,11 @@ sol!(
     "./out/SignalService.sol/SignalService.json",
 );
 
-fn prompt_sender_and_signal() -> Result<(B256, Address)> {
+fn prompt_sender_and_signal() -> Result<(B256, Address, NameSpaceConst)> {
     let args: Vec<String> = env::args().collect();
-    if args.len() != 3 {
+    if args.len() != 4 {
         return Err(eyre!(
-            "Usage: cargo run --bin signal_proof <signal (0x...)> <sender (0x...)>"
+            "Usage: cargo run --bin signal_proof <signal (0x...)> <sender (0x...)> <namespace (1 or 2)>"
         ));
     }
 
@@ -44,20 +44,16 @@ fn prompt_sender_and_signal() -> Result<(B256, Address)> {
         .parse()
         .map_err(|_| eyre!("Invalid sender format: {}", sender_str))?;
 
-    Ok((signal, sender))
-}
+    let namespace = NameSpaceConst::from_arg(&args[3])?;
 
-fn get_provider() -> Result<impl Provider> {
-    let anvil = Anvil::new().block_time(BLOCK_TIME).try_spawn()?;
-    let signer: PrivateKeySigner = anvil.keys()[0].clone().into();
-    let rpc_url = anvil.endpoint_url();
-    Ok(ProviderBuilder::new().wallet(signer).on_http(rpc_url))
+    Ok((signal, sender, namespace))
 }
 
 async fn get_proofs(
     provider: &impl Provider,
     signal: &B256,
     sender: &Address,
+    namespace: NameSpaceConst,
     signal_service: &SignalServiceInstance<(), &impl Provider>,
 ) -> Result<(FixedBytes<32>, EIP1186AccountProofResponse)> {
     let state_root = provider
@@ -67,7 +63,7 @@ async fn get_proofs(
         .header
         .state_root;
 
-    let slot = get_signal_slot(&signal, &sender);
+    let slot = get_signal_slot(&signal, &sender, namespace);
     let proof = provider
         .get_proof(signal_service.address().to_owned(), vec![slot])
         .await?;
@@ -78,18 +74,35 @@ async fn get_proofs(
 #[tokio::main]
 async fn main() -> Result<()> {
     println!();
-    let (signal, sender) = prompt_sender_and_signal()?;
+    let (signal, sender, namespace) = prompt_sender_and_signal()?;
 
-    let provider = get_provider()?;
+    let anvil = Anvil::new()
+        .block_time(BLOCK_TIME)
+        .port(8547_u16)
+        .try_spawn()?;
+    let signer: PrivateKeySigner = anvil.keys()[0].clone().into();
+    let rpc_url = anvil.endpoint_url();
+    let provider = ProviderBuilder::new()
+        .wallet(signer.clone())
+        .on_http(rpc_url);
 
     let contract = SignalService::deploy(&provider, ROLLUP_OPERATOR).await?;
 
     println!("Deployed contract at address: {}", contract.address());
 
-    let builder = contract.sendSignal(signal);
-    builder.send().await?.watch().await?;
+    if namespace == NameSpaceConst::ETHBridge {
+        println!("Sending ETH deposit signal...");
+        let builder = contract
+            .deposit(sender, bytes!())
+            .value(U256::from(4000000000000000000_u128));
+        builder.send().await?.watch().await?;
+    } else {
+        println!("Sending normal signal...");
+        let builder = contract.sendSignal(signal);
+        builder.send().await?.watch().await?;
+    }
 
-    let (state_root, proof) = get_proofs(&provider, &signal, &sender, &contract).await?;
+    let (state_root, proof) = get_proofs(&provider, &signal, &sender, namespace, &contract).await?;
 
     println!("State Root: {}", state_root.to_string());
     println!("Storage Root: {}", proof.storage_hash.to_string());
