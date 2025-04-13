@@ -6,7 +6,6 @@ use alloy::{
 };
 use eyre::{eyre, Result};
 
-#[derive(PartialEq, Eq)]
 pub enum NameSpaceConst {
     Signal,
     ETHBridge,
