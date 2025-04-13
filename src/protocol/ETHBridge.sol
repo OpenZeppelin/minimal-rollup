@@ -12,6 +12,9 @@ abstract contract ETHBridge is IETHBridge {
     /// Incremental nonce to generate unique deposit IDs.
     uint256 private _globalDepositNonce;
 
+    /// Namespace for the ETH bridge.
+    bytes32 internal constant ETH_BRIDGE_NAMESPACE = keccak256("eth-bridge");
+
     /// @inheritdoc IETHBridge
     function claimed(bytes32 id) public view virtual returns (bool) {
         return _claimed[id];
