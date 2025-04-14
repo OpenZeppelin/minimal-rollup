@@ -3,7 +3,7 @@ pragma solidity ^0.8.28;
 
 /// @dev Bridges native value (i.e. ETH) by creating and verifying ETHDeposits.
 ///
-/// These can be created by sending value to the `depositETH` function. Later, the receiver can
+/// These can be created by sending value to the `deposit` function. Later, the receiver can
 /// claim the deposit on the destination chain by using a storage proof.
 interface IETHBridge {
     // TODO: Think about gas?
