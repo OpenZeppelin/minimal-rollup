@@ -12,6 +12,9 @@ abstract contract ETHBridge is IETHBridge {
     /// Incremental nonce to generate unique deposit IDs.
     uint256 private _globalDepositNonce;
 
+    /// Namespace for the ETH bridge.
+    bytes32 internal constant ETH_BRIDGE_NAMESPACE = keccak256("eth-bridge");
+
     /// @inheritdoc IETHBridge
     function claimed(bytes32 id) public view virtual returns (bool) {
         return _claimed[id];
@@ -23,7 +26,6 @@ abstract contract ETHBridge is IETHBridge {
     }
 
     /// @inheritdoc IETHBridge
-    // TODO: Possibly make this accept ETHDEeposit struct as input
     function deposit(address to, bytes memory data) public payable virtual returns (bytes32 id) {
         ETHDeposit memory ethDeposit = ETHDeposit(_globalDepositNonce, msg.sender, to, msg.value, data);
         id = _generateId(ethDeposit);

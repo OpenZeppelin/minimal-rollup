@@ -8,8 +8,16 @@ name = "signal_slot"
 path = "offchain/signal_slot.rs"
 
 [[bin]]
-name = "signal_proof"
-path = "offchain/signal_proof.rs"
+name = "generic_signal_proof"
+path = "offchain/generic_signal_proof.rs"
+
+[[bin]]
+name = "deposit_signal_proof"
+path = "offchain/deposit_signal_proof.rs"
+
+[[bin]]
+name = "utils"
+path = "offchain/utils.rs"
 
 [dependencies]
 alloy = { version = "0.13.0", features = ["node-bindings"] }
