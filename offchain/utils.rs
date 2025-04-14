@@ -11,7 +11,7 @@ use SignalService::SignalServiceInstance;
 use eyre::Result;
 use serde_json::to_string_pretty;
 
-const BLOCK_TIME: u64 = 1;
+const BLOCK_TIME: u64 = 5;
 
 // NOTE: This needs to match the address of the rollup operator in the tests
 // to ensure the signal service is deployed to the same address.
