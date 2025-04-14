@@ -54,7 +54,7 @@ abstract contract ETHBridge is IETHBridge {
     /// @param value Amount of ETH to send
     /// @param data Data to send to the receiver
     function _sendETH(address to, uint256 value, bytes memory data) internal virtual {
-        (bool success,) = to.call{value: value, gas: gasleft()}(data);
+        (bool success,) = to.call{value: value}(data);
         require(success, FailedClaim());
     }
 
