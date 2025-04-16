@@ -22,7 +22,7 @@ contract MockCheckpointTracker is ICheckpointTracker {
         uint256 numPublications,
         bytes calldata proof
     ) external {
-        commitmentStore.storeCommitment(end.publicationId, end.commitment);
+        commitmentStore.storeCommitment(block.chainid, end.publicationId, end.commitment);
     }
 
     /// @notice Helper to set the proven hash for easier testing
