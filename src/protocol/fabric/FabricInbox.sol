@@ -6,7 +6,8 @@ import {IDelayedInclusionStore} from "../IDelayedInclusionStore.sol";
 import {IPublicationFeed} from "../IPublicationFeed.sol";
 import {DelayedInclusionStore} from "../taiko_alethia/DelayedInclusionStore.sol";
 import {IProposerFees} from "../IProposerFees.sol";
-import {IRegistry} from "./IRegistry.sol";
+import {IRegistry} from "urc/src/IRegistry.sol";
+
 
 contract FabricInbox is DelayedInclusionStore {
     struct Metadata {
