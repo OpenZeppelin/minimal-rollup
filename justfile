@@ -2,8 +2,10 @@
 # "🚨WARNING: This starts two background processes🚨"
 # "To stop them, run: just stop-anvil"
 start-anvil:
-    anvil --port 8545 &
-    anvil --port 8546 &
+    # L1 fork
+    anvil --port 8545 --chain-id 1 &
+    # L2 fork
+    anvil --port 8546 --chain-id 2 &
     wait
 
 stop-anvil:

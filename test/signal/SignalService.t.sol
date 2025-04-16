@@ -9,7 +9,7 @@ import {SignalService} from "src/protocol/SignalService.sol";
 import {MockAnchor} from "test/mocks/MockAnchor.sol";
 import {MockCheckpointTracker} from "test/mocks/MockCheckpointTracker.sol";
 
-/// @notice These tessts are simulating cross-chain signaling between L1 and L2.
+/// @notice These tests are simulating cross-chain signaling between L1 and L2.
 /// They use fork testing to simulate L1 and L2 chains. You must therefore run the tests
 /// with two anvil nodes running in the background. One on port 8545 (L1) and one on port 8546 (L2).
 /// command to run anvil:
@@ -25,6 +25,9 @@ contract BaseState is Test {
 
     uint256 public L1Fork;
     uint256 public L2Fork;
+    // this is set in the just file
+    uint256 public L1ChainId = 1;
+    uint256 public L2ChainId = 2;
 
     // public key: 0xCf03Dd0a894Ef79CB5b601A43C4b25E3Ae4c67eD
     address public rollupOperator = vm.addr(0x1234);
@@ -34,6 +37,7 @@ contract BaseState is Test {
     // the storage proofs generated in offchain/signal_proofs.rs
     // BUG: For some reason the default sender is not being changed even though
     // it's is the foundry.toml file, therefore we need to set it manually
+    // make sure all signals are sent from this sender
     address public defaultSender = address(0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266);
     uint256 public senderBalanceL1 = 10 ether;
     uint256 public senderBalanceL2 = 0 ether;
@@ -132,7 +136,7 @@ contract SendL1SignalTest is SendL1SignalState {
         uint256 height = 1;
         anchor.anchor(height, stateRoot);
 
-        L2signalService.verifySignal(height, defaultSender, signal, encodedProof);
+        L2signalService.verifySignal(L1ChainId, height, defaultSender, signal, encodedProof);
     }
 
     function test_verifyL1Signal_UsingStorageProof() public {
@@ -145,6 +149,6 @@ contract SendL1SignalTest is SendL1SignalState {
         uint256 height = 1;
         anchor.anchor(height, storageRoot);
 
-        L2signalService.verifySignal(height, defaultSender, signal, encodedProof);
+        L2signalService.verifySignal(L1ChainId, height, defaultSender, signal, encodedProof);
     }
 }

@@ -13,6 +13,7 @@ contract MockAnchor {
     /// @notice Anchor doesnt do anything, it just stores the commitment
     function anchor(uint256 _anchorBlockId, bytes32 _anchorBlockHash) external {
         // WARN: Here we are committing the L1 state root not block hash
-        commitmentStore.storeCommitment(block.chainid, _anchorBlockId, _anchorBlockHash);
+        uint256 L1ChainId = 1;
+        commitmentStore.storeCommitment(L1ChainId, _anchorBlockId, _anchorBlockHash);
     }
 }

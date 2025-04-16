@@ -76,8 +76,10 @@ contract CheckpointTracker is ICheckpointTracker {
         _provenCheckpoint = end;
         emit CheckpointUpdated(end);
 
+        // TODO: This should be the actual taiko chainid
+        uint256 taikoBlockId = 2;
         // Stores the state of the other chain
-        commitmentStore.storeCommitment(block.chainid, end.publicationId, end.commitment);
+        commitmentStore.storeCommitment(taikoBlockId, end.publicationId, end.commitment);
     }
 
     function getProvenCheckpoint() external view returns (Checkpoint memory) {

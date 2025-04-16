@@ -30,7 +30,7 @@ contract BridgeETHState is BaseState {
         vm.prank(defaultSender);
         bytes memory emptyData = "";
         vm.recordLogs();
-        depositIdOne = L1signalService.deposit{value: depositAmount}(defaultSender, emptyData);
+        depositIdOne = L1signalService.deposit{value: depositAmount}(defaultSender, L2ChainId, emptyData);
 
         Vm.Log[] memory entries = vm.getRecordedLogs();
 
@@ -121,16 +121,16 @@ contract ClaimDepositTest is CommitmentStoredState {
 
         vm.selectFork(L1Fork);
         bool storedInGenericNamespace =
-            L1signalService.isSignalStored(invalidDepositId, defaultSender, keccak256("generic-signal"));
+            L1signalService.isSignalStored(invalidDepositId, L1ChainId, defaultSender, keccak256("generic-signal"));
         assertTrue(storedInGenericNamespace);
 
         bool storedInEthBridgeNamespace =
-            L1signalService.isSignalStored(invalidDepositId, defaultSender, keccak256("eth-bridge"));
+            L1signalService.isSignalStored(invalidDepositId, L1ChainId, defaultSender, keccak256("eth-bridge"));
         assertFalse(storedInEthBridgeNamespace);
 
         vm.selectFork(L2Fork);
         // to be extra sure its not a problem with the proof
-        L2signalService.verifySignal(commitmentHeight, defaultSender, invalidDepositId, encodedProof);
+        L2signalService.verifySignal(L1ChainId, commitmentHeight, defaultSender, invalidDepositId, encodedProof);
         // I believe this error means that the proof is not valid for this deposit id
         vm.expectRevert("MerkleTrie: invalid large internal hash");
         L2signalService.claimDeposit(invalidDeposit, commitmentHeight, encodedProof);
