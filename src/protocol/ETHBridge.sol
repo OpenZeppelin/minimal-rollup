@@ -26,8 +26,9 @@ abstract contract ETHBridge is IETHBridge {
     }
 
     /// @inheritdoc IETHBridge
-    function deposit(address to, bytes memory data) public payable virtual returns (bytes32 id) {
-        ETHDeposit memory ethDeposit = ETHDeposit(_globalDepositNonce, msg.sender, to, msg.value, data);
+    function deposit(address to, uint256 dstChainId, bytes memory data) public payable virtual returns (bytes32 id) {
+        ETHDeposit memory ethDeposit =
+            ETHDeposit(_globalDepositNonce, block.chainid, dstChainId, msg.sender, to, msg.value, data);
         id = _generateId(ethDeposit);
         unchecked {
             ++_globalDepositNonce;

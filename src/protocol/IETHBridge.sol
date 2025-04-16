@@ -10,6 +10,8 @@ interface IETHBridge {
     struct ETHDeposit {
         // The nonce of the deposit
         uint256 nonce;
+        uint256 srcChainId;
+        uint256 dstChainId;
         // The sender of the deposit
         address from;
         // The receiver of the deposit
@@ -46,8 +48,9 @@ interface IETHBridge {
 
     /// @dev Creates an ETH deposit with `msg.value`
     /// @param to The receiver of the deposit
+    /// @param dstChainId Chain Id of the deposit's receiver
     /// @param data Any calldata to be sent to the receiver in case of a contract
-    function deposit(address to, bytes memory data) external payable returns (bytes32 id);
+    function deposit(address to, uint256 dstChainId, bytes memory data) external payable returns (bytes32 id);
 
     /// @dev Claims an ETH deposit created on by the sender (`from`) with `nonce`. The `value` ETH claimed  is
     /// sent to the receiver (`to`) after verifying a storage proof.

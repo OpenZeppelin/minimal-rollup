@@ -32,6 +32,10 @@ library LibSignal {
         return signaled(value, block.chainid, msg.sender, namespace);
     }
 
+    function signaled(bytes32 value, uint256 chainId, bytes32 namespace) internal view returns (bool) {
+        return signaled(value, chainId, msg.sender, namespace);
+    }
+
     /// @dev A `value` was signaled at a namespaced slot. See `deriveSlot`.
     function signaled(bytes32 value, uint256 chainId, address account, bytes32 namespace)
         internal
@@ -48,8 +52,12 @@ library LibSignal {
     }
 
     /// @dev Signal a `value` at a namespaced slot for the current `msg.sender` and namespace.
-    function signal(bytes32 value, address account, bytes32 namespace) internal returns (bytes32) {
-        return signal(value, block.chainid, account, namespace);
+    function signal(bytes32 value, bytes32 namespace) internal returns (bytes32) {
+        return signal(value, block.chainid, msg.sender, namespace);
+    }
+
+    function signal(bytes32 value, uint256 chainId, bytes32 namespace) internal returns (bytes32) {
+        return signal(value, chainId, msg.sender, namespace);
     }
 
     /// @dev Signal a `value` at a namespaced slot. See `deriveSlot`.
@@ -57,6 +65,10 @@ library LibSignal {
         bytes32 slot = deriveSlot(value, chainId, account, namespace);
         slot.getBytes32Slot().value = keccak256(abi.encode(value));
         return slot;
+    }
+
+    function deriveSlot(bytes32 value) internal view returns (bytes32) {
+        return deriveSlot(value, block.chainid, msg.sender, SIGNAL_NAMESPACE);
     }
 
     /// @dev Returns the storage slot for a signal. Namespaced to the msg.sender, value and namespace.
@@ -82,6 +94,7 @@ library LibSignal {
     /// @param value The signal value to verify
     /// @param namespace The namespace of the signal
     /// @param sender The address that originally sent the signal on the source chain
+    /// @param chainId The chain ID of the signal src chain
     /// @param root The state root from the source chain to verify against
     /// @param accountProof Merkle proof for the contract's account against the state root
     /// @param storageProof Merkle proof for the derived storage slot against the account's storage root
@@ -89,6 +102,7 @@ library LibSignal {
     function verifySignal(
         bytes32 value,
         bytes32 namespace,
+        uint256 chainId,
         address sender,
         bytes32 root,
         bytes[] memory accountProof,
@@ -98,11 +112,12 @@ library LibSignal {
         // If the account proof is empty we assume `root` is the root of the signal tree
         if (accountProof.length == 0) {
             // Only verifies a state proof not full storage proof
-            valid = LibTrieProof.verifyState(deriveSlot(value, sender, namespace), hashedValue, root, storageProof);
+            valid =
+                LibTrieProof.verifyState(deriveSlot(value, chainId, sender, namespace), hashedValue, root, storageProof);
             return valid;
         }
         (valid,) = LibTrieProof.verifyStorage(
-            address(this), deriveSlot(value, sender, namespace), hashedValue, root, accountProof, storageProof
+            address(this), deriveSlot(value, chainId, sender, namespace), hashedValue, root, accountProof, storageProof
         );
     }
 }
