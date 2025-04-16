@@ -23,41 +23,59 @@ library LibSignal {
 
     /// @dev A `value` was signaled at a namespaced slot for the current `msg.sender`.
     function signaled(bytes32 value) internal view returns (bool) {
-        return signaled(value, SIGNAL_NAMESPACE);
+        return signaled(value, block.chainid, msg.sender, SIGNAL_NAMESPACE);
     }
 
     /// @dev A `value` was signaled at a namespaced slot for the current `msg.sender` and
     /// namespace.
     function signaled(bytes32 value, bytes32 namespace) internal view returns (bool) {
-        return signaled(value, msg.sender, namespace);
+        return signaled(value, block.chainid, msg.sender, namespace);
     }
 
     /// @dev A `value` was signaled at a namespaced slot. See `deriveSlot`.
-    function signaled(bytes32 value, address account, bytes32 namespace) internal view returns (bool) {
-        bytes32 slot = deriveSlot(value, account, namespace);
+    function signaled(bytes32 value, uint256 chainId, address account, bytes32 namespace)
+        internal
+        view
+        returns (bool)
+    {
+        bytes32 slot = deriveSlot(value, chainId, account, namespace);
         return slot.getBytes32Slot().value == keccak256(abi.encode(value));
     }
 
     /// @dev Signal a `value` at a namespaced slot for the current `msg.sender` and namespace.
     function signal(bytes32 value) internal returns (bytes32) {
-        return signal(value, msg.sender, SIGNAL_NAMESPACE);
+        return signal(value, block.chainid, msg.sender, SIGNAL_NAMESPACE);
+    }
+
+    /// @dev Signal a `value` at a namespaced slot for the current `msg.sender` and namespace.
+    function signal(bytes32 value, address account, bytes32 namespace) internal returns (bytes32) {
+        return signal(value, block.chainid, account, namespace);
     }
 
     /// @dev Signal a `value` at a namespaced slot. See `deriveSlot`.
-    function signal(bytes32 value, address account, bytes32 namespace) internal returns (bytes32) {
-        bytes32 slot = deriveSlot(value, account, namespace);
+    function signal(bytes32 value, uint256 chainId, address account, bytes32 namespace) internal returns (bytes32) {
+        bytes32 slot = deriveSlot(value, chainId, account, namespace);
         slot.getBytes32Slot().value = keccak256(abi.encode(value));
         return slot;
     }
 
     /// @dev Returns the storage slot for a signal. Namespaced to the msg.sender, value and namespace.
     function deriveSlot(bytes32 value, bytes32 namespace) internal view returns (bytes32) {
-        return deriveSlot(value, msg.sender, namespace);
+        return deriveSlot(value, block.chainid, msg.sender, namespace);
+    }
+
+    /// @dev Returns the storage slot for a signal. Namespaced to the msg.sender, value and namespace.
+    function deriveSlot(bytes32 value, uint256 chainId, bytes32 namespace) internal view returns (bytes32) {
+        return deriveSlot(value, chainId, msg.sender, namespace);
     }
 
     /// @dev Returns the storage slot for a signal. Namespaced to the current account and value and namespace.
-    function deriveSlot(bytes32 value, address account, bytes32 namespace) internal pure returns (bytes32) {
-        return string(abi.encodePacked(value, account, namespace)).erc7201Slot();
+    function deriveSlot(bytes32 value, uint256 chainId, address account, bytes32 namespace)
+        internal
+        pure
+        returns (bytes32)
+    {
+        return string(abi.encodePacked(value, chainId, account, namespace)).erc7201Slot();
     }
 
     /// @dev Performs a storage proof verification for a signal stored on the contract using this library
