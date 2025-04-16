@@ -32,10 +32,12 @@ interface ICommitmentStore {
 
     /// @dev Returns the commitment at the given `height`.
     /// @param height The height of the commitment
-    function commitmentAt(uint256 height) external view returns (bytes32 commitment);
+    /// @param chainId The chain id of the commitment
+    function commitmentAt(uint256 chainId, uint256 height) external view returns (bytes32 commitment);
 
     /// @dev Stores a commitment.
+    /// @param chainId The chain id of the commitment
     /// @param height The height of the commitment
     /// @param commitment The commitment to store
-    function storeCommitment(uint256 height, bytes32 commitment) external;
+    function storeCommitment(uint256 chainId, uint256 height, bytes32 commitment) external;
 }

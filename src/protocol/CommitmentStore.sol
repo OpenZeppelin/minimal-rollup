@@ -13,7 +13,7 @@ abstract contract CommitmentStore is ICommitmentStore, Ownable {
 
     address private _authorizedCommitter;
 
-    mapping(uint256 height => bytes32 commitment) private _commitments;
+    mapping(uint256 chainId => mapping(uint256 height => bytes32 commitment)) private _commitments;
 
     /// @param _rollupOperator The address of the rollup operator
     constructor(address _rollupOperator) Ownable(_rollupOperator) {}
@@ -37,13 +37,17 @@ abstract contract CommitmentStore is ICommitmentStore, Ownable {
     }
 
     /// @inheritdoc ICommitmentStore
-    function commitmentAt(uint256 height) public view virtual returns (bytes32) {
-        return _commitments[height];
+    function commitmentAt(uint256 chainId, uint256 height) public view virtual returns (bytes32) {
+        return _commitments[chainId][height];
     }
 
     /// @inheritdoc ICommitmentStore
-    function storeCommitment(uint256 height, bytes32 commitment) external virtual onlyAuthorizedCommitter {
-        _commitments[height] = commitment;
+    function storeCommitment(uint256 chainId, uint256 height, bytes32 commitment)
+        external
+        virtual
+        onlyAuthorizedCommitter
+    {
+        _commitments[chainId][height] = commitment;
         emit CommitmentStored(height, commitment);
     }
 

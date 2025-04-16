@@ -63,7 +63,7 @@ contract TaikoAnchor {
             lastAnchorBlockId = _anchorBlockId;
             l1BlockHashes[_anchorBlockId] = _anchorBlockHash;
             // Stores the state of the other chain
-            commitmentStore.storeCommitment(_anchorBlockId, _anchorBlockHash);
+            commitmentStore.storeCommitment(block.chainid, _anchorBlockId, _anchorBlockHash);
         }
 
         // Store the parent block hash in the _blockhashes mapping

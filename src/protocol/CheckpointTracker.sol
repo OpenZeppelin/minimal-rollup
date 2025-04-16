@@ -77,7 +77,7 @@ contract CheckpointTracker is ICheckpointTracker {
         emit CheckpointUpdated(end);
 
         // Stores the state of the other chain
-        commitmentStore.storeCommitment(end.publicationId, end.commitment);
+        commitmentStore.storeCommitment(block.chainid, end.publicationId, end.commitment);
     }
 
     function getProvenCheckpoint() external view returns (Checkpoint memory) {
