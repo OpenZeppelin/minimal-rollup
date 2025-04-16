@@ -33,11 +33,9 @@ library LibSignal {
     }
 
     /// @dev A `value` was signaled at a namespaced slot. See `deriveSlot`.
-    /// @dev This indicates whether the relevant storage slot is non-zero, which has two implications:
-    /// - if a signal slot has an incorrect non-zero value, it will be "signaled" but `verifySignal` will fail
-    /// - zero signals are not supported (but can be proven with `verifySignal`)
     function signaled(bytes32 value, address account, bytes32 namespace) internal view returns (bool) {
-        return deriveSlot(value, account, namespace).getBytes32Slot().value != 0;
+        bytes32 slot = deriveSlot(value, account, namespace);
+        return slot.getBytes32Slot().value == keccak256(abi.encode(value));
     }
 
     /// @dev Signal a `value` at a namespaced slot for the current `msg.sender` and namespace.
@@ -48,7 +46,7 @@ library LibSignal {
     /// @dev Signal a `value` at a namespaced slot. See `deriveSlot`.
     function signal(bytes32 value, address account, bytes32 namespace) internal returns (bytes32) {
         bytes32 slot = deriveSlot(value, account, namespace);
-        slot.getBytes32Slot().value = value;
+        slot.getBytes32Slot().value = keccak256(abi.encode(value));
         return slot;
     }
 
@@ -78,14 +76,15 @@ library LibSignal {
         bytes[] memory accountProof,
         bytes[] memory storageProof
     ) internal view returns (bool valid) {
+        bytes32 hashedValue = keccak256(abi.encode(value));
         // If the account proof is empty we assume `root` is the root of the signal tree
         if (accountProof.length == 0) {
             // Only verifies a state proof not full storage proof
-            valid = LibTrieProof.verifyState(deriveSlot(value, sender, namespace), value, root, storageProof);
+            valid = LibTrieProof.verifyState(deriveSlot(value, sender, namespace), hashedValue, root, storageProof);
             return valid;
         }
         (valid,) = LibTrieProof.verifyStorage(
-            address(this), deriveSlot(value, sender, namespace), value, root, accountProof, storageProof
+            address(this), deriveSlot(value, sender, namespace), hashedValue, root, accountProof, storageProof
         );
     }
 }

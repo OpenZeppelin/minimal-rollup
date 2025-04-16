@@ -32,7 +32,6 @@ contract SignalService is ISignalService, ETHBridge, CommitmentStore {
 
     /// @inheritdoc ISignalService
     function isSignalStored(bytes32 value, address sender, bytes32 namespace) external view returns (bool) {
-        // This will return `false` when the signal itself is 0
         return value.signaled(sender, namespace);
     }
 
