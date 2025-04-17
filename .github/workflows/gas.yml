@@ -1,0 +1,49 @@
+name: Report gas diff
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+env:
+  FOUNDRY_PROFILE: ci
+
+jobs:
+  compare_gas_reports:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install Foundry
+        uses: foundry-rs/foundry-toolchain@v1
+        with:
+          version: nightly
+
+      - name: Show Forge version
+        run: |
+          forge --version
+
+      - name: Run Forge tests
+        run: |
+          forge test --gas-report --color never | tee gasreport.ansi
+        id: test
+
+      - name: Compare gas reports
+        uses: Rubilmax/foundry-gas-diff@v3
+        with:
+          summaryQuantile: 0.9 # only display the 10% most significant gas diffs in the summary (defaults to 20%)
+          sortCriteria: avg,max # sort diff rows by criteria
+          sortOrders: desc,asc
+        id: gas_diff
+
+      - name: Add gas diff to sticky comment
+        if: github.event_name == 'pull_request' || github.event_name == 'pull_request_target'
+        uses: marocchino/sticky-pull-request-comment@v2
+        with:
+          # delete the comment in case changes no longer impact gas costs
+          delete: ${{ !steps.gas_diff.outputs.markdown }}
+          message: ${{ steps.gas_diff.outputs.markdown }}

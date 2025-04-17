@@ -4,6 +4,8 @@ out = "out"
 libs = ["lib"]
 evm_version = "cancun"
 
+gas_reports = ["*"]
+
 [fmt]
 sort_imports = true
 wrap_comments = true
