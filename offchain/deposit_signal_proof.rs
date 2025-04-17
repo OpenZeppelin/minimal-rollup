@@ -22,6 +22,8 @@ async fn main() -> Result<()> {
     let data = bytes!();
     let sender = address!("0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266");
     let amount = U256::from(4000000000000000000_u128);
+    let src_chain_id = U256::from(1);
+    let dst_chain_id = U256::from(2);
 
     let (provider, _anvil) = get_provider()?;
 
@@ -33,7 +35,9 @@ async fn main() -> Result<()> {
     );
 
     println!("Sending ETH deposit signal...");
-    let builder = signal_service.deposit(sender, data).value(amount);
+    let builder = signal_service
+        .deposit(sender, dst_chain_id, data)
+        .value(amount);
     let tx = builder.send().await?.get_receipt().await?;
 
     // Get deposit ID from the transaction receipt logs
@@ -41,7 +45,12 @@ async fn main() -> Result<()> {
     let receipt_logs = tx.logs().get(0).unwrap().topics();
     let deposit_id = receipt_logs.get(1).unwrap();
 
-    let slot = get_signal_slot(deposit_id, &sender, NameSpaceConst::ETHBridge);
+    let slot = get_signal_slot(
+        deposit_id,
+        &sender,
+        &src_chain_id,
+        NameSpaceConst::ETHBridge,
+    );
     get_proofs(&provider, slot, &signal_service).await?;
 
     Ok(())
