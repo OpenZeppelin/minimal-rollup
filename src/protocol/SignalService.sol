@@ -65,6 +65,8 @@ contract SignalService is ISignalService, ETHBridge, CommitmentStore {
     {
         id = _generateId(ethDeposit);
 
+        require(ethDeposit.dstChainId == block.chainid, "Invalid Chain Id");
+
         _verifySignal(height, ethDeposit.srcChainId, ethDeposit.from, id, ETH_BRIDGE_NAMESPACE, proof);
 
         super._processClaimDepositWithId(id, ethDeposit);

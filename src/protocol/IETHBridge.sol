@@ -10,7 +10,9 @@ interface IETHBridge {
     struct ETHDeposit {
         // The nonce of the deposit
         uint256 nonce;
+        // Chain ID of the sender
         uint256 srcChainId;
+        // Chain ID of the receiver
         uint256 dstChainId;
         // The sender of the deposit
         address from;
