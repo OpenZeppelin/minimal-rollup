@@ -2,8 +2,10 @@
 # "🚨WARNING: This starts two background processes🚨"
 # "To stop them, run: just stop-anvil"
 start-anvil:
-    anvil --port 8545 &
-    anvil --port 8546 &
+    # L1 fork
+    anvil --port 8545 --chain-id 1 &
+    # L2 fork
+    anvil --port 8546 --chain-id 2 &
     wait
 
 stop-anvil:
@@ -11,8 +13,8 @@ stop-anvil:
     lsof -ti:8546 | xargs -r kill
 
 # Get signal proof for a signal and sender 
-get-generic-signal-proof signal sender:
-    cargo run --bin generic_signal_proof {{signal}} {{sender}}
+get-generic-signal-proof signal sender chain_id:
+    cargo run --bin generic_signal_proof {{signal}} {{sender}} {{chain_id}}
 
 get-deposit-signal-proof:
     cargo run --bin deposit_signal_proof
