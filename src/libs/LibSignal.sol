@@ -21,17 +21,18 @@ library LibSignal {
 
     bytes32 constant SIGNAL_NAMESPACE = keccak256("generic-signal");
 
-    /// @dev A `value` was signaled at a namespaced slot for the current `msg.sender`.
+    /// @dev A `value` was signaled at a namespaced slot for the current `msg.sender`, `block.chainid`, and "signal
+    /// namespace".
     function signaled(bytes32 value) internal view returns (bool) {
         return signaled(value, block.chainid, msg.sender, SIGNAL_NAMESPACE);
     }
 
-    /// @dev A `value` was signaled at a namespaced slot for the current `msg.sender` and
-    /// namespace.
+    /// @dev A `value` was signaled at a namespaced slot using a custom namespace.
     function signaled(bytes32 value, bytes32 namespace) internal view returns (bool) {
         return signaled(value, block.chainid, msg.sender, namespace);
     }
 
+    /// @dev A `value` was signaled at a namespaced slot using a custom chain ID and namespace.
     function signaled(bytes32 value, uint256 chainId, bytes32 namespace) internal view returns (bool) {
         return signaled(value, chainId, msg.sender, namespace);
     }
@@ -51,22 +52,29 @@ library LibSignal {
         return signal(value, block.chainid, msg.sender, SIGNAL_NAMESPACE);
     }
 
-    /// @dev Signal a `value` at a namespaced slot for the current `msg.sender` and namespace.
+    /// @dev Signal a `value` at a namespaced slot for the current `msg.sender` and a custom namespace.
     function signal(bytes32 value, bytes32 namespace) internal returns (bytes32) {
         return signal(value, block.chainid, msg.sender, namespace);
     }
 
+    /// @dev Signal a `value` at a namespaced slot using a custom chain ID and namespace.
     function signal(bytes32 value, uint256 chainId, bytes32 namespace) internal returns (bytes32) {
         return signal(value, chainId, msg.sender, namespace);
     }
 
     /// @dev Signal a `value` at a namespaced slot. See `deriveSlot`.
+    /// @param value The signal value to store
+    /// @param chainId The chain ID to namespace the signal
+    /// @param account The sender of the signal
+    /// @param namespace A custom namespace to isolate signals
+    /// @return _ The derived storage slot used to store the signal
     function signal(bytes32 value, uint256 chainId, address account, bytes32 namespace) internal returns (bytes32) {
         bytes32 slot = deriveSlot(value, chainId, account, namespace);
         slot.getBytes32Slot().value = keccak256(abi.encode(value));
         return slot;
     }
 
+    /// @dev Returns the storage slot for a signal. Namespaced to the msg.sender, value and namespace.
     function deriveSlot(bytes32 value) internal view returns (bytes32) {
         return deriveSlot(value, block.chainid, msg.sender, SIGNAL_NAMESPACE);
     }
@@ -76,12 +84,17 @@ library LibSignal {
         return deriveSlot(value, block.chainid, msg.sender, namespace);
     }
 
-    /// @dev Returns the storage slot for a signal. Namespaced to the msg.sender, value and namespace.
+    /// @dev Returns the storage slot for a signal. Namespaced to the msg.sender, chain ID, value and namespace.
     function deriveSlot(bytes32 value, uint256 chainId, bytes32 namespace) internal view returns (bytes32) {
         return deriveSlot(value, chainId, msg.sender, namespace);
     }
 
-    /// @dev Returns the storage slot for a signal. Namespaced to the current account and value and namespace.
+    /// @dev Returns the storage slot for a signal. Namespaced to the account, value, and namespace.
+    /// @param value The signal value
+    /// @param chainId The chain ID used in the namespace
+    /// @param account The account to namespace
+    /// @param namespace The custom namespace for the signal
+    /// @return slot The derived storage slot
     function deriveSlot(bytes32 value, uint256 chainId, address account, bytes32 namespace)
         internal
         pure

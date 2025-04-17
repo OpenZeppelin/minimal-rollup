@@ -48,7 +48,7 @@ abstract contract CommitmentStore is ICommitmentStore, Ownable {
         onlyAuthorizedCommitter
     {
         _commitments[chainId][height] = commitment;
-        emit CommitmentStored(height, commitment);
+        emit CommitmentStored(chainId, height, commitment);
     }
 
     /// @dev Internal helper to validate the authorizedCommitter.
