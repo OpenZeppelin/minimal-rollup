@@ -12,6 +12,7 @@ use eyre::Result;
 use serde_json::to_string_pretty;
 
 const BLOCK_TIME: u64 = 5;
+const L1_CHAIN_ID: u64 = 1;
 
 // NOTE: This needs to match the address of the rollup operator in the tests
 // to ensure the signal service is deployed to the same address.
@@ -28,6 +29,7 @@ pub fn get_provider() -> Result<(impl Provider, AnvilInstance)> {
     let anvil = Anvil::new()
         .block_time(BLOCK_TIME)
         .port(8547_u16)
+        .chain_id(L1_CHAIN_ID)
         .try_spawn()?;
     let signer: PrivateKeySigner = anvil.keys()[0].clone().into();
     let rpc_url = anvil.endpoint_url();

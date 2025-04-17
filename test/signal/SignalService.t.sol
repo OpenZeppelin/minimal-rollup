@@ -92,8 +92,8 @@ contract SendL1SignalState is BaseState {
     // 0xe321d900f3fd366734e2d071e30949ded20c27fd638f1a059390091c643b62c5
     bytes32 public signal = keccak256(abi.encode(value));
 
-    bytes32 public stateRoot = hex"9bd008a5a90cbe90d20f4b5b0586b27207737e3b191079fff145b5b9c901c455";
-    bytes32 public storageRoot = hex"3ce30cf67714952c040433caae45d61b2435a503ea618de43375e00a6c174bed";
+    bytes32 public stateRoot = hex"c1e08570f2f86772aa068d2e6c1472882937999e45024cb2b1eb4695aecb954a";
+    bytes32 public storageRoot = hex"fe201dc3c31cfab4e0f804fa77b26ee77eb433cafdc4a457081e12a1fb77321f";
 
     function setUp() public virtual override {
         super.setUp();
@@ -102,27 +102,27 @@ contract SendL1SignalState is BaseState {
         L1signalService.sendSignal(signal);
     }
 
+    // NOTE: This proof is only valid for the given stateRoot and storageRoot
+    function accountProof() public pure returns (bytes[] memory accountProofArr) {
+        accountProofArr = new bytes[](3);
+
+        accountProofArr[0] =
+            hex"f90131a0b91a8b7a7e9d3eab90afd81da3725030742f663c6ed8c26657bf00d842a9f4aaa01689b2a5203afd9ea0a0ca3765e4a538c7176e53eac1f8307a344ffc3c6176558080a0ca0af0336a19f157e2f616a5b7557ba54812e9ad3a58b56779586bdbb5f80730a080280f69e5744940c0036bf54b8e0cf3fbadaaa171a03d40ad200be2c26c6a478080a04b29efa44ecf50c19b34950cf1d0f05e00568bcc873120fbea9a4e8439de0962a0d0a1bfe5b45d2d863a794f016450a4caca04f3b599e8d1652afca8b752935fd880a0bf9b09e442e044778b354abbadb5ec049d7f5e8b585c3966d476c4fbc9a181d28080a0c67cf1b037ce86bf013a67a6303a5036c3bc8144c2efa48cdde44085d8dfb205a0e5c557a0ce3894afeb44c37f3d24247f67dc76a174d8cacc360c1210eef60a7680";
+        accountProofArr[1] =
+            hex"f85180808080a01d4fc1db150c495ea949963e88a103a93033d24d54c6166363794291d9fda8c780808080a074ae0767a40fc6fff780050f46a50f6b39ca4edb7faa9669108157a1cd96f40980808080808080";
+        accountProofArr[2] =
+            hex"f869a020e659e60b21cc961f64ad47f20523c1d329d4bbda245ef3940a76dc89d0911bb846f8440180a0fe201dc3c31cfab4e0f804fa77b26ee77eb433cafdc4a457081e12a1fb77321fa0ddfe133f8d0695ac1f20fc88dcdc608589d64d03d20e948e7486d381b9e2c426";
+    }
+
     // NOTE: This proof is only valid for the defaultSender address and signal
     // For the given stateRoot and storageRoot
     function storageProof() public pure returns (bytes[] memory storageProofArr) {
         storageProofArr = new bytes[](2);
 
         storageProofArr[0] =
-            hex"f851a023a999cb10807a0eb6e21969ab26264d39c395eeb67e929a3c0256dc8a56876c808080a015ae32d5986f7e597e8a4db519e6640db0eeb8271f30c7691dc58cd99b9cae8d808080808080808080808080";
+            hex"f85180808080a015ae32d5986f7e597e8a4db519e6640db0eeb8271f30c7691dc58cd99b9cae8d808080808080a09e55e2648102fda81eb95b4ee10aee84628a953d4878b0f6a4d0736614d94a168080808080";
         storageProofArr[1] =
-            hex"f843a032fbc053d21d1450a7eb877000b701317b2bf5fa5907266fb096a14feb00db21a1a029d86d891992a0a891ff8cc9477d178707448d6a8f2f8a15fe1ca735238569e4";
-    }
-
-    // NOTE: This proof is only valid for the given stateRoot and storageRoot
-    function accountProof() public pure returns (bytes[] memory accountProofArr) {
-        accountProofArr = new bytes[](3);
-
-        accountProofArr[0] =
-            hex"f90131a0b91a8b7a7e9d3eab90afd81da3725030742f663c6ed8c26657bf00d842a9f4aaa01689b2a5203afd9ea0a0ca3765e4a538c7176e53eac1f8307a344ffc3c6176558080a0d6df02675ad4091927c8fb88eccc1eae7e8ee758327a4bb4f006dcba84f08b8fa0f08abfe349659ee092513d2474566e286f6c6d9b2930e29d3e04b283c2b25dfd8080a04b29efa44ecf50c19b34950cf1d0f05e00568bcc873120fbea9a4e8439de0962a0d0a1bfe5b45d2d863a794f016450a4caca04f3b599e8d1652afca8b752935fd880a0bf9b09e442e044778b354abbadb5ec049d7f5e8b585c3966d476c4fbc9a181d28080a0659892986d3408997f74c30845ede10e8dd4892dd7e39a153dee6fdc2f43d4f8a0e5c557a0ce3894afeb44c37f3d24247f67dc76a174d8cacc360c1210eef60a7680";
-        accountProofArr[1] =
-            hex"f85180808080a0888ad3a3c3b85d0e75d6cdf73c5918b34e6401c0378c0260f675b5ab2f16b29080808080a074ae0767a40fc6fff780050f46a50f6b39ca4edb7faa9669108157a1cd96f40980808080808080";
-        accountProofArr[2] =
-            hex"f869a020e659e60b21cc961f64ad47f20523c1d329d4bbda245ef3940a76dc89d0911bb846f8440180a03ce30cf67714952c040433caae45d61b2435a503ea618de43375e00a6c174beda0c0ba2d0c0eedb3a5fcd78a0aa384e2399651f191eccdd9576bec86c1c300607f";
+            hex"f843a034f6405d43a092e4cd9a4c9c942b759fef6afe35152e7dff7baf6f0c82cd54e2a1a029d86d891992a0a891ff8cc9477d178707448d6a8f2f8a15fe1ca735238569e4";
     }
 }
 

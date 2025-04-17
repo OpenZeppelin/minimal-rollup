@@ -21,7 +21,7 @@ contract BridgeETHState is BaseState {
 
     // this is a valid deposit ID but is sent via a signal not a deposit
     // hence "invalid" and should not be claimable
-    bytes32 invalidDepositId = 0xbf8ce3088406c4ddbc32e32404ca006c3ef57f07d5139479f16c9124d6490f2e;
+    bytes32 invalidDepositId = 0xc9c38023fccb0f40eb13158a43adb58b864737eaf95c112b795e4bc6eb390e79;
 
     function setUp() public virtual override {
         super.setUp();
@@ -35,7 +35,6 @@ contract BridgeETHState is BaseState {
         Vm.Log[] memory entries = vm.getRecordedLogs();
 
         depositOne = abi.decode(entries[0].data, (IETHBridge.ETHDeposit));
-        console.log("depositOne", depositOne.nonce);
 
         vm.prank(defaultSender);
         L1signalService.sendSignal(invalidDepositId);
@@ -54,7 +53,7 @@ contract ETHBridgeTest is BridgeETHState {
 }
 
 contract CommitmentStoredState is BridgeETHState {
-    bytes32 public stateRoot = hex"b56827bea299e8ea13277172f0839722368039e3acf7e1a44048a76f783fbcd5";
+    bytes32 public stateRoot = hex"4066a712204e3e382dded70283152bc193d2dd2723785db86d819454f644be05";
     uint256 public commitmentHeight = 1;
 
     function setUp() public virtual override {
@@ -65,29 +64,33 @@ contract CommitmentStoredState is BridgeETHState {
 
     function accountProofSignalService() public pure returns (bytes[] memory accountProofArr) {
         accountProofArr = new bytes[](3);
+
         accountProofArr[0] =
-            hex"f90131a0b91a8b7a7e9d3eab90afd81da3725030742f663c6ed8c26657bf00d842a9f4aaa01689b2a5203afd9ea0a0ca3765e4a538c7176e53eac1f8307a344ffc3c6176558080a02d4083d5d0f8156ad256d9234d424cd9e49fb1812d743e9c734b4f414e505e63a078cd190fd2ca48935f923419a47d2857d520e451bbf7d51be5c77d672f9c5cd08080a04b29efa44ecf50c19b34950cf1d0f05e00568bcc873120fbea9a4e8439de0962a0d0a1bfe5b45d2d863a794f016450a4caca04f3b599e8d1652afca8b752935fd880a0bf9b09e442e044778b354abbadb5ec049d7f5e8b585c3966d476c4fbc9a181d28080a0b1deafb10e860851c54e860bf8247c81cc05c0d19ed742f144b4fcca3be5e121a0e5c557a0ce3894afeb44c37f3d24247f67dc76a174d8cacc360c1210eef60a7680";
+            hex"f90131a0b91a8b7a7e9d3eab90afd81da3725030742f663c6ed8c26657bf00d842a9f4aaa01689b2a5203afd9ea0a0ca3765e4a538c7176e53eac1f8307a344ffc3c6176558080a056dc093a5c10f342d85933dc7cd8bb9ee0cc0b490ae5a03d624f3d82469b3686a0ebfc19e87dcaddfa5601abfc75cb41ea61657f3bce80c31a518611fc7ba9b1698080a04b29efa44ecf50c19b34950cf1d0f05e00568bcc873120fbea9a4e8439de0962a0d0a1bfe5b45d2d863a794f016450a4caca04f3b599e8d1652afca8b752935fd880a0bf9b09e442e044778b354abbadb5ec049d7f5e8b585c3966d476c4fbc9a181d28080a0809b70d0f09f0d53aed5487d0aafadc6357b429c43248ec0246a3433598d5ef3a0e5c557a0ce3894afeb44c37f3d24247f67dc76a174d8cacc360c1210eef60a7680";
         accountProofArr[1] =
-            hex"f85180808080a090e25787e679147069a9022e76f57949e7ec57d5368ec66212e165f83ff5ff8680808080a074ae0767a40fc6fff780050f46a50f6b39ca4edb7faa9669108157a1cd96f40980808080808080";
+            hex"f85180808080a01a6a724a7a2827a0e134565d73cf3a1d6b1e5439fb9433d2d6d17bfba5b329f080808080a074ae0767a40fc6fff780050f46a50f6b39ca4edb7faa9669108157a1cd96f40980808080808080";
         accountProofArr[2] =
-            hex"f871a020e659e60b21cc961f64ad47f20523c1d329d4bbda245ef3940a76dc89d0911bb84ef84c01883782dace9d900000a0584ab30fb9214d0f4b747d87b177802f7022e18ec5ed2c58a85e3bfa953915d0a0c0ba2d0c0eedb3a5fcd78a0aa384e2399651f191eccdd9576bec86c1c300607f";
+            hex"f871a020e659e60b21cc961f64ad47f20523c1d329d4bbda245ef3940a76dc89d0911bb84ef84c01883782dace9d900000a06e729ae3f1a09bc7964410fbb1d91db87b0e8d305599fc5dd2d82d1581de3c14a0ddfe133f8d0695ac1f20fc88dcdc608589d64d03d20e948e7486d381b9e2c426";
     }
 
     function storageProofDepositOne() public pure returns (bytes[] memory storageProofArr) {
-        storageProofArr = new bytes[](2);
+        storageProofArr = new bytes[](3);
+
         storageProofArr[0] =
-            hex"f89180808080a015ae32d5986f7e597e8a4db519e6640db0eeb8271f30c7691dc58cd99b9cae8da0189ef9b745baf1cac397de18cd0daa0080adc277514b3424e51add1fa0560caa8080808080a0f4984a11f61a2921456141df88de6e1a710d28681b91af794c5a721e47839cd780a07922f462ebc1e5dbf5d9cf69804cfb38646a24cce553010811b89d913f1e0544808080";
+            hex"f87180808080a03c92b61d416e91dc69fa87dd4b52ae3e4229fa2d7be76cc9b6173c04b9f938948080a03d330cbe29881fcb0d06f42ef7c73bffaacf45fe22c2e94560d0cb18a61ff37a808080a0f4984a11f61a2921456141df88de6e1a710d28681b91af794c5a721e47839cd78080808080";
         storageProofArr[1] =
-            hex"f843a03e489ae456a515de885d39c5188bcd6169574db5667aa9ba76cfe7c1e9afc5fea1a01731af609b4a0951d3773ff202fa03d48b0d9db4630773c1330747c674c86ea1";
+            hex"f851a0ad42e1edb0c73638954137aa6a8b81f68c8bb79b345826de7aa15c82de29bee080808080808080808080a0c7e8c82df0b4d6ed871ccd192478e2ff8030136cad665cc7ab6fdc8c146859b98080808080";
+        storageProofArr[2] =
+            hex"f843a020f25e97012c20910400e86321fb6bc8bb83c6ffb146881d997cbad075087089a1a05858edf174ac03f9c53790ca8545f827eb3cc142106ae17bebf6f01551bc1656";
     }
 
     function storageProofInvalidDeposit() public pure returns (bytes[] memory storageProofArr) {
         storageProofArr = new bytes[](2);
 
         storageProofArr[0] =
-            hex"f89180808080a015ae32d5986f7e597e8a4db519e6640db0eeb8271f30c7691dc58cd99b9cae8da0189ef9b745baf1cac397de18cd0daa0080adc277514b3424e51add1fa0560caa8080808080a0f4984a11f61a2921456141df88de6e1a710d28681b91af794c5a721e47839cd780a07922f462ebc1e5dbf5d9cf69804cfb38646a24cce553010811b89d913f1e0544808080";
+            hex"f87180808080a03c92b61d416e91dc69fa87dd4b52ae3e4229fa2d7be76cc9b6173c04b9f938948080a03d330cbe29881fcb0d06f42ef7c73bffaacf45fe22c2e94560d0cb18a61ff37a808080a0f4984a11f61a2921456141df88de6e1a710d28681b91af794c5a721e47839cd78080808080";
         storageProofArr[1] =
-            hex"f843a03e4b9f05a3709e8b7aeb7ad23c6304cc7c352036e185309eb9ca85a9d479a4bca1a09a30c5e99dafa3ca4343a7bbe5c7ae498be2a41a4ff6743822305b8acfeb183d";
+            hex"f843a033524159aecef2c48536ead2e14ada747cbcc5edb9e69bed129c51895085f8efa1a0a4991c98fb3cffdd001a1ac90467fb0a3417c9032762ab3d717fbf955780b39e";
     }
 }
 
@@ -114,6 +117,8 @@ contract ClaimDepositTest is CommitmentStoredState {
 
         ETHBridge.ETHDeposit memory invalidDeposit;
         invalidDeposit.nonce = 1;
+        invalidDeposit.srcChainId = 1;
+        invalidDeposit.dstChainId = 2;
         invalidDeposit.from = defaultSender;
         invalidDeposit.to = defaultSender;
         invalidDeposit.amount = depositAmount;
@@ -131,6 +136,7 @@ contract ClaimDepositTest is CommitmentStoredState {
         vm.selectFork(L2Fork);
         // to be extra sure its not a problem with the proof
         L2signalService.verifySignal(L1ChainId, commitmentHeight, defaultSender, invalidDepositId, encodedProof);
+
         // I believe this error means that the proof is not valid for this deposit id
         vm.expectRevert("MerkleTrie: invalid large internal hash");
         L2signalService.claimDeposit(invalidDeposit, commitmentHeight, encodedProof);
