@@ -10,7 +10,7 @@ import "src/vendor/optimism/trie/SecureMerkleTrie.sol";
 library LibTrieProof {
     /// @dev Retrieves account's storage root and verifies a storage slot within that root.
     /// @param accountProof Merkle proof for account state against global stateRoot
-    /// @param stateProof Merkle proof for slot value against account's storageRoot
+    /// @param storageProof Merkle proof for slot value against account's storageRoot
     /// @return valid True if both proofs verify successfully
     /// @return storageRoot The account's storage root retrieved with accountProof
     function verifyStorage(
@@ -19,7 +19,7 @@ library LibTrieProof {
         bytes32 value,
         bytes32 stateRoot,
         bytes[] memory accountProof,
-        bytes[] memory stateProof
+        bytes[] memory storageProof
     ) internal pure returns (bool valid, bytes32 storageRoot) {
         RLPReader.RLPItem[] memory accountState =
             RLPReader.readList(SecureMerkleTrie.get(abi.encodePacked(account), accountProof, stateRoot));
@@ -28,7 +28,7 @@ library LibTrieProof {
         // See https://ethereum.org/en/developers/docs/data-structures-and-encoding/patricia-merkle-trie/#state-trie
         storageRoot = bytes32(RLPReader.readBytes(accountState[2]));
 
-        return (verifySlot(slot, value, storageRoot, stateProof), storageRoot);
+        return (verifySlot(slot, value, storageRoot, storageProof), storageRoot);
     }
 
     /// @dev Verifies a value in Merkle-Patricia trie using inclusion proof
