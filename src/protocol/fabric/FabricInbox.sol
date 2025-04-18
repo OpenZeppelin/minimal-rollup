@@ -2,14 +2,17 @@
 pragma solidity ^0.8.28;
 
 import {IBlobRefRegistry} from "../../blobs/IBlobRefRegistry.sol";
+
+import {IDelayedInclusionStore} from "../IDelayedInclusionStore.sol";
 import {IProposerFees} from "../IProposerFees.sol";
 import {IPublicationFeed} from "../IPublicationFeed.sol";
+import {DelayedInclusionStore} from "../taiko_alethia/DelayedInclusionStore.sol";
 
 import {EIP4788} from "./EIP-4788.sol";
 import {IRegistry} from "urc/src/IRegistry.sol";
 import {BLS} from "urc/src/lib/BLS.sol";
 
-contract FabricInbox {
+contract FabricInbox is DelayedInclusionStore {
     struct Metadata {
         uint256 anchorBlockId;
         bytes32 anchorBlockHash;
@@ -20,7 +23,6 @@ contract FabricInbox {
     IPublicationFeed public immutable publicationFeed;
     IProposerFees public immutable proposerFees;
     IRegistry public immutable registry;
-    IBlobRefRegistry public immutable blobRefRegistry;
 
     // Publication ID trackers
     uint64 public unsafeHead;
@@ -40,20 +42,22 @@ contract FabricInbox {
     uint256 private constant BLOB_REFERENCE = 2;
     uint256 private constant VALIDATOR_PUBKEY = 3;
 
+    event NewSafeHead(uint64 indexed newSafeHead);
+
     constructor(
         address _publicationFeed,
         address _blobRefRegistry,
         address _registry,
         address _slasher,
         address _proposerFees,
+        uint256 _inclusionDelay,
         uint256 _requiredCollateralWei,
         uint256 _genesisTimestamp
-    ) {
+    ) DelayedInclusionStore(_inclusionDelay, _blobRefRegistry) {
         publicationFeed = IPublicationFeed(_publicationFeed);
         registry = IRegistry(_registry);
         slasher = _slasher;
         proposerFees = IProposerFees(_proposerFees);
-        blobRefRegistry = IBlobRefRegistry(_blobRefRegistry);
         requiredCollateralWei = _requiredCollateralWei;
         GENESIS_TIMESTAMP = _genesisTimestamp;
     }
@@ -77,11 +81,15 @@ contract FabricInbox {
         _isAllowedProposer(registrationProof);
 
         // Publish the attributes
-        uint64 newPublicationId = _publishAttributes(nBlobs, _hashBLSPubKey(registrationProof.registration.pubkey));
+        (uint64 newPublicationId, Metadata memory metadata) =
+            _publishAttributes(nBlobs, _hashBLSPubKey(registrationProof.registration.pubkey));
 
         // Update the heads
         (unsafeHead, safeHead) =
             _updateHeads(replaceUnsafeHead, newPublicationId, unsafeHeader, unsafeAttributeHashes, validatorProof);
+
+        // Process delayed inclusions
+        _forceInclusions(metadata);
     }
 
     function _buildBlobIndices(uint256 nBlobs) private pure returns (uint256[] memory blobIndices) {
@@ -127,9 +135,12 @@ contract FabricInbox {
         // todo other checks?
     }
 
-    function _publishAttributes(uint256 nBlobs, bytes32 pubkeyHash) internal returns (uint64 _publicationId) {
+    function _publishAttributes(uint256 nBlobs, bytes32 pubkeyHash)
+        internal
+        returns (uint64 _publicationId, Metadata memory metadata)
+    {
         // Construct metadata attribute
-        Metadata memory metadata =
+        metadata =
             Metadata({anchorBlockId: unsafeHead, anchorBlockHash: blockhash(unsafeHead), isDelayedInclusion: false});
         require(metadata.anchorBlockHash != 0, "blockhash not found");
 
@@ -202,9 +213,37 @@ contract FabricInbox {
 
             // Update the safe head
             _safeHead = unsafeHead;
+            emit NewSafeHead(_safeHead);
 
             // Replace the unsafe head
             _unsafeHead = newPublicationId;
+        }
+    }
+
+    function _forceInclusions(Metadata memory metadata) internal {
+        IDelayedInclusionStore.Inclusion[] memory inclusions = processDueInclusions();
+        // unsafeHead is always the latest publication id
+        uint64 _lastPublicationId = unsafeHead;
+        metadata.isDelayedInclusion = true;
+
+        (, uint256 delayedPublicationFee) = proposerFees.getCurrentFees();
+
+        // Metadata is fixed for all inclusions
+        bytes[] memory attributes = new bytes[](3);
+        attributes[METADATA] = abi.encode(metadata);
+        for (uint256 i; i < inclusions.length; ++i) {
+            attributes[LAST_PUBLICATION] = abi.encode(_lastPublicationId);
+            attributes[BLOB_REFERENCE] = abi.encode(inclusions[i]);
+
+            // Pay the publication fee
+            proposerFees.payPublicationFee{value: delayedPublicationFee}(msg.sender, true);
+
+            // Publish the inclusion
+            _lastPublicationId = uint64(publicationFeed.publish(attributes).id);
+
+            // Update the safe head
+            safeHead = _lastPublicationId;
+            emit NewSafeHead(safeHead);
         }
     }
 
