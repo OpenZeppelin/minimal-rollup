@@ -79,7 +79,7 @@ contract TaikoAnchor {
     }
 
     function l1BlockHashes(uint256 blockId) external view returns (bytes32 blockHash) {
-        return commitmentStore.commitmentAt(blockId);
+        return commitmentStore.commitmentAt(address(this), blockId);
     }
 
     /// @dev Calculates the aggregated ancestor block hash for the given block ID
