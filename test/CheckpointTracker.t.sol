@@ -38,11 +38,16 @@ contract CheckpointTrackerTest is Test {
 
         signalService = new SignalService(rollupOperator);
 
-        tracker = new CheckpointTracker(
-            keccak256(abi.encode("genesis")), address(feed), address(verifier), proverManager, address(signalService)
-        );
-        vm.prank(rollupOperator);
+        bytes32 genesis = keccak256(abi.encode("genesis"));
+        tracker =
+            new CheckpointTracker(genesis, address(feed), address(verifier), proverManager, address(signalService));
+
+        vm.startPrank(rollupOperator);
+        ICommitmentStore(address(signalService)).setAuthorizedCommitter(rollupOperator);
+        ICommitmentStore(address(signalService)).storeCommitment(0, genesis);
         ICommitmentStore(address(signalService)).setAuthorizedCommitter(address(tracker));
+        vm.stopPrank();
+
         proof = abi.encode("proof");
     }
 
@@ -61,11 +66,9 @@ contract CheckpointTrackerTest is Test {
 
     function test_constructor_EmitsEvent() public {
         bytes32 genesisCommitment = keccak256(abi.encode("genesis"));
-        ICheckpointTracker.Checkpoint memory genesisCheckpoint =
-            ICheckpointTracker.Checkpoint({publicationId: 0, commitment: genesisCommitment});
 
         vm.expectEmit();
-        emit ICheckpointTracker.CheckpointUpdated(genesisCheckpoint);
+        emit ICheckpointTracker.CheckpointUpdated(0, genesisCommitment);
         new CheckpointTracker(
             genesisCommitment, address(feed), address(verifier), proverManager, address(signalService)
         );
@@ -79,7 +82,7 @@ contract CheckpointTrackerTest is Test {
         uint256 numRelevantPublications = 2;
 
         vm.expectEmit();
-        emit ICheckpointTracker.CheckpointUpdated(end);
+        emit ICheckpointTracker.CheckpointUpdated(end.publicationId, end.commitment);
         tracker.proveTransition(start, end, numRelevantPublications, proof);
 
         ICheckpointTracker.Checkpoint memory provenCheckpoint = tracker.getProvenCheckpoint();
