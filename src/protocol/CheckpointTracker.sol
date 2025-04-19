@@ -37,12 +37,7 @@ contract CheckpointTracker is ICheckpointTracker {
         commitmentStore = ICommitmentStore(_commitmentStore);
         proverManager = _proverManager;
 
-        // We should call _updateCheckpoint(0, _genesis);
-        // This requires the checkpoint tracker to be the authorized committer, which means we need to deploy this with
-        // CREATE2 so the rollup operator can set the permission before this contract is created
-        // For now, we assume the rollup operator will save the genesis checkpoint in the commitmentStore
-        // This is a hack but we are about to remove the authorizer mechanism anyway
-        emit CheckpointUpdated(0, _genesis);
+        _updateCheckpoint(0, _genesis);
     }
 
     /// @inheritdoc ICheckpointTracker
@@ -79,7 +74,7 @@ contract CheckpointTracker is ICheckpointTracker {
 
     function getProvenCheckpoint() public view returns (Checkpoint memory provenCheckpoint) {
         provenCheckpoint.publicationId = _provenPublicationId;
-        provenCheckpoint.commitment = commitmentStore.commitmentAt(provenCheckpoint.publicationId);
+        provenCheckpoint.commitment = commitmentStore.commitmentAt(address(this), provenCheckpoint.publicationId);
     }
 
     function _updateCheckpoint(uint256 publicationId, bytes32 commitment) internal {
