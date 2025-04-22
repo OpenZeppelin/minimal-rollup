@@ -4,7 +4,7 @@ out = "out"
 libs = ["lib"]
 evm_version = "cancun"
 
-gas_reports = ["*"]
+gas_reports_ignore = ["MockDelayedInclusionStore", "MockCheckpointTracker", ""]
 
 [fmt]
 sort_imports = true

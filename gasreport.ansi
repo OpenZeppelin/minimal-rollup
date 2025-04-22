@@ -1,14 +1,22 @@
-No files changed, compilation skipped
+Compiling 2 files with Solc 0.8.28
+Solc 0.8.28 finished in 359.20ms
+Compiler run successful with warnings:
+Warning (5667): Unused function parameter. Remove or comment out the variable name to silence this warning.
+   --> src/protocol/taiko_alethia/ProverManager.sol:126:50:
+    |
+126 |     function payPublicationFee(address proposer, bool isDelayed) external payable {
+    |                                                  ^^^^^^^^^^^^^^
+
+
+Ran 1 test for test/taiko_alethia/DelayedInclusionStore.t.sol:StaggeredInclusionStateTest
+[FAIL: EvmError: Revert] setUp() (gas: 0)
+Suite result: FAILED. 0 passed; 1 failed; 0 skipped; finished in 30.48ms (0.00ns CPU time)
 
 Ran 3 tests for test/taiko_alethia/DelayedInclusionStore.t.sol:BaseStateTest
 [PASS] test_SetupState() (gas: 8311)
 [FAIL: log != expected log] test_publishDelayed_OneInclusionOneBlob() (gas: 25874)
 [FAIL: EvmError: Revert] test_publish_delayed_OneInclusionMultipleBlobs() (gas: 22490)
-Suite result: FAILED. 1 passed; 2 failed; 0 skipped; finished in 29.88ms (20.56ms CPU time)
-
-Ran 1 test for test/taiko_alethia/DelayedInclusionStore.t.sol:StaggeredInclusionStateTest
-[FAIL: EvmError: Revert] setUp() (gas: 0)
-Suite result: FAILED. 0 passed; 1 failed; 0 skipped; finished in 29.92ms (0.00ns CPU time)
+Suite result: FAILED. 1 passed; 2 failed; 0 skipped; finished in 30.79ms (20.66ms CPU time)
 
 Ran 37 tests for test/ProverManager.t.sol:ProverManagerTest
 [PASS] test_bid_ActivatesSuccessionDelay() (gas: 223909)
@@ -48,7 +56,7 @@ Ran 37 tests for test/ProverManager.t.sol:ProverManagerTest
 [PASS] test_prove_RevertWhen_LastPublicationAfterPeriodEnd() (gas: 260452)
 [PASS] test_prove_RevertWhen_LastPublicationDoesNotMatchEndCheckpoint() (gas: 181543)
 [PASS] test_withdraw() (gas: 105769)
-Suite result: ok. 37 passed; 0 failed; 0 skipped; finished in 264.90ms (1.99s CPU time)
+Suite result: ok. 37 passed; 0 failed; 0 skipped; finished in 266.35ms (2.07s CPU time)
 
 Ran 7 tests for test/CheckpointTracker.t.sol:CheckpointTrackerTest
 [PASS] test_constructor_EmitsEvent() (gas: 955254)
@@ -58,7 +66,7 @@ Ran 7 tests for test/CheckpointTracker.t.sol:CheckpointTrackerTest
 [PASS] test_proveTransition_RevertWhenStartCheckpointNotLatestProven() (gas: 47778)
 [PASS] test_proveTransition_SuccessfulTransition() (gas: 97400)
 [PASS] test_setUp() (gas: 15028)
-Suite result: ok. 7 passed; 0 failed; 0 skipped; finished in 279.58ms (70.17ms CPU time)
+Suite result: ok. 7 passed; 0 failed; 0 skipped; finished in 287.08ms (69.96ms CPU time)
 
 ╭--------------------------------------------------------+-----------------+------+--------+------+---------╮
 | src/blobs/BlobRefRegistry.sol:BlobRefRegistry Contract |                 |      |        |      |         |
@@ -146,38 +154,8 @@ Suite result: ok. 7 passed; 0 failed; 0 skipped; finished in 279.58ms (70.17ms C
 | withdraw                                                            | 35453           | 35453  | 35453  | 35453  | 1       |
 ╰---------------------------------------------------------------------+-----------------+--------+--------+--------+---------╯
 
-╭---------------------------------------------------------------------+-----------------+-------+--------+-------+---------╮
-| test/mocks/MockCheckpointTracker.sol:MockCheckpointTracker Contract |                 |       |        |       |         |
-+==========================================================================================================================+
-| Deployment Cost                                                     | Deployment Size |       |        |       |         |
-|---------------------------------------------------------------------+-----------------+-------+--------+-------+---------|
-| 285271                                                              | 1128            |       |        |       |         |
-|---------------------------------------------------------------------+-----------------+-------+--------+-------+---------|
-|                                                                     |                 |       |        |       |         |
-|---------------------------------------------------------------------+-----------------+-------+--------+-------+---------|
-| Function Name                                                       | Min             | Avg   | Median | Max   | # Calls |
-|---------------------------------------------------------------------+-----------------+-------+--------+-------+---------|
-| getProvenCheckpoint                                                 | 4875            | 4875  | 4875   | 4875  | 6       |
-|---------------------------------------------------------------------+-----------------+-------+--------+-------+---------|
-| setProvenHash                                                       | 66857           | 66857 | 66857  | 66857 | 5       |
-╰---------------------------------------------------------------------+-----------------+-------+--------+-------+---------╯
 
-╭-----------------------------------------------------------------------------+-----------------+-----+--------+-----+---------╮
-| test/mocks/MockDelayedInclusionStore.sol:MockDelayedInclusionStore Contract |                 |     |        |     |         |
-+==============================================================================================================================+
-| Deployment Cost                                                             | Deployment Size |     |        |     |         |
-|-----------------------------------------------------------------------------+-----------------+-----+--------+-----+---------|
-| 749012                                                                      | 3635            |     |        |     |         |
-|-----------------------------------------------------------------------------+-----------------+-----+--------+-----+---------|
-|                                                                             |                 |     |        |     |         |
-|-----------------------------------------------------------------------------+-----------------+-----+--------+-----+---------|
-| Function Name                                                               | Min             | Avg | Median | Max | # Calls |
-|-----------------------------------------------------------------------------+-----------------+-----+--------+-----+---------|
-| publishDelayed                                                              | 0               | 0   | 0      | 0   | 3       |
-╰-----------------------------------------------------------------------------+-----------------+-----+--------+-----+---------╯
-
-
-Ran 4 test suites in 280.45ms (604.29ms CPU time): 45 tests passed, 3 failed, 0 skipped (48 total tests)
+Ran 4 test suites in 288.64ms (614.71ms CPU time): 45 tests passed, 3 failed, 0 skipped (48 total tests)
 
 Failing tests:
 Encountered 2 failing tests in test/taiko_alethia/DelayedInclusionStore.t.sol:BaseStateTest
