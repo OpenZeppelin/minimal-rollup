@@ -1,22 +1,30 @@
-No files changed, compilation skipped
+Compiling 3 files with Solc 0.8.28
+Solc 0.8.28 finished in 372.10ms
+Compiler run successful with warnings:
+Warning (5667): Unused function parameter. Remove or comment out the variable name to silence this warning.
+   --> src/protocol/taiko_alethia/ProverManager.sol:126:50:
+    |
+126 |     function payPublicationFee(address proposer, bool isDelayed) external payable {
+    |                                                  ^^^^^^^^^^^^^^
+
+
+Ran 1 test for test/taiko_alethia/DelayedInclusionStore.t.sol:StaggeredInclusionStateTest
+[FAIL: EvmError: Revert] setUp() (gas: 0)
+Suite result: FAILED. 0 passed; 1 failed; 0 skipped; finished in 29.63ms (0.00ns CPU time)
 
 Ran 3 tests for test/taiko_alethia/DelayedInclusionStore.t.sol:BaseStateTest
 [PASS] test_SetupState() (gas: 8311)
 [FAIL: log != expected log] test_publishDelayed_OneInclusionOneBlob() (gas: 25874)
 [FAIL: EvmError: Revert] test_publish_delayed_OneInclusionMultipleBlobs() (gas: 22490)
-Suite result: FAILED. 1 passed; 2 failed; 0 skipped; finished in 29.88ms (20.56ms CPU time)
-
-Ran 1 test for test/taiko_alethia/DelayedInclusionStore.t.sol:StaggeredInclusionStateTest
-[FAIL: EvmError: Revert] setUp() (gas: 0)
-Suite result: FAILED. 0 passed; 1 failed; 0 skipped; finished in 29.92ms (0.00ns CPU time)
+Suite result: FAILED. 1 passed; 2 failed; 0 skipped; finished in 29.80ms (21.74ms CPU time)
 
 Ran 37 tests for test/ProverManager.t.sol:ProverManagerTest
-[PASS] test_bid_ActivatesSuccessionDelay() (gas: 223909)
-[PASS] test_bid_ActivePeriod() (gas: 232157)
-[PASS] test_bid_ExistingNextPeriod() (gas: 341675)
-[PASS] test_bid_RevertWhen_FeeNotLowEnough() (gas: 94370)
-[PASS] test_bid_RevertWhen_InsufficientBalance() (gas: 151934)
-[PASS] test_bid_RevertWhen_NotEnoughUndercutOnNextPeriod() (gas: 299284)
+[PASS] test_bid_ActivatesSuccessionDelay() (gas: 223258)
+[PASS] test_bid_ActivePeriod() (gas: 229506)
+[PASS] test_bid_ExistingNextPeriod() (gas: 338473)
+[FAIL: next call did not revert as expected] test_bid_RevertWhen_FeeNotLowEnough() (gas: 208293)
+[PASS] test_bid_RevertWhen_InsufficientBalance() (gas: 149283)
+[FAIL: next call did not revert as expected] test_bid_RevertWhen_NotEnoughUndercutOnNextPeriod() (gas: 317169)
 [PASS] test_claimProvingVacancy() (gas: 384066)
 [PASS] test_claimProvingVacancy_AdvancesPeriod() (gas: 425654)
 [PASS] test_claimProvingVacancy_RevertWhen_InsufficientBalance() (gas: 297578)
@@ -48,7 +56,7 @@ Ran 37 tests for test/ProverManager.t.sol:ProverManagerTest
 [PASS] test_prove_RevertWhen_LastPublicationAfterPeriodEnd() (gas: 260452)
 [PASS] test_prove_RevertWhen_LastPublicationDoesNotMatchEndCheckpoint() (gas: 181543)
 [PASS] test_withdraw() (gas: 105769)
-Suite result: ok. 37 passed; 0 failed; 0 skipped; finished in 264.90ms (1.99s CPU time)
+Suite result: FAILED. 35 passed; 2 failed; 0 skipped; finished in 260.32ms (2.13s CPU time)
 
 Ran 7 tests for test/CheckpointTracker.t.sol:CheckpointTrackerTest
 [PASS] test_constructor_EmitsEvent() (gas: 955254)
@@ -58,7 +66,7 @@ Ran 7 tests for test/CheckpointTracker.t.sol:CheckpointTrackerTest
 [PASS] test_proveTransition_RevertWhenStartCheckpointNotLatestProven() (gas: 47778)
 [PASS] test_proveTransition_SuccessfulTransition() (gas: 97400)
 [PASS] test_setUp() (gas: 15028)
-Suite result: ok. 7 passed; 0 failed; 0 skipped; finished in 279.58ms (70.17ms CPU time)
+Suite result: ok. 7 passed; 0 failed; 0 skipped; finished in 291.03ms (70.19ms CPU time)
 
 ╭--------------------------------------------------------+-----------------+------+--------+------+---------╮
 | src/blobs/BlobRefRegistry.sol:BlobRefRegistry Contract |                 |      |        |      |         |
@@ -113,7 +121,7 @@ Suite result: ok. 7 passed; 0 failed; 0 skipped; finished in 279.58ms (70.17ms C
 +============================================================================================================================+
 | Deployment Cost                                                     | Deployment Size |        |        |        |         |
 |---------------------------------------------------------------------+-----------------+--------+--------+--------+---------|
-| 2854442                                                             | 14913           |        |        |        |         |
+| 2801247                                                             | 14657           |        |        |        |         |
 |---------------------------------------------------------------------+-----------------+--------+--------+--------+---------|
 |                                                                     |                 |        |        |        |         |
 |---------------------------------------------------------------------+-----------------+--------+--------+--------+---------|
@@ -121,7 +129,7 @@ Suite result: ok. 7 passed; 0 failed; 0 skipped; finished in 279.58ms (70.17ms C
 |---------------------------------------------------------------------+-----------------+--------+--------+--------+---------|
 | balances                                                            | 935             | 1195   | 935    | 2935   | 23      |
 |---------------------------------------------------------------------+-----------------+--------+--------+--------+---------|
-| bid                                                                 | 29290           | 104212 | 140440 | 145846 | 9       |
+| bid                                                                 | 51994           | 117617 | 143195 | 143207 | 9       |
 |---------------------------------------------------------------------+-----------------+--------+--------+--------+---------|
 | claimProvingVacancy                                                 | 26424           | 113029 | 141407 | 142880 | 4       |
 |---------------------------------------------------------------------+-----------------+--------+--------+--------+---------|
@@ -137,7 +145,7 @@ Suite result: ok. 7 passed; 0 failed; 0 skipped; finished in 279.58ms (70.17ms C
 |---------------------------------------------------------------------+-----------------+--------+--------+--------+---------|
 | getCurrentFees                                                      | 1162            | 4088   | 4088   | 7015   | 2       |
 |---------------------------------------------------------------------+-----------------+--------+--------+--------+---------|
-| getPeriod                                                           | 2458            | 6458   | 6458   | 14458  | 14      |
+| getPeriod                                                           | 2458            | 6600   | 6458   | 14458  | 14      |
 |---------------------------------------------------------------------+-----------------+--------+--------+--------+---------|
 | payPublicationFee                                                   | 22331           | 53830  | 59556  | 59556  | 57      |
 |---------------------------------------------------------------------+-----------------+--------+--------+--------+---------|
@@ -177,9 +185,13 @@ Suite result: ok. 7 passed; 0 failed; 0 skipped; finished in 279.58ms (70.17ms C
 ╰-----------------------------------------------------------------------------+-----------------+-----+--------+-----+---------╯
 
 
-Ran 4 test suites in 280.45ms (604.29ms CPU time): 45 tests passed, 3 failed, 0 skipped (48 total tests)
+Ran 4 test suites in 292.72ms (610.79ms CPU time): 43 tests passed, 5 failed, 0 skipped (48 total tests)
 
 Failing tests:
+Encountered 2 failing tests in test/ProverManager.t.sol:ProverManagerTest
+[FAIL: next call did not revert as expected] test_bid_RevertWhen_FeeNotLowEnough() (gas: 208293)
+[FAIL: next call did not revert as expected] test_bid_RevertWhen_NotEnoughUndercutOnNextPeriod() (gas: 317169)
+
 Encountered 2 failing tests in test/taiko_alethia/DelayedInclusionStore.t.sol:BaseStateTest
 [FAIL: log != expected log] test_publishDelayed_OneInclusionOneBlob() (gas: 25874)
 [FAIL: EvmError: Revert] test_publish_delayed_OneInclusionMultipleBlobs() (gas: 22490)
@@ -187,4 +199,4 @@ Encountered 2 failing tests in test/taiko_alethia/DelayedInclusionStore.t.sol:Ba
 Encountered 1 failing test in test/taiko_alethia/DelayedInclusionStore.t.sol:StaggeredInclusionStateTest
 [FAIL: EvmError: Revert] setUp() (gas: 0)
 
-Encountered a total of 3 failing tests, 45 tests succeeded
+Encountered a total of 5 failing tests, 43 tests succeeded

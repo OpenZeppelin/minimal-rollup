@@ -154,13 +154,10 @@ contract ProverManager is IProposerFees, IProverManager {
         Period storage _currentPeriod = _periods[currentPeriod];
         Period storage _nextPeriod = _periods[currentPeriod + 1];
         if (_currentPeriod.end == 0) {
-            _ensureSufficientUnderbid(_currentPeriod.fee, offeredFee);
             _closePeriod(_currentPeriod, successionDelay, provingWindow);
         } else {
             address _nextProverAddress = _nextPeriod.prover;
             if (_nextProverAddress != address(0)) {
-                _ensureSufficientUnderbid(_nextPeriod.fee, offeredFee);
-
                 // Refund the liveness bond to the losing bid
                 balances[_nextProverAddress] += _nextPeriod.stake;
             }
