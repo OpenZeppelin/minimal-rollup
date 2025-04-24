@@ -178,7 +178,7 @@ contract ERC20ProverManagerTest is BaseProverManagerTest {
         assertEq(actualBalance, expectedBalance, "Contract does not hold the correct token balance");
     }
 
-    function test_Constructor_RevertWhen_ZeroTokenAddress() public {
+    function test_constructor_RevertWhen_ZeroTokenAddress() public {
         vm.expectRevert("Token address cannot be 0");
         new ERC20ProverManagerMock(
             inbox,
