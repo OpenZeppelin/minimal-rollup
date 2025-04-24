@@ -85,7 +85,7 @@ contract ETHProverManagerTest is BaseProverManagerTest {
         proverManager = new ETHProverManagerMock{value: LIVENESS_BOND}(
             inbox, address(checkpointTracker), address(publicationFeed), initialProver, INITIAL_FEE
         );
-        ethProverManager = ETHProverManager(address(proverManager));
+        ethProverManager = ETHProverManager(payable(address(proverManager)));
 
         // Fund the initial prover so the constructor can receive the required livenessBond.
         vm.deal(initialProver, 10 ether);

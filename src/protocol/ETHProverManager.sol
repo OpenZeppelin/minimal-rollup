@@ -20,6 +20,12 @@ abstract contract ETHProverManager is BaseProverManager {
         );
     }
 
+    /// @notice Receive ETH transfers and deposit them to the sender's balance
+    /// @dev This allows direct ETH transfers to the contract to be credited as deposits
+    receive() external payable {
+        _deposit(msg.sender, msg.value);
+    }
+
     /// @notice Deposit ETH into the contract. The deposit can be used both for opting in as a prover or proposer
     function deposit() external payable {
         _deposit(msg.sender, msg.value);

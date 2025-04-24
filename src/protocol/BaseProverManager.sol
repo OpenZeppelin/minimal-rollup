@@ -44,6 +44,7 @@ abstract contract BaseProverManager is IProposerFees, IProverManager {
     /// @param _publicationFeed The address of the publication feed contract
     /// @param _initialProver The address that will be designated as the initial prover
     /// @param _initialFee The fee for the initial period
+    /// @param _initialDeposit The initial deposit that will be added to the `_initialProver`'s balance
     constructor(
         address _inbox,
         address _checkpointTracker,
@@ -52,6 +53,11 @@ abstract contract BaseProverManager is IProposerFees, IProverManager {
         uint96 _initialFee,
         uint256 _initialDeposit
     ) {
+        require(_inbox != address(0), "Inbox address cannot be 0");
+        require(_checkpointTracker != address(0), "Checkpoint tracker address cannot be 0");
+        require(_publicationFeed != address(0), "Publication feed address cannot be 0");
+        require(_initialProver != address(0), "Initial prover address cannot be 0");
+
         inbox = _inbox;
         checkpointTracker = ICheckpointTracker(_checkpointTracker);
         publicationFeed = IPublicationFeed(_publicationFeed);
@@ -234,7 +240,10 @@ abstract contract BaseProverManager is IProposerFees, IProverManager {
         uint256 currentPeriod = currentPeriodId;
         uint40 periodEnd = _periods[currentPeriod].end;
         if (periodEnd != 0 && block.timestamp > periodEnd) {
-            currentPeriod++;
+            // can never overflow
+            unchecked {
+                ++currentPeriod;
+            }
         }
 
         Period storage period = _periods[currentPeriod];
@@ -295,6 +304,7 @@ abstract contract BaseProverManager is IProposerFees, IProverManager {
     /// @dev The percentage (in bps) of the fee that is charged for delayed publications
     /// @dev It is recommended to set this to >10,000 bps since delayed publications should usually be charged at a
     /// higher rate
+    /// @return _ The multiplier expressed in basis points. This value should usually be greater than 10,000 bps(100%).
     function _delayedFeePercentage() internal view virtual returns (uint16);
 
     /// @dev Increases `user`'s balance by `amount` and emits a `Deposit` event
