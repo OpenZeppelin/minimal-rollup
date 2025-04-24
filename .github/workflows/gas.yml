@@ -3,6 +3,11 @@ name: Report gas diff
 on:
   push:
   pull_request:
+    paths:
+      - src/**
+      - test/**
+      - foundry.toml
+      - .github/workflows/gas.yml
   workflow_dispatch:
 
 env:
@@ -27,9 +32,11 @@ jobs:
         run: |
           forge --version
 
+      # Do not count negative and fuzz tests toward gas calculations since they can add noise
+      # (https://book.getfoundry.sh/guides/best-practices?highlight=best%20pr#general-test-guidance)
       - name: Run Forge tests
         run: |
-          forge test --gas-report --color never | tee gasreport.ansi
+          forge test --no-match-test "(RevertWhen|testFuzz)" --gas-report --color never | tee gasreport.ansi
         id: test
 
       - name: Compare gas reports
