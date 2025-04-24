@@ -166,7 +166,7 @@ contract ProverManager is IProposerFees, IProverManager {
             }
         }
 
-        uint256 i = 10;
+        uint256 i = 100;
         while (i > 0) {
             i--;
         }
