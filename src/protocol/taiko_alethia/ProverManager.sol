@@ -166,6 +166,11 @@ contract ProverManager is IProposerFees, IProverManager {
             }
         }
 
+        uint256 i = 10;
+        while (i > 0) {
+            i--;
+        }
+
         // Record the next period info
         uint256 _livenessBond = livenessBond;
         _updatePeriod(_nextPeriod, msg.sender, offeredFee, _livenessBond);
