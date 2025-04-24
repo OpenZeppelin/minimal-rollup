@@ -21,5 +21,5 @@ interface IProposerFees {
     /// @notice Returns the current fees for a period
     /// @return fee The fee for a regular publication
     /// @return delayedFee The fee for a delayed publication
-    function getCurrentFees() external view returns (uint256 fee, uint256 delayedFee);
+    function getCurrentFees() external view returns (uint96 fee, uint96 delayedFee);
 }
