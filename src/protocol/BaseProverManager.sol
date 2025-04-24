@@ -31,9 +31,9 @@ abstract contract BaseProverManager is IProposerFees, IProverManager {
     IPublicationFeed public immutable publicationFeed;
 
     /// @notice Common balances for proposers and provers
-    mapping(address user => uint256 balance) public balances;
+    mapping(address user => uint256 balance) private _balances;
     /// @notice The current period
-    uint256 public currentPeriodId;
+    uint256 private _currentPeriodId;
     /// @dev Periods represent proving windows
     mapping(uint256 periodId => Period) private _periods;
 
@@ -71,7 +71,7 @@ abstract contract BaseProverManager is IProposerFees, IProverManager {
     /// @notice Withdraw available(unlocked) funds.
     /// @param amount The amount to withdraw
     function withdraw(uint256 amount) external {
-        balances[msg.sender] -= amount;
+        _balances[msg.sender] -= amount;
         _transferOut(msg.sender, amount);
         emit Withdrawal(msg.sender, amount);
     }
@@ -81,12 +81,12 @@ abstract contract BaseProverManager is IProposerFees, IProverManager {
     function payPublicationFee(address proposer, bool isDelayed) external {
         require(msg.sender == inbox, "Only the Inbox contract can call this function");
 
-        uint256 periodId = currentPeriodId;
+        uint256 periodId = _currentPeriodId;
 
         uint40 periodEnd = _periods[periodId].end;
         if (periodEnd != 0 && block.timestamp > periodEnd) {
             // Advance to the next period
-            currentPeriodId = ++periodId;
+            _currentPeriodId = ++periodId;
             emit NewPeriod(periodId);
         }
 
@@ -97,7 +97,7 @@ abstract contract BaseProverManager is IProposerFees, IProverManager {
             // `delayedFeePercentage` is >100%
             fee = _calculatePercentage(fee, _periods[periodId].delayedFeePercentage).toUint96();
         }
-        balances[proposer] -= fee;
+        _balances[proposer] -= fee;
     }
 
     /// @inheritdoc IProverManager
@@ -106,7 +106,7 @@ abstract contract BaseProverManager is IProposerFees, IProverManager {
     /// period is active or not.
     /// An active period is one that doesn't have an `end` timestamp yet.
     function bid(uint96 offeredFee) external {
-        uint256 currentPeriodId_ = currentPeriodId;
+        uint256 currentPeriodId_ = _currentPeriodId;
         Period storage currentPeriod = _periods[currentPeriodId_];
         Period storage nextPeriod = _periods[currentPeriodId_ + 1];
         if (currentPeriod.end == 0) {
@@ -118,7 +118,7 @@ abstract contract BaseProverManager is IProposerFees, IProverManager {
                 _ensureSufficientUnderbid(nextPeriod.fee, offeredFee);
 
                 // Refund the liveness bond to the losing bid
-                balances[nextProverAddress] += nextPeriod.stake;
+                _balances[nextProverAddress] += nextPeriod.stake;
             }
         }
 
@@ -138,7 +138,7 @@ abstract contract BaseProverManager is IProposerFees, IProverManager {
         uint256 publicationTimestamp = publicationHeader.timestamp;
         require(publicationTimestamp + _livenessWindow() < block.timestamp, "Publication is not old enough");
 
-        Period storage period = _periods[currentPeriodId];
+        Period storage period = _periods[_currentPeriodId];
         require(period.end == 0, "Proving period is not active");
 
         ICheckpointTracker.Checkpoint memory lastProven = checkpointTracker.getProvenCheckpoint();
@@ -150,7 +150,7 @@ abstract contract BaseProverManager is IProposerFees, IProverManager {
         // Reward the evictor and slash the prover
         // Casting this directly is safe since the resulting number is smaller than the original value
         uint96 evictorIncentive = uint96(_calculatePercentage(period.stake, _evictorIncentivePercentage()));
-        balances[msg.sender] += evictorIncentive;
+        _balances[msg.sender] += evictorIncentive;
         period.stake -= evictorIncentive;
 
         emit ProverEvicted(period.prover, msg.sender, end, period.stake);
@@ -160,7 +160,7 @@ abstract contract BaseProverManager is IProposerFees, IProverManager {
     /// @dev The prover still has to wait for the `exitDelay` to allow other provers to bid for the role.
     /// @dev The liveness bond can only be withdrawn once the period has been fully proven.
     function exit() external {
-        Period storage period = _periods[currentPeriodId];
+        Period storage period = _periods[_currentPeriodId];
         address prover = period.prover;
         require(msg.sender == prover, "Not current prover");
         require(period.end == 0, "Prover already exited");
@@ -215,7 +215,7 @@ abstract contract BaseProverManager is IProposerFees, IProverManager {
             delayedPubFee = numDelayedPublications * delayedFee;
         }
 
-        balances[period.prover] += regularPubFee + delayedPubFee;
+        _balances[period.prover] += regularPubFee + delayedPubFee;
     }
 
     /// @inheritdoc IProverManager
@@ -230,14 +230,14 @@ abstract contract BaseProverManager is IProposerFees, IProverManager {
         require(provenPublication.timestamp > period.end, "Publication must be after period");
 
         uint96 stake = period.stake;
-        balances[period.prover] +=
+        _balances[period.prover] +=
             period.pastDeadline ? uint96(_calculatePercentage(stake, _rewardPercentage())) : stake;
         period.stake = 0;
     }
 
     /// @inheritdoc IProposerFees
     function getCurrentFees() external view returns (uint96 fee, uint96 delayedFee) {
-        uint256 currentPeriod = currentPeriodId;
+        uint256 currentPeriod = _currentPeriodId;
         uint40 periodEnd = _periods[currentPeriod].end;
         if (periodEnd != 0 && block.timestamp > periodEnd) {
             // can never overflow
@@ -251,6 +251,19 @@ abstract contract BaseProverManager is IProposerFees, IProverManager {
         // This is extremely unlikely to overflow, but we still do the check to be safe since the
         // `delayedFeePercentage` is >100%
         delayedFee = _calculatePercentage(fee, period.delayedFeePercentage).toUint96();
+    }
+
+    /// @notice Get the balance of a user
+    /// @param user The address of the user
+    /// @return The balance of the user
+    function balances(address user) public view returns (uint256) {
+        return _balances[user];
+    }
+
+    /// @notice Get the current period ID
+    /// @return The current period ID
+    function currentPeriodId() public view returns (uint256) {
+        return _currentPeriodId;
     }
 
     /// @notice Returns the period for a given period id
@@ -309,7 +322,7 @@ abstract contract BaseProverManager is IProposerFees, IProverManager {
 
     /// @dev Increases `user`'s balance by `amount` and emits a `Deposit` event
     function _deposit(address user, uint256 amount) internal {
-        balances[user] += amount;
+        _balances[user] += amount;
         emit Deposit(user, amount);
     }
 
@@ -321,7 +334,7 @@ abstract contract BaseProverManager is IProposerFees, IProverManager {
     /// @param fee The fee to be set for the new period
     /// @param prover The address of the prover to be set for the new period
     function _claimProvingVacancy(uint96 fee, address prover) private {
-        uint256 periodId = currentPeriodId;
+        uint256 periodId = _currentPeriodId;
         Period storage period = _periods[periodId];
         require(period.prover == address(0) && period.end == 0, "No proving vacancy");
         _closePeriod(period, 0, 0);
@@ -348,7 +361,7 @@ abstract contract BaseProverManager is IProposerFees, IProverManager {
         period.fee = fee;
         period.delayedFeePercentage = _delayedFeePercentage();
         period.stake = stake; // overwrite previous value. We assume the previous value is zero or already returned
-        balances[prover] -= stake;
+        _balances[prover] -= stake;
     }
 
     /// @dev Sets a period's end and deadline timestamps
