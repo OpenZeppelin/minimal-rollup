@@ -1,6 +1,7 @@
 pragma solidity ^0.8.28;
 
 import {BaseProverManager} from "./BaseProverManager.sol";
+import {IERC20Depositor} from "./IProverManager.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
@@ -9,7 +10,7 @@ import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol
 /// contract for bids, stake and paying for publication fees.
 /// @dev This contract expects the `_initialProver` to have already approved this address to spend at least the initial
 /// liveness bond. This amount of tokens will be transferred from the `_initialProver` on the constructor at deployment.
-abstract contract ERC20ProverManager is BaseProverManager {
+abstract contract ERC20ProverManager is BaseProverManager, IERC20Depositor {
     using SafeERC20 for IERC20;
 
     IERC20 public immutable token;
@@ -34,7 +35,8 @@ abstract contract ERC20ProverManager is BaseProverManager {
         token.safeTransferFrom(_initialProver, address(this), _initialDeposit);
     }
 
-    /// @notice Deposit tokens into the contract. The deposit can be used both for opting in as a prover or proposer
+    /// @inheritdoc IERC20Depositor
+    /// @dev The deposit can be used both for opting in as a prover or proposer
     function deposit(uint256 amount) external {
         _deposit(msg.sender, amount);
         token.safeTransferFrom(msg.sender, address(this), amount);

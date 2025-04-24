@@ -85,3 +85,13 @@ interface IProverManager {
     function finalizePastPeriod(uint256 periodId, IPublicationFeed.PublicationHeader calldata provenPublication)
         external;
 }
+
+interface IERC20Depositor {
+    /// @notice Deposit tokens into the contract.
+    function deposit(uint256 amount) external;
+}
+
+interface IETHDepositor {
+    /// @notice Deposit ETH into the contract.
+    function deposit() external payable;
+}

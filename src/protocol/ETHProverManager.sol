@@ -2,11 +2,12 @@
 pragma solidity ^0.8.28;
 
 import {BaseProverManager} from "./BaseProverManager.sol";
+import {IETHDepositor} from "./IProverManager.sol";
 
 /// @title ETHProverManager
 /// @notice Implementation of the `BaseProverManager` contract that uses ETH for bids, stake and paying for publication
 /// fees.
-abstract contract ETHProverManager is BaseProverManager {
+abstract contract ETHProverManager is BaseProverManager, IETHDepositor {
     constructor(
         address _inbox,
         address _checkpointTracker,
@@ -26,7 +27,8 @@ abstract contract ETHProverManager is BaseProverManager {
         _deposit(msg.sender, msg.value);
     }
 
-    /// @notice Deposit ETH into the contract. The deposit can be used both for opting in as a prover or proposer
+    /// @inheritdoc IETHDepositor
+    /// @dev The deposit can be used both for opting in as a prover or proposer
     function deposit() external payable {
         _deposit(msg.sender, msg.value);
     }
