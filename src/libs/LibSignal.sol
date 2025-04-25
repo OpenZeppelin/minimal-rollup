@@ -122,11 +122,11 @@ library LibSignal {
         bytes[] memory storageProof
     ) internal view returns (bool valid) {
         bytes32 hashedValue = keccak256(abi.encode(value));
-        // If the account proof is empty we assume `root` is the root of the signal tree
+        // If the account proof is empty we assume `root` is the storage root of the signal service contract
         if (accountProof.length == 0) {
             // Only verifies a state proof not full storage proof
             valid =
-                LibTrieProof.verifyState(deriveSlot(value, chainId, sender, namespace), hashedValue, root, storageProof);
+                LibTrieProof.verifySlot(deriveSlot(value, chainId, sender, namespace), hashedValue, root, storageProof);
             return valid;
         }
         (valid,) = LibTrieProof.verifyStorage(
