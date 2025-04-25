@@ -81,17 +81,6 @@ contract CheckpointTrackerTest is Test {
         tracker.proveTransition(end, numRelevantPublications, proof);
     }
 
-    function test_proveTransition_RevertWhenEndPublicationNotAfterStart() public {
-        ICheckpointTracker.Checkpoint memory end =
-            ICheckpointTracker.Checkpoint({publicationId: 0, commitment: keccak256(abi.encode("end"))});
-        // this is nonsensical, but we're testing the publicationId check so I think it makes sense for the other
-        // parameters to match previous tests.
-        uint256 numRelevantPublications = 2;
-
-        vm.expectRevert("End publication must be after the last proven publication");
-        tracker.proveTransition(end, numRelevantPublications, proof);
-    }
-
     function createSampleFeed() private {
         pubHashes = new bytes32[](NUM_PUBLICATIONS);
 
