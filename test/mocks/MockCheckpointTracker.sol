@@ -13,12 +13,7 @@ contract MockCheckpointTracker is ICheckpointTracker {
     }
 
     /// @notice Do nothing. All checkpoints and proofs are accepted.
-    function proveTransition(
-        Checkpoint calldata start,
-        Checkpoint calldata end,
-        uint256 numPublications,
-        bytes calldata proof
-    ) external {}
+    function proveTransition(Checkpoint calldata end, uint256 numPublications, bytes calldata proof) external {}
 
     /// @notice Helper to set the proven hash for easier testing
     /// @param checkpoint the checkpoint to set as proven, that will be hashed and stored as the proven hash

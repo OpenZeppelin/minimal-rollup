@@ -238,7 +238,7 @@ contract ProverManager is IProposerFees, IProverManager {
         require(start.publicationId + 1 == firstPub.id, "First publication not immediately after start checkpoint");
         require(firstPub.timestamp > previousPeriodEnd, "First publication is before the period");
 
-        checkpointTracker.proveTransition(start, end, numPublications, proof);
+        checkpointTracker.proveTransition(end, numPublications, proof);
 
         bool isPastDeadline = block.timestamp > period.deadline && period.deadline != 0;
         if (isPastDeadline) {
