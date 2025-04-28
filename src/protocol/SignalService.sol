@@ -49,8 +49,13 @@ contract SignalService is ISignalService, ETHBridge, CommitmentStore {
     }
 
     /// @dev Overrides ETHBridge.depositETH to add signaling functionality.
-    function deposit(address to, bytes memory data) public payable override returns (bytes32 id) {
-        id = super.deposit(to, data);
+    function deposit(address to, address releaseAuthority, bytes memory data)
+        public
+        payable
+        override
+        returns (bytes32 id)
+    {
+        id = super.deposit(to, releaseAuthority, data);
         id.signal(msg.sender, ETH_BRIDGE_NAMESPACE);
     }
 

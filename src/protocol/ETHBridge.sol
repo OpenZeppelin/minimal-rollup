@@ -9,6 +9,8 @@ import {IETHBridge} from "./IETHBridge.sol";
 abstract contract ETHBridge is IETHBridge {
     mapping(bytes32 id => bool claimed) private _claimed;
 
+    mapping(address releaseAuthority => uint256 balance) private _balances;
+
     /// Incremental nonce to generate unique deposit IDs.
     uint256 private _globalDepositNonce;
 
@@ -26,9 +28,16 @@ abstract contract ETHBridge is IETHBridge {
     }
 
     /// @inheritdoc IETHBridge
-    function deposit(address to, bytes memory data) public payable virtual returns (bytes32 id) {
-        ETHDeposit memory ethDeposit = ETHDeposit(_globalDepositNonce, msg.sender, to, msg.value, data);
+    function deposit(address to, address releaseAuthority, bytes memory data)
+        public
+        payable
+        virtual
+        returns (bytes32 id)
+    {
+        ETHDeposit memory ethDeposit =
+            ETHDeposit(_globalDepositNonce, msg.sender, to, msg.value, releaseAuthority, data);
         id = _generateId(ethDeposit);
+        _creditReleaseAuthority(ethDeposit);
         unchecked {
             ++_globalDepositNonce;
         }
@@ -47,6 +56,7 @@ abstract contract ETHBridge is IETHBridge {
     function _processClaimDepositWithId(bytes32 id, ETHDeposit memory ethDeposit) internal virtual {
         require(!claimed(id), AlreadyClaimed());
         _claimed[id] = true;
+        _debitReleaseAuthority(ethDeposit);
         _sendETH(ethDeposit.to, ethDeposit.amount, ethDeposit.data);
         emit DepositClaimed(id, ethDeposit);
     }
@@ -64,5 +74,13 @@ abstract contract ETHBridge is IETHBridge {
     /// @param ethDeposit Deposit to generate an ID for
     function _generateId(ETHDeposit memory ethDeposit) internal pure returns (bytes32) {
         return keccak256(abi.encode(ethDeposit));
+    }
+
+    function _creditReleaseAuthority(ETHDeposit memory ethDeposit) internal virtual {
+        _balances[ethDeposit.releaseAuthority] += ethDeposit.amount;
+    }
+
+    function _debitReleaseAuthority(ETHDeposit memory ethDeposit) internal virtual {
+        _balances[ethDeposit.releaseAuthority] -= ethDeposit.amount;
     }
 }
