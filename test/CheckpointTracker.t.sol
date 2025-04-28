@@ -41,12 +41,7 @@ contract CheckpointTrackerTest is Test {
         bytes32 genesis = keccak256(abi.encode("genesis"));
         tracker =
             new CheckpointTracker(genesis, address(feed), address(verifier), proverManager, address(signalService));
-
-        vm.startPrank(rollupOperator);
-        ICommitmentStore(address(signalService)).setAuthorizedCommitter(rollupOperator);
-        ICommitmentStore(address(signalService)).storeCommitment(0, genesis);
-        ICommitmentStore(address(signalService)).setAuthorizedCommitter(address(tracker));
-        vm.stopPrank();
+        signalService.setAuthorizedCommitter(address(tracker));
 
         proof = abi.encode("proof");
     }

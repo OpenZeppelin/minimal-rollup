@@ -19,6 +19,14 @@ import {ISignalService} from "./ISignalService.sol";
 contract SignalService is ISignalService, ETHBridge, CommitmentStore {
     using LibSignal for bytes32;
 
+    /// TEMPORARY. We are about to generalise the mechanism.
+    /// This simulates the previous behaviour to minimise unnecessary changes to the tests.
+    address private AUTHORIZED_COMMITTER;
+
+    function setAuthorizedCommitter(address authorizedCommitter) external {
+        AUTHORIZED_COMMITTER = authorizedCommitter;
+    }
+
     /// @inheritdoc ISignalService
     /// @dev Signals are stored in a namespaced slot derived from the signal value, sender address and SIGNAL_NAMESPACE
     /// const
@@ -69,7 +77,7 @@ contract SignalService is ISignalService, ETHBridge, CommitmentStore {
         // TODO: commitmentAt(height) might not be the 'state root' of the chain
         // For now it could be the block hash or other hashed value
         // further work is needed to ensure we get the 'state root' of the chain
-        bytes32 root = commitmentAt(height);
+        bytes32 root = commitmentAt(AUTHORIZED_COMMITTER, height);
         SignalProof memory signalProof = abi.decode(proof, (SignalProof));
         bytes[] memory accountProof = signalProof.accountProof;
         bytes[] memory storageProof = signalProof.storageProof;

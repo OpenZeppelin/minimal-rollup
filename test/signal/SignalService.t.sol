@@ -48,7 +48,7 @@ contract BaseState is Test {
         vm.deal(defaultSender, senderBalanceL1);
 
         vm.prank(defaultSender);
-        L1signalService = new SignalService(rollupOperator);
+        L1signalService = new SignalService();
         vm.deal(address(L1signalService), ETHBridgeInitBalance);
 
         checkpointTracker = new MockCheckpointTracker(address(L1signalService));
@@ -60,7 +60,7 @@ contract BaseState is Test {
         vm.deal(defaultSender, senderBalanceL2);
 
         vm.prank(defaultSender);
-        L2signalService = new SignalService(rollupOperator);
+        L2signalService = new SignalService();
         vm.deal(address(L2signalService), ETHBridgeInitBalance);
 
         anchor = new MockAnchor(address(L2signalService));

@@ -43,10 +43,9 @@ contract ProverManagerTest is Test {
     uint256 constant INITIAL_PERIOD = 1;
 
     function setUp() public {
-        signalService = new SignalService(rollupOperator);
+        signalService = new SignalService();
         checkpointTracker = new MockCheckpointTracker(address(signalService));
         publicationFeed = new PublicationFeed();
-        vm.prank(rollupOperator);
         signalService.setAuthorizedCommitter(address(checkpointTracker));
 
         // Fund the initial prover so the constructor can receive the required livenessBond.
