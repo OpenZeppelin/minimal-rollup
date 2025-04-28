@@ -36,7 +36,7 @@ contract CheckpointTrackerTest is Test {
         feed = new PublicationFeed();
         createSampleFeed();
 
-        signalService = new SignalService(rollupOperator);
+        signalService = new SignalService();
 
         bytes32 genesis = keccak256(abi.encode("genesis"));
         tracker =

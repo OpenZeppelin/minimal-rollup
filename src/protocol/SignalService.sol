@@ -19,8 +19,6 @@ import {ISignalService} from "./ISignalService.sol";
 contract SignalService is ISignalService, ETHBridge, CommitmentStore {
     using LibSignal for bytes32;
 
-    constructor(address _rollupOperator) CommitmentStore(_rollupOperator) {}
-
     /// @inheritdoc ISignalService
     /// @dev Signals are stored in a namespaced slot derived from the signal value, sender address and SIGNAL_NAMESPACE
     /// const
