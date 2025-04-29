@@ -104,7 +104,7 @@ This guide is not intended to be comprehensive, but rather to provide a starting
     error InsufficientBalance(uint256 balance, uint256 required);
 
     function withdraw(uint256 amount) external {
-        if (amount > balance) revert InsufficientBalance(balance, amount);
+        require(amount <= balance, InsufficientBalance(balance, amount));
         balance -= amount;
     }
     ```
