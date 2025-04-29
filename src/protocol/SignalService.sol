@@ -66,9 +66,8 @@ contract SignalService is ISignalService, ETHBridge, CommitmentStore {
         returns (bytes32 id)
     {
         id = _generateId(ethDeposit);
-
+        _isValidDeposit(ethDeposit);
         _verifySignal(height, releaseAuthority, ethDeposit.from, id, ETH_BRIDGE_NAMESPACE, proof);
-
         super._processClaimDepositWithId(id, ethDeposit);
     }
 
@@ -89,5 +88,9 @@ contract SignalService is ISignalService, ETHBridge, CommitmentStore {
         bytes[] memory storageProof = signalProof.storageProof;
         bool valid = value.verifySignal(namespace, sender, root, accountProof, storageProof);
         require(valid, SignalNotReceived(value));
+    }
+
+    function _isValidDeposit(ETHDeposit memory) internal virtual returns (bool) {
+        return true;
     }
 }
