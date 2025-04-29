@@ -16,7 +16,7 @@ interface IETHBridge {
         address to;
         // The amount of the deposit
         uint256 amount;
-        // The contract with control of the deposited ETH.
+        // The address with control of the deposited ETH.
         // The funds can be released by an incoming bridge transfer within a commitment posted by the
         // releaseAuthority. In the standard case, this will be the relevant CheckpointTracker on L1 or the anchor
         // contract on L2. However, there is no access control so anyone can choose an arbitrary releaseAuthority
@@ -51,16 +51,17 @@ interface IETHBridge {
 
     /// @dev Creates an ETH deposit with `msg.value`
     /// @param to The receiver of the deposit
-    /// @param releaseAuthority The contract with control of the deposited ETH.
+    /// @param releaseAuthority The address with control of the deposited ETH.
     /// @param data Any calldata to be sent to the receiver in case of a contract
     function deposit(address to, address releaseAuthority, bytes memory data) external payable returns (bytes32 id);
 
     /// @dev Claims an ETH deposit created on by the sender (`from`) with `nonce`. The `value` ETH claimed  is
     /// sent to the receiver (`to`) after verifying a storage proof.
     /// @param ethDeposit The ETH deposit struct
+    /// @param releaseAuthority The address that published the commitment we are claiming against
     /// @param height The `height` of the checkpoint on the source chain (i.e. the block number or commitmentId)
     /// @param proof Encoded proof of the storage slot where the deposit is stored
-    function claimDeposit(ETHDeposit memory ethDeposit, uint256 height, bytes memory proof)
+    function claimDeposit(ETHDeposit memory ethDeposit, address releaseAuthority, uint256 height, bytes memory proof)
         external
         returns (bytes32 id);
 }

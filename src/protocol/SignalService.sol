@@ -19,14 +19,6 @@ import {ISignalService} from "./ISignalService.sol";
 contract SignalService is ISignalService, ETHBridge, CommitmentStore {
     using LibSignal for bytes32;
 
-    /// TEMPORARY. We are about to generalise the mechanism.
-    /// This simulates the previous behaviour to minimise unnecessary changes to the tests.
-    address private AUTHORIZED_COMMITTER;
-
-    function setAuthorizedCommitter(address authorizedCommitter) external {
-        AUTHORIZED_COMMITTER = authorizedCommitter;
-    }
-
     /// @inheritdoc ISignalService
     /// @dev Signals are stored in a namespaced slot derived from the signal value, sender address and SIGNAL_NAMESPACE
     /// const
@@ -43,8 +35,14 @@ contract SignalService is ISignalService, ETHBridge, CommitmentStore {
 
     /// @inheritdoc ISignalService
     /// @dev Cannot be used to verify signals that are under the eth-bridge namespace.
-    function verifySignal(uint256 height, address sender, bytes32 value, bytes memory proof) external {
-        _verifySignal(height, sender, value, LibSignal.SIGNAL_NAMESPACE, proof);
+    function verifySignal(
+        uint256 height,
+        address commitmentPublisher,
+        address sender,
+        bytes32 value,
+        bytes memory proof
+    ) external {
+        _verifySignal(height, commitmentPublisher, sender, value, LibSignal.SIGNAL_NAMESPACE, proof);
         emit SignalVerified(sender, value);
     }
 
@@ -62,27 +60,30 @@ contract SignalService is ISignalService, ETHBridge, CommitmentStore {
     // CHECK: Should this function be non-reentrant?
     /// @inheritdoc ETHBridge
     /// @dev Overrides ETHBridge.claimDeposit to add signal verification logic.
-    function claimDeposit(ETHDeposit memory ethDeposit, uint256 height, bytes memory proof)
+    function claimDeposit(ETHDeposit memory ethDeposit, address releaseAuthority, uint256 height, bytes memory proof)
         external
         override
         returns (bytes32 id)
     {
         id = _generateId(ethDeposit);
 
-        _verifySignal(height, ethDeposit.from, id, ETH_BRIDGE_NAMESPACE, proof);
+        _verifySignal(height, releaseAuthority, ethDeposit.from, id, ETH_BRIDGE_NAMESPACE, proof);
 
         super._processClaimDepositWithId(id, ethDeposit);
     }
 
-    function _verifySignal(uint256 height, address sender, bytes32 value, bytes32 namespace, bytes memory proof)
-        internal
-        view
-        virtual
-    {
-        // TODO: commitmentAt(height) might not be the 'state root' of the chain
+    function _verifySignal(
+        uint256 height,
+        address commitmentPublisher,
+        address sender,
+        bytes32 value,
+        bytes32 namespace,
+        bytes memory proof
+    ) internal view virtual {
+        // TODO: commitmentAt() might not be the 'state root' of the chain
         // For now it could be the block hash or other hashed value
         // further work is needed to ensure we get the 'state root' of the chain
-        bytes32 root = commitmentAt(AUTHORIZED_COMMITTER, height);
+        bytes32 root = commitmentAt(commitmentPublisher, height);
         SignalProof memory signalProof = abi.decode(proof, (SignalProof));
         bytes[] memory accountProof = signalProof.accountProof;
         bytes[] memory storageProof = signalProof.storageProof;

@@ -102,7 +102,7 @@ contract ClaimDepositTest is CommitmentStoredState {
         ISignalService.SignalProof memory signalProof = ISignalService.SignalProof(accountProof, storageProof);
         bytes memory encodedProof = abi.encode(signalProof);
 
-        L2signalService.claimDeposit(depositOne, commitmentHeight, encodedProof);
+        L2signalService.claimDeposit(depositOne, address(anchor), commitmentHeight, encodedProof);
 
         assertEq(address(L2signalService).balance, ETHBridgeInitBalance - depositAmount);
         assertEq(defaultSender.balance, senderBalanceL2 + depositAmount);
@@ -132,9 +132,9 @@ contract ClaimDepositTest is CommitmentStoredState {
 
         vm.selectFork(L2Fork);
         // to be extra sure its not a problem with the proof
-        L2signalService.verifySignal(commitmentHeight, defaultSender, invalidDepositId, encodedProof);
+        L2signalService.verifySignal(commitmentHeight, address(anchor), defaultSender, invalidDepositId, encodedProof);
         // I believe this error means that the proof is not valid for this deposit id
         vm.expectRevert("MerkleTrie: invalid large internal hash");
-        L2signalService.claimDeposit(invalidDeposit, commitmentHeight, encodedProof);
+        L2signalService.claimDeposit(invalidDeposit, address(anchor), commitmentHeight, encodedProof);
     }
 }

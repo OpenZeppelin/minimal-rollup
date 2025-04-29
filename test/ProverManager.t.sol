@@ -46,7 +46,6 @@ contract ProverManagerTest is Test {
         signalService = new SignalService();
         checkpointTracker = new MockCheckpointTracker(address(signalService));
         publicationFeed = new PublicationFeed();
-        signalService.setAuthorizedCommitter(address(checkpointTracker));
 
         // Fund the initial prover so the constructor can receive the required livenessBond.
         vm.deal(initialProver, 10 ether);

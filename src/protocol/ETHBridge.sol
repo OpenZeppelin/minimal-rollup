@@ -45,7 +45,7 @@ abstract contract ETHBridge is IETHBridge {
     }
 
     /// @inheritdoc IETHBridge
-    function claimDeposit(ETHDeposit memory deposit, uint256 height, bytes memory proof)
+    function claimDeposit(ETHDeposit memory deposit, address releaseAuthority, uint256 height, bytes memory proof)
         external
         virtual
         returns (bytes32 id);
