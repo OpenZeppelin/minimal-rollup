@@ -7,10 +7,10 @@ import {IPublicationFeed} from "./IPublicationFeed.sol";
 interface IProverManager {
     /// @notice Emitted when a prover bids to prove a period
     /// @param prover The address of the prover that made the bid
-    /// @param period The period that the prover is bidding to prove
+    /// @param periodId The period that the prover is bidding to prove
     /// @param fee The fee that the prover is willing to charge for proving each publication
     /// @param stake The stake that the prover is going to put as stake for the period
-    event ProverOffer(address indexed prover, uint256 period, uint256 fee, uint256 stake);
+    event ProverOffer(address indexed prover, uint256 periodId, uint256 fee, uint256 stake);
 
     /// @notice Emitted when a prover is evicted from the prover role
     /// @param prover The address of the prover that was evicted
@@ -26,8 +26,8 @@ interface IProverManager {
     event ProverExited(address indexed prover, uint256 periodEnd, uint256 provingDeadline);
 
     /// @notice Emitted when a new period starts
-    /// @param period The id of the new period
-    event NewPeriod(uint256 period);
+    /// @param periodId The id of the new period
+    event NewPeriod(uint256 periodId);
 
     /// @notice Bid to become the prover for the next period
     /// @param offeredFee The fee you are willing to charge for proving each publication
