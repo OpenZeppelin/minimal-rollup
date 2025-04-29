@@ -29,7 +29,7 @@ This guide is not intended to be comprehensive, but rather to provide a starting
     event Published();
     ```
 
-1. Constructor parameters, when they overshade a state variable, should be prefixed with an underscore.
+1. Constructor parameters, when they shadow a state variable, should be prefixed with an underscore.
 
     ```solidity
     constructor(uint256 _totalSupply) {
@@ -37,7 +37,7 @@ This guide is not intended to be comprehensive, but rather to provide a starting
     }
     ```
 
-1. Local variables or function parameters when they overshade a state variable should be suffixed with an underscore.
+1. Local variables or function parameters when they shadow a state variable should be suffixed with an underscore.
 
     ```solidity
     uint256 public totalSupply;
