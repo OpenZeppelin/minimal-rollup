@@ -56,7 +56,7 @@ This guide is not intended to be comprehensive, but rather to provide a starting
 
     ```solidity
     interface IMyContract {
-        // These event and struct are part of the interface
+        // This event and struct are part of the interface
         event Published();
         struct MyStruct {
             uint256 value;
