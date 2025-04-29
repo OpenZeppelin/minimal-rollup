@@ -19,6 +19,7 @@ abstract contract BaseProverManager is IProposerFees, IProverManager {
         uint96 fee;
         // the percentage (in bps) of the fee that is charged for delayed publications.
         uint16 delayedFeePercentage;
+        // the timestamp of the end of the period. Default to zero while the period is open.
         uint40 end;
         // the time by which the prover needs to submit a proof
         uint40 deadline;
