@@ -7,9 +7,12 @@ import {IProposerFees} from "./IProposerFees.sol";
 import {IProverManager} from "./IProverManager.sol";
 import {IPublicationFeed} from "./IPublicationFeed.sol";
 
+import "@openzeppelin/contracts/utils/math/SafeCast.sol";
+
+
 abstract contract BaseProverManager is IProposerFees, IProverManager {
     using SafeCast for uint256;
-    using LibPercentage for uint256;
+    using LibPercentage for uint96;
 
     struct Period {
         // SLOT 1
@@ -18,7 +21,7 @@ abstract contract BaseProverManager is IProposerFees, IProverManager {
         // SLOT 2
         // the fee that the prover is willing to charge for proving each publication
         uint96 fee;
-        // the percentage (in bps) of the fee that is charged for delayed publications.
+        // the percentage (with two decimals precision) of the fee that is charged for delayed publications.
         uint16 delayedFeePercentage;
         // the timestamp of the end of the period. Default to zero while the period is open.
         uint40 end;
@@ -95,7 +98,7 @@ abstract contract BaseProverManager is IProposerFees, IProverManager {
         // Deduct fee from proposer's balance
         uint96 fee = _periods[periodId].fee;
         if (isDelayed) {
-            fee = fee.scaleBy(_periods[periodId].delayedFeePercentage);
+            fee = fee.scaleBy(_periods[periodId].delayedFeePercentage, LibPercentage.PERCENT);
         }
         _balances[proposer] -= fee;
     }
@@ -210,7 +213,7 @@ abstract contract BaseProverManager is IProposerFees, IProverManager {
         uint256 delayedPubFee;
 
         if (numDelayedPublications > 0) {
-            uint96 delayedFee = baseFee.scaleBy(period.delayedFeePercentage);
+            uint96 delayedFee = baseFee.scaleBy(period.delayedFeePercentage, LibPercentage.PERCENT);
             delayedPubFee = numDelayedPublications * delayedFee;
         }
 
@@ -246,7 +249,7 @@ abstract contract BaseProverManager is IProposerFees, IProverManager {
 
         Period storage period = _periods[currentPeriod];
         fee = period.fee;
-        delayedFee = fee.scaleBy(period.delayedFeePercentage);
+        delayedFee = fee.scaleBy(period.delayedFeePercentage, LibPercentage.PERCENT);
     }
 
     /// @notice Get the balance of a user
@@ -310,10 +313,9 @@ abstract contract BaseProverManager is IProposerFees, IProverManager {
     /// @return _ The reward percentage
     function _rewardPercentage() internal view virtual returns (uint16);
 
-    /// @dev The percentage (in bps) of the fee that is charged for delayed publications
-    /// @dev It is recommended to set this to >10,000 bps since delayed publications should usually be charged at a
-    /// higher rate
-    /// @return _ The multiplier expressed in basis points. This value should usually be greater than 10,000 bps(100%).
+    /// @dev The percentage of the fee that is charged for delayed publications
+    /// @dev It is recommended to set this to >100 since delayed publications should usually be charged at a higher rate
+    /// @return _ The multiplier as a percentage (two decimals). This value should usually be greater than 100 (100%).
     function _delayedFeePercentage() internal view virtual returns (uint16);
 
     /// @dev Increases `user`'s balance by `amount` and emits a `Deposit` event

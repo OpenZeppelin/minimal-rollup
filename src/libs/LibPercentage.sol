@@ -8,7 +8,7 @@ library LibPercentage {
 
     // COMMON PRECISION AMOUNTS (https://muens.io/solidity-percentages)
     uint256 constant BASIS_POINTS = 10000;
-    uint256 constant TWO_DECIMALS = 100;
+    uint256 constant PERCENT = 100;
 
     /// @dev Calculates the percentage of a given value scaling by `precision` to limit rounding loss
     /// @param value The number to scale
