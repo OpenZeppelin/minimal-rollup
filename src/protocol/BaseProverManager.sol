@@ -284,10 +284,11 @@ abstract contract BaseProverManager is IProposerFees, IProverManager {
     function _claimProvingVacancy(uint96 fee, address prover) private {
         uint256 periodId = _currentPeriodId;
         LibProvingPeriod.Period storage period = _periods[periodId];
-        require(period.prover == address(0) && period.isOpen(), "No proving vacancy");
+        LibProvingPeriod.Period storage nextPeriod = _periods[periodId + 1];
+
+        require(period.isVacant(), "No proving vacancy");
         period.close(0, 0);
 
-        LibProvingPeriod.Period storage nextPeriod = _periods[periodId + 1];
         _decreaseBalance(prover, _livenessBond());
         nextPeriod.init(prover, fee, _delayedFeePercentage(), _livenessBond());
     }

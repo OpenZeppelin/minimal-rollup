@@ -87,6 +87,10 @@ library LibProvingPeriod {
         return block.timestamp > period.deadline && period.deadline != 0;
     }
 
+    function isVacant(Period storage period) internal view returns (bool) {
+        return !isInitialized(period) && isOpen(period);
+    }
+
     function totalFeeEarned(Period storage period, uint256 numPublications, uint256 numDelayedPublications)
         internal
         view
