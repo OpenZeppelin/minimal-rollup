@@ -37,22 +37,17 @@ contract ETHBridge is IETHBridge {
         unchecked {
             ++_globalDepositNonce;
         }
+        signalService.sendSignal(id);
         emit DepositMade(id, ethDeposit);
     }
 
     /// @inheritdoc IETHBridge
+    // TODO: Non reentrant
     function claimDeposit(ETHDeposit memory ethDeposit, uint256 height, address commitmentPublisher, bytes memory proof)
         external
     {
         bytes32 id = _generateId(ethDeposit);
-
         signalService.verifySignal(height, commitmentPublisher, ethDeposit.from, id, proof);
-    }
-
-    /// @dev Processes deposit claim by id.
-    /// @param id Identifier of the deposit
-    /// @param ethDeposit Deposit to process
-    function _processClaimDepositWithId(bytes32 id, ETHDeposit memory ethDeposit) internal {
         require(!claimed(id), AlreadyClaimed());
         _claimed[id] = true;
         _sendETH(ethDeposit.to, ethDeposit.amount, ethDeposit.data);

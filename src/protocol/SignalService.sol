@@ -6,7 +6,7 @@ import {CommitmentStore} from "./CommitmentStore.sol";
 import {ETHBridge} from "./ETHBridge.sol";
 import {ISignalService} from "./ISignalService.sol";
 
-/// @dev SignalService combines secure cross-chain messaging with native token bridging.
+/// @dev SignalService is used for secure cross-chain messaging
 ///
 /// This contract allows sending arbitrary data as signals via `sendSignal`, verifying signals from other chains using
 /// `verifySignal`, and bridging native ETH with built-in signal generation and verification. It integrates:
@@ -23,16 +23,15 @@ contract SignalService is ISignalService, CommitmentStore {
     /// @dev Cannot be used to send eth bridge signals
     function sendSignal(bytes32 value) external returns (bytes32 slot) {
         slot = value.signal();
-        emit SignalSent(msg.sender, LibSignal.SIGNAL_NAMESPACE, value);
+        emit SignalSent(msg.sender, value);
     }
 
     /// @inheritdoc ISignalService
-    function isSignalStored(bytes32 value, address sender, bytes32 namespace) external view returns (bool) {
-        return value.signaled(sender, namespace);
+    function isSignalStored(bytes32 value, address sender) external view returns (bool) {
+        return value.signaled(sender);
     }
 
     /// @inheritdoc ISignalService
-    /// @dev Cannot be used to verify signals that are under the eth-bridge namespace.
     function verifySignal(
         uint256 height,
         address commitmentPublisher,
@@ -52,26 +51,5 @@ contract SignalService is ISignalService, CommitmentStore {
         require(accountProof.length != 0, StateProofNotSupported());
         value.verifySignal(sender, root, accountProof, storageProof);
         emit SignalVerified(sender, value);
-    }
-
-    /// @dev Overrides ETHBridge.depositETH to add signaling functionality.
-    function deposit(address to, bytes memory data) public payable override returns (bytes32 id) {
-        id = super.deposit(to, data);
-        id.signal(msg.sender, ETH_BRIDGE_NAMESPACE);
-    }
-
-    // CHECK: Should this function be non-reentrant?
-    /// @inheritdoc ETHBridge
-    /// @dev Overrides ETHBridge.claimDeposit to add signal verification logic.
-    function claimDeposit(ETHDeposit memory ethDeposit, uint256 height, bytes memory proof)
-        external
-        override
-        returns (bytes32 id)
-    {
-        id = _generateId(ethDeposit);
-
-        _verifySignal(height, commitmentPublisher, ethDeposit.from, id, ETH_BRIDGE_NAMESPACE, proof);
-
-        super._processClaimDepositWithId(id, ethDeposit);
     }
 }

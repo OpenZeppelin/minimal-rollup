@@ -16,9 +16,8 @@ interface ISignalService {
 
     /// @dev Emitted when a signal is sent.
     /// @param sender The address that sent the signal on the source chain
-    /// @param namespace The namespace of the signal
     /// @param value The signal value
-    event SignalSent(address indexed sender, bytes32 namespace, bytes32 value);
+    event SignalSent(address indexed sender, bytes32 value);
 
     /// @dev Emitted when a signal is verified.
     /// @param sender The address of the sender on the source chain
@@ -37,8 +36,7 @@ interface ISignalService {
     /// only that it has been stored on the source chain.
     /// @param value Value to be checked is stored
     /// @param sender The address that sent the signal
-    /// @param namespace The namespace of the signal
-    function isSignalStored(bytes32 value, address sender, bytes32 namespace) external view returns (bool);
+    function isSignalStored(bytes32 value, address sender) external view returns (bool);
 
     /// @dev Verifies if the signal can be proved to be part of a merkle tree
     /// @dev Signals are not deleted when verified, and can be
@@ -50,8 +48,8 @@ interface ISignalService {
     /// @param proof The encoded value of the SignalProof struct
     function verifySignal(
         uint256 height,
-        address sender,
         address commitmentPublisher,
+        address sender,
         bytes32 value,
         bytes memory proof
     ) external;
