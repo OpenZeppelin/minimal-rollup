@@ -87,14 +87,10 @@ abstract contract BaseProverManager is IProposerFees, IProverManager {
         if (currentPeriod.isOpen()) {
             _ensureSufficientUnderbid(currentPeriod.fee, offeredFee);
             currentPeriod.close(_successionDelay(), _provingWindow());
-        } else {
-            address nextProverAddress = nextPeriod.prover;
-            if (nextProverAddress != address(0)) {
-                _ensureSufficientUnderbid(nextPeriod.fee, offeredFee);
-
-                // Refund the liveness bond to the losing bid
-                _increaseBalance(nextProverAddress, nextPeriod.stake);
-            }
+        } else if (nextPeriod.isInitialized()) {
+            _ensureSufficientUnderbid(nextPeriod.fee, offeredFee);
+            // Refund the liveness bond to the losing bid
+            _increaseBalance(nextPeriod.prover, nextPeriod.stake);
         }
 
         // Record the next period info

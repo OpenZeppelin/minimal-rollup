@@ -52,6 +52,11 @@ library LibProvingPeriod {
         period.stake = stake;
     }
 
+    /// @notice Whether the period has been initialized
+    function isInitialized(Period storage period) internal view returns (bool) {
+        return period.prover != address(0);
+    }
+
     /// @notice The period has an end timestamp in the past
     function isComplete(Period storage period) internal view returns (bool) {
         uint40 periodEnd = period.end;
