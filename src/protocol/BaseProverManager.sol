@@ -105,9 +105,7 @@ abstract contract BaseProverManager is IProposerFees, IProverManager {
     /// incentive.
     function evictProver(IPublicationFeed.PublicationHeader calldata publicationHeader) external {
         require(publicationFeed.validateHeader(publicationHeader), "Invalid publication");
-
-        uint256 publicationTimestamp = publicationHeader.timestamp;
-        require(publicationTimestamp + _livenessWindow() < block.timestamp, "Publication is not old enough");
+        require(publicationHeader.timestamp + _livenessWindow() < block.timestamp, "Publication is not old enough");
 
         LibProvingPeriod.Period storage period = _periods[_currentPeriodId];
         require(period.isOpen(), "Proving period is closed");
