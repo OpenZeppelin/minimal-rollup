@@ -2,6 +2,8 @@
 pragma solidity ^0.8.28;
 
 import {LibPercentage} from "../libs/LibPercentage.sol";
+import "@openzeppelin/contracts/utils/math/SafeCast.sol";
+
 
 /// Each proving period is defined by
 /// - the _prover_ address that must post proofs for any publications received during this period
@@ -19,6 +21,7 @@ import {LibPercentage} from "../libs/LibPercentage.sol";
 /// _pastDeadline_ flag is set and the address that completes the outstanding proofs receives a fraction of the stake.
 library LibProvingPeriod {
     using LibPercentage for uint96;
+    using SafeCast for uint256;
 
     struct Period {
         // SLOT 1
@@ -31,9 +34,9 @@ library LibProvingPeriod {
         uint16 delayedFeePercentage;
         // the timestamp of the end of the period. Default to zero while the period is open.
         uint40 end;
-        // the time by which the prover needs to submit a proof
+        // the time by which the prover needs to submit the final proof
         uint40 deadline;
-        // whether the proof came after the deadline
+        // whether the final proof came after the deadline
         bool pastDeadline;
     }
 
@@ -51,5 +54,21 @@ library LibProvingPeriod {
     /// @notice The period has no end timestamp
     function isOpen(Period storage period) internal view returns (bool) {
         return period.end == 0;
+    }
+
+    /// @dev Sets the period's end and deadline timestamps
+    /// @param period The period to finalize
+    /// @param endDelay The duration (from now) when the period will end
+    /// @param provingWindow The duration that proofs can be submitted after the end of the period
+    /// @return end The period's end timestamp
+    /// @return deadline The period's deadline timestamp
+    function close(Period storage period, uint40 endDelay, uint40 provingWindow)
+        internal
+        returns (uint40 end, uint40 deadline)
+    {
+        end = block.timestamp.toUint40() + endDelay;
+        deadline = end + provingWindow;
+        period.end = end;
+        period.deadline = deadline;
     }
 }

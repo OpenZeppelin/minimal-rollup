@@ -8,10 +8,7 @@ import {IProposerFees} from "./IProposerFees.sol";
 import {IProverManager} from "./IProverManager.sol";
 import {IPublicationFeed} from "./IPublicationFeed.sol";
 
-import "@openzeppelin/contracts/utils/math/SafeCast.sol";
-
 abstract contract BaseProverManager is IProposerFees, IProverManager {
-    using SafeCast for uint256;
     using LibPercentage for uint96;
     using LibProvingPeriod for LibProvingPeriod.Period;
 
@@ -90,7 +87,7 @@ abstract contract BaseProverManager is IProposerFees, IProverManager {
         LibProvingPeriod.Period storage nextPeriod = _periods[currentPeriodId_ + 1];
         if (currentPeriod.isOpen()) {
             _ensureSufficientUnderbid(currentPeriod.fee, offeredFee);
-            _closePeriod(currentPeriod, _successionDelay(), _provingWindow());
+            currentPeriod.close(_successionDelay(), _provingWindow());
         } else {
             address nextProverAddress = nextPeriod.prover;
             if (nextProverAddress != address(0)) {
@@ -124,7 +121,7 @@ abstract contract BaseProverManager is IProposerFees, IProverManager {
         require(publicationHeader.id > lastProven.publicationId, "Publication has been proven");
 
         // We use this to mark the prover as evicted
-        (uint40 end,) = _closePeriod(period, _exitDelay(), 0);
+        (uint40 end,) = period.close(_exitDelay(), 0);
 
         // Reward the evictor and slash the prover
         uint96 evictorIncentive = period.stake.scaleBy(_evictorIncentivePercentage());
@@ -143,7 +140,7 @@ abstract contract BaseProverManager is IProposerFees, IProverManager {
         require(msg.sender == prover, "Not current prover");
         require(period.isOpen(), "Period already closed");
 
-        (uint40 end, uint40 deadline) = _closePeriod(period, _exitDelay(), _provingWindow());
+        (uint40 end, uint40 deadline) = period.close(_exitDelay(), _provingWindow());
         emit ProverExited(prover, end, deadline);
     }
 
@@ -310,7 +307,7 @@ abstract contract BaseProverManager is IProposerFees, IProverManager {
         uint256 periodId = _currentPeriodId;
         LibProvingPeriod.Period storage period = _periods[periodId];
         require(period.prover == address(0) && period.isOpen(), "No proving vacancy");
-        _closePeriod(period, 0, 0);
+        period.close(0, 0);
 
         LibProvingPeriod.Period storage nextPeriod = _periods[periodId + 1];
         _updatePeriod(nextPeriod, prover, fee, _livenessBond());
@@ -327,22 +324,6 @@ abstract contract BaseProverManager is IProposerFees, IProverManager {
         period.delayedFeePercentage = _delayedFeePercentage();
         period.stake = stake; // overwrite previous value. We assume the previous value is zero or already returned
         _balances[prover] -= stake;
-    }
-
-    /// @dev Sets a period's end and deadline timestamps
-    /// @param period The period to finalize
-    /// @param endDelay The duration (from now) when the period will end
-    /// @param provingWindow_ The duration that proofs can be submitted after the end of the period
-    /// @return end The period's end timestamp
-    /// @return deadline The period's deadline timestamp
-    function _closePeriod(LibProvingPeriod.Period storage period, uint40 endDelay, uint40 provingWindow_)
-        private
-        returns (uint40 end, uint40 deadline)
-    {
-        end = block.timestamp.toUint40() + endDelay;
-        deadline = end + provingWindow_;
-        period.end = end;
-        period.deadline = deadline;
     }
 
     /// @notice mark the next period as active. Future publications will be assigned to the new period
