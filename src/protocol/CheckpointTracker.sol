@@ -10,7 +10,7 @@ contract CheckpointTracker is ICheckpointTracker {
     /// @notice The publication id of the current proven checkpoint representing the latest verified state of the rollup
     /// @dev A checkpoint commitment is any value (typically a state root) that uniquely identifies
     /// the state of the rollup at a specific point in time
-    uint256 _provenPublicationId;
+    uint256 private _provenPublicationId;
 
     IPublicationFeed public immutable publicationFeed;
     IVerifier public immutable verifier;
@@ -29,21 +29,16 @@ contract CheckpointTracker is ICheckpointTracker {
         address _proverManager,
         address _commitmentStore
     ) {
+        // set the genesis checkpoint commitment of the rollup - genesis is trusted to be correct
+        require(_genesis != 0, "genesis checkpoint commitment cannot be 0");
         publicationFeed = IPublicationFeed(_publicationFeed);
-        if (_genesis != 0) {
-            uint256 latestPublicationId = publicationFeed.getNextPublicationId() - 1;
-            require(
-                _genesis == publicationFeed.getPublicationHash(latestPublicationId),
-                GenesisNotLatestPublication(latestPublicationId)
-            );
-            _updateCheckpoint(latestPublicationId, _genesis);
-        } else {
-            _updateCheckpoint(0, _genesis);
-        }
+        uint256 latestPublicationId = publicationFeed.getNextPublicationId() - 1;
 
         verifier = IVerifier(_verifier);
         commitmentStore = ICommitmentStore(_commitmentStore);
         proverManager = _proverManager;
+
+        _updateCheckpoint(latestPublicationId, _genesis);
     }
 
     /// @inheritdoc ICheckpointTracker

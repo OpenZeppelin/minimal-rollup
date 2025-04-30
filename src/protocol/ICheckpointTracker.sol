@@ -12,10 +12,6 @@ interface ICheckpointTracker {
     /// @param commitment the commitment of the latest proven checkpoint
     event CheckpointUpdated(uint256 indexed publicationId, bytes32 commitment);
 
-    /// @dev If genesis is not 0 it should be the latest publication
-    /// @param latestPublicationId the current latest publication ID
-    error GenesisNotLatestPublication(uint256 latestPublicationId);
-
     /// @return _ The last proven checkpoint
     function getProvenCheckpoint() external view returns (Checkpoint memory);
 

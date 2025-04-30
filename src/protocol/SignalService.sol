@@ -4,9 +4,11 @@ pragma solidity ^0.8.28;
 import {LibSignal} from "../libs/LibSignal.sol";
 import {CommitmentStore} from "./CommitmentStore.sol";
 import {ETHBridge} from "./ETHBridge.sol";
+
+import {ICommitmentStore} from "./ICommitmentStore.sol";
 import {ISignalService} from "./ISignalService.sol";
 
-/// @dev SignalService is used for secure cross-chain messaging
+/// @dev SignalService is used for secure cross-cain messaging
 ///
 /// This contract allows sending arbitrary data as signals via `sendSignal`, verifying signals from other chains using
 /// `verifySignal`, and bridging native ETH with built-in signal generation and verification. It integrates:
