@@ -30,10 +30,10 @@ contract BridgeETHState is BaseState {
         super.setUp();
 
         vm.selectFork(L2Fork);
-        L2ethBridge = new ETHBridge();
+        L2ethBridge = new ETHBridge(address(L2signalService), address(anchor));
 
         vm.selectFork(L1Fork);
-        L1ethBridge = new ETHBridge();
+        L1ethBridge = new ETHBridge(address(L1ethBridge), address(checkpointTracker));
 
         vm.prank(defaultSender);
         bytes memory emptyData = "";
@@ -127,12 +127,10 @@ contract ClaimDepositTest is CommitmentStoredState {
         invalidDeposit.data = "";
 
         vm.selectFork(L1Fork);
-        bool storedInGenericNamespace =
-            L1signalService.isSignalStored(invalidDepositId, defaultSender, keccak256("generic-signal"));
+        bool storedInGenericNamespace = L1signalService.isSignalStored(invalidDepositId, defaultSender);
         assertTrue(storedInGenericNamespace);
 
-        bool storedInEthBridgeNamespace =
-            L1signalService.isSignalStored(invalidDepositId, defaultSender, keccak256("eth-bridge"));
+        bool storedInEthBridgeNamespace = L1signalService.isSignalStored(invalidDepositId, defaultSender);
         assertFalse(storedInEthBridgeNamespace);
 
         vm.selectFork(L2Fork);
