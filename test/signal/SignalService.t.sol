@@ -51,6 +51,7 @@ contract BaseState is Test {
         // Deploy L1SignalService
         vm.prank(defaultSender);
         L1SignalService = new SignalService();
+        vm.label(address(L1SignalService), "L1SignalService");
 
         checkpointTracker = new MockCheckpointTracker(address(L1SignalService));
 
@@ -64,13 +65,10 @@ contract BaseState is Test {
         // Deploy L2SignalService
         vm.prank(defaultSender);
         L2SignalService = new SignalService();
+        vm.label(address(L2SignalService), "L2SignalService");
 
         // Deploy MockAnchor
         anchor = new MockAnchor(address(L2SignalService));
-
-        // Labels for debugging
-        vm.label(address(L1SignalService), "L1SignalService");
-        vm.label(address(L2SignalService), "L2SignalService");
     }
 }
 
@@ -86,8 +84,8 @@ contract SendL1SignalState is BaseState {
     // 0xe321d900f3fd366734e2d071e30949ded20c27fd638f1a059390091c643b62c5
     bytes32 public signal = keccak256(abi.encode(value));
 
-    bytes32 public stateRoot = hex"9bd008a5a90cbe90d20f4b5b0586b27207737e3b191079fff145b5b9c901c455";
-    bytes32 public storageRoot = hex"3ce30cf67714952c040433caae45d61b2435a503ea618de43375e00a6c174bed";
+    bytes32 public stateRoot = hex"afeb12112708b753dee82f80647b152125d8d31c9d58cd6eb5b55c80f130bcfd";
+    bytes32 public storageRoot = hex"04bdf08088bbf36329fe89a42e20579b0a9222b2301b4787eeecc03ef88bc507";
 
     function setUp() public virtual override {
         super.setUp();
@@ -99,12 +97,8 @@ contract SendL1SignalState is BaseState {
     // NOTE: This proof is only valid for the defaultSender address and signal
     // For the given stateRoot and storageRoot
     function storageProof() public pure returns (bytes[] memory storageProofArr) {
-        storageProofArr = new bytes[](2);
-
-        storageProofArr[0] =
-            hex"f851a023a999cb10807a0eb6e21969ab26264d39c395eeb67e929a3c0256dc8a56876c808080a015ae32d5986f7e597e8a4db519e6640db0eeb8271f30c7691dc58cd99b9cae8d808080808080808080808080";
-        storageProofArr[1] =
-            hex"f843a032fbc053d21d1450a7eb877000b701317b2bf5fa5907266fb096a14feb00db21a1a029d86d891992a0a891ff8cc9477d178707448d6a8f2f8a15fe1ca735238569e4";
+        storageProofArr = new bytes[](1);
+        storageProofArr[0] = hex"e3a120b85a01aaebad61d59b54ccfbfab9d3934481964f6208167ef0868494605ddc8401";
     }
 
     // NOTE: This proof is only valid for the given stateRoot and storageRoot
@@ -112,18 +106,18 @@ contract SendL1SignalState is BaseState {
         accountProofArr = new bytes[](3);
 
         accountProofArr[0] =
-            hex"f90131a0b91a8b7a7e9d3eab90afd81da3725030742f663c6ed8c26657bf00d842a9f4aaa01689b2a5203afd9ea0a0ca3765e4a538c7176e53eac1f8307a344ffc3c6176558080a0d6df02675ad4091927c8fb88eccc1eae7e8ee758327a4bb4f006dcba84f08b8fa0f08abfe349659ee092513d2474566e286f6c6d9b2930e29d3e04b283c2b25dfd8080a04b29efa44ecf50c19b34950cf1d0f05e00568bcc873120fbea9a4e8439de0962a0d0a1bfe5b45d2d863a794f016450a4caca04f3b599e8d1652afca8b752935fd880a0bf9b09e442e044778b354abbadb5ec049d7f5e8b585c3966d476c4fbc9a181d28080a0659892986d3408997f74c30845ede10e8dd4892dd7e39a153dee6fdc2f43d4f8a0e5c557a0ce3894afeb44c37f3d24247f67dc76a174d8cacc360c1210eef60a7680";
+            hex"f90131a0b91a8b7a7e9d3eab90afd81da3725030742f663c6ed8c26657bf00d842a9f4aaa01689b2a5203afd9ea0a0ca3765e4a538c7176e53eac1f8307a344ffc3c6176558080a0089013914176be36b11c71ff3b8a136c0a47bcf74b4ef922567c19d36814a4c7a09491a0bc16e49dd46059e35bdafadbd765d8daa1b1088151eee07161124824a28080a04b29efa44ecf50c19b34950cf1d0f05e00568bcc873120fbea9a4e8439de0962a0d0a1bfe5b45d2d863a794f016450a4caca04f3b599e8d1652afca8b752935fd880a0bf9b09e442e044778b354abbadb5ec049d7f5e8b585c3966d476c4fbc9a181d28080a0bbe068d0fb4ae57d0a82da1469f15383b562d29d001e7bd9693b0e5fd1b5e998a0e5c557a0ce3894afeb44c37f3d24247f67dc76a174d8cacc360c1210eef60a7680";
         accountProofArr[1] =
-            hex"f85180808080a0888ad3a3c3b85d0e75d6cdf73c5918b34e6401c0378c0260f675b5ab2f16b29080808080a074ae0767a40fc6fff780050f46a50f6b39ca4edb7faa9669108157a1cd96f40980808080808080";
+            hex"f85180808080a000b85deecd2beb8cead803f57b060d758bd1a3109255e2e8b7c120d08dd06c3f80808080a074ae0767a40fc6fff780050f46a50f6b39ca4edb7faa9669108157a1cd96f40980808080808080";
         accountProofArr[2] =
-            hex"f869a020e659e60b21cc961f64ad47f20523c1d329d4bbda245ef3940a76dc89d0911bb846f8440180a03ce30cf67714952c040433caae45d61b2435a503ea618de43375e00a6c174beda0c0ba2d0c0eedb3a5fcd78a0aa384e2399651f191eccdd9576bec86c1c300607f";
+            hex"f869a020e659e60b21cc961f64ad47f20523c1d329d4bbda245ef3940a76dc89d0911bb846f8440180a004bdf08088bbf36329fe89a42e20579b0a9222b2301b4787eeecc03ef88bc507a0c39e34a085b4c4074cb6f667a85c9d06b08fb97dcde27b211f9cd0648028fb84";
     }
 }
 
 contract SendL1SignalTest is SendL1SignalState {
     function test_verifyL1Signal_UsingBothProofs() public {
         vm.selectFork(L1Fork);
-        bool isSignalStored = L2SignalService.isSignalStored(signal, defaultSender);
+        bool isSignalStored = L1SignalService.isSignalStored(signal, defaultSender);
         assertTrue(isSignalStored);
 
         vm.selectFork(L2Fork);

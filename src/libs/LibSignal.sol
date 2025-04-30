@@ -31,7 +31,9 @@ library LibSignal {
     /// @dev Signal a `value` at a namespaced slot. See `deriveSlot`.
     function signal(bytes32 value, address account) internal returns (bytes32) {
         bytes32 slot = deriveSlot(value, account);
-        slot.getBooleanSlot().value = true;
+        assembly {
+            sstore(slot, true)
+        }
         return slot;
     }
 

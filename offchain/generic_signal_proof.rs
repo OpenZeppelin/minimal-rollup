@@ -4,7 +4,7 @@ use alloy::primitives::{Address, B256};
 use eyre::{eyre, Result};
 
 mod signal_slot;
-use signal_slot::{get_signal_slot, NameSpaceConst};
+use signal_slot::get_signal_slot;
 
 mod utils;
 use utils::{deploy_signal_service, get_proofs, get_provider};
@@ -48,7 +48,7 @@ async fn main() -> Result<()> {
     let builder = signal_service.sendSignal(signal);
     builder.send().await?.watch().await?;
 
-    let slot = get_signal_slot(&signal, &sender, NameSpaceConst::Signal);
+    let slot = get_signal_slot(&signal, &sender);
     get_proofs(&provider, slot, &signal_service).await?;
 
     Ok(())
