@@ -44,27 +44,6 @@ contract SignalService is ISignalService, CommitmentStore {
         emit SignalVerified(sender, value);
     }
 
-    /// @dev Overrides ETHBridge.depositETH to add signaling functionality.
-    function deposit(address to, bytes memory data) public payable override returns (bytes32 id) {
-        id = super.deposit(to, data);
-        id.signal(msg.sender, ETH_BRIDGE_NAMESPACE);
-    }
-
-    // CHECK: Should this function be non-reentrant?
-    /// @inheritdoc ETHBridge
-    /// @dev Overrides ETHBridge.claimDeposit to add signal verification logic.
-    function claimDeposit(ETHDeposit memory ethDeposit, uint256 height, bytes memory proof)
-        external
-        override
-        returns (bytes32 id)
-    {
-        id = _generateId(ethDeposit);
-
-        _verifySignal(height, commitmentPublisher, ethDeposit.from, id, ETH_BRIDGE_NAMESPACE, proof);
-
-        super._processClaimDepositWithId(id, ethDeposit);
-    }
-
     function _verifySignal(
         uint256 height,
         address commitmentPublisher,

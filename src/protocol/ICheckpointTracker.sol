@@ -10,7 +10,7 @@ interface ICheckpointTracker {
     /// @notice Emitted when the proven checkpoint is updated
     /// @param publicationId the publication ID of the latest proven checkpoint
     /// @param commitment the commitment of the latest proven checkpoint
-    event CheckpointUpdated(uint256 publicationId, bytes32 commitment);
+    event CheckpointUpdated(uint256 indexed publicationId, bytes32 commitment);
 
     /// @dev If genesis is not 0 it should be the latest publication
     /// @param latestPublicationId the current latest publication ID

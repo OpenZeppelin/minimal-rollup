@@ -19,18 +19,26 @@ contract BridgeETHState is BaseState {
     uint256 public depositAmount = 4 ether;
     ETHBridge.ETHDeposit public depositOne;
 
+    ETHBridge public L1ethBridge;
+    ETHBridge public L2ethBridge;
+
     // this is a valid deposit ID but is sent via a signal not a deposit
     // hence "invalid" and should not be claimable
     bytes32 invalidDepositId = 0xbf8ce3088406c4ddbc32e32404ca006c3ef57f07d5139479f16c9124d6490f2e;
 
     function setUp() public virtual override {
         super.setUp();
+
+        vm.selectFork(L2Fork);
+        L2ethBridge = new ETHBridge();
+
         vm.selectFork(L1Fork);
+        L1ethBridge = new ETHBridge();
 
         vm.prank(defaultSender);
         bytes memory emptyData = "";
         vm.recordLogs();
-        depositIdOne = L1signalService.deposit{value: depositAmount}(defaultSender, emptyData);
+        depositIdOne = L1ethBridge.deposit{value: depositAmount}(defaultSender, emptyData);
 
         Vm.Log[] memory entries = vm.getRecordedLogs();
 
@@ -47,7 +55,7 @@ contract ETHBridgeTest is BridgeETHState {
         assertEq(defaultSender.balance, senderBalanceL1 - depositAmount);
 
         vm.selectFork(L2Fork);
-        assertEq(L2signalService.claimed(depositIdOne), false);
+        assertEq(L2ethBridge.claimed(depositIdOne), false);
         assertEq(defaultSender.balance, senderBalanceL2);
     }
 }
@@ -99,9 +107,9 @@ contract ClaimDepositTest is CommitmentStoredState {
         ISignalService.SignalProof memory signalProof = ISignalService.SignalProof(accountProof, storageProof);
         bytes memory encodedProof = abi.encode(signalProof);
 
-        L2signalService.claimDeposit(depositOne, commitmentHeight, encodedProof);
+        L2ethBridge.claimDeposit(depositOne, commitmentHeight, encodedProof);
 
-        assertEq(address(L2signalService).balance, ETHBridgeInitBalance - depositAmount);
+        assertEq(address(L2ethBridge).balance, ETHBridgeInitBalance - depositAmount);
         assertEq(defaultSender.balance, senderBalanceL2 + depositAmount);
     }
 
@@ -129,9 +137,9 @@ contract ClaimDepositTest is CommitmentStoredState {
 
         vm.selectFork(L2Fork);
         // to be extra sure its not a problem with the proof
-        L2signalService.verifySignal(commitmentHeight, defaultSender, invalidDepositId, encodedProof);
+        L2signalService.verifySignal(commitmentHeight, address(anchor), defaultSender, invalidDepositId, encodedProof);
         // I believe this error means that the proof is not valid for this deposit id
         vm.expectRevert("MerkleTrie: invalid large internal hash");
-        L2signalService.claimDeposit(invalidDeposit, commitmentHeight, encodedProof);
+        L2ethBridge.claimDeposit(invalidDeposit, commitmentHeight, encodedProof);
     }
 }
