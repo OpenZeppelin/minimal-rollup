@@ -32,4 +32,10 @@ library LibProvingPeriod {
         // whether the proof came after the deadline
         bool pastDeadline;
     }
+
+    /// @notice The period has an end timestamp in the past
+    function isComplete(Period storage period) internal view returns (bool) {
+        uint40 periodEnd = period.end;
+        return periodEnd != 0 && block.timestamp > periodEnd;
+    }
 }

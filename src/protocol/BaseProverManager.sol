@@ -13,6 +13,7 @@ import "@openzeppelin/contracts/utils/math/SafeCast.sol";
 abstract contract BaseProverManager is IProposerFees, IProverManager {
     using SafeCast for uint256;
     using LibPercentage for uint96;
+    using LibProvingPeriod for LibProvingPeriod.Period;
 
     address public immutable inbox;
     ICheckpointTracker public immutable checkpointTracker;
@@ -71,8 +72,7 @@ abstract contract BaseProverManager is IProposerFees, IProverManager {
 
         uint256 periodId = _currentPeriodId;
 
-        uint40 periodEnd = _periods[periodId].end;
-        if (periodEnd != 0 && block.timestamp > periodEnd) {
+        if (_periods[periodId].isComplete()) {
             // Advance to the next period
             _currentPeriodId = ++periodId;
             emit NewPeriod(periodId);
@@ -222,8 +222,7 @@ abstract contract BaseProverManager is IProposerFees, IProverManager {
     /// @inheritdoc IProposerFees
     function getCurrentFees() external view returns (uint96 fee, uint96 delayedFee) {
         uint256 currentPeriod = _currentPeriodId;
-        uint40 periodEnd = _periods[currentPeriod].end;
-        if (periodEnd != 0 && block.timestamp > periodEnd) {
+        if (_periods[currentPeriod].isComplete()) {
             // can never overflow
             unchecked {
                 ++currentPeriod;
