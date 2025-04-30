@@ -56,14 +56,6 @@ abstract contract BaseProverManager is IProposerFees, IProverManager, BalanceAcc
         _claimProvingVacancy(_initialFee, _initialProver);
     }
 
-    /// @notice Withdraw available(unlocked) funds.
-    /// @param amount The amount to withdraw
-    function withdraw(uint256 amount) external {
-        _decreaseBalance(msg.sender, amount);
-        _transferOut(msg.sender, amount);
-        emit Withdrawal(msg.sender, amount);
-    }
-
     /// @inheritdoc IProposerFees
     /// @dev This function advances to the next period if the current period has ended.
     function payPublicationFee(address proposer, bool isDelayed) external {
@@ -224,15 +216,6 @@ abstract contract BaseProverManager is IProposerFees, IProverManager, BalanceAcc
         uint96 requiredMaxFee = fee.scaleBy(_maxBidPercentage());
         require(offeredFee <= requiredMaxFee, "Offered fee not low enough");
     }
-
-    /// @dev Increases `user`'s balance by `amount` and emits a `Deposit` event
-    function _deposit(address user, uint256 amount) internal {
-        _increaseBalance(user, amount);
-        emit Deposit(user, amount);
-    }
-
-    /// @dev Implements currency-specific transfer logic for withdrawals
-    function _transferOut(address to, uint256 amount) internal virtual;
 
     /// @dev implementation of `IProverManager.claimProvingVacancy` with the option to specify a prover
     /// This also lets the constructor claim the first vacancy on behalf of _initialProver
