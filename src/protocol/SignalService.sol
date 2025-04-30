@@ -2,7 +2,6 @@
 pragma solidity ^0.8.28;
 
 import {LibSignal} from "../libs/LibSignal.sol";
-import {LibTrieProof} from "../libs/LibTrieProof.sol";
 import {CommitmentStore} from "./CommitmentStore.sol";
 import {ETHBridge} from "./ETHBridge.sol";
 import {ISignalService} from "./ISignalService.sol";

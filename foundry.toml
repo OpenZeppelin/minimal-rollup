@@ -9,6 +9,11 @@ sender = "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"
 
 gas_reports_ignore = ["MockDelayedInclusionStore", "MockCheckpointTracker", ""]
 
+remappings = [
+    "@optimism/=lib/optimism/",
+    "@vendor/=src/vendor/"
+]
+
 [fmt]
 sort_imports = true
 wrap_comments = true

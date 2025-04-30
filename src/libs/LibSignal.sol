@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
-import {LibTrieProof} from "./LibTrieProof.sol";
 import {SlotDerivation} from "@openzeppelin/contracts/utils/SlotDerivation.sol";
 import {StorageSlot} from "@openzeppelin/contracts/utils/StorageSlot.sol";
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
+import {LibTrieProof} from "@vendor/taiko/LibTrieProof.sol";
 
 /// @dev Library for secure broadcasting (i.e. signaling) cross-chain arbitrary data.
 library LibSignal {
@@ -61,7 +61,6 @@ library LibSignal {
     /// @param accountProof Merkle proof for the contract's account against the state root. Empty if we are using a
     /// storage root.
     /// @param storageProof Merkle proof for the derived storage slot against the account's storage root
-    /// @return valid Boolean indicating whether the signal was successfully verified
     function verifySignal(
         bytes32 value,
         bytes32 namespace,
@@ -69,17 +68,10 @@ library LibSignal {
         bytes32 root,
         bytes[] memory accountProof,
         bytes[] memory storageProof
-    ) internal view returns (bool valid) {
-        bytes32 hashedValue = keccak256(abi.encode(value));
-        // bytes32 encodedBool = abi.encode(true);
-        // If the account proof is empty we assume `root` is the storage root of the signal service contract
-        if (accountProof.length == 0) {
-            // No need to first retrieve the storage root from the state root.
-            valid = LibTrieProof.verifySlot(deriveSlot(value, sender, namespace), hashedValue, root, storageProof);
-            return valid;
-        }
-        (valid,) = LibTrieProof.verifyStorage(
-            address(this), deriveSlot(value, sender, namespace), hashedValue, root, accountProof, storageProof
+    ) internal pure {
+        bytes32 encodedBool = bytes32(uint256(1));
+        LibTrieProof.verifyMerkleProof(
+            root, sender, deriveSlot(value, sender, namespace), encodedBool, accountProof, storageProof
         );
     }
 }
