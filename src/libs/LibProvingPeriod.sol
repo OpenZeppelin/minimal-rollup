@@ -45,6 +45,7 @@ library LibProvingPeriod {
     function init(Period storage period, address prover, uint96 fee, uint16 delayedFeePercentage, uint96 stake)
         internal
     {
+        require(prover != address(0), "Prover cannot be zero address");
         period.prover = prover;
         period.fee = fee;
         period.delayedFeePercentage = delayedFeePercentage;
