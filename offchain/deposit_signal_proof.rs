@@ -2,10 +2,10 @@ use alloy::primitives::{address, bytes, U256};
 use eyre::Result;
 
 mod utils;
-use utils::{deploy_signal_service, get_proofs, get_provider};
+use utils::{deploy_eth_bridge, deploy_signal_service, get_proofs, get_provider};
 
 mod signal_slot;
-use signal_slot::{get_signal_slot, NameSpaceConst};
+use signal_slot::get_signal_slot;
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -23,6 +23,9 @@ async fn main() -> Result<()> {
     let sender = address!("0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266");
     let amount = U256::from(4000000000000000000_u128);
 
+    // This is the anchor
+    let trusted_publisher = address!("0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266");
+
     let (provider, _anvil) = get_provider()?;
 
     let signal_service = deploy_signal_service(&provider).await?;
@@ -32,8 +35,11 @@ async fn main() -> Result<()> {
         signal_service.address()
     );
 
+    let eth_bridge =
+        deploy_eth_bridge(&provider, *signal_service.address(), trusted_publisher).await?;
+
     println!("Sending ETH deposit signal...");
-    let builder = signal_service.deposit(sender, data).value(amount);
+    let builder = eth_bridge.deposit(sender, data).value(amount);
     let tx = builder.send().await?.get_receipt().await?;
 
     // Get deposit ID from the transaction receipt logs
@@ -41,7 +47,7 @@ async fn main() -> Result<()> {
     let receipt_logs = tx.logs().get(0).unwrap().topics();
     let deposit_id = receipt_logs.get(1).unwrap();
 
-    let slot = get_signal_slot(deposit_id, &sender, NameSpaceConst::ETHBridge);
+    let slot = get_signal_slot(deposit_id, &sender);
     get_proofs(&provider, slot, &signal_service).await?;
 
     Ok(())

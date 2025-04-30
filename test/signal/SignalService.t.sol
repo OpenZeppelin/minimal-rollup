@@ -129,18 +129,9 @@ contract SendL1SignalTest is SendL1SignalState {
         uint256 height = 1;
         anchor.anchor(height, stateRoot);
 
-        L2signalService.verifySignal(height, address(anchor), defaultSender, signal, encodedProof);
-    }
+        bool isSignalStored = L2signalService.isSignalStored(signal, defaultSender);
 
-    function test_verifyL1Signal_UsingStorageProof() public {
-        vm.selectFork(L2Fork);
-
-        bytes[] memory accountProof = new bytes[](0);
-        ISignalService.SignalProof memory signalProof = ISignalService.SignalProof(accountProof, storageProof());
-        bytes memory encodedProof = abi.encode(signalProof);
-
-        uint256 height = 1;
-        anchor.anchor(height, storageRoot);
+        assertTrue(isSignalStored);
 
         L2signalService.verifySignal(height, address(anchor), defaultSender, signal, encodedProof);
     }

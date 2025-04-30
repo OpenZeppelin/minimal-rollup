@@ -6,28 +6,6 @@ use alloy::{
 };
 use eyre::{eyre, Result};
 
-pub enum NameSpaceConst {
-    Signal,
-    ETHBridge,
-}
-
-impl NameSpaceConst {
-    pub fn value(&self) -> B256 {
-        match self {
-            NameSpaceConst::Signal => keccak256("generic-signal"),
-            NameSpaceConst::ETHBridge => keccak256("eth-bridge"),
-        }
-    }
-
-    pub fn from_arg(arg: &str) -> Result<Self> {
-        match arg {
-            "1" => Ok(NameSpaceConst::Signal),
-            "2" => Ok(NameSpaceConst::ETHBridge),
-            _ => Err(eyre!("Invalid namespace selection: must be '1' for normal signals or '2' for eth deposits")),
-        }
-    }
-}
-
 pub fn erc7201_slot(namespace: &Vec<u8>) -> B256 {
     let namespace_hash = keccak256(namespace);
 
@@ -41,8 +19,8 @@ pub fn erc7201_slot(namespace: &Vec<u8>) -> B256 {
     aligned_slot
 }
 
-pub fn get_signal_slot(signal: &B256, sender: &Address, namespace: NameSpaceConst) -> B256 {
-    let namespace = (signal, sender, namespace.value()).abi_encode_packed();
+pub fn get_signal_slot(signal: &B256, sender: &Address) -> B256 {
+    let namespace = (signal, sender).abi_encode_packed();
     return erc7201_slot(namespace.as_ref());
 }
 
@@ -51,7 +29,7 @@ fn main() -> Result<()> {
     let args: Vec<String> = env::args().collect();
     if args.len() != 4 {
         return Err(eyre!(
-            "Usage: cargo run --bin signal_slot <signal (0x...)> <sender (0x...)> <namespace (1 or 2)>"
+            "Usage: cargo run --bin signal_slot <signal (0x...)> <sender (0x...)>"
         ));
     }
 
@@ -65,11 +43,6 @@ fn main() -> Result<()> {
         .parse()
         .map_err(|_| eyre!("Invalid sender format: {}", sender_str))?;
 
-    let namespace = NameSpaceConst::from_arg(&args[3])?;
-
-    println!(
-        "Signal Slot: {:?}",
-        get_signal_slot(&signal, &sender, namespace)
-    );
+    println!("Signal Slot: {:?}", get_signal_slot(&signal, &sender));
     Ok(())
 }

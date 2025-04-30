@@ -6,6 +6,7 @@ use alloy::{
     sol,
 };
 
+use ETHBridge::ETHBridgeInstance;
 use SignalService::SignalServiceInstance;
 
 use eyre::Result;
@@ -24,6 +25,13 @@ sol!(
     "./out/SignalService.sol/SignalService.json",
 );
 
+sol!(
+    #[allow(missing_docs)]
+    #[sol(rpc)]
+    ETHBridge,
+    "./out/ETHBridge.sol/ETHBridge.json"
+);
+
 pub fn get_provider() -> Result<(impl Provider, AnvilInstance)> {
     let anvil = Anvil::new()
         .block_time(BLOCK_TIME)
@@ -40,7 +48,16 @@ pub fn get_provider() -> Result<(impl Provider, AnvilInstance)> {
 pub async fn deploy_signal_service(
     provider: &impl Provider,
 ) -> Result<SignalServiceInstance<(), &impl Provider>> {
-    let contract = SignalService::deploy(provider, ROLLUP_OPERATOR).await?;
+    let contract = SignalService::deploy(provider).await?;
+    Ok(contract)
+}
+
+pub async fn deploy_eth_bridge(
+    provider: &impl Provider,
+    signal_service: Address,
+    trusted_publisher: Address,
+) -> Result<ETHBridgeInstance<(), &impl Provider>> {
+    let contract = ETHBridge::deploy(provider, signal_service, trusted_publisher).await?;
     Ok(contract)
 }
 
