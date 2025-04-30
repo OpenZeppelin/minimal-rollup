@@ -1,14 +1,15 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
+import {LibPercentage} from "../libs/LibPercentage.sol";
 import {ICheckpointTracker} from "./ICheckpointTracker.sol";
 import {IProposerFees} from "./IProposerFees.sol";
 import {IProverManager} from "./IProverManager.sol";
 import {IPublicationFeed} from "./IPublicationFeed.sol";
-import "@openzeppelin/contracts/utils/math/SafeCast.sol";
 
 abstract contract BaseProverManager is IProposerFees, IProverManager {
     using SafeCast for uint256;
+    using LibPercentage for uint256;
 
     struct Period {
         // SLOT 1
@@ -94,7 +95,7 @@ abstract contract BaseProverManager is IProposerFees, IProverManager {
         // Deduct fee from proposer's balance
         uint96 fee = _periods[periodId].fee;
         if (isDelayed) {
-            fee = _calculatePercentage(fee, _periods[periodId].delayedFeePercentage).toUint96();
+            fee = fee.scaleBy(_periods[periodId].delayedFeePercentage);
         }
         _balances[proposer] -= fee;
     }
@@ -147,7 +148,7 @@ abstract contract BaseProverManager is IProposerFees, IProverManager {
         (uint40 end,) = _closePeriod(period, _exitDelay(), 0);
 
         // Reward the evictor and slash the prover
-        uint96 evictorIncentive = _calculatePercentage(period.stake, _evictorIncentivePercentage()).toUint96();
+        uint96 evictorIncentive = period.stake.scaleBy(_evictorIncentivePercentage());
         _balances[msg.sender] += evictorIncentive;
         period.stake -= evictorIncentive;
 
@@ -209,7 +210,7 @@ abstract contract BaseProverManager is IProposerFees, IProverManager {
         uint256 delayedPubFee;
 
         if (numDelayedPublications > 0) {
-            uint256 delayedFee = _calculatePercentage(baseFee, period.delayedFeePercentage);
+            uint96 delayedFee = baseFee.scaleBy(period.delayedFeePercentage);
             delayedPubFee = numDelayedPublications * delayedFee;
         }
 
@@ -228,8 +229,7 @@ abstract contract BaseProverManager is IProposerFees, IProverManager {
         require(provenPublication.timestamp > period.end, "Publication must be after period");
 
         uint96 stake = period.stake;
-        _balances[period.prover] +=
-            period.pastDeadline ? _calculatePercentage(stake, _rewardPercentage()).toUint96() : stake;
+        _balances[period.prover] += period.pastDeadline ? stake.scaleBy(_rewardPercentage()) : stake;
         period.stake = 0;
     }
 
@@ -246,7 +246,7 @@ abstract contract BaseProverManager is IProposerFees, IProverManager {
 
         Period storage period = _periods[currentPeriod];
         fee = period.fee;
-        delayedFee = _calculatePercentage(fee, period.delayedFeePercentage).toUint96();
+        delayedFee = fee.scaleBy(period.delayedFeePercentage);
     }
 
     /// @notice Get the balance of a user
@@ -273,7 +273,7 @@ abstract contract BaseProverManager is IProposerFees, IProverManager {
     /// @param fee The fee to be outbid (either the current period's fee or next period's winning fee)
     /// @param offeredFee The new bid
     function _ensureSufficientUnderbid(uint96 fee, uint96 offeredFee) internal view virtual {
-        uint256 requiredMaxFee = _calculatePercentage(fee, _maxBidPercentage());
+        uint96 requiredMaxFee = fee.scaleBy(_maxBidPercentage());
         require(offeredFee <= requiredMaxFee, "Offered fee not low enough");
     }
 
@@ -337,14 +337,6 @@ abstract contract BaseProverManager is IProposerFees, IProverManager {
 
         Period storage nextPeriod = _periods[periodId + 1];
         _updatePeriod(nextPeriod, prover, fee, _livenessBond());
-    }
-
-    /// @dev Calculates the percentage of a given numerator scaling up to avoid precision loss
-    /// @param amount The number to calculate the percentage of
-    /// @param bps The percentage expressed in basis points(https://muens.io/solidity-percentages)
-    /// @return _ The calculated percentage of the given numerator
-    function _calculatePercentage(uint256 amount, uint256 bps) private pure returns (uint256) {
-        return (amount * bps) / 10_000;
     }
 
     /// @dev Updates a period with prover information and transfers the liveness bond
