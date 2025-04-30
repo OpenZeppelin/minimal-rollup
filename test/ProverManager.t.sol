@@ -8,17 +8,17 @@ import {ProverManager} from "../src/protocol/taiko_alethia/ProverManager.sol";
 import {ICheckpointTracker} from "src/protocol/ICheckpointTracker.sol";
 import {IPublicationFeed} from "src/protocol/IPublicationFeed.sol";
 import {PublicationFeed} from "src/protocol/PublicationFeed.sol";
-import {SignalService} from "src/protocol/SignalService.sol";
 
+import {SignalService} from "src/protocol/SignalService.sol";
 import {MockCheckpointTracker} from "test/mocks/MockCheckpointTracker.sol";
 import {NullVerifier} from "test/mocks/NullVerifier.sol";
 
 contract ProverManagerTest is Test {
     ProverManager proverManager;
     MockCheckpointTracker checkpointTracker;
+    SignalService signalService;
     NullVerifier verifier;
     PublicationFeed publicationFeed;
-    SignalService signalService;
     uint256 constant DEPOSIT_AMOUNT = 2 ether;
 
     // Addresses used for testing.
@@ -43,11 +43,9 @@ contract ProverManagerTest is Test {
     uint256 constant INITIAL_PERIOD = 1;
 
     function setUp() public {
-        signalService = new SignalService(rollupOperator);
-        checkpointTracker = new MockCheckpointTracker(address(signalService));
         publicationFeed = new PublicationFeed();
-        vm.prank(rollupOperator);
-        signalService.setAuthorizedCommitter(address(checkpointTracker));
+        signalService = new SignalService();
+        checkpointTracker = new MockCheckpointTracker(address(signalService));
 
         // Fund the initial prover so the constructor can receive the required livenessBond.
         vm.deal(initialProver, 10 ether);

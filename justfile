@@ -10,11 +10,11 @@ stop-anvil:
     lsof -ti:8545 | xargs -r kill
     lsof -ti:8546 | xargs -r kill
 
-test +ARGS:
+test +ARGS="":
     # Run all unit tests
     forge test {{ARGS}} --no-match-path 'test/signal/**'
 
-test-int +ARGS:
+test-int +ARGS="":
     # Run all tests
     forge test {{ARGS}}
 
