@@ -83,6 +83,16 @@ library LibProvingPeriod {
         return block.timestamp > period.deadline && period.deadline != 0;
     }
 
+    function totalFeeEarned(Period storage period, uint256 numPublications, uint256 numDelayedPublications)
+        internal
+        view
+        returns (uint96)
+    {
+        uint256 standardFee = publicationFee(period, false) * (numPublications - numDelayedPublications);
+        uint256 delayedFee = publicationFee(period, true) * numDelayedPublications;
+        return (standardFee + delayedFee).toUint96();
+    }
+
     /// @dev Sets the period's end and deadline timestamps
     /// @param period The period to finalize
     /// @param endDelay The duration (from now) when the period will end

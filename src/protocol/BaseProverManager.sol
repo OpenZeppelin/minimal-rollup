@@ -170,17 +170,7 @@ abstract contract BaseProverManager is IProposerFees, IProverManager {
             period.assignReward(msg.sender);
         }
 
-        uint96 baseFee = period.fee;
-        uint256 regularPubFee = (numPublications - numDelayedPublications) * baseFee;
-
-        uint256 delayedPubFee;
-
-        if (numDelayedPublications > 0) {
-            uint96 delayedFee = baseFee.scaleBy(period.delayedFeePercentage, LibPercentage.PERCENT);
-            delayedPubFee = numDelayedPublications * delayedFee;
-        }
-
-        _increaseBalance(period.prover, regularPubFee + delayedPubFee);
+        _increaseBalance(period.prover, period.totalFeeEarned(numPublications, numDelayedPublications));
     }
 
     /// @inheritdoc IProverManager
