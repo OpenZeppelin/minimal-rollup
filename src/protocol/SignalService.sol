@@ -40,7 +40,17 @@ contract SignalService is ISignalService, CommitmentStore {
         bytes32 value,
         bytes memory proof
     ) external {
-        _verifySignal(height, commitmentPublisher, sender, value, LibSignal.SIGNAL_NAMESPACE, proof);
+        // TODO: commitmentAt(height) might not be the 'state root' of the chain
+        // For now it could be the block hash or other hashed value
+        // further work is needed to ensure we get the 'state root' of the chain
+        bytes32 root = commitmentAt(commitmentPublisher, height);
+        SignalProof memory signalProof = abi.decode(proof, (SignalProof));
+        bytes[] memory accountProof = signalProof.accountProof;
+        bytes[] memory storageProof = signalProof.storageProof;
+        // if there is no account proof, verify signal will treat root as a storage root
+        // instead of a full state root which we currently do not support
+        require(accountProof.length != 0, StateProofNotSupported());
+        value.verifySignal(sender, root, accountProof, storageProof);
         emit SignalVerified(sender, value);
     }
 
@@ -63,26 +73,5 @@ contract SignalService is ISignalService, CommitmentStore {
         _verifySignal(height, commitmentPublisher, ethDeposit.from, id, ETH_BRIDGE_NAMESPACE, proof);
 
         super._processClaimDepositWithId(id, ethDeposit);
-    }
-
-    function _verifySignal(
-        uint256 height,
-        address commitmentPublisher,
-        address sender,
-        bytes32 value,
-        bytes32 namespace,
-        bytes memory proof
-    ) internal view virtual {
-        // TODO: commitmentAt(height) might not be the 'state root' of the chain
-        // For now it could be the block hash or other hashed value
-        // further work is needed to ensure we get the 'state root' of the chain
-        bytes32 root = commitmentAt(commitmentPublisher, height);
-        SignalProof memory signalProof = abi.decode(proof, (SignalProof));
-        bytes[] memory accountProof = signalProof.accountProof;
-        bytes[] memory storageProof = signalProof.storageProof;
-        // if there is no account proof, verify signal will treat root as a storage root
-        // instead of a full state root which we currently do not support
-        require(accountProof.length != 0, StateProofNotSupported());
-        value.verifySignal(namespace, sender, root, accountProof, storageProof);
     }
 }
