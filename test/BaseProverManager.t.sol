@@ -274,7 +274,7 @@ abstract contract BaseProverManagerTest is Test {
         // Evict the prover
         vm.warp(vm.getBlockTimestamp() + LIVENESS_WINDOW + 1);
         vm.prank(evictor);
-        vm.expectRevert("Proving period is not active");
+        vm.expectRevert("Proving period is closed");
         proverManager.evictProver(header);
     }
 
@@ -328,7 +328,7 @@ abstract contract BaseProverManagerTest is Test {
 
         // Try to exit again
         vm.prank(initialProver);
-        vm.expectRevert("Prover already exited");
+        vm.expectRevert("Period already closed");
         proverManager.exit();
     }
 

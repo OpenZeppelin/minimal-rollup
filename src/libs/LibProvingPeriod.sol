@@ -47,4 +47,9 @@ library LibProvingPeriod {
     function publicationFee(Period storage period, bool isDelayed) internal view returns (uint96) {
         return isDelayed ? period.fee.scaleBy(period.delayedFeePercentage, LibPercentage.PERCENT) : period.fee;
     }
+
+    /// @notice The period has no end timestamp
+    function isOpen(Period storage period) internal view returns (bool) {
+        return period.end == 0;
+    }
 }

@@ -83,13 +83,12 @@ abstract contract BaseProverManager is IProposerFees, IProverManager {
     /// @inheritdoc IProverManager
     /// @dev The offered fee has to be at most `maxBidPercentage` of the current best price.
     /// @dev The current best price may be the current prover's fee or the fee of the next bid, depending on whether the
-    /// period is active or not.
-    /// An active period is one that doesn't have an `end` timestamp yet.
+    /// period is open or closed.
     function bid(uint96 offeredFee) external {
         uint256 currentPeriodId_ = _currentPeriodId;
         LibProvingPeriod.Period storage currentPeriod = _periods[currentPeriodId_];
         LibProvingPeriod.Period storage nextPeriod = _periods[currentPeriodId_ + 1];
-        if (currentPeriod.end == 0) {
+        if (currentPeriod.isOpen()) {
             _ensureSufficientUnderbid(currentPeriod.fee, offeredFee);
             _closePeriod(currentPeriod, _successionDelay(), _provingWindow());
         } else {
@@ -119,7 +118,7 @@ abstract contract BaseProverManager is IProposerFees, IProverManager {
         require(publicationTimestamp + _livenessWindow() < block.timestamp, "Publication is not old enough");
 
         LibProvingPeriod.Period storage period = _periods[_currentPeriodId];
-        require(period.end == 0, "Proving period is not active");
+        require(period.isOpen(), "Proving period is closed");
 
         ICheckpointTracker.Checkpoint memory lastProven = checkpointTracker.getProvenCheckpoint();
         require(publicationHeader.id > lastProven.publicationId, "Publication has been proven");
@@ -142,7 +141,7 @@ abstract contract BaseProverManager is IProposerFees, IProverManager {
         LibProvingPeriod.Period storage period = _periods[_currentPeriodId];
         address prover = period.prover;
         require(msg.sender == prover, "Not current prover");
-        require(period.end == 0, "Prover already exited");
+        require(period.isOpen(), "Period already closed");
 
         (uint40 end, uint40 deadline) = _closePeriod(period, _exitDelay(), _provingWindow());
         emit ProverExited(prover, end, deadline);
@@ -169,7 +168,7 @@ abstract contract BaseProverManager is IProposerFees, IProverManager {
 
         require(publicationFeed.validateHeader(lastPub), "Last publication does not exist");
         require(end.publicationId == lastPub.id, "Last publication does not match end checkpoint");
-        require(period.end == 0 || lastPub.timestamp <= period.end, "Last publication is after the period");
+        require(period.isOpen() || lastPub.timestamp <= period.end, "Last publication is after the period");
 
         require(publicationFeed.validateHeader(firstPub), "First publication does not exist");
         require(start.publicationId + 1 == firstPub.id, "First publication not immediately after start checkpoint");
@@ -310,7 +309,7 @@ abstract contract BaseProverManager is IProposerFees, IProverManager {
     function _claimProvingVacancy(uint96 fee, address prover) private {
         uint256 periodId = _currentPeriodId;
         LibProvingPeriod.Period storage period = _periods[periodId];
-        require(period.prover == address(0) && period.end == 0, "No proving vacancy");
+        require(period.prover == address(0) && period.isOpen(), "No proving vacancy");
         _closePeriod(period, 0, 0);
 
         LibProvingPeriod.Period storage nextPeriod = _periods[periodId + 1];
