@@ -10,7 +10,6 @@ import {IPublicationFeed} from "./IPublicationFeed.sol";
 
 import "@openzeppelin/contracts/utils/math/SafeCast.sol";
 
-
 abstract contract BaseProverManager is IProposerFees, IProverManager {
     using SafeCast for uint256;
     using LibPercentage for uint96;

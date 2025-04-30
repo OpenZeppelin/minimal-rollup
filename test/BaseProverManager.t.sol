@@ -986,7 +986,6 @@ abstract contract BaseProverManagerTest is Test {
         return amount * percentage / 100;
     }
 
-
     function _exit(address prover) internal {
         vm.prank(prover);
         proverManager.exit();
