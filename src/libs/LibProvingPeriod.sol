@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
+import {LibPercentage} from "../libs/LibPercentage.sol";
+
 /// Each proving period is defined by
 /// - the _prover_ address that must post proofs for any publications received during this period
 /// - the standard proving _fee_ that the prover charges per publication in this period
@@ -16,6 +18,8 @@ pragma solidity ^0.8.28;
 /// If a prover misses the deadline, anyone can prove outstanding publications on their behalf. In this case, the
 /// _pastDeadline_ flag is set and the address that completes the outstanding proofs receives a fraction of the stake.
 library LibProvingPeriod {
+    using LibPercentage for uint96;
+
     struct Period {
         // SLOT 1
         address prover;
@@ -37,5 +41,10 @@ library LibProvingPeriod {
     function isComplete(Period storage period) internal view returns (bool) {
         uint40 periodEnd = period.end;
         return periodEnd != 0 && block.timestamp > periodEnd;
+    }
+
+    /// @notice The period fee, scaled by `delayedFeePercentage` if the publication is delayed
+    function publicationFee(Period storage period, bool isDelayed) internal view returns (uint96) {
+        return isDelayed ? period.fee.scaleBy(period.delayedFeePercentage, LibPercentage.PERCENT) : period.fee;
     }
 }

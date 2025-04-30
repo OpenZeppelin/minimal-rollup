@@ -79,11 +79,7 @@ abstract contract BaseProverManager is IProposerFees, IProverManager {
         }
 
         // Deduct fee from proposer's balance
-        uint96 fee = _periods[periodId].fee;
-        if (isDelayed) {
-            fee = fee.scaleBy(_periods[periodId].delayedFeePercentage, LibPercentage.PERCENT);
-        }
-        _balances[proposer] -= fee;
+        _balances[proposer] -= _periods[periodId].publicationFee(isDelayed);
     }
 
     /// @inheritdoc IProverManager
