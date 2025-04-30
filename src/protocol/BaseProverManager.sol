@@ -5,12 +5,14 @@ import {LibPercentage} from "../libs/LibPercentage.sol";
 import {LibProvingPeriod} from "../libs/LibProvingPeriod.sol";
 
 import {BalanceAccounting} from "./BalanceAccounting.sol";
+
 import {ICheckpointTracker} from "./ICheckpointTracker.sol";
 import {IProposerFees} from "./IProposerFees.sol";
 import {IProverManager} from "./IProverManager.sol";
 import {IPublicationFeed} from "./IPublicationFeed.sol";
+import {ProverManagerConfig} from "./ProverManagerConfig.sol";
 
-abstract contract BaseProverManager is IProposerFees, IProverManager, BalanceAccounting {
+abstract contract BaseProverManager is IProposerFees, IProverManager, BalanceAccounting, ProverManagerConfig {
     using LibPercentage for uint96;
     using LibProvingPeriod for LibProvingPeriod.Period;
 
@@ -222,44 +224,6 @@ abstract contract BaseProverManager is IProposerFees, IProverManager, BalanceAcc
         uint96 requiredMaxFee = fee.scaleBy(_maxBidPercentage());
         require(offeredFee <= requiredMaxFee, "Offered fee not low enough");
     }
-
-    /// @dev Returns the maximum percentage (in bps) of the previous bid a prover can offer and still have a successful
-    /// bid
-    /// @return _ The maximum bid percentage value
-    function _maxBidPercentage() internal view virtual returns (uint16);
-
-    /// @dev Returns the time window after which a publication is considered old enough for prover eviction
-    /// @return _ The liveness window value in seconds
-    function _livenessWindow() internal view virtual returns (uint40);
-
-    /// @dev Returns the time delay before a new prover takes over after a successful bid
-    /// @return _ The succession delay value in seconds
-    function _successionDelay() internal view virtual returns (uint40);
-
-    /// @dev Returns the delay after which the current prover can exit, or is removed if evicted
-    /// @return _ The exit delay value in seconds
-    function _exitDelay() internal view virtual returns (uint40);
-
-    /// @dev Returns the time window for a prover to submit a valid proof after their period ends
-    /// @return _ The proving window value in seconds
-    function _provingWindow() internal view virtual returns (uint40);
-
-    /// @dev Returns the minimum stake required to be a prover
-    /// @return _ The liveness bond value in wei
-    function _livenessBond() internal view virtual returns (uint96);
-
-    /// @dev Returns the percentage (in bps) of the liveness bond that the evictor gets as an incentive
-    /// @return _ The evictor incentive percentage
-    function _evictorIncentivePercentage() internal view virtual returns (uint16);
-
-    /// @dev Returns the percentage (in bps) of the remaining liveness bond rewarded to the prover
-    /// @return _ The reward percentage
-    function _rewardPercentage() internal view virtual returns (uint16);
-
-    /// @dev The percentage of the fee that is charged for delayed publications
-    /// @dev It is recommended to set this to >100 since delayed publications should usually be charged at a higher rate
-    /// @return _ The multiplier as a percentage (two decimals). This value should usually be greater than 100 (100%).
-    function _delayedFeePercentage() internal view virtual returns (uint16);
 
     /// @dev Increases `user`'s balance by `amount` and emits a `Deposit` event
     function _deposit(address user, uint256 amount) internal {
