@@ -59,8 +59,7 @@ library LibProvingPeriod {
 
     /// @notice The period has an end timestamp in the past
     function isComplete(Period storage period) internal view returns (bool) {
-        uint40 periodEnd = period.end;
-        return periodEnd != 0 && block.timestamp > periodEnd;
+        return isBefore(period, block.timestamp);
     }
 
     /// @notice The period fee, scaled by `delayedFeePercentage` if the publication is delayed
@@ -73,9 +72,14 @@ library LibProvingPeriod {
         return period.end == 0;
     }
 
+    /// @notice The timestamp is after the end of the period (which must be set)
+    function isBefore(Period storage period, uint256 timestamp) internal view returns (bool) {
+        return period.end != 0 && timestamp > period.end;
+    }
+
     /// @notice The timestamp is not after the end of the period
     function isNotBefore(Period storage period, uint256 timestamp) internal view returns (bool) {
-        return isOpen(period) || timestamp.toUint40() <= period.end;
+        return !isBefore(period, timestamp);
     }
 
     /// @notice The period has a deadline timestamp in the past

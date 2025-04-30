@@ -177,12 +177,13 @@ abstract contract BaseProverManager is IProposerFees, IProverManager {
     function finalizePastPeriod(uint256 periodId, IPublicationFeed.PublicationHeader calldata provenPublication)
         external
     {
-        ICheckpointTracker.Checkpoint memory lastProven = checkpointTracker.getProvenCheckpoint();
         require(publicationFeed.validateHeader(provenPublication), "Invalid publication header");
+
+        ICheckpointTracker.Checkpoint memory lastProven = checkpointTracker.getProvenCheckpoint();
         require(lastProven.publicationId >= provenPublication.id, "Publication must be proven");
 
         LibProvingPeriod.Period storage period = _periods[periodId];
-        require(provenPublication.timestamp > period.end, "Publication must be after period");
+        require(period.isBefore(provenPublication.timestamp), "Publication must be after period");
 
         uint96 stake = period.stake;
         _increaseBalance(period.prover, period.pastDeadline ? stake.scaleBy(_rewardPercentage()) : stake);
