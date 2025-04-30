@@ -119,7 +119,7 @@ abstract contract BaseProverManager is IProposerFees, IProverManager {
         // Reward the evictor and slash the prover
         uint96 evictorIncentive = period.stake.scaleBy(_evictorIncentivePercentage());
         _increaseBalance(msg.sender, evictorIncentive);
-        period.stake -= evictorIncentive;
+        period.slash(evictorIncentive);
 
         emit ProverEvicted(period.prover, msg.sender, end, period.stake);
     }

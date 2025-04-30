@@ -88,4 +88,9 @@ library LibProvingPeriod {
         period.end = end;
         period.deadline = deadline;
     }
+
+    /// @notice slash the penalty from the period's stake
+    function slash(Period storage period, uint96 penalty) internal {
+        period.stake -= penalty;
+    }
 }
