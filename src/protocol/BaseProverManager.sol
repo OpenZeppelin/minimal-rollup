@@ -167,11 +167,9 @@ abstract contract BaseProverManager is IProposerFees, IProverManager {
         checkpointTracker.proveTransition(start, end, numPublications, numDelayedPublications, proof);
 
         if (period.isDeadlinePassed()) {
-            // Whoever proves the final publication in this period can (eventually) call `finalizePastPeriod` to claim a
-            // percentage of the stake. In practice, a single prover will likely close the whole period with one proof.
-            period.prover = msg.sender;
-            period.pastDeadline = true;
+            period.assignReward(msg.sender);
         }
+
         uint96 baseFee = period.fee;
         uint256 regularPubFee = (numPublications - numDelayedPublications) * baseFee;
 

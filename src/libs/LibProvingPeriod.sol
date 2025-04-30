@@ -103,4 +103,12 @@ library LibProvingPeriod {
     function slash(Period storage period, uint96 penalty) internal {
         period.stake -= penalty;
     }
+
+    /// @notice Assign the newProver (and percentage of remaining stake) to the new prover
+    /// @dev The last prover for the period will be assigned the reward (claimed with `finalizePastPeriod`).
+    /// In practice, a single prover will likely close the whole period with one proof.
+    function assignReward(Period storage period, address newProver) internal {
+        period.prover = newProver;
+        period.pastDeadline = true;
+    }
 }
