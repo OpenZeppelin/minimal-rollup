@@ -73,6 +73,11 @@ library LibProvingPeriod {
         return period.end == 0;
     }
 
+    /// @notice The timestamp is not after the end of the period
+    function isNotBefore(Period storage period, uint256 timestamp) internal view returns (bool) {
+        return isOpen(period) || timestamp.toUint40() <= period.end;
+    }
+
     /// @dev Sets the period's end and deadline timestamps
     /// @param period The period to finalize
     /// @param endDelay The duration (from now) when the period will end

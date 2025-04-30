@@ -158,7 +158,7 @@ abstract contract BaseProverManager is IProposerFees, IProverManager {
 
         require(publicationFeed.validateHeader(lastPub), "Last publication does not exist");
         require(end.publicationId == lastPub.id, "Last publication does not match end checkpoint");
-        require(period.isOpen() || lastPub.timestamp <= period.end, "Last publication is after the period");
+        require(period.isNotBefore(lastPub.timestamp), "Last publication is after the period");
 
         require(publicationFeed.validateHeader(firstPub), "First publication does not exist");
         require(start.publicationId + 1 == firstPub.id, "First publication not immediately after start checkpoint");
