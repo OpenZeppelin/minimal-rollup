@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
-import {Test, Vm, console} from "forge-std/Test.sol";
+import {Test, Vm} from "forge-std/Test.sol";
 import {CheckpointTracker} from "src/protocol/CheckpointTracker.sol";
 import {ICheckpointTracker} from "src/protocol/ICheckpointTracker.sol";
 

@@ -18,8 +18,9 @@ import {MockCheckpointTracker} from "test/mocks/MockCheckpointTracker.sol";
 
 /// State where there are no signals.
 contract BaseState is Test {
-    SignalService public L1signalService;
-    SignalService public L2signalService;
+    SignalService public L1SignalService;
+    SignalService public L2SignalService;
+
     MockCheckpointTracker public checkpointTracker;
     MockAnchor public anchor;
 
@@ -47,29 +48,29 @@ contract BaseState is Test {
         // Sender has 10 eth in the L1 fork
         vm.deal(defaultSender, senderBalanceL1);
 
+        // Deploy L1SignalService
         vm.prank(defaultSender);
-        L1signalService = new SignalService();
-        vm.deal(address(L1signalService), ETHBridgeInitBalance);
+        L1SignalService = new SignalService();
 
-        checkpointTracker = new MockCheckpointTracker(address(L1signalService));
+        checkpointTracker = new MockCheckpointTracker(address(L1SignalService));
 
         L2Fork = vm.createFork("L2");
-        vm.selectFork(L2Fork);
 
         // Sender has 0 eth in the L2 fork
         vm.deal(defaultSender, senderBalanceL2);
 
-        vm.prank(defaultSender);
-        L2signalService = new SignalService();
-        vm.deal(address(L2signalService), ETHBridgeInitBalance);
+        vm.selectFork(L2Fork);
 
-        anchor = new MockAnchor(address(L2signalService));
+        // Deploy L2SignalService
+        vm.prank(defaultSender);
+        L2SignalService = new SignalService();
+
+        // Deploy MockAnchor
+        anchor = new MockAnchor(address(L2SignalService));
 
         // Labels for debugging
-        vm.label(address(L1signalService), "L1signalService");
-        vm.label(address(L2signalService), "L2signalService");
-        vm.label(address(checkpointTracker), "CheckpointTracker");
-        vm.label(address(anchor), "MockAnchor");
+        vm.label(address(L1SignalService), "L1SignalService");
+        vm.label(address(L2SignalService), "L2SignalService");
     }
 }
 
@@ -92,7 +93,7 @@ contract SendL1SignalState is BaseState {
         super.setUp();
         vm.selectFork(L1Fork);
         vm.prank(defaultSender);
-        L1signalService.sendSignal(signal);
+        L1SignalService.sendSignal(signal);
     }
 
     // NOTE: This proof is only valid for the defaultSender address and signal
@@ -121,6 +122,10 @@ contract SendL1SignalState is BaseState {
 
 contract SendL1SignalTest is SendL1SignalState {
     function test_verifyL1Signal_UsingBothProofs() public {
+        vm.selectFork(L1Fork);
+        bool isSignalStored = L2SignalService.isSignalStored(signal, defaultSender);
+        assertTrue(isSignalStored);
+
         vm.selectFork(L2Fork);
 
         ISignalService.SignalProof memory signalProof = ISignalService.SignalProof(accountProof(), storageProof());
@@ -129,10 +134,6 @@ contract SendL1SignalTest is SendL1SignalState {
         uint256 height = 1;
         anchor.anchor(height, stateRoot);
 
-        bool isSignalStored = L2signalService.isSignalStored(signal, defaultSender);
-
-        assertTrue(isSignalStored);
-
-        L2signalService.verifySignal(height, address(anchor), defaultSender, signal, encodedProof);
+        L2SignalService.verifySignal(height, address(anchor), defaultSender, signal, encodedProof);
     }
 }
