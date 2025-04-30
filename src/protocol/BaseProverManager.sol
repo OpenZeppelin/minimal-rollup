@@ -73,9 +73,7 @@ abstract contract BaseProverManager is IProposerFees, IProverManager {
         uint256 periodId = _currentPeriodId;
 
         if (_periods[periodId].isComplete()) {
-            // Advance to the next period
-            _currentPeriodId = ++periodId;
-            emit NewPeriod(periodId);
+            periodId = _advancePeriod();
         }
 
         // Deduct fee from proposer's balance
@@ -346,5 +344,12 @@ abstract contract BaseProverManager is IProposerFees, IProverManager {
         deadline = end + provingWindow_;
         period.end = end;
         period.deadline = deadline;
+    }
+
+    /// @notice mark the next period as active. Future publications will be assigned to the new period
+    function _advancePeriod() private returns (uint256 periodId) {
+        _currentPeriodId++;
+        periodId = _currentPeriodId;
+        emit NewPeriod(periodId);
     }
 }
