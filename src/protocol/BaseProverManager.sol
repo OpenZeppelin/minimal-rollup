@@ -192,16 +192,14 @@ abstract contract BaseProverManager is IProposerFees, IProverManager {
     /// @inheritdoc IProposerFees
     function getCurrentFees() external view returns (uint96 fee, uint96 delayedFee) {
         uint256 currentPeriod = _currentPeriodId;
-        if (_periods[currentPeriod].isComplete()) {
-            // can never overflow
-            unchecked {
-                ++currentPeriod;
-            }
+        LibProvingPeriod.Period storage period = _periods[currentPeriod];
+
+        if (period.isComplete()) {
+            period = _periods[currentPeriod + 1];
         }
 
-        LibProvingPeriod.Period storage period = _periods[currentPeriod];
-        fee = period.fee;
-        delayedFee = fee.scaleBy(period.delayedFeePercentage, LibPercentage.PERCENT);
+        fee = period.publicationFee(false);
+        delayedFee = period.publicationFee(true);
     }
 
     /// @notice Get the balance of a user
