@@ -31,7 +31,7 @@ contract ETHBridge is IETHBridge {
     }
 
     /// @inheritdoc IETHBridge
-    function getDepositId(ETHDeposit memory ethDeposit) public view returns (bytes32 id) {
+    function getDepositId(ETHDeposit memory ethDeposit) public pure returns (bytes32 id) {
         return _generateId(ethDeposit);
     }
 

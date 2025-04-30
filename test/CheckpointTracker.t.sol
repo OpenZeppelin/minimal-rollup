@@ -36,13 +36,12 @@ contract CheckpointTrackerTest is Test {
         feed = new PublicationFeed();
         createSampleFeed();
 
-        signalService = new SignalService(rollupOperator);
+        signalService = new SignalService();
 
         tracker = new CheckpointTracker(
             keccak256(abi.encode("genesis")), address(feed), address(verifier), proverManager, address(signalService)
         );
         vm.prank(rollupOperator);
-        ICommitmentStore(address(signalService)).setAuthorizedCommitter(address(tracker));
         proof = abi.encode("proof");
     }
 
