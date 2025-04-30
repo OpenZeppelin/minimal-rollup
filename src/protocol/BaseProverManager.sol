@@ -2,6 +2,7 @@
 pragma solidity ^0.8.28;
 
 import {LibPercentage} from "../libs/LibPercentage.sol";
+import {LibProvingPeriod} from "../libs/LibProvingPeriod.sol";
 import {ICheckpointTracker} from "./ICheckpointTracker.sol";
 import {IProposerFees} from "./IProposerFees.sol";
 import {IProverManager} from "./IProverManager.sol";
@@ -14,23 +15,6 @@ abstract contract BaseProverManager is IProposerFees, IProverManager {
     using SafeCast for uint256;
     using LibPercentage for uint96;
 
-    struct Period {
-        // SLOT 1
-        address prover;
-        uint96 stake;
-        // SLOT 2
-        // the fee that the prover is willing to charge for proving each publication
-        uint96 fee;
-        // the percentage (with two decimals precision) of the fee that is charged for delayed publications.
-        uint16 delayedFeePercentage;
-        // the timestamp of the end of the period. Default to zero while the period is open.
-        uint40 end;
-        // the time by which the prover needs to submit a proof
-        uint40 deadline;
-        // whether the proof came after the deadline
-        bool pastDeadline;
-    }
-
     address public immutable inbox;
     ICheckpointTracker public immutable checkpointTracker;
     IPublicationFeed public immutable publicationFeed;
@@ -40,7 +24,7 @@ abstract contract BaseProverManager is IProposerFees, IProverManager {
     /// @notice The current period
     uint256 private _currentPeriodId;
     /// @dev Periods represent proving windows
-    mapping(uint256 periodId => Period) private _periods;
+    mapping(uint256 periodId => LibProvingPeriod.Period) private _periods;
 
     /// @dev Initializes the contract state and deposits the initial prover's liveness bond.
     /// The constructor also calls `_claimProvingVacancy`. Publications will actually start in period 1.
@@ -110,8 +94,8 @@ abstract contract BaseProverManager is IProposerFees, IProverManager {
     /// An active period is one that doesn't have an `end` timestamp yet.
     function bid(uint96 offeredFee) external {
         uint256 currentPeriodId_ = _currentPeriodId;
-        Period storage currentPeriod = _periods[currentPeriodId_];
-        Period storage nextPeriod = _periods[currentPeriodId_ + 1];
+        LibProvingPeriod.Period storage currentPeriod = _periods[currentPeriodId_];
+        LibProvingPeriod.Period storage nextPeriod = _periods[currentPeriodId_ + 1];
         if (currentPeriod.end == 0) {
             _ensureSufficientUnderbid(currentPeriod.fee, offeredFee);
             _closePeriod(currentPeriod, _successionDelay(), _provingWindow());
@@ -141,7 +125,7 @@ abstract contract BaseProverManager is IProposerFees, IProverManager {
         uint256 publicationTimestamp = publicationHeader.timestamp;
         require(publicationTimestamp + _livenessWindow() < block.timestamp, "Publication is not old enough");
 
-        Period storage period = _periods[_currentPeriodId];
+        LibProvingPeriod.Period storage period = _periods[_currentPeriodId];
         require(period.end == 0, "Proving period is not active");
 
         ICheckpointTracker.Checkpoint memory lastProven = checkpointTracker.getProvenCheckpoint();
@@ -162,7 +146,7 @@ abstract contract BaseProverManager is IProposerFees, IProverManager {
     /// @dev The prover still has to wait for the `exitDelay` to allow other provers to bid for the role.
     /// @dev The liveness bond can only be withdrawn once the period has been fully proven.
     function exit() external {
-        Period storage period = _periods[_currentPeriodId];
+        LibProvingPeriod.Period storage period = _periods[_currentPeriodId];
         address prover = period.prover;
         require(msg.sender == prover, "Not current prover");
         require(period.end == 0, "Prover already exited");
@@ -187,7 +171,7 @@ abstract contract BaseProverManager is IProposerFees, IProverManager {
         bytes calldata proof,
         uint256 periodId
     ) external {
-        Period storage period = _periods[periodId];
+        LibProvingPeriod.Period storage period = _periods[periodId];
         uint40 previousPeriodEnd = periodId > 0 ? _periods[periodId - 1].end : 0;
 
         require(publicationFeed.validateHeader(lastPub), "Last publication does not exist");
@@ -228,7 +212,7 @@ abstract contract BaseProverManager is IProposerFees, IProverManager {
         require(publicationFeed.validateHeader(provenPublication), "Invalid publication header");
         require(lastProven.publicationId >= provenPublication.id, "Publication must be proven");
 
-        Period storage period = _periods[periodId];
+        LibProvingPeriod.Period storage period = _periods[periodId];
         require(provenPublication.timestamp > period.end, "Publication must be after period");
 
         uint96 stake = period.stake;
@@ -247,7 +231,7 @@ abstract contract BaseProverManager is IProposerFees, IProverManager {
             }
         }
 
-        Period storage period = _periods[currentPeriod];
+        LibProvingPeriod.Period storage period = _periods[currentPeriod];
         fee = period.fee;
         delayedFee = fee.scaleBy(period.delayedFeePercentage, LibPercentage.PERCENT);
     }
@@ -268,7 +252,7 @@ abstract contract BaseProverManager is IProposerFees, IProverManager {
     /// @notice Returns the period for a given period id
     /// @param periodId The id of the period
     /// @return _ The period
-    function getPeriod(uint256 periodId) external view returns (Period memory) {
+    function getPeriod(uint256 periodId) external view returns (LibProvingPeriod.Period memory) {
         return _periods[periodId];
     }
 
@@ -333,11 +317,11 @@ abstract contract BaseProverManager is IProposerFees, IProverManager {
     /// @param prover The address of the prover to be set for the new period
     function _claimProvingVacancy(uint96 fee, address prover) private {
         uint256 periodId = _currentPeriodId;
-        Period storage period = _periods[periodId];
+        LibProvingPeriod.Period storage period = _periods[periodId];
         require(period.prover == address(0) && period.end == 0, "No proving vacancy");
         _closePeriod(period, 0, 0);
 
-        Period storage nextPeriod = _periods[periodId + 1];
+        LibProvingPeriod.Period storage nextPeriod = _periods[periodId + 1];
         _updatePeriod(nextPeriod, prover, fee, _livenessBond());
     }
 
@@ -346,7 +330,7 @@ abstract contract BaseProverManager is IProposerFees, IProverManager {
     /// @param prover The address of the prover
     /// @param fee The fee offered by the prover
     /// @param stake The liveness bond to be staked
-    function _updatePeriod(Period storage period, address prover, uint96 fee, uint96 stake) private {
+    function _updatePeriod(LibProvingPeriod.Period storage period, address prover, uint96 fee, uint96 stake) private {
         period.prover = prover;
         period.fee = fee;
         period.delayedFeePercentage = _delayedFeePercentage();
@@ -360,7 +344,7 @@ abstract contract BaseProverManager is IProposerFees, IProverManager {
     /// @param provingWindow_ The duration that proofs can be submitted after the end of the period
     /// @return end The period's end timestamp
     /// @return deadline The period's deadline timestamp
-    function _closePeriod(Period storage period, uint40 endDelay, uint40 provingWindow_)
+    function _closePeriod(LibProvingPeriod.Period storage period, uint40 endDelay, uint40 provingWindow_)
         private
         returns (uint40 end, uint40 deadline)
     {
