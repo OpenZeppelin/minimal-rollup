@@ -3,12 +3,14 @@ pragma solidity ^0.8.28;
 
 import {LibPercentage} from "../libs/LibPercentage.sol";
 import {LibProvingPeriod} from "../libs/LibProvingPeriod.sol";
+
+import {BalanceAccounting} from "./BalanceAccounting.sol";
 import {ICheckpointTracker} from "./ICheckpointTracker.sol";
 import {IProposerFees} from "./IProposerFees.sol";
 import {IProverManager} from "./IProverManager.sol";
 import {IPublicationFeed} from "./IPublicationFeed.sol";
 
-abstract contract BaseProverManager is IProposerFees, IProverManager {
+abstract contract BaseProverManager is IProposerFees, IProverManager, BalanceAccounting {
     using LibPercentage for uint96;
     using LibProvingPeriod for LibProvingPeriod.Period;
 
@@ -16,8 +18,6 @@ abstract contract BaseProverManager is IProposerFees, IProverManager {
     ICheckpointTracker public immutable checkpointTracker;
     IPublicationFeed public immutable publicationFeed;
 
-    /// @notice Common balances for proposers and provers
-    mapping(address user => uint256 balance) private _balances;
     /// @notice The current period
     uint256 private _currentPeriodId;
     /// @dev Periods represent proving windows
@@ -202,13 +202,6 @@ abstract contract BaseProverManager is IProposerFees, IProverManager {
         delayedFee = period.publicationFee(true);
     }
 
-    /// @notice Get the balance of a user
-    /// @param user The address of the user
-    /// @return The balance of the user
-    function balances(address user) public view returns (uint256) {
-        return _balances[user];
-    }
-
     /// @notice Get the current period ID
     /// @return The current period ID
     function currentPeriodId() public view returns (uint256) {
@@ -270,7 +263,7 @@ abstract contract BaseProverManager is IProposerFees, IProverManager {
 
     /// @dev Increases `user`'s balance by `amount` and emits a `Deposit` event
     function _deposit(address user, uint256 amount) internal {
-        _balances[user] += amount;
+        _increaseBalance(user, amount);
         emit Deposit(user, amount);
     }
 
@@ -298,13 +291,5 @@ abstract contract BaseProverManager is IProposerFees, IProverManager {
         _currentPeriodId++;
         periodId = _currentPeriodId;
         emit NewPeriod(periodId);
-    }
-
-    function _increaseBalance(address user, uint256 amount) internal {
-        _balances[user] += amount;
-    }
-
-    function _decreaseBalance(address user, uint256 amount) internal {
-        _balances[user] -= amount;
     }
 }
