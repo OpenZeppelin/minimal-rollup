@@ -150,7 +150,7 @@ abstract contract BaseProverManager is IProposerFees, IProverManager {
 
         // Reward the evictor and slash the prover
         // Casting this directly is safe since the resulting number is smaller than the original value
-        uint96 evictorIncentive = uint96(_calculatePercentage(period.stake, _evictorIncentivePercentage()));
+        uint96 evictorIncentive = _calculatePercentage(period.stake, _evictorIncentivePercentage()).toUint96();
         _balances[msg.sender] += evictorIncentive;
         period.stake -= evictorIncentive;
 
@@ -232,7 +232,7 @@ abstract contract BaseProverManager is IProposerFees, IProverManager {
 
         uint96 stake = period.stake;
         _balances[period.prover] +=
-            period.pastDeadline ? uint96(_calculatePercentage(stake, _rewardPercentage())) : stake;
+            period.pastDeadline ? _calculatePercentage(stake, _rewardPercentage()).toUint96() : stake;
         period.stake = 0;
     }
 
@@ -375,7 +375,7 @@ abstract contract BaseProverManager is IProposerFees, IProverManager {
         private
         returns (uint40 end, uint40 deadline)
     {
-        end = uint40(block.timestamp) + endDelay;
+        end = block.timestamp.toUint40() + endDelay;
         deadline = end + provingWindow_;
         period.end = end;
         period.deadline = deadline;
