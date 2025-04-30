@@ -183,11 +183,10 @@ abstract contract BaseProverManager is IProposerFees, IProverManager {
         require(lastProven.publicationId >= provenPublication.id, "Publication must be proven");
 
         LibProvingPeriod.Period storage period = _periods[periodId];
+        require(period.isInitialized(), "Period not initialized");
         require(period.isBefore(provenPublication.timestamp), "Publication must be after period");
 
-        uint96 stake = period.stake;
-        _increaseBalance(period.prover, period.pastDeadline ? stake.scaleBy(_rewardPercentage()) : stake);
-        period.stake = 0;
+        _increaseBalance(period.prover, period.finalize(_rewardPercentage()));
     }
 
     /// @inheritdoc IProposerFees
