@@ -4,6 +4,8 @@ pragma solidity ^0.8.28;
 import {LibSignal} from "../libs/LibSignal.sol";
 import {CommitmentStore} from "./CommitmentStore.sol";
 import {ETHBridge} from "./ETHBridge.sol";
+
+import {ICommitmentStore} from "./ICommitmentStore.sol";
 import {ISignalService} from "./ISignalService.sol";
 
 /// @dev SignalService combines secure cross-chain messaging with native token bridging.
@@ -42,27 +44,6 @@ contract SignalService is ISignalService, CommitmentStore {
     ) external {
         _verifySignal(height, commitmentPublisher, sender, value, LibSignal.SIGNAL_NAMESPACE, proof);
         emit SignalVerified(sender, value);
-    }
-
-    /// @dev Overrides ETHBridge.depositETH to add signaling functionality.
-    function deposit(address to, bytes memory data) public payable override returns (bytes32 id) {
-        id = super.deposit(to, data);
-        id.signal(msg.sender, ETH_BRIDGE_NAMESPACE);
-    }
-
-    // CHECK: Should this function be non-reentrant?
-    /// @inheritdoc ETHBridge
-    /// @dev Overrides ETHBridge.claimDeposit to add signal verification logic.
-    function claimDeposit(ETHDeposit memory ethDeposit, uint256 height, bytes memory proof)
-        external
-        override
-        returns (bytes32 id)
-    {
-        id = _generateId(ethDeposit);
-
-        _verifySignal(height, commitmentPublisher, ethDeposit.from, id, ETH_BRIDGE_NAMESPACE, proof);
-
-        super._processClaimDepositWithId(id, ethDeposit);
     }
 
     function _verifySignal(

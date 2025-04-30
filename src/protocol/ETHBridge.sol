@@ -6,7 +6,7 @@ import {IETHBridge} from "./IETHBridge.sol";
 /// @dev Abstract ETH bridging contract to send native ETH between L1 <-> L2 using storage proofs.
 ///
 /// IMPORTANT: No recovery mechanism is implemented in case an account creates a deposit that can't be claimed.
-abstract contract ETHBridge is IETHBridge {
+contract ETHBridge is IETHBridge {
     mapping(bytes32 id => bool claimed) private _claimed;
 
     /// Incremental nonce to generate unique deposit IDs.
@@ -36,10 +36,12 @@ abstract contract ETHBridge is IETHBridge {
     }
 
     /// @inheritdoc IETHBridge
-    function claimDeposit(ETHDeposit memory deposit, uint256 height, bytes memory proof)
+    function claimDeposit(ETHDeposit memory ethDeposit, uint256 height, bytes memory proof)
         external
-        virtual
-        returns (bytes32 id);
+        returns (bytes32 id)
+    {
+        id = _generateId(ethDeposit);
+    }
 
     /// @dev Processes deposit claim by id.
     /// @param id Identifier of the deposit
