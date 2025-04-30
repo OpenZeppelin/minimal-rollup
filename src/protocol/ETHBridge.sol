@@ -4,7 +4,7 @@ pragma solidity ^0.8.28;
 import {IETHBridge} from "./IETHBridge.sol";
 import {ISignalService} from "./ISignalService.sol";
 
-/// @dev Abstract ETH bridging contract to send native ETH between L1 <-> L2 using storage proofs.
+/// @dev ETH bridging contract to send native ETH between L1 <-> L2 using storage proofs.
 ///
 /// IMPORTANT: No recovery mechanism is implemented in case an account creates a deposit that can't be claimed.
 contract ETHBridge is IETHBridge {
@@ -15,9 +15,14 @@ contract ETHBridge is IETHBridge {
 
     ISignalService public immutable signalService;
 
-    constructor(address _signalService) {
+    /// @dev This is the Anchor on L2 and the Checkpoint Tracker on the L1
+    address public immutable trustedCommitmentPublisher;
+
+    constructor(address _signalService, address _trustedCommitmentPublisher) {
         require(_signalService != address(0), "Empty signal service");
+        require(_trustedCommitmentPublisher != address(0), "Empty trusted publisher");
         signalService = ISignalService(_signalService);
+        trustedCommitmentPublisher = _trustedCommitmentPublisher;
     }
 
     /// @inheritdoc IETHBridge
@@ -43,11 +48,9 @@ contract ETHBridge is IETHBridge {
 
     /// @inheritdoc IETHBridge
     // TODO: Non reentrant
-    function claimDeposit(ETHDeposit memory ethDeposit, uint256 height, address commitmentPublisher, bytes memory proof)
-        external
-    {
+    function claimDeposit(ETHDeposit memory ethDeposit, uint256 height, bytes memory proof) external {
         bytes32 id = _generateId(ethDeposit);
-        signalService.verifySignal(height, commitmentPublisher, ethDeposit.from, id, proof);
+        signalService.verifySignal(height, trustedCommitmentPublisher, ethDeposit.from, id, proof);
         require(!claimed(id), AlreadyClaimed());
         _claimed[id] = true;
         _sendETH(ethDeposit.to, ethDeposit.amount, ethDeposit.data);
