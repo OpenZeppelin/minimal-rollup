@@ -48,7 +48,6 @@ contract BaseState is Test {
         vm.deal(defaultSender, senderBalanceL1);
 
         vm.prank(defaultSender);
-        L1signalService = new SignalService(rollupOperator);
         vm.deal(address(L1signalService), ETHBridgeInitBalance);
 
         checkpointTracker = new MockCheckpointTracker(address(L1signalService));
@@ -60,13 +59,11 @@ contract BaseState is Test {
         vm.deal(defaultSender, senderBalanceL2);
 
         vm.prank(defaultSender);
-        L2signalService = new SignalService(rollupOperator);
         vm.deal(address(L2signalService), ETHBridgeInitBalance);
 
         anchor = new MockAnchor(address(L2signalService));
 
         vm.prank(rollupOperator);
-        L2signalService.setAuthorizedCommitter(address(anchor));
 
         // Labels for debugging
         vm.label(address(L1signalService), "L1signalService");
@@ -132,7 +129,7 @@ contract SendL1SignalTest is SendL1SignalState {
         uint256 height = 1;
         anchor.anchor(height, stateRoot);
 
-        L2signalService.verifySignal(height, defaultSender, signal, encodedProof);
+        L2signalService.verifySignal(height, address(anchor), defaultSender, signal, encodedProof);
     }
 
     function test_verifyL1Signal_UsingStorageProof() public {
@@ -145,6 +142,6 @@ contract SendL1SignalTest is SendL1SignalState {
         uint256 height = 1;
         anchor.anchor(height, storageRoot);
 
-        L2signalService.verifySignal(height, defaultSender, signal, encodedProof);
+        L2signalService.verifySignal(height, address(anchor), defaultSender, signal, encodedProof);
     }
 }
