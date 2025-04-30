@@ -4,7 +4,6 @@ pragma solidity ^0.8.28;
 import {LibPercentage} from "../libs/LibPercentage.sol";
 import "@openzeppelin/contracts/utils/math/SafeCast.sol";
 
-
 /// Each proving period is defined by
 /// - the _prover_ address that must post proofs for any publications received during this period
 /// - the standard proving _fee_ that the prover charges per publication in this period
@@ -38,6 +37,18 @@ library LibProvingPeriod {
         uint40 deadline;
         // whether the final proof came after the deadline
         bool pastDeadline;
+    }
+
+    /// @notice Initializes the period with the given parameters.
+    /// @dev The _end_ and _deadline_ default to zero. The _pastDeadline` flag defaults to false.
+    /// @dev This can be called multiple times to set the latest bid while the auction is ongoing.
+    function init(Period storage period, address prover, uint96 fee, uint16 delayedFeePercentage, uint96 stake)
+        internal
+    {
+        period.prover = prover;
+        period.fee = fee;
+        period.delayedFeePercentage = delayedFeePercentage;
+        period.stake = stake;
     }
 
     /// @notice The period has an end timestamp in the past

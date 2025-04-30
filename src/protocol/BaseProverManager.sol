@@ -57,7 +57,7 @@ abstract contract BaseProverManager is IProposerFees, IProverManager {
     /// @notice Withdraw available(unlocked) funds.
     /// @param amount The amount to withdraw
     function withdraw(uint256 amount) external {
-        _balances[msg.sender] -= amount;
+        _decreaseBalance(msg.sender, amount);
         _transferOut(msg.sender, amount);
         emit Withdrawal(msg.sender, amount);
     }
@@ -73,8 +73,7 @@ abstract contract BaseProverManager is IProposerFees, IProverManager {
             periodId = _advancePeriod();
         }
 
-        // Deduct fee from proposer's balance
-        _balances[proposer] -= _periods[periodId].publicationFee(isDelayed);
+        _decreaseBalance(proposer, _periods[periodId].publicationFee(isDelayed));
     }
 
     /// @inheritdoc IProverManager
@@ -94,15 +93,15 @@ abstract contract BaseProverManager is IProposerFees, IProverManager {
                 _ensureSufficientUnderbid(nextPeriod.fee, offeredFee);
 
                 // Refund the liveness bond to the losing bid
-                _balances[nextProverAddress] += nextPeriod.stake;
+                _increaseBalance(nextProverAddress, nextPeriod.stake);
             }
         }
 
         // Record the next period info
-        uint96 livenessBond_ = _livenessBond();
-        _updatePeriod(nextPeriod, msg.sender, offeredFee, livenessBond_);
+        _decreaseBalance(msg.sender, _livenessBond());
+        nextPeriod.init(msg.sender, offeredFee, _delayedFeePercentage(), _livenessBond());
 
-        emit ProverOffer(msg.sender, currentPeriodId_ + 1, offeredFee, livenessBond_);
+        emit ProverOffer(msg.sender, currentPeriodId_ + 1, offeredFee, _livenessBond());
     }
 
     /// @inheritdoc IProverManager
@@ -125,7 +124,7 @@ abstract contract BaseProverManager is IProposerFees, IProverManager {
 
         // Reward the evictor and slash the prover
         uint96 evictorIncentive = period.stake.scaleBy(_evictorIncentivePercentage());
-        _balances[msg.sender] += evictorIncentive;
+        _increaseBalance(msg.sender, evictorIncentive);
         period.stake -= evictorIncentive;
 
         emit ProverEvicted(period.prover, msg.sender, end, period.stake);
@@ -190,7 +189,7 @@ abstract contract BaseProverManager is IProposerFees, IProverManager {
             delayedPubFee = numDelayedPublications * delayedFee;
         }
 
-        _balances[period.prover] += regularPubFee + delayedPubFee;
+        _increaseBalance(period.prover, regularPubFee + delayedPubFee);
     }
 
     /// @inheritdoc IProverManager
@@ -205,7 +204,7 @@ abstract contract BaseProverManager is IProposerFees, IProverManager {
         require(provenPublication.timestamp > period.end, "Publication must be after period");
 
         uint96 stake = period.stake;
-        _balances[period.prover] += period.pastDeadline ? stake.scaleBy(_rewardPercentage()) : stake;
+        _increaseBalance(period.prover, period.pastDeadline ? stake.scaleBy(_rewardPercentage()) : stake);
         period.stake = 0;
     }
 
@@ -310,20 +309,8 @@ abstract contract BaseProverManager is IProposerFees, IProverManager {
         period.close(0, 0);
 
         LibProvingPeriod.Period storage nextPeriod = _periods[periodId + 1];
-        _updatePeriod(nextPeriod, prover, fee, _livenessBond());
-    }
-
-    /// @dev Updates a period with prover information and transfers the liveness bond
-    /// @param period The period to update
-    /// @param prover The address of the prover
-    /// @param fee The fee offered by the prover
-    /// @param stake The liveness bond to be staked
-    function _updatePeriod(LibProvingPeriod.Period storage period, address prover, uint96 fee, uint96 stake) private {
-        period.prover = prover;
-        period.fee = fee;
-        period.delayedFeePercentage = _delayedFeePercentage();
-        period.stake = stake; // overwrite previous value. We assume the previous value is zero or already returned
-        _balances[prover] -= stake;
+        _decreaseBalance(prover, _livenessBond());
+        nextPeriod.init(prover, fee, _delayedFeePercentage(), _livenessBond());
     }
 
     /// @notice mark the next period as active. Future publications will be assigned to the new period
@@ -331,5 +318,13 @@ abstract contract BaseProverManager is IProposerFees, IProverManager {
         _currentPeriodId++;
         periodId = _currentPeriodId;
         emit NewPeriod(periodId);
+    }
+
+    function _increaseBalance(address user, uint256 amount) internal {
+        _balances[user] += amount;
+    }
+
+    function _decreaseBalance(address user, uint256 amount) internal {
+        _balances[user] -= amount;
     }
 }
