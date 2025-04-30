@@ -33,10 +33,14 @@ contract SignalService is ISignalService, CommitmentStore {
 
     /// @inheritdoc ISignalService
     /// @dev Cannot be used to verify signals that are under the eth-bridge namespace.
-    function verifySignal(uint256 index, address commitmentPublisher, address sender, bytes32 value, bytes memory proof)
-        external
-    {
-        _verifySignal(index, commitmentPublisher, sender, value, LibSignal.SIGNAL_NAMESPACE, proof);
+    function verifySignal(
+        uint256 height,
+        address commitmentPublisher,
+        address sender,
+        bytes32 value,
+        bytes memory proof
+    ) external {
+        _verifySignal(height, commitmentPublisher, sender, value, LibSignal.SIGNAL_NAMESPACE, proof);
         emit SignalVerified(sender, value);
     }
 
@@ -49,20 +53,20 @@ contract SignalService is ISignalService, CommitmentStore {
     // CHECK: Should this function be non-reentrant?
     /// @inheritdoc ETHBridge
     /// @dev Overrides ETHBridge.claimDeposit to add signal verification logic.
-    function claimDeposit(ETHDeposit memory ethDeposit, uint256 index, bytes memory proof)
+    function claimDeposit(ETHDeposit memory ethDeposit, uint256 height, bytes memory proof)
         external
         override
         returns (bytes32 id)
     {
         id = _generateId(ethDeposit);
 
-        _verifySignal(index, commitmentPublisher, ethDeposit.from, id, ETH_BRIDGE_NAMESPACE, proof);
+        _verifySignal(height, commitmentPublisher, ethDeposit.from, id, ETH_BRIDGE_NAMESPACE, proof);
 
         super._processClaimDepositWithId(id, ethDeposit);
     }
 
     function _verifySignal(
-        uint256 index,
+        uint256 height,
         address commitmentPublisher,
         address sender,
         bytes32 value,
@@ -72,10 +76,13 @@ contract SignalService is ISignalService, CommitmentStore {
         // TODO: commitmentAt(height) might not be the 'state root' of the chain
         // For now it could be the block hash or other hashed value
         // further work is needed to ensure we get the 'state root' of the chain
-        bytes32 root = commitmentAt(commitmentPublisher, index);
+        bytes32 root = commitmentAt(commitmentPublisher, height);
         SignalProof memory signalProof = abi.decode(proof, (SignalProof));
         bytes[] memory accountProof = signalProof.accountProof;
         bytes[] memory storageProof = signalProof.storageProof;
+        // if there is no account proof, verify signal will treat root as a storage root
+        // instead of a full state root which we currently do not support
+        require(accountProof.length != 0, StateProofNotSupported());
         value.verifySignal(namespace, sender, root, accountProof, storageProof);
     }
 }
