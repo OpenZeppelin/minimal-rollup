@@ -78,6 +78,11 @@ library LibProvingPeriod {
         return isOpen(period) || timestamp.toUint40() <= period.end;
     }
 
+    /// @notice The period has a deadline timestamp in the past
+    function isDeadlinePassed(Period storage period) internal view returns (bool) {
+        return block.timestamp > period.deadline && period.deadline != 0;
+    }
+
     /// @dev Sets the period's end and deadline timestamps
     /// @param period The period to finalize
     /// @param endDelay The duration (from now) when the period will end
