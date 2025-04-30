@@ -94,8 +94,6 @@ abstract contract BaseProverManager is IProposerFees, IProverManager {
         // Deduct fee from proposer's balance
         uint96 fee = _periods[periodId].fee;
         if (isDelayed) {
-            // This is extremely unlikely to overflow, but we still do the check to be safe since the
-            // `delayedFeePercentage` is >100%
             fee = _calculatePercentage(fee, _periods[periodId].delayedFeePercentage).toUint96();
         }
         _balances[proposer] -= fee;
@@ -149,7 +147,6 @@ abstract contract BaseProverManager is IProposerFees, IProverManager {
         (uint40 end,) = _closePeriod(period, _exitDelay(), 0);
 
         // Reward the evictor and slash the prover
-        // Casting this directly is safe since the resulting number is smaller than the original value
         uint96 evictorIncentive = _calculatePercentage(period.stake, _evictorIncentivePercentage()).toUint96();
         _balances[msg.sender] += evictorIncentive;
         period.stake -= evictorIncentive;
@@ -249,8 +246,6 @@ abstract contract BaseProverManager is IProposerFees, IProverManager {
 
         Period storage period = _periods[currentPeriod];
         fee = period.fee;
-        // This is extremely unlikely to overflow, but we still do the check to be safe since the
-        // `delayedFeePercentage` is >100%
         delayedFee = _calculatePercentage(fee, period.delayedFeePercentage).toUint96();
     }
 
