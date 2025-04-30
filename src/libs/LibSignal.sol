@@ -7,13 +7,6 @@ import {StorageSlot} from "@openzeppelin/contracts/utils/StorageSlot.sol";
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 
 /// @dev Library for secure broadcasting (i.e. signaling) cross-chain arbitrary data.
-///
-/// Signaling a value consists of storing a `bytes32` in a namespaced storage location to guarantee non-collision
-/// slots derived by EVM languages such as Solidity or Vyper. Smart contracts utilizing this library will signal values
-/// with the `signal` function, allowing to generate a storage proof with an `eth_getProof` RPC call.
-///
-/// Later, on a destination chain the signal can be proven by providing the proof to `verifySignal` as long as the
-/// state root is trusted.
 library LibSignal {
     using StorageSlot for bytes32;
     using SlotDerivation for string;
@@ -35,7 +28,7 @@ library LibSignal {
     /// @dev A `value` was signaled at a namespaced slot. See `deriveSlot`.
     function signaled(bytes32 value, address account, bytes32 namespace) internal view returns (bool) {
         bytes32 slot = deriveSlot(value, account, namespace);
-        return slot.getBytes32Slot().value == keccak256(abi.encode(value));
+        return slot.getBooleanSlot().value == true;
     }
 
     /// @dev Signal a `value` at a namespaced slot for the current `msg.sender` and namespace.
@@ -46,7 +39,7 @@ library LibSignal {
     /// @dev Signal a `value` at a namespaced slot. See `deriveSlot`.
     function signal(bytes32 value, address account, bytes32 namespace) internal returns (bytes32) {
         bytes32 slot = deriveSlot(value, account, namespace);
-        slot.getBytes32Slot().value = keccak256(abi.encode(value));
+        slot.getBooleanSlot().value = true;
         return slot;
     }
 
@@ -78,6 +71,7 @@ library LibSignal {
         bytes[] memory storageProof
     ) internal view returns (bool valid) {
         bytes32 hashedValue = keccak256(abi.encode(value));
+        // bytes32 encodedBool = abi.encode(true);
         // If the account proof is empty we assume `root` is the storage root of the signal service contract
         if (accountProof.length == 0) {
             // No need to first retrieve the storage root from the state root.
