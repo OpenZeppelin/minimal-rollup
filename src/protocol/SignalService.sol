@@ -74,7 +74,6 @@ contract SignalService is ISignalService, ETHBridge, CommitmentStore {
         SignalProof memory signalProof = abi.decode(proof, (SignalProof));
         bytes[] memory accountProof = signalProof.accountProof;
         bytes[] memory storageProof = signalProof.storageProof;
-        bool valid = value.verifySignal(namespace, sender, root, accountProof, storageProof);
-        require(valid, SignalNotReceived(value));
+        value.verifySignal(namespace, sender, root, accountProof, storageProof);
     }
 }

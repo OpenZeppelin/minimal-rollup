@@ -25,10 +25,6 @@ interface ISignalService {
     /// @param value Value that was signaled
     event SignalVerified(address indexed sender, bytes32 value);
 
-    /// @dev Error when a signal fails to be verified.
-    /// @param value Value that was not verified
-    error SignalNotReceived(bytes32 value);
-
     /// @dev Stores a data signal and returns its storage location.
     /// @param value Data to be stored (signalled)
     function sendSignal(bytes32 value) external returns (bytes32 slot);
