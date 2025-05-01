@@ -31,9 +31,7 @@ library LibSignal {
     /// @dev Signal a `value` at a namespaced slot. See `deriveSlot`.
     function signal(bytes32 value, address account) internal returns (bytes32) {
         bytes32 slot = deriveSlot(value, account);
-        assembly {
-            sstore(slot, true)
-        }
+        slot.getBooleanSlot().value = true;
         return slot;
     }
 
@@ -60,8 +58,10 @@ library LibSignal {
         bytes32 root,
         bytes[] memory accountProof,
         bytes[] memory storageProof
-    ) internal pure {
+    ) internal view {
         bytes32 encodedBool = bytes32(uint256(1));
-        LibTrieProof.verifyMerkleProof(root, sender, deriveSlot(value, sender), encodedBool, accountProof, storageProof);
+        LibTrieProof.verifyMerkleProof(
+            root, address(this), deriveSlot(value, sender), encodedBool, accountProof, storageProof
+        );
     }
 }
