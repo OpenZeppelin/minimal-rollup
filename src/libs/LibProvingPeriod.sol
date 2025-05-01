@@ -40,7 +40,7 @@ library LibProvingPeriod {
     }
 
     /// @notice Initializes the period with the given parameters.
-    /// @dev The _end_ and _deadline_ default to zero. The _pastDeadline` flag defaults to false.
+    /// @dev The _end_ and _deadline_ default to zero. The _pastDeadline_ flag defaults to false.
     /// @dev This can be called multiple times to set the latest bid while the auction is ongoing.
     function init(Period storage period, address prover, uint96 fee, uint16 delayedFeePercentage, uint96 stake)
         internal
