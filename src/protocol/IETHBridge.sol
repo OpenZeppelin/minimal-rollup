@@ -6,7 +6,6 @@ pragma solidity ^0.8.28;
 /// These can be created by sending value to the `deposit` function. Later, the receiver can
 /// claim the deposit on the destination chain by using a storage proof.
 interface IETHBridge {
-    // TODO: Think about gas?
     struct ETHDeposit {
         // The nonce of the deposit
         uint256 nonce;

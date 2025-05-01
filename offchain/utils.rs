@@ -14,10 +14,6 @@ use serde_json::to_string_pretty;
 
 const BLOCK_TIME: u64 = 5;
 
-// NOTE: This needs to match the address of the rollup operator in the tests
-// to ensure the signal service is deployed to the same address.
-const ROLLUP_OPERATOR: Address = address!("0xCf03Dd0a894Ef79CB5b601A43C4b25E3Ae4c67eD");
-
 sol!(
     #[allow(missing_docs)]
     #[sol(rpc)]

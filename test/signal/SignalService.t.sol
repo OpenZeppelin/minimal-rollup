@@ -36,17 +36,10 @@ contract BaseState is Test {
     // BUG: For some reason the default sender is not being changed even though
     // it's is the foundry.toml file, therefore we need to set it manually
     address public defaultSender = address(0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266);
-    uint256 public senderBalanceL1 = 10 ether;
-    uint256 public senderBalanceL2 = 0 ether;
-
-    // Signal service is also the ETHBridge which has a large amount of ETH
-    uint256 public ETHBridgeInitBalance = 100 ether;
 
     function setUp() public virtual {
         L1Fork = vm.createFork("L1");
         vm.selectFork(L1Fork);
-        // Sender has 10 eth in the L1 fork
-        vm.deal(defaultSender, senderBalanceL1);
 
         // Deploy L1SignalService
         vm.prank(defaultSender);
@@ -56,10 +49,6 @@ contract BaseState is Test {
         checkpointTracker = new MockCheckpointTracker(address(L1SignalService));
 
         L2Fork = vm.createFork("L2");
-
-        // Sender has 0 eth in the L2 fork
-        vm.deal(defaultSender, senderBalanceL2);
-
         vm.selectFork(L2Fork);
 
         // Deploy L2SignalService
