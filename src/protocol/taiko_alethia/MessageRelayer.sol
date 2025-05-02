@@ -3,6 +3,8 @@ pragma solidity ^0.8.0;
 
 import {ReentrancyGuardTransient} from "@openzeppelin/contracts/utils/ReentrancyGuardTransient.sol";
 import {IETHBridge} from "src/protocol/IETHBridge.sol";
+
+import {IMessageRelayer} from "src/protocol/IMessageRelayer.sol";
 import {MessageRelayer} from "src/protocol/taiko_alethia/MessageRelayer.sol";
 
 /// @dev Simple implementation of a message relayer.
@@ -30,7 +32,7 @@ import {MessageRelayer} from "src/protocol/taiko_alethia/MessageRelayer.sol";
 ///
 /// If relayer wants to claim this fee, it needs to call claimDeposit on the bridge.
 /// The relayer will net any fee - gas spent on the call to relayMessage.
-contract MessageRelayer is ReentrancyGuardTransient {
+contract MessageRelayer is ReentrancyGuardTransient, IMessageRelayer {
     IETHBridge public immutable ethBridge;
 
     constructor(address _ethBridge) {
@@ -40,6 +42,7 @@ contract MessageRelayer is ReentrancyGuardTransient {
     // keccak256("RELAYER_SLOT")
     bytes32 private constant RELAYER_SLOT = 0x534e7df1601a31e65156f390f0558b27c1017ac64f70cc962aaaeb10ce90ea23;
 
+    /// @inheritdoc IMessageRelayer
     function relayMessage(
         IETHBridge.ETHDeposit memory ethDeposit,
         uint256 height,
@@ -53,9 +56,16 @@ contract MessageRelayer is ReentrancyGuardTransient {
         }
 
         ethBridge.claimDeposit(ethDeposit, height, proof);
+
+        emit RelayInitiated(ethDeposit, relayerAddress);
     }
 
-    function receiveMessage(address to, uint256 fee, bytes memory data) external payable nonReentrant {
+    /// @inheritdoc IMessageRelayer
+    function receiveMessage(address to, uint256 fee, uint256 gasLimit, bytes memory data)
+        external
+        payable
+        nonReentrant
+    {
         bytes32 relayerAddressBytes;
 
         assembly {
@@ -64,10 +74,22 @@ contract MessageRelayer is ReentrancyGuardTransient {
 
         address relayer = address(uint160(uint256(relayerAddressBytes)));
 
+        uint256 valueToSend = msg.value - fee;
+        bool success;
+
+        if (gasLimit == 0) {
+            (success,) = to.call{value: valueToSend}(data);
+        } else {
+            require(gasLimit <= gasleft(), InsufficientGasLimit());
+
+            (success,) = to.call{value: valueToSend, gas: gasLimit}(data);
+        }
+
+        require(success, MessageForwardingFailed());
+
         payable(relayer).transfer(fee);
 
-        (bool success,) = to.call{value: msg.value - fee}(data);
-        require(success, "Message forwarding failed");
+        emit MessageForwarded(to, valueToSend, data);
 
         // TODO: Should we clear the transient storage here?
     }
