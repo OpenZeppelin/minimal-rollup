@@ -86,5 +86,6 @@ contract MessageRelayer is ReentrancyGuardTransient, IMessageRelayer {
         emit MessageForwarded(to, valueToSend, data);
 
         // TODO: Should we clear the transient storage here?
+        RELAYER_SLOT.asAddress().tstore(address(0));
     }
 }
