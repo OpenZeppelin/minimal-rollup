@@ -75,7 +75,6 @@ contract MessageRelayer is ReentrancyGuardTransient, IMessageRelayer {
             (success,) = to.call{value: valueToSend}(data);
         } else {
             require(gasLimit <= gasleft(), InsufficientGasLimit());
-
             (success,) = to.call{value: valueToSend, gas: gasLimit}(data);
         }
 
@@ -85,7 +84,6 @@ contract MessageRelayer is ReentrancyGuardTransient, IMessageRelayer {
 
         emit MessageForwarded(to, valueToSend, data);
 
-        // TODO: Should we clear the transient storage here?
         RELAYER_SLOT.asAddress().tstore(address(0));
     }
 }
