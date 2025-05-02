@@ -2,6 +2,7 @@
 pragma solidity ^0.8.0;
 
 import {ReentrancyGuardTransient} from "@openzeppelin/contracts/utils/ReentrancyGuardTransient.sol";
+import {TransientSlot} from "@openzeppelin/contracts/utils/TransientSlot.sol";
 import {IETHBridge} from "src/protocol/IETHBridge.sol";
 
 import {IMessageRelayer} from "src/protocol/IMessageRelayer.sol";
@@ -24,15 +25,18 @@ import {MessageRelayer} from "src/protocol/taiko_alethia/MessageRelayer.sol";
 ///
 ///    Where encodedData is roughly:
 ///        abi.encodeWithSignature(
-///            "receiveMessage(address,uint256,bytes)",
+///            "receiveMessage(address,uint256,uint256,bytes)",
 ///             address(Alice),
-///             0.1 eth (fee for the relayer)
+///             0.1 eth (fee for the relayer),
+///             0 (gas limit),
 ///             data (in this case ""),
 ///             )
 ///
 /// If relayer wants to claim this fee, it needs to call claimDeposit on the bridge.
 /// The relayer will net any fee - gas spent on the call to relayMessage.
 contract MessageRelayer is ReentrancyGuardTransient, IMessageRelayer {
+    using TransientSlot for *;
+
     IETHBridge public immutable ethBridge;
 
     constructor(address _ethBridge) {
@@ -49,11 +53,7 @@ contract MessageRelayer is ReentrancyGuardTransient, IMessageRelayer {
         bytes memory proof,
         address relayerAddress
     ) external {
-        bytes32 relayerAddressBytes = bytes32(uint256(uint160(relayerAddress)));
-
-        assembly {
-            tstore(RELAYER_SLOT, relayerAddressBytes)
-        }
+        RELAYER_SLOT.asAddress().tstore(relayerAddress);
 
         ethBridge.claimDeposit(ethDeposit, height, proof);
 
@@ -66,13 +66,7 @@ contract MessageRelayer is ReentrancyGuardTransient, IMessageRelayer {
         payable
         nonReentrant
     {
-        bytes32 relayerAddressBytes;
-
-        assembly {
-            relayerAddressBytes := tload(RELAYER_SLOT)
-        }
-
-        address relayer = address(uint160(uint256(relayerAddressBytes)));
+        address relayer = RELAYER_SLOT.asAddress().tload();
 
         uint256 valueToSend = msg.value - fee;
         bool success;
