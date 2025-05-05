@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
-import {ICheckpointTracker} from "./ICheckpointTracker.sol";
 import {ICommitmentStore} from "./ICommitmentStore.sol";
 
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
