@@ -62,8 +62,8 @@ contract SignalService is ISignalService, CommitmentStore {
         bytes[] memory accountProof = signalProof.accountProof;
         bytes[] memory storageProof = signalProof.storageProof;
         // if there is no account proof, verify signal will treat root as a storage root
-        // instead of a full state root which we currently do not support
-        require(accountProof.length != 0, StateProofNotSupported());
+        // for now, we only support full state roots
+        require(accountProof.length != 0, StorageRootCommitmentNotSupported());
         value.verifySignal(namespace, sender, root, accountProof, storageProof);
     }
 }
