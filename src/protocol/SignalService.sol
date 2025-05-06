@@ -55,7 +55,7 @@ contract SignalService is ISignalService, CommitmentStore {
         bytes32 value,
         bytes32 namespace,
         bytes memory proof
-    ) internal view virtual {
+    ) internal virtual {
         // TODO: commitmentAt(height) might not be the 'state root' of the chain
         // For now it could be the block hash or other hashed value
         // further work is needed to ensure we get the 'state root' of the chain
@@ -72,7 +72,7 @@ contract SignalService is ISignalService, CommitmentStore {
         // this is to avoid state roots being used as storage roots (for safety)
         require(accountProof.length != 0, StorageRootCommitmentNotSupported());
 
-        value.verifySignal(sender, root, accountProof, storageProof);
+        value.verifySignal(namespace, sender, root, accountProof, storageProof);
 
         emit SignalVerified(sender, value);
     }

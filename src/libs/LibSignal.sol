@@ -68,7 +68,7 @@ library LibSignal {
         bytes32 root,
         bytes[] memory accountProof,
         bytes[] memory storageProof
-    ) internal pure {
+    ) internal view {
         bytes32 encodedBool = bytes32(uint256(1));
         LibTrieProof.verifyMerkleProof(
             root, sender, deriveSlot(value, sender, namespace), encodedBool, accountProof, storageProof
