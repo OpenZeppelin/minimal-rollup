@@ -22,7 +22,8 @@ interface IMessageRelayer {
     /// @dev Message forwarding failed
     error MessageForwardingFailed();
 
-    /// @dev Executes the claimDeposit function on the ETHBridge.
+    /// @notice Executes the claimDeposit function on the ETHBridge.
+    /// @dev Implements any intermediary step to claim the deposit (i.e. stores relayer address)
     /// @param ethDeposit Deposit to claim
     /// @param height Height of the L2 block
     /// @param proof Proof of the deposit
@@ -34,6 +35,7 @@ interface IMessageRelayer {
         address relayerAddress
     ) external;
 
+    /// @notice Receives a message from the bridge.
     /// @dev Handles logic for receiving a message from the bridge (i.e. sending fees and forwarding the message if
     /// needed).
     /// @param to Address to send the ETH to
