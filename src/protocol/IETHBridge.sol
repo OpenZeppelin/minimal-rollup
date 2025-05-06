@@ -48,7 +48,7 @@ interface IETHBridge {
     /// @param data Any calldata to be sent to the receiver in case of a contract
     function deposit(address to, bytes memory data) external payable returns (bytes32 id);
 
-    /// @dev Claims an ETH deposit created on by the sender (`from`) with `nonce`. The `value` ETH claimed  is
+    /// @dev Claims an ETH deposit created by the sender (`from`) with `nonce`. The `value` ETH claimed  is
     /// sent to the receiver (`to`) after verifying a storage proof.
     /// @param ethDeposit The ETH deposit struct
     /// @param height The `height` of the checkpoint on the source chain (i.e. the block number or commitmentId)
