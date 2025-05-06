@@ -24,25 +24,30 @@ interface ISignalService {
     /// @param value Value that was signaled
     event SignalVerified(address indexed sender, bytes32 value);
 
-    /// @dev We require a storage proof to be submitted
-    error StateProofNotSupported();
+    /// @dev We require the commitment to contain a state root (with an embedded storage root)
+    error StorageRootCommitmentNotSupported();
 
-    /// @dev Stores a data signal and returns its storage location.
+    /// @dev If the commitment returns 0 we assume it does not exist
+    error CommitmentNotFound();
+
+    /// @notice Stores a signal and returns its storage location.
     /// @param value Data to be stored (signalled)
     function sendSignal(bytes32 value) external returns (bytes32 slot);
 
-    /// @dev Checks if a signal has been stored
+    /// @notice Checks if a signal has been stored
     /// @dev Note: This does not mean it has been 'sent' to destination chain,
     /// only that it has been stored on the source chain.
     /// @param value Value to be checked is stored
     /// @param sender The address that sent the signal
     function isSignalStored(bytes32 value, address sender) external view returns (bool);
 
-    /// @dev Verifies if the signal can be proved to be part of a merkle tree
+    /// @notice Verifies if the signal can be proved to be part of a merkle tree. This is usually used to verify signals
+    /// sent by `sender` on the source chain, which state is represented by `commitmentPublisher` at `height`.
     /// @dev Signals are not deleted when verified, and can be
     /// verified multiple times by calling this function
-    /// @param height This refers to the block number / commitmentId where the trusted root is mapped to
-    /// @param commitmentPublisher The address that published the commitment containing the signal.
+    /// @param height A reference value indicating which trusted root to use for verification
+    /// see ICommitmentStore for more information
+    /// @param commitmentPublisher The address that published the commitment
     /// @param sender The address that originally sent the signal on the source chain
     /// @param value The signal value to verify
     /// @param proof The encoded value of the SignalProof struct

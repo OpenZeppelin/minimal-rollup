@@ -15,12 +15,13 @@ interface ICommitmentStore {
     /// @dev A new `commitment` has been stored by `source` at a specified `height`.
     event CommitmentStored(address indexed source, uint256 indexed height, bytes32 commitment);
 
-    /// @dev Returns the commitment at the given `height`.
+    /// @notice Returns the commitment at the given `height`.
+    /// @dev If the commitment does not exist at the given `height`, it returns zero.
     /// @param source The source address for the saved commitment
     /// @param height The height of the commitment
     function commitmentAt(address source, uint256 height) external view returns (bytes32 commitment);
 
-    /// @dev Stores a commitment.
+    /// @notice Stores a commitment attributed to `msg.sender`
     /// @param height The height of the commitment
     /// @param commitment The commitment to store
     function storeCommitment(uint256 height, bytes32 commitment) external;

@@ -1,15 +1,10 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
-import {ICheckpointTracker} from "./ICheckpointTracker.sol";
 import {ICommitmentStore} from "./ICommitmentStore.sol";
-
-import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 
 /// @dev Base contract for storing commitments.
 abstract contract CommitmentStore is ICommitmentStore {
-    using SafeCast for uint256;
-
     mapping(address source => mapping(uint256 height => bytes32 commitment)) private _commitments;
 
     /// @inheritdoc ICommitmentStore
