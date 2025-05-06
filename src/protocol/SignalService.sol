@@ -10,8 +10,8 @@ import {ISignalService} from "./ISignalService.sol";
 
 /// @dev SignalService is used for secure cross-chain messaging
 ///
-/// This contract allows sending arbitrary data as signals via `sendSignal`, verifying signals from other chains using
-/// `verifySignal`, and bridging native ETH with built-in signal generation and verification. It integrates:
+/// This contract allows sending arbitrary data as signals via `sendSignal` and verifying signals from other chains
+/// using `verifySignal`. It integrates:
 /// - `CommitmentStore` to access state roots,
 /// - `LibSignal` for signal hashing, storage, and verification logic.
 ///
