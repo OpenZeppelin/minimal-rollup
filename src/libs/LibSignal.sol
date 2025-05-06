@@ -49,9 +49,11 @@ library LibSignal {
     /// @param value The signal value to verify
     /// @param sender The address that originally sent the signal on the source chain
     /// @param root The state root or storage root from the source chain to verify against
-    /// @param accountProof Merkle proof for the contract's account against the state root. Empty if we are using a
+    /// @param accountProof Merkle proof for the SignalService account against the state root. Empty if we are using a
     /// storage root.
-    /// @param storageProof Merkle proof for the derived storage slot against the account's storage root
+    /// @param storageProof Merkle proof for the derived storage slot against the SignalService's storage root
+    /// @dev We can use `address(this)` as the SignalService address, even when `root` refers to a different chain,
+    /// because we assume the SignalService is deployed at the same address on every chain.
     function verifySignal(
         bytes32 value,
         address sender,
