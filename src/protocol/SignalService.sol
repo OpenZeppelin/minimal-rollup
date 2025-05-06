@@ -10,12 +10,13 @@ import {ISignalService} from "./ISignalService.sol";
 
 /// @dev SignalService combines secure cross-chain messaging with native token bridging.
 ///
-/// This contract allows sending arbitrary data as signals via `sendSignal`, verifying signals from other chains using
-/// `verifySignal`, and bridging native ETH with built-in signal generation and verification. It integrates:
-/// - `CommitmentStore` to access state roots,
-/// - `LibSignal` for signal hashing, storage, and verification logic.
+/// This contract allows sending arbitrary data as signals via `sendSignal` and verifying signals from other chains using`verifySignal`
+///   It integrates:
+///    - `CommitmentStore` to access state roots,
+///    - `LibSignal` for signal hashing, storage, and verification logic.
 ///
-/// Signals stored cannot be deleted and can be verified multiple times.
+/// Signals stored cannot be deleted
+/// WARN: this contract does not provide replay protection(signals can be verified multiple times).
 contract SignalService is ISignalService, CommitmentStore {
     using LibSignal for bytes32;
 
@@ -61,9 +62,10 @@ contract SignalService is ISignalService, CommitmentStore {
         SignalProof memory signalProof = abi.decode(proof, (SignalProof));
         bytes[] memory accountProof = signalProof.accountProof;
         bytes[] memory storageProof = signalProof.storageProof;
-        // if there is no account proof, verify signal will treat root as a storage root
-        // for now, we only support full state roots
-        require(accountProof.length != 0, StorageRootCommitmentNotSupported());
-        value.verifySignal(namespace, sender, root, accountProof, storageProof);
+        // We only support state roots for verification
+        // this is to avoid state roots being used as storage roots (for safety)
+        require(accountProof.length != 0, StateProofNotSupported());
+        value.verifySignal(sender, root, accountProof, storageProof);
+        emit SignalVerified(sender, value);
     }
 }
