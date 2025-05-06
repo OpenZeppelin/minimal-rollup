@@ -41,7 +41,8 @@ interface ISignalService {
     /// @dev Verifies if the signal can be proved to be part of a merkle tree
     /// @dev Signals are not deleted when verified, and can be
     /// verified multiple times by calling this function
-    /// @param height This refers to the block number / commitmentId where the trusted root is mapped to
+    /// @param height A reference value indicating which trusted root to use for verification
+    /// see ICommitmentStore for more information
     /// @param commitmentPublisher The address that published the commitment containing the signal.
     /// @param sender The address that originally sent the signal on the source chain
     /// @param value The signal value to verify

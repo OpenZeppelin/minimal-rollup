@@ -7,15 +7,14 @@ import {IPublicationFeed} from "./IPublicationFeed.sol";
 import {IVerifier} from "./IVerifier.sol";
 
 contract CheckpointTracker is ICheckpointTracker {
-    /// @notice The publication id of the current proven checkpoint representing the latest verified state of the rollup
-    /// @dev A checkpoint commitment is any value (typically a state root) that uniquely identifies
-    /// the state of the rollup at a specific point in time
+    /// @dev The publication id of the current proven checkpoint representing
+    /// the latest verified state of the rollup
     uint256 private _provenPublicationId;
 
     IPublicationFeed public immutable publicationFeed;
     IVerifier public immutable verifier;
     ICommitmentStore public immutable commitmentStore;
-    address public proverManager;
+    address public immutable proverManager;
 
     /// @param _genesis the checkpoint commitment describing the initial state of the rollup
     /// @param _publicationFeed the input data source that updates the state of this rollup
@@ -73,11 +72,16 @@ contract CheckpointTracker is ICheckpointTracker {
         _updateCheckpoint(end.publicationId, end.commitment);
     }
 
+    /// @inheritdoc ICheckpointTracker
     function getProvenCheckpoint() public view returns (Checkpoint memory provenCheckpoint) {
         provenCheckpoint.publicationId = _provenPublicationId;
         provenCheckpoint.commitment = commitmentStore.commitmentAt(address(this), provenCheckpoint.publicationId);
     }
 
+    /// @dev Updates the proven checkpoint to a new publication ID and commitment
+    /// @dev Stores the commitment in the commitment store and emits an event
+    /// @param publicationId The ID of the publication to set as the latest proven checkpoint
+    /// @param commitment The checkpoint commitment representing the state at the given publication ID
     function _updateCheckpoint(uint256 publicationId, bytes32 commitment) internal {
         _provenPublicationId = publicationId;
         commitmentStore.storeCommitment(publicationId, commitment);
