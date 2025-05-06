@@ -27,6 +27,9 @@ interface ISignalService {
     /// @dev We require the commitment to contain a state root (with an embedded storage root)
     error StorageRootCommitmentNotSupported();
 
+    /// @dev If the commitment returns 0 we assume it does not exist
+    error CommitmentNotFound();
+
     /// @notice Stores a signal and returns its storage location.
     /// @param value Data to be stored (signalled)
     function sendSignal(bytes32 value) external returns (bytes32 slot);
@@ -44,7 +47,7 @@ interface ISignalService {
     /// verified multiple times by calling this function
     /// @param height A reference value indicating which trusted root to use for verification
     /// see ICommitmentStore for more information
-    /// @param commitmentPublisher The address that published the commitment containing the signal.
+    /// @param commitmentPublisher The address that published the commitment
     /// @param sender The address that originally sent the signal on the source chain
     /// @param value The signal value to verify
     /// @param proof The encoded value of the SignalProof struct

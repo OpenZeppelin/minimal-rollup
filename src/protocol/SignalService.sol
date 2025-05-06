@@ -10,7 +10,8 @@ import {ISignalService} from "./ISignalService.sol";
 
 /// @dev SignalService is used for secure cross-chain messaging
 ///
-/// This contract allows sending arbitrary data as signals via `sendSignal` and verifying signals from other chains using`verifySignal`
+/// This contract allows sending arbitrary data as signals via `sendSignal` and verifying signals from other chains
+/// using`verifySignal`
 ///   It integrates:
 ///    - `CommitmentStore` to access state roots,
 ///    - `LibSignal` for signal hashing, storage, and verification logic.
@@ -46,13 +47,20 @@ contract SignalService is ISignalService, CommitmentStore {
         // For now it could be the block hash or other hashed value
         // further work is needed to ensure we get the 'state root' of the chain
         bytes32 root = commitmentAt(commitmentPublisher, height);
+
+        // A 0 root would probably fail further down the line but its better to explicitly check
+        require(root != 0, CommitmentNotFound());
+
         SignalProof memory signalProof = abi.decode(proof, (SignalProof));
         bytes[] memory accountProof = signalProof.accountProof;
         bytes[] memory storageProof = signalProof.storageProof;
+
         // We only support state roots for verification
         // this is to avoid state roots being used as storage roots (for safety)
-        require(accountProof.length != 0, StateProofNotSupported());
+        require(accountProof.length != 0, StorageRootCommitmentNotSupported());
+
         value.verifySignal(sender, root, accountProof, storageProof);
+
         emit SignalVerified(sender, value);
     }
 }
