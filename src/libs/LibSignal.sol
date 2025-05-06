@@ -23,7 +23,7 @@ library LibSignal {
         return slot.getBooleanSlot().value == true;
     }
 
-    /// @dev Signal a `value` at a namespaced slot for the current `msg.sender` and namespace.
+    /// @dev Signal a `value` at a namespaced slot for the current `msg.sender`.
     function signal(bytes32 value) internal returns (bytes32) {
         return signal(value, msg.sender);
     }
