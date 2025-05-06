@@ -10,11 +10,10 @@ import {ISignalService} from "./ISignalService.sol";
 
 /// @dev SignalService is used for secure cross-chain messaging
 ///
-/// This contract allows sending arbitrary data as signals via `sendSignal` and verifying signals from other chains
-/// using
-/// `verifySignal`. It integrates:
-/// - `CommitmentStore` to access state roots,
-/// - `LibSignal` for signal hashing, storage, and verification logic.
+/// This contract allows sending arbitrary data as signals via `sendSignal` and verifying signals from other chains using`verifySignal`
+///   It integrates:
+///    - `CommitmentStore` to access state roots,
+///    - `LibSignal` for signal hashing, storage, and verification logic.
 ///
 /// Signals stored cannot be deleted
 /// WARN: this contract does not provide replay protection(signals can be verified multiple times).
