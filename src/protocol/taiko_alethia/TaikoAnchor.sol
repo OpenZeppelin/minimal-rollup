@@ -65,9 +65,12 @@ contract TaikoAnchor {
     /// 2. This function's gas limit is a fixed value;
     /// 3. This function will not revert;
     /// 4. The parameters correspond to the real L1 state.
+    /// @dev The anchor block header is provided in order to extract the L1 state root needed for storage verification
+    /// logic (i.e. verifying an L1 signal)
     /// @param _publicationId The publication that contains this anchor transaction (as the first transaction)
     /// @param _anchorBlockId The latest L1 block known to the L2 blocks in this publication
     /// @param _anchorBlockHash The block hash of the L1 anchor block
+    /// @param _anchorBlockHeader The block header of the L1 anchor block
     /// @param _parentGasUsed The gas used in the parent block
     function anchor(
         uint256 _publicationId,
