@@ -24,7 +24,6 @@ contract SignalService is ISignalService, CommitmentStore {
     /// @inheritdoc ISignalService
     /// @dev Signals are stored in a namespaced slot derived from the signal value, sender address and SIGNAL_NAMESPACE
     /// const
-    /// @dev Cannot be used to send eth bridge signals
     function sendSignal(bytes32 value) external returns (bytes32 slot) {
         slot = value.signal();
         emit SignalSent(msg.sender, value);
