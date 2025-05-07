@@ -53,7 +53,14 @@ pub async fn deploy_eth_bridge(
     signal_service: Address,
     trusted_publisher: Address,
 ) -> Result<ETHBridgeInstance<(), &impl Provider>> {
-    let contract = ETHBridge::deploy(provider, signal_service, trusted_publisher).await?;
+    // L2 Eth bridge address
+    let counterpart = address!("0xDC9e4C83bDe3912E9B63A9BF9cE263F3309aB5d4");
+    // WARN: This is a slight hack for now to make sure the contract is deployed on the correct address
+    ETHBridge::deploy(provider, signal_service, trusted_publisher, counterpart).await?;
+
+    let contract =
+        ETHBridge::deploy(provider, signal_service, trusted_publisher, counterpart).await?;
+
     Ok(contract)
 }
 
