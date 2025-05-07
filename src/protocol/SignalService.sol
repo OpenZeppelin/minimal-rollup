@@ -41,9 +41,6 @@ contract SignalService is ISignalService, CommitmentStore {
         bytes32 value,
         bytes memory proof
     ) external {
-        // TODO: commitmentAt(height) might not be the 'state root' of the chain
-        // For now it could be the block hash or other hashed value
-        // further work is needed to ensure we get the 'state root' of the chain
         bytes32 commitment = commitmentAt(commitmentPublisher, height);
         // A 0 root would probably fail further down the line but its better to explicitly check
         require(commitment != 0, CommitmentNotFound());
