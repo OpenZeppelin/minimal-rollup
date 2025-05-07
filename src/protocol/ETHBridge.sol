@@ -18,11 +18,17 @@ contract ETHBridge is IETHBridge {
     /// @dev This is the Anchor on L2 and the Checkpoint Tracker on the L1
     address public immutable trustedCommitmentPublisher;
 
-    constructor(address _signalService, address _trustedCommitmentPublisher) {
+    /// @dev The counterpart bridge contract on the other chain.
+    /// This is used to locate deposit signals inside the other chain's state root.
+    /// WARN: This address has no significance (and may be untrustworthy) on this chain.
+    address public immutable counterpart;
+
+    constructor(address _signalService, address _trustedCommitmentPublisher, address _counterpart) {
         require(_signalService != address(0), "Empty signal service");
         require(_trustedCommitmentPublisher != address(0), "Empty trusted publisher");
         signalService = ISignalService(_signalService);
         trustedCommitmentPublisher = _trustedCommitmentPublisher;
+        counterpart = _counterpart;
     }
 
     /// @inheritdoc IETHBridge
@@ -50,7 +56,7 @@ contract ETHBridge is IETHBridge {
     // TODO: Non reentrant
     function claimDeposit(ETHDeposit memory ethDeposit, uint256 height, bytes memory proof) external {
         bytes32 id = _generateId(ethDeposit);
-        signalService.verifySignal(height, trustedCommitmentPublisher, ethDeposit.from, id, proof);
+        signalService.verifySignal(height, trustedCommitmentPublisher, counterpart, id, proof);
         require(!claimed(id), AlreadyClaimed());
         _claimed[id] = true;
         _sendETH(ethDeposit.to, ethDeposit.amount, ethDeposit.data);

@@ -15,7 +15,10 @@ import {ISignalService} from "src/protocol/ISignalService.sol";
 // however, the state root is not yet available on L2
 contract BridgeETHState is BaseState {
     ETHBridge public L1EthBridge;
-    ETHBridge public L2EthBridge;
+    // We need to pass the address of each bridge to the constructor of its counterpart
+    // This can be achieved with create2 or with proxy deployments
+    // For testing, we place the L2EthBridge at a specific address
+    ETHBridge public L2EthBridge = ETHBridge(address(uint160(uint256(keccak256("L2EthBridge")))));
 
     // 0xf9c183d2de58fbeb1a8917170139e980fa1b6e5a358ec83721e11c9f6e25eb18
     bytes32 public depositIdOne;
@@ -35,7 +38,7 @@ contract BridgeETHState is BaseState {
         // Deploy L1EthBridge
         vm.setNonce(defaultSender, 2);
         vm.prank(defaultSender);
-        L1EthBridge = new ETHBridge(address(L1SignalService), address(checkpointTracker));
+        L1EthBridge = new ETHBridge(address(L1SignalService), address(checkpointTracker), address(L2EthBridge));
         vm.deal(address(L1EthBridge), ETHBridgeInitBalance);
 
         vm.prank(defaultSender);
@@ -54,7 +57,11 @@ contract BridgeETHState2 is BridgeETHState {
         // Deploy L2EthBridge
         vm.setNonce(defaultSender, 2);
         vm.prank(defaultSender);
-        L2EthBridge = new ETHBridge(address(L2SignalService), address(anchor));
+        deployCodeTo(
+            "ETHBridge.sol",
+            abi.encode(address(L2SignalService), address(anchor), address(L1EthBridge)),
+            address(L2EthBridge)
+        );
         vm.deal(address(L2EthBridge), ETHBridgeInitBalance);
     }
 }
