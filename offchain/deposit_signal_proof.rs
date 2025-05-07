@@ -23,8 +23,8 @@ async fn main() -> Result<()> {
     let sender = address!("0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266");
     let amount = U256::from(4000000000000000000_u128);
 
-    // This is the anchor
-    let trusted_publisher = address!("0x9f1ac54BEF0DD2f6f3462EA0fa94fC62300d3a8e");
+    // This is the checkpoint tracker
+    let trusted_publisher = address!("0xCafac3dD18aC6c6e92c921884f9E4176737C052c");
 
     let (provider, _anvil) = get_provider()?;
 
