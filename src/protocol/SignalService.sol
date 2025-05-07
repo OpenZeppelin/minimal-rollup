@@ -44,20 +44,22 @@ contract SignalService is ISignalService, CommitmentStore {
         // TODO: commitmentAt(height) might not be the 'state root' of the chain
         // For now it could be the block hash or other hashed value
         // further work is needed to ensure we get the 'state root' of the chain
-        bytes32 root = commitmentAt(commitmentPublisher, height);
-
+        bytes32 commitment = commitmentAt(commitmentPublisher, height);
         // A 0 root would probably fail further down the line but its better to explicitly check
-        require(root != 0, CommitmentNotFound());
+        require(commitment != 0, CommitmentNotFound());
 
         SignalProof memory signalProof = abi.decode(proof, (SignalProof));
+        bytes32 blockHash = signalProof.blockHash;
+        bytes32 stateRoot = signalProof.stateRoot;
+        require(keccak256(abi.encode(stateRoot, blockHash)) == commitment, InvalidCommitment());
+
         bytes[] memory accountProof = signalProof.accountProof;
         bytes[] memory storageProof = signalProof.storageProof;
-
         // We only support state roots for verification
         // this is to avoid state roots being used as storage roots (for safety)
         require(accountProof.length != 0, StorageRootCommitmentNotSupported());
 
-        value.verifySignal(sender, root, accountProof, storageProof);
+        value.verifySignal(sender, stateRoot, accountProof, storageProof);
 
         emit SignalVerified(sender, value);
     }

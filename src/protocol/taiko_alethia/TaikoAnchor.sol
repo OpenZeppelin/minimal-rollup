@@ -3,6 +3,30 @@ pragma solidity ^0.8.28;
 
 import {ICommitmentStore} from "../ICommitmentStore.sol";
 
+//CHECK: This contains all the fields of the Ethereum block header / in the same order
+struct BlockHeader {
+    bytes32 parentHash;
+    bytes32 uncleHash;
+    address coinbase;
+    bytes32 stateRoot;
+    bytes32 transactionsRoot;
+    bytes32 receiptsRoot;
+    bytes logsBloom;
+    uint256 difficulty;
+    uint256 number;
+    uint256 gasLimit;
+    uint256 gasUsed;
+    uint256 timestamp;
+    bytes32 mixHash;
+    uint64 nonce;
+    bytes32 baseFeePerGas;
+    bytes32 withdrawalsRoot;
+    bytes32 blobGasUsed;
+    bytes32 excessBlobGas;
+    bytes32 parentBeaconBlockRoot;
+    bytes extraData;
+}
+
 contract TaikoAnchor {
     event Anchor(uint256 publicationId, uint256 anchorBlockId, bytes32 anchorBlockHash, bytes32 parentGasUsed);
 
@@ -45,10 +69,13 @@ contract TaikoAnchor {
     /// @param _anchorBlockId The latest L1 block known to the L2 blocks in this publication
     /// @param _anchorBlockHash The block hash of the L1 anchor block
     /// @param _parentGasUsed The gas used in the parent block
-    function anchor(uint256 _publicationId, uint256 _anchorBlockId, bytes32 _anchorBlockHash, bytes32 _parentGasUsed)
-        external
-        onlyFromPermittedSender
-    {
+    function anchor(
+        uint256 _publicationId,
+        uint256 _anchorBlockId,
+        bytes32 _anchorBlockHash,
+        BlockHeader calldata _anchorBlockHeader,
+        bytes32 _parentGasUsed
+    ) external onlyFromPermittedSender {
         // Make sure this function can only succeed once per publication
         require(_publicationId > lastPublicationId, "publicationId too small");
         lastPublicationId = _publicationId;
@@ -60,8 +87,10 @@ contract TaikoAnchor {
         // Persist anchor block hashes
         if (_anchorBlockId > lastAnchorBlockId) {
             lastAnchorBlockId = _anchorBlockId;
+            require(keccak256(abi.encode(_anchorBlockHeader)) == _anchorBlockHash, "header mismatch");
+            bytes32 commitment = keccak256(abi.encode(_anchorBlockHeader.stateRoot, _anchorBlockHash));
             // Stores the state of the other chain
-            commitmentStore.storeCommitment(_anchorBlockId, _anchorBlockHash);
+            commitmentStore.storeCommitment(_anchorBlockId, commitment);
         }
 
         // Store the parent block hash in the _blockhashes mapping

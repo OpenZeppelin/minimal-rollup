@@ -75,6 +75,8 @@ contract SendL1SignalState is BaseState {
 
     bytes32 public stateRoot = 0xbea626defff8745e6a6fd162f3480615a0e6eb285b8a8ba54b31fe2ffa950874;
     bytes32 public storageRoot = 0x04bdf08088bbf36329fe89a42e20579b0a9222b2301b4787eeecc03ef88bc507;
+    // TODO: Update this to the correct block hash
+    bytes32 public blockHash = 0xbea626defff8745e6a6fd162f3480615a0e6eb285b8a8ba54b31fe2ffa950874;
 
     function setUp() public virtual override {
         super.setUp();
@@ -110,7 +112,8 @@ contract SendL1SignalTest is SendL1SignalState {
 
         vm.selectFork(L2Fork);
 
-        ISignalService.SignalProof memory signalProof = ISignalService.SignalProof(accountProof(), storageProof());
+        ISignalService.SignalProof memory signalProof =
+            ISignalService.SignalProof(accountProof(), storageProof(), stateRoot, blockHash);
         bytes memory encodedProof = abi.encode(signalProof);
 
         uint256 height = 1;
