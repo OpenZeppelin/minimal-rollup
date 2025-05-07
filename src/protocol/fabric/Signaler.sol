@@ -32,7 +32,7 @@ contract Signaler is ISignaler {
         // Compute the digest that the account was expected to sign.
         bytes memory encodedCalls;
         for (uint256 i = 0; i < calls.length; i++) {
-            encodedCalls = abi.encodePacked(encodedCalls, calls[i].to, calls[i].value, calls[i].data);
+            encodedCalls = abi.encodePacked(encodedCalls, calls[i].to, calls[i].value, calls[i].data, calls[i].batcher);
         }
         bytes32 digest = keccak256(abi.encodePacked(_nonce, encodedCalls));
 
@@ -78,7 +78,7 @@ contract Signaler is ISignaler {
         // Send the signal to the signal service contract
         _sendSignal(signal);
 
-        emit CallExecuted(msg.sender, call.to, call.value, call.data);
+        emit CallExecuted(msg.sender, call.to, call.value, call.data, signal);
     }
 
     function _sendSignal(bytes32 signal) internal returns (bytes32 slot) {

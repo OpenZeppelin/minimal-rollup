@@ -25,7 +25,7 @@ interface ISignaler {
     function nonce() external view returns (uint256);
 
     /// @notice Emitted for every individual call executed.
-    event CallExecuted(address indexed sender, address indexed to, uint256 value, bytes data);
+    event CallExecuted(address indexed sender, address indexed to, uint256 value, bytes data, bytes32 signal);
     /// @notice Emitted when a full batch is executed.
     event BatchExecuted(uint256 indexed nonce, Call[] calls);
 

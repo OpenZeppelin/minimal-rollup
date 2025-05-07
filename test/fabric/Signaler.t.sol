@@ -35,6 +35,44 @@ contract MockSignalService {
     }
 }
 
+contract BasicDelegator {
+    uint256 private _nonce;
+
+    function execute(ISignaler.Call calldata call, bytes calldata signature) external returns (bytes memory) {
+        // Compute the digest that the account was expected to sign.
+        bytes memory encodedCall = abi.encodePacked(call.to, call.value, call.data, call.batcher);
+        bytes32 digest = keccak256(abi.encodePacked(_nonce, encodedCall));
+        bytes32 ethSignedMessageHash = MessageHashUtils.toEthSignedMessageHash(digest);
+
+        // Recover the signer from the provided signature.
+        address recovered = ECDSA.recover(ethSignedMessageHash, signature);
+        if (recovered != address(this)) revert InvalidSignature();
+
+        _nonce++; // Increment nonce to protect against replay attacks
+
+        return _executeCall(call);
+    }
+
+    function _executeCall(ISignaler.Call calldata call) internal returns (bytes memory) {
+        if (call.batcher != msg.sender) revert BatcherMismatch();
+
+        (bool success, bytes memory returnData) = call.to.call{value: call.value}(call.data);
+        if (!success) revert CallReverted();
+
+        emit CallExecuted(msg.sender, call.to, call.value, call.data, call, returnData);
+        return returnData;
+    }
+
+    event CallExecuted(
+        address indexed sender, address indexed to, uint256 value, bytes data, ISignaler.Call call, bytes returnData
+    );
+    event BatchExecuted(uint256 indexed nonce, ISignaler.Call[] calls);
+
+    error InvalidSignature();
+    error BatcherMismatch();
+    error CallReverted();
+}
+
 /**
  * @title SignalerTest
  * @dev Test contract for Signaler functionality
@@ -83,7 +121,7 @@ contract SignalerTest is Test {
     function encodeCalls(ISignaler.Call[] memory calls) internal returns (bytes memory) {
         bytes memory encodedCalls = "";
         for (uint256 i = 0; i < calls.length; i++) {
-            encodedCalls = abi.encodePacked(encodedCalls, calls[i].to, calls[i].value, calls[i].data);
+            encodedCalls = abi.encodePacked(encodedCalls, calls[i].to, calls[i].value, calls[i].data, calls[i].batcher);
         }
         return encodedCalls;
     }
@@ -295,5 +333,72 @@ contract SignalerTest is Test {
         bytes32 gotSignal = MockSignalService(signalService).getSignal();
         bytes32 expectedSignal = keccak256(abi.encode(calls[0], abi.encode(price)));
         assertEq(gotSignal, expectedSignal, "signal was not sent");
+    }
+
+    /**
+     * @dev Test that a signal is sent even if the user isn't using the Signaler.
+     * @dev It still assumes the user is able to delegate execution.
+     */
+    function test_nestedSendSignal() public {
+        // Charlie is going to call the oracle via batcher alice
+        (address charlie, uint256 charliePrivateKey) = makeAddrAndKey("charlie");
+
+        // Use a basic delegator that doesn't post signals
+        vm.signAndAttachDelegation(address(new BasicDelegator()), charliePrivateKey);
+
+        // Create a new DumbOracle instance
+        DumbOracle oracle = new DumbOracle();
+        uint256 price = 42;
+
+        // Charlie signs the oracle call
+        ISignaler.Call memory subCall = ISignaler.Call({
+            to: address(oracle),
+            value: 0,
+            data: abi.encodeWithSelector(DumbOracle.setPrice.selector, price),
+            batcher: alice
+        });
+
+        bytes memory encodedCall = abi.encodePacked(subCall.to, subCall.value, subCall.data, subCall.batcher);
+        bytes32 digest = keccak256(abi.encodePacked(uint256(0), encodedCall));
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(charliePrivateKey, MessageHashUtils.toEthSignedMessageHash(digest));
+        bytes memory subSignature = abi.encodePacked(r, s, v);
+
+        // Input for Alice's batch
+        ISignaler.Call[] memory calls = new ISignaler.Call[](2);
+
+        // // Fill the batch with a basic eth transfer
+        calls[0] = ISignaler.Call({
+            to: bob,
+            value: 1 ether,
+            data: "",
+            batcher: alice // alice will submit her own batch
+        });
+
+        // Encode Charlie's oracle call as an executeBatch() call that will be executed in Alice's batch
+        calls[1] = ISignaler.Call({
+            to: charlie,
+            value: 0,
+            data: abi.encodeCall(BasicDelegator.execute, (subCall, subSignature)),
+            batcher: alice // alice will submit her own batch
+        });
+
+        // Execute the batch (no signature required since Alice is the submitter)
+        vm.prank(alice);
+        ISignaler(address(alice)).executeBatch(calls);
+
+        // Verify the eth transfer was executed
+        assertEq(alice.balance, aliceInitialBalance - 1 ether);
+        assertEq(bob.balance, bobInitialBalance + 1 ether);
+
+        // Verify the price was set
+        assertEq(oracle.getPrice(), price, "price was not set");
+
+        // Verify the right signal was sent
+        bytes32 gotSignal = MockSignalService(signalService).getSignal();
+
+        // Signal originates from the batcher
+        // The call is encoded twice, once as the outer call and once as the inner call
+        bytes32 expectedSignal = keccak256(abi.encode(calls[1], abi.encode(abi.encode(price))));
+        assertEq(gotSignal, expectedSignal, "signal was not sent correctly");
     }
 }
