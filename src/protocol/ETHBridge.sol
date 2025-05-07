@@ -16,6 +16,7 @@ contract ETHBridge is IETHBridge, ReentrancyGuardTransient {
 
     ISignalService public immutable signalService;
 
+    /// @dev Trusted source of commitments in the `CommitmentStore` that the bridge will use to validate withdrawals
     /// @dev This is the Anchor on L2 and the Checkpoint Tracker on the L1
     address public immutable trustedCommitmentPublisher;
 
