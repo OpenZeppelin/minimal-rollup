@@ -7,7 +7,7 @@ library LibPercentage {
     using SafeCast for uint256;
 
     // COMMON PRECISION AMOUNTS (https://muens.io/solidity-percentages)
-    uint256 constant BASIS_POINTS = 10000;
+    uint256 constant BASIS_POINTS = 10_000;
     uint256 constant PERCENT = 100;
 
     /// @dev Calculates the percentage of a given value scaling by `precision` to limit rounding loss
