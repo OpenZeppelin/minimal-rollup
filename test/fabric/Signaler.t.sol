@@ -45,12 +45,16 @@ contract SignalerTest is Test {
     uint256 alicePrivateKey;
     uint256 aliceInitialBalance;
     address bob;
+    uint256 bobPrivateKey;
+    uint256 bobInitialBalance;
 
     function setUp() public {
         (alice, alicePrivateKey) = makeAddrAndKey("alice");
-        bob = makeAddr("bob");
+        (bob, bobPrivateKey) = makeAddrAndKey("bob");
         aliceInitialBalance = 100 ether;
+        bobInitialBalance = 100 ether;
         vm.deal(alice, aliceInitialBalance);
+        vm.deal(bob, bobInitialBalance);
 
         // Create a mock SignalService instance
         signalService = address(new MockSignalService());
@@ -62,10 +66,13 @@ contract SignalerTest is Test {
 
         // Alice uses the Signaler as her 7702 account
         vm.signAndAttachDelegation(address(_signaler), alicePrivateKey);
+        vm.signAndAttachDelegation(address(_signaler), bobPrivateKey);
 
-        // Alice sets the SignalService address
+        // Set the SignalService address
         vm.prank(alice);
         ISignaler(address(alice)).setSignalService(signalService);
+        vm.prank(bob);
+        ISignaler(address(bob)).setSignalService(signalService);
     }
 
     /**
@@ -105,6 +112,9 @@ contract SignalerTest is Test {
         require(address(alice).code.length != 0);
         require(ISignaler(address(alice)).nonce() == 0, "interface works");
         require(ISignaler(address(alice)).signalService() == signalService, "signalService is set");
+        require(address(bob).code.length != 0, "interface works");
+        require(ISignaler(address(bob)).nonce() == 0, "interface works");
+        require(ISignaler(address(bob)).signalService() == signalService, "signalService is set");
     }
 
     /**
@@ -114,7 +124,7 @@ contract SignalerTest is Test {
         vm.prank(alice);
         (bool success,) = bob.call{value: 1 ether}("");
         require(success, "transfer failed");
-        assertEq(bob.balance, 1 ether);
+        assertEq(bob.balance, bobInitialBalance + 1 ether);
         assertEq(alice.balance, aliceInitialBalance - 1 ether);
     }
 
@@ -126,8 +136,8 @@ contract SignalerTest is Test {
         address dest1 = makeAddr("dest1");
         address dest2 = makeAddr("dest2");
         ISignaler.Call[] memory calls = new ISignaler.Call[](2);
-        calls[0] = ISignaler.Call({to: dest1, value: 1 ether, data: ""});
-        calls[1] = ISignaler.Call({to: dest2, value: 1 ether, data: ""});
+        calls[0] = ISignaler.Call({to: dest1, value: 1 ether, data: "", batcher: alice});
+        calls[1] = ISignaler.Call({to: dest2, value: 1 ether, data: "", batcher: alice});
 
         // Alice submits the call
         vm.prank(alice);
@@ -147,14 +157,14 @@ contract SignalerTest is Test {
 
         // Create two transfer calls
         ISignaler.Call[] memory calls = new ISignaler.Call[](2);
-        calls[0] = ISignaler.Call({to: dest1, value: 1 ether, data: ""});
-        calls[1] = ISignaler.Call({to: dest2, value: 1 ether, data: ""});
+        calls[0] = ISignaler.Call({to: dest1, value: 1 ether, data: "", batcher: bob});
+        calls[1] = ISignaler.Call({to: dest2, value: 1 ether, data: "", batcher: bob});
 
         // Encode and sign the batch
         bytes memory signature = signBatch(alicePrivateKey, calls, ISignaler(address(alice)).nonce());
 
         // Execute the batch
-        vm.prank(bob); // not alice
+        vm.prank(bob); // bob executes on behalf of alice
         ISignaler(address(alice)).executeBatchWithSig(calls, signature);
 
         // Verify balances
@@ -162,6 +172,101 @@ contract SignalerTest is Test {
         assertEq(dest2.balance, 1 ether);
     }
 
+    /**
+     * @dev Test batch ETH transfer functionality using executeBatchWithSig, submitted by the owner
+     */
+    function test_executeBatchWithSig_batcherMismatch() public {
+        address batcher = makeAddr("batcher");
+
+        // Create a transfer call
+        ISignaler.Call[] memory calls = new ISignaler.Call[](1);
+        calls[0] = ISignaler.Call({to: batcher, value: 1 ether, data: "", batcher: batcher});
+
+        // Encode and sign the batch
+        bytes memory signature = signBatch(alicePrivateKey, calls, ISignaler(address(alice)).nonce());
+
+        // Execute the batch
+        vm.prank(bob); // bob executes instead of batcher
+        vm.expectRevert(ISignaler.BatcherMismatch.selector);
+        ISignaler(address(alice)).executeBatchWithSig(calls, signature);
+    }
+
+    /**
+     * @dev Test executeBatchWithSig reverts if a call is unbatched
+     */
+    function test_executeBatchWithSig_invalidSignature() public {
+        address dest1 = makeAddr("dest1");
+        address dest2 = makeAddr("dest2");
+
+        // Create two transfer calls
+        ISignaler.Call[] memory calls = new ISignaler.Call[](2);
+        calls[0] = ISignaler.Call({to: dest1, value: 1 ether, data: "", batcher: bob});
+        calls[1] = ISignaler.Call({to: dest2, value: 1 ether, data: "", batcher: bob});
+
+        // Encode and sign the batch
+        bytes memory signature = signBatch(alicePrivateKey, calls, ISignaler(address(alice)).nonce());
+
+        // Attempt to unbatch the 2nd call
+        ISignaler.Call[] memory calls2 = new ISignaler.Call[](1);
+        calls2[0] = calls[0];
+
+        // Execute the batch
+        vm.prank(bob); // bob executes on behalf of alice
+        vm.expectRevert(ISignaler.InvalidSignature.selector);
+        ISignaler(address(alice)).executeBatchWithSig(calls2, signature);
+    }
+
+    /**
+     * @dev Test a nested batch of calls, assuming all accounts are Signalers
+     */
+    function test_nestedBatchExecuteWithSig() public {
+        // Charlie is the end recipient of the eth transfers
+        address charlie = makeAddr("charlie");
+
+        // Bob pre-signs an ETH transfer to Charlie
+        ISignaler.Call[] memory subCalls = new ISignaler.Call[](1);
+        subCalls[0] = ISignaler.Call({
+            to: charlie,
+            value: 1 ether,
+            data: "",
+            batcher: alice // this call is nested in Alice's batch
+        });
+        bytes memory subSignature = signBatch(bobPrivateKey, subCalls, ISignaler(address(bob)).nonce());
+
+        // Verify this call cannot be sent as a standalone batch
+        vm.prank(bob);
+        vm.expectRevert(ISignaler.BatcherMismatch.selector);
+        ISignaler(address(bob)).executeBatchWithSig(subCalls, subSignature);
+
+        // Encode Bob's eth transfer as an executeBatch() call that will be executed in Alice's batch
+        ISignaler.Call[] memory calls = new ISignaler.Call[](2);
+        calls[0] = ISignaler.Call({
+            to: bob,
+            value: 0,
+            data: abi.encodeCall(ISignaler.executeBatchWithSig, (subCalls, subSignature)),
+            batcher: alice // alice will submit her own batch
+        });
+
+        calls[1] = ISignaler.Call({
+            to: charlie,
+            value: 1 ether,
+            data: "",
+            batcher: alice // alice will submit her own batch
+        });
+
+        // Execute the batch (no signature required since Alice is the submitter)
+        vm.prank(alice);
+        ISignaler(address(alice)).executeBatch(calls);
+
+        // Verify the transfer was executed
+        assertEq(alice.balance, aliceInitialBalance - 1 ether);
+        assertEq(bob.balance, bobInitialBalance - 1 ether);
+        assertEq(charlie.balance, 2 ether);
+    }
+
+    /**
+     * @dev Test that a signal is sent when a call is executed
+     */
     function test_sendSignal() public {
         // Create a new DumbOracle instance
         DumbOracle oracle = new DumbOracle();
@@ -172,7 +277,8 @@ contract SignalerTest is Test {
         calls[0] = ISignaler.Call({
             to: address(oracle),
             value: 0,
-            data: abi.encodeWithSelector(DumbOracle.setPrice.selector, price)
+            data: abi.encodeWithSelector(DumbOracle.setPrice.selector, price),
+            batcher: bob
         });
 
         // Encode and sign the batch

@@ -4,9 +4,18 @@ pragma solidity ^0.8.28;
 interface ISignaler {
     /// @notice Represents a single call within a batch.
     struct Call {
+        /// @notice The address to call.
         address to;
+        /// @notice The value to send with the call.
         uint256 value;
+        /// @notice The data to send with the call.
         bytes data;
+        /// @notice The expected account that is executing the call.
+        /// @dev This is used to ensure that a Call cannot be unbatched.
+        /// @dev If the batch contains [alice, bob] destined for charlie to execute,
+        /// @dev setting charlie as the batcher prevents alice's tx from being unbatched and
+        /// @dev executed at her own account.
+        address batcher;
     }
 
     function executeBatch(Call[] calldata calls) external;
@@ -24,5 +33,6 @@ interface ISignaler {
     error NotOwner();
     error InvalidSignature();
     error InvalidNonce();
+    error BatcherMismatch();
     error CallReverted();
 }

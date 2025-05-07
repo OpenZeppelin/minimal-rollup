@@ -67,6 +67,8 @@ contract Signaler is ISignaler {
     }
 
     function _executeCall(Call calldata call) internal {
+        if (call.batcher != msg.sender) revert BatcherMismatch();
+
         (bool success, bytes memory returnData) = call.to.call{value: call.value}(call.data);
         if (!success) revert CallReverted();
 
