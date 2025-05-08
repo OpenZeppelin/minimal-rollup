@@ -34,6 +34,8 @@ contract SignalService is ISignalService, CommitmentStore {
     }
 
     /// @inheritdoc ISignalService
+    /// @dev This function assumes that the commitment is the `keccak256(stateRoot, blockHash)` of the origin chain to
+    /// be able to use the `stateRoot` to verify the signal.
     function verifySignal(
         uint256 height,
         address commitmentPublisher,
@@ -42,7 +44,7 @@ contract SignalService is ISignalService, CommitmentStore {
         bytes memory proof
     ) external {
         bytes32 commitment = commitmentAt(commitmentPublisher, height);
-        // A 0 root would probably fail further down the line but its better to explicitly check
+        // A 0 root will fail the hash comparison, but better to explicitly check and return an error
         require(commitment != 0, CommitmentNotFound());
 
         SignalProof memory signalProof = abi.decode(proof, (SignalProof));

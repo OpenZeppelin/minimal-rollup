@@ -4,6 +4,9 @@ pragma solidity ^0.8.28;
 interface ICheckpointTracker {
     struct Checkpoint {
         uint256 publicationId;
+        /// @dev A commitment can be anything that uniquely represents the state of the rollup
+        /// @dev We recommend using the `keccak256(stateRoot, blockHash)` or similar to ensure both uniqueness and being
+        /// able to verify messages across chains
         bytes32 commitment;
     }
 
