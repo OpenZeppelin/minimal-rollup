@@ -22,21 +22,18 @@ contract SignalService is ISignalService, CommitmentStore {
     using LibSignal for bytes32;
 
     /// @inheritdoc ISignalService
-    /// @dev Signals are stored in a namespaced slot derived from the signal value, sender address and SIGNAL_NAMESPACE
-    /// const
-    /// @dev Cannot be used to send eth bridge signals
+    /// @dev Signals are stored in a namespaced slot derived from the signal value and sender address
     function sendSignal(bytes32 value) external returns (bytes32 slot) {
         slot = value.signal();
-        emit SignalSent(msg.sender, LibSignal.SIGNAL_NAMESPACE, value);
+        emit SignalSent(msg.sender, value);
     }
 
     /// @inheritdoc ISignalService
-    function isSignalStored(bytes32 value, address sender, bytes32 namespace) external view returns (bool) {
-        return value.signaled(sender, namespace);
+    function isSignalStored(bytes32 value, address sender) external view returns (bool) {
+        return value.signaled(sender);
     }
 
     /// @inheritdoc ISignalService
-    /// @dev Cannot be used to verify signals that are under the eth-bridge namespace.
     function verifySignal(
         uint256 height,
         address commitmentPublisher,
@@ -44,18 +41,6 @@ contract SignalService is ISignalService, CommitmentStore {
         bytes32 value,
         bytes memory proof
     ) external {
-        _verifySignal(height, commitmentPublisher, sender, value, LibSignal.SIGNAL_NAMESPACE, proof);
-        emit SignalVerified(sender, value);
-    }
-
-    function _verifySignal(
-        uint256 height,
-        address commitmentPublisher,
-        address sender,
-        bytes32 value,
-        bytes32 namespace,
-        bytes memory proof
-    ) internal virtual {
         // TODO: commitmentAt(height) might not be the 'state root' of the chain
         // For now it could be the block hash or other hashed value
         // further work is needed to ensure we get the 'state root' of the chain
@@ -72,7 +57,7 @@ contract SignalService is ISignalService, CommitmentStore {
         // this is to avoid state roots being used as storage roots (for safety)
         require(accountProof.length != 0, StorageRootCommitmentNotSupported());
 
-        value.verifySignal(namespace, sender, root, accountProof, storageProof);
+        value.verifySignal(sender, root, accountProof, storageProof);
 
         emit SignalVerified(sender, value);
     }

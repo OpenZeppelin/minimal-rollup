@@ -11,7 +11,8 @@ gas_reports_ignore = ["MockDelayedInclusionStore", "MockCheckpointTracker", ""]
 
 remappings = [
     "@optimism/=lib/optimism/",
-    "@vendor/=src/vendor/"
+    "@vendor/=src/vendor/",
+    "@openzeppelin/contracts/=lib/openzeppelin-contracts/contracts/"
 ]
 
 [fmt]

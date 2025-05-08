@@ -6,6 +6,7 @@ use alloy::{
     sol,
 };
 
+use ETHBridge::ETHBridgeInstance;
 use SignalService::SignalServiceInstance;
 
 use eyre::Result;
@@ -13,15 +14,18 @@ use serde_json::to_string_pretty;
 
 const BLOCK_TIME: u64 = 5;
 
-// NOTE: This needs to match the address of the rollup operator in the tests
-// to ensure the signal service is deployed to the same address.
-const ROLLUP_OPERATOR: Address = address!("0xCf03Dd0a894Ef79CB5b601A43C4b25E3Ae4c67eD");
-
 sol!(
     #[allow(missing_docs)]
     #[sol(rpc)]
     SignalService,
     "./out/SignalService.sol/SignalService.json",
+);
+
+sol!(
+    #[allow(missing_docs)]
+    #[sol(rpc)]
+    ETHBridge,
+    "./out/ETHBridge.sol/ETHBridge.json"
 );
 
 pub fn get_provider() -> Result<(impl Provider, AnvilInstance)> {
@@ -40,7 +44,23 @@ pub fn get_provider() -> Result<(impl Provider, AnvilInstance)> {
 pub async fn deploy_signal_service(
     provider: &impl Provider,
 ) -> Result<SignalServiceInstance<(), &impl Provider>> {
-    let contract = SignalService::deploy(provider, ROLLUP_OPERATOR).await?;
+    let contract = SignalService::deploy(provider).await?;
+    Ok(contract)
+}
+
+pub async fn deploy_eth_bridge(
+    provider: &impl Provider,
+    signal_service: Address,
+    trusted_publisher: Address,
+) -> Result<ETHBridgeInstance<(), &impl Provider>> {
+    // L2 Eth bridge address
+    let counterpart = address!("0xDC9e4C83bDe3912E9B63A9BF9cE263F3309aB5d4");
+    // WARN: This is a slight hack for now to make sure the contract is deployed on the correct address
+    ETHBridge::deploy(provider, signal_service, trusted_publisher, counterpart).await?;
+
+    let contract =
+        ETHBridge::deploy(provider, signal_service, trusted_publisher, counterpart).await?;
+
     Ok(contract)
 }
 

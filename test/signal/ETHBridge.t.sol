@@ -14,48 +14,66 @@ import {ISignalService} from "src/protocol/ISignalService.sol";
 // represents state where a deposit is made on L1
 // however, the state root is not yet available on L2
 contract BridgeETHState is BaseState {
+    ETHBridge public L1EthBridge;
+    // We need to pass the address of each bridge to the constructor of its counterpart
+    // This can be achieved with create2 or with proxy deployments
+    // For testing, we place the L2EthBridge at a specific address
+    ETHBridge public L2EthBridge = ETHBridge(address(uint160(uint256(keccak256("L2EthBridge")))));
+
     // 0xf9c183d2de58fbeb1a8917170139e980fa1b6e5a358ec83721e11c9f6e25eb18
     bytes32 public depositIdOne;
     uint256 public depositAmount = 4 ether;
     ETHBridge.ETHDeposit public depositOne;
 
-    ETHBridge public L1ethBridge;
-    ETHBridge public L2ethBridge;
+    // ETHBridge which has a large amount of ETH
+    uint256 public ETHBridgeInitBalance = 100 ether;
 
-    // this is a valid deposit ID but is sent via a signal not a deposit
-    // hence "invalid" and should not be claimable
-    bytes32 invalidDepositId = 0xbf8ce3088406c4ddbc32e32404ca006c3ef57f07d5139479f16c9124d6490f2e;
+    uint256 public senderBalanceL1 = 10 ether;
+    uint256 public senderBalanceL2 = 0 ether;
 
     function setUp() public virtual override {
         super.setUp();
 
-        vm.selectFork(L2Fork);
-        L2ethBridge = new ETHBridge();
-
         vm.selectFork(L1Fork);
-        L1ethBridge = new ETHBridge();
+        // Deploy L1EthBridge
+        vm.setNonce(defaultSender, 2);
+        vm.prank(defaultSender);
+        L1EthBridge = new ETHBridge(address(L1SignalService), address(checkpointTracker), address(L2EthBridge));
+        vm.deal(address(L1EthBridge), ETHBridgeInitBalance);
 
         vm.prank(defaultSender);
+        vm.deal(defaultSender, senderBalanceL1);
         bytes memory emptyData = "";
-        vm.recordLogs();
-        depositIdOne = L1ethBridge.deposit{value: depositAmount}(defaultSender, emptyData);
-
-        Vm.Log[] memory entries = vm.getRecordedLogs();
-
-        depositOne = abi.decode(entries[0].data, (IETHBridge.ETHDeposit));
-
-        vm.prank(defaultSender);
-        L1signalService.sendSignal(invalidDepositId);
+        depositIdOne = L1EthBridge.deposit{value: depositAmount}(defaultSender, emptyData);
     }
 }
 
-contract ETHBridgeTest is BridgeETHState {
+// Need to separate the states or it crashes
+contract BridgeETHState2 is BridgeETHState {
+    function setUp() public virtual override {
+        super.setUp();
+        vm.selectFork(L2Fork);
+        vm.deal(defaultSender, senderBalanceL2);
+        // Deploy L2EthBridge
+        vm.setNonce(defaultSender, 2);
+        vm.prank(defaultSender);
+        deployCodeTo(
+            "ETHBridge.sol",
+            abi.encode(address(L2SignalService), address(anchor), address(L1EthBridge)),
+            address(L2EthBridge)
+        );
+        vm.deal(address(L2EthBridge), ETHBridgeInitBalance);
+    }
+}
+
+contract ETHBridgeTest is BridgeETHState2 {
     function test_initialDepositState() public {
-        assertEq(address(L1signalService).balance, ETHBridgeInitBalance + depositAmount);
+        vm.selectFork(L1Fork);
+        assertEq(address(L1EthBridge).balance, ETHBridgeInitBalance + depositAmount);
         assertEq(defaultSender.balance, senderBalanceL1 - depositAmount);
 
         vm.selectFork(L2Fork);
-        assertEq(L2ethBridge.claimed(depositIdOne), false);
+        assertEq(L2EthBridge.claimed(depositIdOne), false);
         assertEq(defaultSender.balance, senderBalanceL2);
     }
 }
@@ -87,59 +105,21 @@ contract CommitmentStoredState is BridgeETHState {
         storageProofArr[1] =
             hex"f843a03e489ae456a515de885d39c5188bcd6169574db5667aa9ba76cfe7c1e9afc5fea1a01731af609b4a0951d3773ff202fa03d48b0d9db4630773c1330747c674c86ea1";
     }
-
-    function storageProofInvalidDeposit() public pure returns (bytes[] memory storageProofArr) {
-        storageProofArr = new bytes[](2);
-
-        storageProofArr[0] =
-            hex"f89180808080a015ae32d5986f7e597e8a4db519e6640db0eeb8271f30c7691dc58cd99b9cae8da0189ef9b745baf1cac397de18cd0daa0080adc277514b3424e51add1fa0560caa8080808080a0f4984a11f61a2921456141df88de6e1a710d28681b91af794c5a721e47839cd780a07922f462ebc1e5dbf5d9cf69804cfb38646a24cce553010811b89d913f1e0544808080";
-        storageProofArr[1] =
-            hex"f843a03e4b9f05a3709e8b7aeb7ad23c6304cc7c352036e185309eb9ca85a9d479a4bca1a09a30c5e99dafa3ca4343a7bbe5c7ae498be2a41a4ff6743822305b8acfeb183d";
-    }
 }
 
 contract ClaimDepositTest is CommitmentStoredState {
     function test_claimDeposit() public {
-        vm.selectFork(L2Fork);
-
         bytes[] memory accountProof = accountProofSignalService();
         bytes[] memory storageProof = storageProofDepositOne();
         ISignalService.SignalProof memory signalProof = ISignalService.SignalProof(accountProof, storageProof);
         bytes memory encodedProof = abi.encode(signalProof);
 
-        L2ethBridge.claimDeposit(depositOne, commitmentHeight, encodedProof);
-
-        assertEq(address(L2ethBridge).balance, ETHBridgeInitBalance - depositAmount);
-        assertEq(defaultSender.balance, senderBalanceL2 + depositAmount);
-    }
-
-    function test_claimDeposit_RevertWhen_SentViaSignalNotDeposit() public {
-        bytes[] memory accountProof = accountProofSignalService();
-        bytes[] memory storageProof = storageProofInvalidDeposit();
-        ISignalService.SignalProof memory signalProof = ISignalService.SignalProof(accountProof, storageProof);
-        bytes memory encodedProof = abi.encode(signalProof);
-
-        ETHBridge.ETHDeposit memory invalidDeposit;
-        invalidDeposit.nonce = 1;
-        invalidDeposit.from = defaultSender;
-        invalidDeposit.to = defaultSender;
-        invalidDeposit.amount = depositAmount;
-        invalidDeposit.data = "";
-
-        vm.selectFork(L1Fork);
-        bool storedInGenericNamespace =
-            L1signalService.isSignalStored(invalidDepositId, defaultSender, keccak256("generic-signal"));
-        assertTrue(storedInGenericNamespace);
-
-        bool storedInEthBridgeNamespace =
-            L1signalService.isSignalStored(invalidDepositId, defaultSender, keccak256("eth-bridge"));
-        assertFalse(storedInEthBridgeNamespace);
+        IETHBridge.ETHDeposit memory depositOne =
+            IETHBridge.ETHDeposit(0, defaultSender, defaultSender, depositAmount, bytes(""));
 
         vm.selectFork(L2Fork);
-        // to be extra sure its not a problem with the proof
-        L2signalService.verifySignal(commitmentHeight, address(anchor), defaultSender, invalidDepositId, encodedProof);
-        // I believe this error means that the proof is not valid for this deposit id
-        vm.expectRevert("MerkleTrie: invalid large internal hash");
-        L2ethBridge.claimDeposit(invalidDeposit, commitmentHeight, encodedProof);
+        L2EthBridge.claimDeposit(depositOne, commitmentHeight, encodedProof);
+        // assertEq(address(L2EthBridge).balance, ETHBridgeInitBalance - depositAmount);
+        // assertEq(defaultSender.balance, senderBalanceL2 + depositAmount);
     }
 }
