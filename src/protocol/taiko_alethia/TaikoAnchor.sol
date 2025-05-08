@@ -3,10 +3,11 @@ pragma solidity ^0.8.28;
 
 import {ICommitmentStore} from "../ICommitmentStore.sol";
 
-//CHECK: This contains all the fields of the Ethereum block header / in the same order
+///@dev This contains all the fields of the Ethereum block header in the cancun fork taken from
+/// https://ethereum.github.io/execution-specs/src/ethereum/cancun/blocks.py.html#ethereum.cancun.blocks.Header:0
 struct BlockHeader {
     bytes32 parentHash;
-    bytes32 uncleHash;
+    bytes32 omnersHash;
     address coinbase;
     bytes32 stateRoot;
     bytes32 transactionsRoot;
@@ -17,14 +18,14 @@ struct BlockHeader {
     uint256 gasLimit;
     uint256 gasUsed;
     uint256 timestamp;
-    bytes32 mixHash;
+    bytes extraData;
+    bytes32 prevRandao;
     uint64 nonce;
     bytes32 baseFeePerGas;
     bytes32 withdrawalsRoot;
-    bytes32 blobGasUsed;
-    bytes32 excessBlobGas;
+    uint64 blobGasUsed;
+    uint64 excessBlobGas;
     bytes32 parentBeaconBlockRoot;
-    bytes extraData;
 }
 
 contract TaikoAnchor {
