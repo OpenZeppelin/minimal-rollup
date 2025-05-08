@@ -32,6 +32,10 @@ struct BlockHeader {
 contract TaikoAnchor {
     event Anchor(uint256 publicationId, uint256 anchorBlockId, bytes32 anchorBlockHash, bytes32 parentGasUsed);
 
+    /// @dev The header provided does not match the block hash
+    /// @param headerHash The header hash
+    error HeaderMismatch(bytes32 headerHash);
+
     uint256 public immutable fixedBaseFee;
     address public immutable permittedSender; // 0x0000777735367b36bC9B61C50022d9D0700dB4Ec
 
@@ -92,7 +96,8 @@ contract TaikoAnchor {
         // Persist anchor block hashes
         if (_anchorBlockId > lastAnchorBlockId) {
             lastAnchorBlockId = _anchorBlockId;
-            require(keccak256(abi.encode(_anchorBlockHeader)) == _anchorBlockHash, "header mismatch");
+            bytes32 headerHash = keccak256(abi.encode(_anchorBlockHeader));
+            require(headerHash == _anchorBlockHash, HeaderMismatch(headerHash));
             bytes32 commitment = keccak256(abi.encode(_anchorBlockHeader.stateRoot, _anchorBlockHash));
             // Stores the state of the other chain
             commitmentStore.storeCommitment(_anchorBlockId, commitment);
