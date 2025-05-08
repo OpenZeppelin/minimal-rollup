@@ -35,7 +35,13 @@ contract CheckpointTracker is ICheckpointTracker {
     }
 
     /// @inheritdoc ICheckpointTracker
-    function proveTransition(Checkpoint calldata end, uint256 numPublications, bytes calldata proof) external {
+    /// @dev This function does not use the `start` checkpoint since we don't support parallel transitions.
+    function proveTransition(
+        Checkpoint calldata,
+        Checkpoint calldata end,
+        uint256 numPublications,
+        bytes calldata proof
+    ) external {
         require(
             proverManager == address(0) || msg.sender == proverManager, "Only the prover manager can call this function"
         );

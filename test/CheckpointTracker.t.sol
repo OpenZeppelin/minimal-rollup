@@ -65,7 +65,11 @@ contract CheckpointTrackerTest is Test {
 
         vm.expectEmit();
         emit ICheckpointTracker.CheckpointUpdated(end);
-        tracker.proveTransition(end, numRelevantPublications, proof);
+
+        // Empty checkpoint needed to comply with the interface, but not used in `CheckpointTracker`
+        ICheckpointTracker.Checkpoint memory emptyCheckpoint =
+            ICheckpointTracker.Checkpoint({publicationId: 0, commitment: bytes32(0)});
+        tracker.proveTransition(emptyCheckpoint, end, numRelevantPublications, proof);
 
         ICheckpointTracker.Checkpoint memory provenCheckpoint = tracker.getProvenCheckpoint();
         assertEq(provenCheckpoint.publicationId, end.publicationId);
@@ -78,7 +82,10 @@ contract CheckpointTrackerTest is Test {
         uint256 numRelevantPublications = 2;
 
         vm.expectRevert("Checkpoint commitment cannot be 0");
-        tracker.proveTransition(end, numRelevantPublications, proof);
+        // Empty checkpoint needed to comply with the interface, but not used in `CheckpointTracker`
+        ICheckpointTracker.Checkpoint memory emptyCheckpoint =
+            ICheckpointTracker.Checkpoint({publicationId: 0, commitment: bytes32(0)});
+        tracker.proveTransition(emptyCheckpoint, end, numRelevantPublications, proof);
     }
 
     function createSampleFeed() private {
