@@ -3,11 +3,12 @@ pragma solidity ^0.8.28;
 
 import {IETHBridge} from "./IETHBridge.sol";
 import {ISignalService} from "./ISignalService.sol";
+import {ReentrancyGuardTransient} from "@openzeppelin/contracts/utils/ReentrancyGuardTransient.sol";
 
 /// @dev ETH bridging contract to send native ETH between L1 <-> L2 using storage proofs.
 ///
 /// IMPORTANT: No recovery mechanism is implemented in case an account creates a deposit that can't be claimed.
-contract ETHBridge is IETHBridge {
+contract ETHBridge is IETHBridge, ReentrancyGuardTransient {
     mapping(bytes32 id => bool claimed) private _claimed;
 
     /// Incremental nonce to generate unique deposit IDs.
@@ -15,14 +16,22 @@ contract ETHBridge is IETHBridge {
 
     ISignalService public immutable signalService;
 
+    /// @dev Trusted source of commitments in the `CommitmentStore` that the bridge will use to validate withdrawals
     /// @dev This is the Anchor on L2 and the Checkpoint Tracker on the L1
     address public immutable trustedCommitmentPublisher;
 
-    constructor(address _signalService, address _trustedCommitmentPublisher) {
+    /// @dev The counterpart bridge contract on the other chain.
+    /// This is used to locate deposit signals inside the other chain's state root.
+    /// WARN: This address has no significance (and may be untrustworthy) on this chain.
+    address public immutable counterpart;
+
+    constructor(address _signalService, address _trustedCommitmentPublisher, address _counterpart) {
         require(_signalService != address(0), "Empty signal service");
         require(_trustedCommitmentPublisher != address(0), "Empty trusted publisher");
+
         signalService = ISignalService(_signalService);
         trustedCommitmentPublisher = _trustedCommitmentPublisher;
+        counterpart = _counterpart;
     }
 
     /// @inheritdoc IETHBridge
@@ -42,18 +51,21 @@ contract ETHBridge is IETHBridge {
         unchecked {
             ++_globalDepositNonce;
         }
+
         signalService.sendSignal(id);
         emit DepositMade(id, ethDeposit);
     }
 
     /// @inheritdoc IETHBridge
-    // TODO: Non reentrant
-    function claimDeposit(ETHDeposit memory ethDeposit, uint256 height, bytes memory proof) external {
+    function claimDeposit(ETHDeposit memory ethDeposit, uint256 height, bytes memory proof) external nonReentrant {
         bytes32 id = _generateId(ethDeposit);
-        signalService.verifySignal(height, trustedCommitmentPublisher, ethDeposit.from, id, proof);
         require(!claimed(id), AlreadyClaimed());
+
+        signalService.verifySignal(height, trustedCommitmentPublisher, counterpart, id, proof);
+
         _claimed[id] = true;
         _sendETH(ethDeposit.to, ethDeposit.amount, ethDeposit.data);
+
         emit DepositClaimed(id, ethDeposit);
     }
 
