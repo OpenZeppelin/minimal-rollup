@@ -7,19 +7,14 @@ import {IPublicationFeed} from "./IPublicationFeed.sol";
 import {IVerifier} from "./IVerifier.sol";
 
 contract CheckpointTracker is ICheckpointTracker {
-    /// @notice The current proven checkpoint representing the latest verified state of the rollup
-    /// @dev Previous checkpoints are not stored here but are synchronized to the `SignalService`
-    /// @dev A checkpoint commitment is any value (typically a state root) that uniquely identifies
-    /// the state of the rollup at a specific point in time
-    /// @dev We store the actual checkpoint(not the hash) to avoid race conditions when closing a period or evicting a
-    /// prover(https://github.com/OpenZeppelin/minimal-rollup/pull/77#discussion_r2002192018)
-
-    Checkpoint private _provenCheckpoint;
+    /// @dev The publication id of the current proven checkpoint representing
+    /// the latest verified state of the rollup
+    uint256 private _provenPublicationId;
 
     IPublicationFeed public immutable publicationFeed;
     IVerifier public immutable verifier;
     ICommitmentStore public immutable commitmentStore;
-    address public proverManager;
+    address public immutable proverManager;
 
     /// @param _genesis the checkpoint commitment describing the initial state of the rollup
     /// @param _publicationFeed the input data source that updates the state of this rollup
@@ -35,14 +30,14 @@ contract CheckpointTracker is ICheckpointTracker {
     ) {
         // set the genesis checkpoint commitment of the rollup - genesis is trusted to be correct
         require(_genesis != 0, "genesis checkpoint commitment cannot be 0");
-
         publicationFeed = IPublicationFeed(_publicationFeed);
+        uint256 latestPublicationId = publicationFeed.getNextPublicationId() - 1;
+
         verifier = IVerifier(_verifier);
         commitmentStore = ICommitmentStore(_commitmentStore);
         proverManager = _proverManager;
-        Checkpoint memory genesisCheckpoint = Checkpoint({publicationId: 0, commitment: _genesis});
-        _provenCheckpoint = genesisCheckpoint;
-        emit CheckpointUpdated(genesisCheckpoint);
+
+        _updateCheckpoint(latestPublicationId, _genesis);
     }
 
     /// @inheritdoc ICheckpointTracker
@@ -58,8 +53,9 @@ contract CheckpointTracker is ICheckpointTracker {
 
         require(end.commitment != 0, "Checkpoint commitment cannot be 0");
 
+        Checkpoint memory provenCheckpoint = getProvenCheckpoint();
         require(
-            start.publicationId == _provenCheckpoint.publicationId && start.commitment == _provenCheckpoint.commitment,
+            start.publicationId == provenCheckpoint.publicationId && start.commitment == provenCheckpoint.commitment,
             "Start checkpoint must be the latest proven checkpoint"
         );
 
@@ -73,14 +69,22 @@ contract CheckpointTracker is ICheckpointTracker {
             startPublicationHash, endPublicationHash, start.commitment, end.commitment, numPublications, proof
         );
 
-        _provenCheckpoint = end;
-        emit CheckpointUpdated(end);
-
-        // Stores the state of the other chain
-        commitmentStore.storeCommitment(end.publicationId, end.commitment);
+        _updateCheckpoint(end.publicationId, end.commitment);
     }
 
-    function getProvenCheckpoint() external view returns (Checkpoint memory) {
-        return _provenCheckpoint;
+    /// @inheritdoc ICheckpointTracker
+    function getProvenCheckpoint() public view returns (Checkpoint memory provenCheckpoint) {
+        provenCheckpoint.publicationId = _provenPublicationId;
+        provenCheckpoint.commitment = commitmentStore.commitmentAt(address(this), provenCheckpoint.publicationId);
+    }
+
+    /// @dev Updates the proven checkpoint to a new publication ID and commitment
+    /// @dev Stores the commitment in the commitment store and emits an event
+    /// @param publicationId The ID of the publication to set as the latest proven checkpoint
+    /// @param commitment The checkpoint commitment representing the state at the given publication ID
+    function _updateCheckpoint(uint256 publicationId, bytes32 commitment) internal {
+        _provenPublicationId = publicationId;
+        commitmentStore.storeCommitment(publicationId, commitment);
+        emit CheckpointUpdated(publicationId, commitment);
     }
 }

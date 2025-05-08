@@ -15,7 +15,6 @@ contract TaikoAnchor {
     uint256 public lastPublicationId;
     bytes32 public circularBlocksHash;
     mapping(uint256 blockId => bytes32 blockHash) public blockHashes;
-    mapping(uint256 blockId => bytes32 blockHash) public l1BlockHashes;
 
     modifier onlyFromPermittedSender() {
         require(msg.sender == permittedSender, "sender not golden touch");
@@ -61,7 +60,6 @@ contract TaikoAnchor {
         // Persist anchor block hashes
         if (_anchorBlockId > lastAnchorBlockId) {
             lastAnchorBlockId = _anchorBlockId;
-            l1BlockHashes[_anchorBlockId] = _anchorBlockHash;
             // Stores the state of the other chain
             commitmentStore.storeCommitment(_anchorBlockId, _anchorBlockHash);
         }
@@ -78,6 +76,10 @@ contract TaikoAnchor {
         _verifyBaseFee(_parentGasUsed);
 
         emit Anchor(_publicationId, _anchorBlockId, _anchorBlockHash, _parentGasUsed);
+    }
+
+    function l1BlockHashes(uint256 blockId) external view returns (bytes32 blockHash) {
+        return commitmentStore.commitmentAt(address(this), blockId);
     }
 
     /// @dev Calculates the aggregated ancestor block hash for the given block ID
