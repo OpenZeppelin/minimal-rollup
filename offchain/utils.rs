@@ -69,18 +69,18 @@ pub async fn get_proofs(
     slot: B256,
     signal_service: &SignalServiceInstance<(), &impl Provider>,
 ) -> Result<()> {
-    let state_root = provider
+    let block_header = provider
         .get_block_by_number(alloy::eips::BlockNumberOrTag::Latest)
         .await?
         .unwrap()
-        .header
-        .state_root;
+        .header;
 
     let proof = provider
         .get_proof(signal_service.address().to_owned(), vec![slot])
         .await?;
 
-    println!("State Root: {}", state_root.to_string());
+    println!("Block Hash: {}", block_header.hash.to_string());
+    println!("State Root: {}", block_header.state_root.to_string());
     println!("Storage Root: {}", proof.storage_hash.to_string());
     println!("Account Proof: {}", to_string_pretty(&proof.account_proof)?);
     println!("Storage Proof: {}", to_string_pretty(&proof.storage_proof)?);
