@@ -73,10 +73,9 @@ contract SendL1SignalState is BaseState {
     // 0xe321d900f3fd366734e2d071e30949ded20c27fd638f1a059390091c643b62c5
     bytes32 public signal = keccak256(abi.encode(value));
 
+    bytes32 public blockHash = 0x72ea63fa1980ed28a3e10245096d3bb7c717d83e025bcfb6e0a2889fa88984c7;
     bytes32 public stateRoot = 0xbea626defff8745e6a6fd162f3480615a0e6eb285b8a8ba54b31fe2ffa950874;
     bytes32 public storageRoot = 0x04bdf08088bbf36329fe89a42e20579b0a9222b2301b4787eeecc03ef88bc507;
-    // TODO: Update this to the correct block hash
-    bytes32 public blockHash = 0xbea626defff8745e6a6fd162f3480615a0e6eb285b8a8ba54b31fe2ffa950874;
 
     function setUp() public virtual override {
         super.setUp();
@@ -117,7 +116,8 @@ contract SendL1SignalTest is SendL1SignalState {
         bytes memory encodedProof = abi.encode(signalProof);
 
         uint256 height = 1;
-        anchor.anchor(height, stateRoot);
+        bytes32 commitment = keccak256(abi.encode(stateRoot, blockHash));
+        anchor.anchor(height, commitment);
 
         L2SignalService.verifySignal(height, address(anchor), defaultSender, signal, encodedProof);
     }

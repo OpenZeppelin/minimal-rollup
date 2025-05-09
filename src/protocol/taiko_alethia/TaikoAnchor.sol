@@ -70,7 +70,8 @@ contract TaikoAnchor {
     /// 1. This function is transacted as the first transaction in the first L2 block derived from the same publication;
     /// 2. This function's gas limit is a fixed value;
     /// 3. This function will not revert;
-    /// 4. The parameters correspond to the real L1 state.
+    /// 4. The parameters correspond to the real L1 state, except _anchorBlockHeader is validated in this function
+    /// rather than the node
     /// @dev The anchor block header is provided in order to extract the L1 state root needed for storage verification
     /// logic (i.e. verifying an L1 signal)
     /// @param _publicationId The publication that contains this anchor transaction (as the first transaction)
