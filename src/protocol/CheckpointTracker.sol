@@ -54,14 +54,15 @@ contract CheckpointTracker is ICheckpointTracker {
 
         require(end.commitment != 0, "Checkpoint commitment cannot be 0");
 
-        bytes32 startPublicationHash = publicationFeed.getPublicationHash(_provenCheckpoint.publicationId);
+        Checkpoint memory latestProvenCheckpoint = getProvenCheckpoint();
+        bytes32 startPublicationHash = publicationFeed.getPublicationHash(latestProvenCheckpoint.publicationId);
         bytes32 endPublicationHash = publicationFeed.getPublicationHash(end.publicationId);
         require(endPublicationHash != 0, "End publication does not exist");
 
         verifier.verifyProof(
             startPublicationHash,
             endPublicationHash,
-            _provenCheckpoint.commitment,
+            latestProvenCheckpoint.commitment,
             end.commitment,
             numPublications,
             proof

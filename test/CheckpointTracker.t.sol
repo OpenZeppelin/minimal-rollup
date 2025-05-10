@@ -77,7 +77,7 @@ contract CheckpointTrackerTest is Test {
         uint256 numRelevantPublications = 2;
 
         vm.expectEmit();
-        emit ICheckpointTracker.CheckpointUpdated(end);
+        emit ICheckpointTracker.CheckpointUpdated(end.publicationId, end.commitment);
 
         // Empty checkpoint needed to comply with the interface, but not used in `CheckpointTracker`
         ICheckpointTracker.Checkpoint memory emptyCheckpoint =
