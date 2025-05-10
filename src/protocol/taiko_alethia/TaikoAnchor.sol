@@ -1,17 +1,20 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
+import {ICommitmentStore} from "../ICommitmentStore.sol";
+
 contract TaikoAnchor {
     event Anchor(uint256 publicationId, uint256 anchorBlockId, bytes32 anchorBlockHash, bytes32 parentGasUsed);
 
     uint256 public immutable fixedBaseFee;
     address public immutable permittedSender; // 0x0000777735367b36bC9B61C50022d9D0700dB4Ec
 
+    ICommitmentStore public immutable commitmentStore;
+
     uint256 public lastAnchorBlockId;
     uint256 public lastPublicationId;
     bytes32 public circularBlocksHash;
     mapping(uint256 blockId => bytes32 blockHash) public blockHashes;
-    mapping(uint256 blockId => bytes32 blockHash) public l1BlockHashes;
 
     modifier onlyFromPermittedSender() {
         require(msg.sender == permittedSender, "sender not golden touch");
@@ -19,7 +22,10 @@ contract TaikoAnchor {
     }
 
     // This constructor is only used in test as the contract will be pre-deployed in the L2 genesis
-    constructor(uint256 _fixedBaseFee, address _permittedSender) {
+    /// @param _fixedBaseFee The fixed base fee for the rollup
+    /// @param _permittedSender The address of the sender that can call the anchor function
+    /// @param _commitmentStore contract responsible storing historical commitments
+    constructor(uint256 _fixedBaseFee, address _permittedSender, address _commitmentStore) {
         require(_fixedBaseFee > 0, "fixedBaseFee must be greater than 0");
         fixedBaseFee = _fixedBaseFee;
         permittedSender = _permittedSender;
@@ -27,6 +33,7 @@ contract TaikoAnchor {
         uint256 parentId = block.number - 1;
         blockHashes[parentId] = blockhash(parentId);
         (circularBlocksHash,) = _calcCircularBlocksHash(block.number);
+        commitmentStore = ICommitmentStore(_commitmentStore);
     }
 
     /// @dev The node software will guarantee and the prover will verify the following:
@@ -53,7 +60,8 @@ contract TaikoAnchor {
         // Persist anchor block hashes
         if (_anchorBlockId > lastAnchorBlockId) {
             lastAnchorBlockId = _anchorBlockId;
-            l1BlockHashes[_anchorBlockId] = _anchorBlockHash;
+            // Stores the state of the other chain
+            commitmentStore.storeCommitment(_anchorBlockId, _anchorBlockHash);
         }
 
         // Store the parent block hash in the _blockhashes mapping
@@ -68,6 +76,10 @@ contract TaikoAnchor {
         _verifyBaseFee(_parentGasUsed);
 
         emit Anchor(_publicationId, _anchorBlockId, _anchorBlockHash, _parentGasUsed);
+    }
+
+    function l1BlockHashes(uint256 blockId) external view returns (bytes32 blockHash) {
+        return commitmentStore.commitmentAt(address(this), blockId);
     }
 
     /// @dev Calculates the aggregated ancestor block hash for the given block ID
