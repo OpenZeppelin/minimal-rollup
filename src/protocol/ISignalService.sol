@@ -12,6 +12,8 @@ interface ISignalService {
     struct SignalProof {
         bytes[] accountProof;
         bytes[] storageProof;
+        bytes32 stateRoot;
+        bytes32 blockHash;
     }
 
     /// @dev Emitted when a signal is sent.
@@ -29,6 +31,9 @@ interface ISignalService {
 
     /// @dev If the commitment returns 0 we assume it does not exist
     error CommitmentNotFound();
+
+    /// @dev The commitment does not match the block hash and state root
+    error InvalidCommitment();
 
     /// @notice Stores a signal and returns its storage location.
     /// @param value Data to be stored (signalled)
