@@ -41,8 +41,9 @@ contract CheckpointTracker is ICheckpointTracker {
     }
 
     /// @inheritdoc ICheckpointTracker
+    /// @dev This function does not use the `start` checkpoint since we don't support parallel transitions.
     function proveTransition(
-        Checkpoint calldata start,
+        Checkpoint calldata,
         Checkpoint calldata end,
         uint256 numPublications,
         bytes calldata proof
@@ -53,20 +54,18 @@ contract CheckpointTracker is ICheckpointTracker {
 
         require(end.commitment != 0, "Checkpoint commitment cannot be 0");
 
-        Checkpoint memory provenCheckpoint = getProvenCheckpoint();
-        require(
-            start.publicationId == provenCheckpoint.publicationId && start.commitment == provenCheckpoint.commitment,
-            "Start checkpoint must be the latest proven checkpoint"
-        );
-
-        require(start.publicationId < end.publicationId, "End publication must be after the last proven publication");
-
-        bytes32 startPublicationHash = publicationFeed.getPublicationHash(start.publicationId);
+        Checkpoint memory latestProvenCheckpoint = getProvenCheckpoint();
+        bytes32 startPublicationHash = publicationFeed.getPublicationHash(latestProvenCheckpoint.publicationId);
         bytes32 endPublicationHash = publicationFeed.getPublicationHash(end.publicationId);
         require(endPublicationHash != 0, "End publication does not exist");
 
         verifier.verifyProof(
-            startPublicationHash, endPublicationHash, start.commitment, end.commitment, numPublications, proof
+            startPublicationHash,
+            endPublicationHash,
+            latestProvenCheckpoint.commitment,
+            end.commitment,
+            numPublications,
+            proof
         );
 
         _updateCheckpoint(end.publicationId, end.commitment);

@@ -17,7 +17,7 @@ contract MockCheckpointTracker is ICheckpointTracker {
 
     /// @notice Do nothing. All checkpoints and proofs are accepted.
     function proveTransition(
-        Checkpoint calldata start,
+        Checkpoint calldata,
         Checkpoint calldata end,
         uint256 numPublications,
         bytes calldata proof

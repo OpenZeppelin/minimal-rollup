@@ -80,6 +80,8 @@ contract ETHBridgeTest is BridgeETHState2 {
 
 contract CommitmentStoredState is BridgeETHState {
     bytes32 public stateRoot = hex"b56827bea299e8ea13277172f0839722368039e3acf7e1a44048a76f783fbcd5";
+    // TODO: Update this to the correct block hash
+    bytes32 public blockHash = hex"b56827bea299e8ea13277172f0839722368039e3acf7e1a44048a76f783fbcd5";
     uint256 public commitmentHeight = 1;
 
     function setUp() public virtual override {
@@ -111,7 +113,8 @@ contract ClaimDepositTest is CommitmentStoredState {
     function test_claimDeposit() public {
         bytes[] memory accountProof = accountProofSignalService();
         bytes[] memory storageProof = storageProofDepositOne();
-        ISignalService.SignalProof memory signalProof = ISignalService.SignalProof(accountProof, storageProof);
+        ISignalService.SignalProof memory signalProof =
+            ISignalService.SignalProof(accountProof, storageProof, stateRoot, blockHash);
         bytes memory encodedProof = abi.encode(signalProof);
 
         IETHBridge.ETHDeposit memory depositOne =

@@ -34,6 +34,8 @@ contract SignalService is ISignalService, CommitmentStore {
     }
 
     /// @inheritdoc ISignalService
+    /// @dev This function assumes that the commitment is the `keccak256(stateRoot, blockHash)` of the origin chain to
+    /// be able to use the `stateRoot` to verify the signal.
     function verifySignal(
         uint256 height,
         address commitmentPublisher,
@@ -41,23 +43,22 @@ contract SignalService is ISignalService, CommitmentStore {
         bytes32 value,
         bytes memory proof
     ) external {
-        // TODO: commitmentAt(height) might not be the 'state root' of the chain
-        // For now it could be the block hash or other hashed value
-        // further work is needed to ensure we get the 'state root' of the chain
-        bytes32 root = commitmentAt(commitmentPublisher, height);
-
-        // A 0 root would probably fail further down the line but its better to explicitly check
-        require(root != 0, CommitmentNotFound());
+        bytes32 commitment = commitmentAt(commitmentPublisher, height);
+        // A 0 root will fail the hash comparison, but better to explicitly check and return an error
+        require(commitment != 0, CommitmentNotFound());
 
         SignalProof memory signalProof = abi.decode(proof, (SignalProof));
+        bytes32 blockHash = signalProof.blockHash;
+        bytes32 stateRoot = signalProof.stateRoot;
+        require(keccak256(abi.encode(stateRoot, blockHash)) == commitment, InvalidCommitment());
+
         bytes[] memory accountProof = signalProof.accountProof;
         bytes[] memory storageProof = signalProof.storageProof;
-
         // We only support state roots for verification
         // this is to avoid state roots being used as storage roots (for safety)
         require(accountProof.length != 0, StorageRootCommitmentNotSupported());
 
-        value.verifySignal(sender, root, accountProof, storageProof);
+        value.verifySignal(sender, stateRoot, accountProof, storageProof);
 
         emit SignalVerified(sender, value);
     }

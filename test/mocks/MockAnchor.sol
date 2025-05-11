@@ -11,8 +11,10 @@ contract MockAnchor {
     }
 
     /// @notice Anchor doesnt do anything, it just stores the commitment
-    function anchor(uint256 _anchorBlockId, bytes32 _anchorBlockHash) external {
-        // WARN: Here we are committing the L1 state root not block hash
-        commitmentStore.storeCommitment(_anchorBlockId, _anchorBlockHash);
+    function anchor(uint256 _anchorBlockId, bytes32 _commitment) external {
+        // TODO: The real anchor contract hashes the block header to verify the block hash,
+        // but here we just store the commitment directly
+        // Where commitment is the keccak256(abi.encode(stateRoot, blockHash))
+        commitmentStore.storeCommitment(_anchorBlockId, _commitment);
     }
 }
