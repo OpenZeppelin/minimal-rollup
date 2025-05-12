@@ -79,11 +79,10 @@ contract MessageRelayer is ReentrancyGuardTransient, IMessageRelayer {
         }
 
         require(success, MessageForwardingFailed());
-
-        payable(relayer).transfer(fee);
-
         emit MessageForwarded(to, valueToSend, data);
 
         RELAYER_SLOT.asAddress().tstore(address(0));
+
+        payable(relayer).transfer(fee);
     }
 }
