@@ -32,7 +32,6 @@ import {MessageRelayer} from "src/protocol/taiko_alethia/MessageRelayer.sol";
 ///             data (in this case ""),
 ///             )
 ///
-/// If relayer wants to claim this fee, it needs to call claimDeposit on the bridge.
 /// The relayer will net any fee - gas spent on the call to relayMessage.
 contract MessageRelayer is ReentrancyGuardTransient, IMessageRelayer {
     using TransientSlot for *;
