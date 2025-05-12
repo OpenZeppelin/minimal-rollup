@@ -25,7 +25,7 @@ interface IMessageRelayer {
     /// @notice Executes the claimDeposit function on the ETHBridge.
     /// @dev Implements any intermediary step to claim the deposit (i.e. stores relayer address)
     /// @param ethDeposit Deposit to claim
-    /// @param height Height of the L2 block
+    /// @param height The `height` of the checkpoint on the source chain (i.e. the block number or publicationId)
     /// @param proof Proof of the deposit
     /// @param relayerAddress Address of the relayer to send fee to
     function relayMessage(
