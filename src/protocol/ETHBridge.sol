@@ -9,7 +9,7 @@ import {ReentrancyGuardTransient} from "@openzeppelin/contracts/utils/Reentrancy
 ///
 /// IMPORTANT: No recovery mechanism is implemented in case an account creates a deposit that can't be claimed.
 contract ETHBridge is IETHBridge, ReentrancyGuardTransient {
-    mapping(bytes32 id => bool claimed) private _claimed;
+    mapping(bytes32 id => Status status) private _depositStatus;
 
     /// Incremental nonce to generate unique deposit IDs.
     uint256 private _globalDepositNonce;
@@ -35,8 +35,11 @@ contract ETHBridge is IETHBridge, ReentrancyGuardTransient {
     }
 
     /// @inheritdoc IETHBridge
-    function claimed(bytes32 id) public view returns (bool) {
-        return _claimed[id];
+    /// @dev The `NONE` status does not indicate that the deposit does not exist
+    /// but rather that the deposit has not been processed yet (it may also not exist),
+    /// use isSignalStored to verify the existence of a deposit.
+    function depositStatus(bytes32 id) public view returns (Status) {
+        return _depositStatus[id];
     }
 
     /// @inheritdoc IETHBridge
@@ -59,14 +62,41 @@ contract ETHBridge is IETHBridge, ReentrancyGuardTransient {
     /// @inheritdoc IETHBridge
     function claimDeposit(ETHDeposit memory ethDeposit, uint256 height, bytes memory proof) external nonReentrant {
         bytes32 id = _generateId(ethDeposit);
-        require(!claimed(id), AlreadyClaimed());
+        require(depositStatus(id) == Status.NONE, AlreadyClaimed());
 
         signalService.verifySignal(height, trustedCommitmentPublisher, counterpart, id, proof);
 
-        _claimed[id] = true;
+        _depositStatus[id] = Status.PROCESSED;
         _sendETH(ethDeposit.to, ethDeposit.amount, ethDeposit.data);
 
         emit DepositClaimed(id, ethDeposit);
+    }
+
+    function cancelDeposit(ETHDeposit memory ethDeposit) external {
+        bytes32 id = _generateId(ethDeposit);
+        require(msg.sender == ethDeposit.from, "Only the sender can cancel a deposit");
+        require(depositStatus(id) == Status.NONE, "Deposit already processed");
+
+        _depositStatus[id] = Status.CANCELLED;
+
+        bytes32 cancelledDepositId = id ^ bytes32(uint256(Status.CANCELLED));
+        signalService.sendSignal(cancelledDepositId);
+
+        // emit DepositCancelled(id);
+    }
+
+    function claimCancelledDeposit(ETHDeposit memory ethDeposit, uint256 height, bytes memory proof)
+        external
+        nonReentrant
+    {
+        bytes32 id = _generateId(ethDeposit);
+        require(depositStatus(id) == Status.NONE, "Deposit already processed");
+        bytes32 cancelledDepositId = id ^ bytes32(uint256(Status.CANCELLED));
+
+        signalService.verifySignal(height, trustedCommitmentPublisher, counterpart, cancelledDepositId, proof);
+
+        _depositStatus[id] = Status.PROCESSED;
+        _sendETH(ethDeposit.to, ethDeposit.amount, ethDeposit.data);
     }
 
     /// @dev Function to transfer ETH to the receiver but ignoring the returndata.

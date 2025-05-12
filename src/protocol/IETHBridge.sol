@@ -19,6 +19,15 @@ interface IETHBridge {
         bytes data;
     }
 
+    enum Status {
+        // Deposit has not been processed (or does not exist)
+        NONE,
+        // Successfully claimed and processed
+        PROCESSED,
+        // Claim cancelled
+        CANCELLED
+    }
+
     /// @dev Emitted when a deposit is made.
     /// @param id The deposit id
     /// @param deposit The ETH deposit
@@ -35,9 +44,9 @@ interface IETHBridge {
     /// @dev A deposit was already claimed.
     error AlreadyClaimed();
 
-    /// @dev Whether the deposit identified by `id` has been claimed.
+    /// @notice The status of the deposit identified by `id``
     /// @param id The deposit id
-    function claimed(bytes32 id) external view returns (bool);
+    function depositStatus(bytes32 id) external view returns (Status);
 
     /// @dev ETH Deposit identifier.
     /// @param ethDeposit The ETH deposit struct
