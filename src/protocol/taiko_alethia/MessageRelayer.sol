@@ -57,7 +57,7 @@ contract MessageRelayer is ReentrancyGuardTransient, IMessageRelayer {
 
         ethBridge.claimDeposit(ethDeposit, height, proof);
 
-        emit RelayInitiated(ethDeposit, relayerAddress);
+        emit Relayed(ethDeposit, relayerAddress);
     }
 
     /// @inheritdoc IMessageRelayer

@@ -8,7 +8,7 @@ interface IMessageRelayer {
     /// @dev Emitted when a deposit has been successfully claimed.
     /// @param ethDeposit Deposit claimed
     /// @param relayer Address of the relayer that claimed the deposit
-    event RelayInitiated(IETHBridge.ETHDeposit indexed ethDeposit, address relayer);
+    event Relayed(IETHBridge.ETHDeposit indexed ethDeposit, address relayer);
 
     /// @dev Emitted when a message has been successfully forwarded.
     /// @param to Address forwarded to
