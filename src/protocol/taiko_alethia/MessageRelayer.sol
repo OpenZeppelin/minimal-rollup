@@ -37,8 +37,13 @@ import {MessageRelayer} from "src/protocol/taiko_alethia/MessageRelayer.sol";
 ///    2. This will call claimDeposit on the ETHBridge
 ///    3. If the original message was specified correctly, this will call receiveMessage on this contract
 ///    4. This will call the message recipient and send the fee to the relayer
-/// 
+///
 /// The relayer will net any fee minus the gas spent on the call to relayMessage.
+///
+/// WARN: There is no relayer protection. In particular:
+///    - if the ETHDeposit does not invoke receiveMessage, the relayer will not be paid.
+///    - if receiveMessage is called directly, the fee will be sent to whichever address exists in the RELAYER_SLOT
+/// (typically address(0)).
 contract MessageRelayer is ReentrancyGuardTransient, IMessageRelayer {
     using TransientSlot for *;
 
