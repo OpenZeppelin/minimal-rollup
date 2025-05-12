@@ -24,13 +24,13 @@ import {MessageRelayer} from "src/protocol/taiko_alethia/MessageRelayer.sol";
 ///    }
 ///
 ///    Where encodedData is roughly:
-///        abi.encodeWithSignature(
-///            "receiveMessage(address,uint256,uint256,bytes)",
-///             address(Alice),
-///             0.1 eth (fee for the relayer),
-///             0 (gas limit),
-///             data (in this case ""),
-///             )
+///        abi.encodeCall(
+///            IMessageRelayer.receiveMessage,
+///            address(Alice),
+///            0.1 eth (fee for the relayer),
+///            0 (gas limit),
+///            data (in this case ""),
+///        )
 ///
 /// The relayer will net any fee - gas spent on the call to relayMessage.
 contract MessageRelayer is ReentrancyGuardTransient, IMessageRelayer {
