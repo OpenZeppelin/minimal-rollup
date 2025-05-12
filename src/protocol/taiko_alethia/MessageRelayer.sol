@@ -13,7 +13,7 @@ import {MessageRelayer} from "src/protocol/taiko_alethia/MessageRelayer.sol";
 /// Relays messages from the bridge to the receiver and handles fees.
 ///
 /// Example message:
-///    If Alice wants to send herself 1 eth to L2 with a fee of 0.1 eth.
+///    If Alice wants to send herself 1 eth to L2 with a tip of 0.1 eth.
 ///
 ///    ETHDeposit {
 ///    nonce: 0,
@@ -27,7 +27,7 @@ import {MessageRelayer} from "src/protocol/taiko_alethia/MessageRelayer.sol";
 ///        abi.encodeCall(
 ///            IMessageRelayer.receiveMessage,
 ///            address(Alice),
-///            0.1 eth (fee for the relayer),
+///            0.1 eth (tip for the relayer),
 ///            0 (gas limit),
 ///            data (in this case ""),
 ///        )
@@ -36,13 +36,13 @@ import {MessageRelayer} from "src/protocol/taiko_alethia/MessageRelayer.sol";
 ///    1. Any address on the destination chain can call relayMessage
 ///    2. This will call claimDeposit on the ETHBridge
 ///    3. If the original message was specified correctly, this will call receiveMessage on this contract
-///    4. This will call the message recipient and send the fee to the relayer
+///    4. This will call the message recipient and send the tip to the relayer
 ///
-/// The relayer will net any fee minus the gas spent on the call to relayMessage.
+/// The relayer will net any tip minus the gas spent on the call to relayMessage.
 ///
 /// WARN: There is no relayer protection. In particular:
 ///    - if the ETHDeposit does not invoke receiveMessage, the relayer will not be paid.
-///    - if receiveMessage is called directly, the fee will be sent to whichever address exists in the RELAYER_SLOT
+///    - if receiveMessage is called directly, the tip will be sent to whichever address exists in the RELAYER_SLOT
 /// (typically address(0)).
 contract MessageRelayer is ReentrancyGuardTransient, IMessageRelayer {
     using TransientSlot for *;
@@ -71,14 +71,14 @@ contract MessageRelayer is ReentrancyGuardTransient, IMessageRelayer {
     }
 
     /// @inheritdoc IMessageRelayer
-    function receiveMessage(address to, uint256 fee, uint256 gasLimit, bytes memory data)
+    function receiveMessage(address to, uint256 tip, uint256 gasLimit, bytes memory data)
         external
         payable
         nonReentrant
     {
         address relayer = RELAYER_SLOT.asAddress().tload();
 
-        uint256 valueToSend = msg.value - fee;
+        uint256 valueToSend = msg.value - tip;
         bool success;
 
         if (gasLimit == 0) {
@@ -93,6 +93,6 @@ contract MessageRelayer is ReentrancyGuardTransient, IMessageRelayer {
 
         RELAYER_SLOT.asAddress().tstore(address(0));
 
-        payable(relayer).transfer(fee);
+        payable(relayer).transfer(tip);
     }
 }

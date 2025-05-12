@@ -27,7 +27,7 @@ interface IMessageRelayer {
     /// @param ethDeposit Deposit to claim
     /// @param height The `height` of the checkpoint on the source chain (i.e. the block number or publicationId)
     /// @param proof Proof of the deposit
-    /// @param relayerAddress Address of the relayer to send fee to
+    /// @param relayerAddress Address of the relayer to send tip to
     function relayMessage(
         IETHBridge.ETHDeposit memory ethDeposit,
         uint256 height,
@@ -39,8 +39,8 @@ interface IMessageRelayer {
     /// @dev Handles logic for receiving a message from the bridge (i.e. sending fees and forwarding the message if
     /// needed).
     /// @param to Address to send the ETH to
-    /// @param fee Fee to send to the relayer
+    /// @param tip Tip to send to the relayer
     /// @param gasLimit Gas limit to use when forwarding the message
     /// @param data Data to send to the recipient
-    function receiveMessage(address to, uint256 fee, uint256 gasLimit, bytes memory data) external payable;
+    function receiveMessage(address to, uint256 tip, uint256 gasLimit, bytes memory data) external payable;
 }
