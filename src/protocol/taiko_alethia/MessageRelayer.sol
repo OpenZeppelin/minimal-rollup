@@ -74,7 +74,7 @@ contract MessageRelayer is ReentrancyGuardTransient, IMessageRelayer {
         if (gasLimit == 0) {
             (success,) = to.call{value: valueToSend}(data);
         } else {
-            require(gasLimit <= gasleft(), InsufficientGasLimit());
+            require(gasLimit <= gasleft(), InsufficientGas());
             (success,) = to.call{value: valueToSend, gas: gasLimit}(data);
         }
 
