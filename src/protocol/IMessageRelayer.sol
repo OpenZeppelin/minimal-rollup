@@ -41,6 +41,6 @@ interface IMessageRelayer {
     /// @param to Address to send the ETH to
     /// @param fee Fee to send to the relayer
     /// @param gasLimit Gas limit to use when forwarding the message
-    /// @param data Data to send to the receiver
+    /// @param data Data to send to the recipient
     function receiveMessage(address to, uint256 fee, uint256 gasLimit, bytes memory data) external payable;
 }
