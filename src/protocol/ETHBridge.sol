@@ -38,7 +38,7 @@ contract ETHBridge is IETHBridge, ReentrancyGuardTransient {
     /// @dev The `NONE` status does not indicate that the deposit does not exist
     /// but rather that the deposit has not been processed yet (it may also not exist),
     /// use isSignalStored to verify the existence of a deposit.
-    function depositStatus(bytes32 id) public view returns (Status) {
+    function getDepositStatus(bytes32 id) public view returns (Status) {
         return _depositStatus[id];
     }
 
@@ -62,7 +62,7 @@ contract ETHBridge is IETHBridge, ReentrancyGuardTransient {
     /// @inheritdoc IETHBridge
     function claimDeposit(ETHDeposit memory ethDeposit, uint256 height, bytes memory proof) external nonReentrant {
         bytes32 id = _generateId(ethDeposit);
-        require(depositStatus(id) == Status.NONE, AlreadyClaimed());
+        require(getDepositStatus(id) == Status.NONE, AlreadyClaimed());
 
         signalService.verifySignal(height, trustedCommitmentPublisher, counterpart, id, proof);
 
@@ -72,31 +72,34 @@ contract ETHBridge is IETHBridge, ReentrancyGuardTransient {
         emit DepositClaimed(id, ethDeposit);
     }
 
+    /// @inheritdoc IETHBridge
     function cancelDeposit(ETHDeposit memory ethDeposit) external {
         bytes32 id = _generateId(ethDeposit);
         require(msg.sender == ethDeposit.from, "Only the sender can cancel a deposit");
-        require(depositStatus(id) == Status.NONE, "Deposit already processed");
+        require(getDepositStatus(id) == Status.NONE, "Deposit already processed");
 
         _depositStatus[id] = Status.CANCELLED;
 
         bytes32 cancelledDepositId = id ^ bytes32(uint256(Status.CANCELLED));
         signalService.sendSignal(cancelledDepositId);
 
-        // emit DepositCancelled(id);
+        emit DepositCancelled(id, cancelledDepositId);
     }
 
+    /// @inheritdoc IETHBridge
     function claimCancelledDeposit(ETHDeposit memory ethDeposit, uint256 height, bytes memory proof)
         external
         nonReentrant
     {
         bytes32 id = _generateId(ethDeposit);
-        require(depositStatus(id) == Status.NONE, "Deposit already processed");
+        require(getDepositStatus(id) == Status.NONE, "Deposit already processed");
         bytes32 cancelledDepositId = id ^ bytes32(uint256(Status.CANCELLED));
 
         signalService.verifySignal(height, trustedCommitmentPublisher, counterpart, cancelledDepositId, proof);
 
         _depositStatus[id] = Status.PROCESSED;
-        _sendETH(ethDeposit.to, ethDeposit.amount, ethDeposit.data);
+        //CHECK: send to depositor or from.. should be the same address by i feel from is safer
+        _sendETH(ethDeposit.from, ethDeposit.amount, "");
     }
 
     /// @dev Function to transfer ETH to the receiver but ignoring the returndata.
