@@ -10,7 +10,7 @@ import {MessageRelayer} from "src/protocol/taiko_alethia/MessageRelayer.sol";
 
 /// @dev Simple implementation of a message relayer.
 ///
-/// Relays messages from the bridge to the receiver and handles fees.
+/// Relays messages from the bridge to the receiver and handles tips.
 ///
 /// Example message:
 ///    If Alice wants to send herself 1 eth to L2 with a tip of 0.1 eth.
@@ -42,7 +42,8 @@ import {MessageRelayer} from "src/protocol/taiko_alethia/MessageRelayer.sol";
 ///
 /// WARN: There is no relayer protection. In particular:
 ///    - if the ETHDeposit does not invoke receiveMessage, the relayer will not be paid.
-///    - if receiveMessage is called directly, the tip will be sent to whichever address exists in the RELAYER_SLOT
+///    - if receiveMessage is called directly, the tip will be sent to whichever address exists in the
+/// TIP_RECIPIENT_SLOT
 /// (typically address(0)).
 contract MessageRelayer is ReentrancyGuardTransient, IMessageRelayer {
     using TransientSlot for *;
@@ -53,21 +54,21 @@ contract MessageRelayer is ReentrancyGuardTransient, IMessageRelayer {
         ethBridge = IETHBridge(_ethBridge);
     }
 
-    // keccak256("RELAYER_SLOT")
-    bytes32 private constant RELAYER_SLOT = 0x534e7df1601a31e65156f390f0558b27c1017ac64f70cc962aaaeb10ce90ea23;
+    // keccak256("TIP_RECIPIENT_SLOT")
+    bytes32 private constant TIP_RECIPIENT_SLOT = 0x833ce1785f54a5ca49991a09a7b058587309bf3687e5f20b7b66fa12132ef6f0;
 
     /// @inheritdoc IMessageRelayer
     function relayMessage(
         IETHBridge.ETHDeposit memory ethDeposit,
         uint256 height,
         bytes memory proof,
-        address relayerAddress
+        address tipRecipient
     ) external {
-        RELAYER_SLOT.asAddress().tstore(relayerAddress);
+        TIP_RECIPIENT_SLOT.asAddress().tstore(tipRecipient);
 
         ethBridge.claimDeposit(ethDeposit, height, proof);
 
-        emit Relayed(ethDeposit, relayerAddress);
+        emit Relayed(ethDeposit, tipRecipient);
     }
 
     /// @inheritdoc IMessageRelayer
@@ -76,7 +77,7 @@ contract MessageRelayer is ReentrancyGuardTransient, IMessageRelayer {
         payable
         nonReentrant
     {
-        address relayer = RELAYER_SLOT.asAddress().tload();
+        address tipRecipient = TIP_RECIPIENT_SLOT.asAddress().tload();
 
         uint256 valueToSend = msg.value - tip;
         bool success;
@@ -91,8 +92,8 @@ contract MessageRelayer is ReentrancyGuardTransient, IMessageRelayer {
         require(success, MessageForwardingFailed());
         emit MessageForwarded(to, valueToSend, data);
 
-        RELAYER_SLOT.asAddress().tstore(address(0));
+        TIP_RECIPIENT_SLOT.asAddress().tstore(address(0));
 
-        payable(relayer).transfer(tip);
+        payable(tipRecipient).transfer(tip);
     }
 }
