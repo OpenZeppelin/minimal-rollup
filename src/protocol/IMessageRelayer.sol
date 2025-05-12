@@ -16,7 +16,7 @@ interface IMessageRelayer {
     /// @param data Data forwarded
     event MessageForwarded(address indexed to, uint256 amount, bytes data);
 
-    /// @dev User did not provide a high enough gas limit
+    /// @dev Relayer did not provide a high enough gas limit
     error InsufficientGasLimit();
 
     /// @dev Message forwarding failed
