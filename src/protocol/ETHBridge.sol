@@ -75,8 +75,8 @@ contract ETHBridge is IETHBridge, ReentrancyGuardTransient {
     /// @inheritdoc IETHBridge
     function cancelDeposit(ETHDeposit memory ethDeposit) external {
         bytes32 id = _generateId(ethDeposit);
-        require(msg.sender == ethDeposit.from, "Only the sender can cancel a deposit");
-        require(getDepositStatus(id) == Status.NONE, "Deposit already processed");
+        require(msg.sender == ethDeposit.from, OnlyDepositer());
+        require(getDepositStatus(id) == Status.NONE, DepositAlreadyProcessed());
 
         _depositStatus[id] = Status.CANCELLED;
 
@@ -92,7 +92,7 @@ contract ETHBridge is IETHBridge, ReentrancyGuardTransient {
         nonReentrant
     {
         bytes32 id = _generateId(ethDeposit);
-        require(getDepositStatus(id) == Status.NONE, "Deposit already processed");
+        require(getDepositStatus(id) == Status.NONE, DepositAlreadyProcessed());
         bytes32 cancelledDepositId = id ^ bytes32(uint256(Status.CANCELLED));
 
         signalService.verifySignal(height, trustedCommitmentPublisher, counterpart, cancelledDepositId, proof);
