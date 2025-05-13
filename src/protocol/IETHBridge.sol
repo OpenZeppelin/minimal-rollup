@@ -19,6 +19,15 @@ interface IETHBridge {
         bytes data;
     }
 
+    enum Status {
+        // Deposit has not been processed (or does not exist)
+        NONE,
+        // Successfully processed (either claimed on the source chain or cancelled)
+        PROCESSED,
+        // Claim cancelled (marks as cancelled on destination chain)
+        CANCELLED
+    }
+
     /// @dev Emitted when a deposit is made.
     /// @param id The deposit id
     /// @param deposit The ETH deposit
@@ -29,15 +38,26 @@ interface IETHBridge {
     /// @param deposit The claimed ETH deposit
     event DepositClaimed(bytes32 indexed id, ETHDeposit deposit);
 
+    /// @dev Emitted when a deposit is cancelled.
+    /// @param id The deposit id
+    /// @param cancelledDepositId The cancelled deposit id
+    event DepositCancelled(bytes32 indexed id, bytes32 indexed cancelledDepositId);
+
     /// @dev Failed to call the receiver with value.
     error FailedClaim();
 
     /// @dev A deposit was already claimed.
     error AlreadyClaimed();
 
-    /// @dev Whether the deposit identified by `id` has been claimed.
+    /// @dev Deposit has already been processed or cancelled.
+    error DepositAlreadyProcessed();
+
+    /// @dev Only depositer can cancel a deposit.
+    error OnlyDepositer();
+
+    /// @notice The status of the deposit identified by `id``
     /// @param id The deposit id
-    function claimed(bytes32 id) external view returns (bool);
+    function getDepositStatus(bytes32 id) external view returns (Status);
 
     /// @dev ETH Deposit identifier.
     /// @param ethDeposit The ETH deposit struct
@@ -54,4 +74,14 @@ interface IETHBridge {
     /// @param height The `height` of the checkpoint on the source chain (i.e. the block number or publicationId)
     /// @param proof Encoded proof of the storage slot where the deposit is stored
     function claimDeposit(ETHDeposit memory ethDeposit, uint256 height, bytes memory proof) external;
+
+    /// @dev Initiates a cancel on the deposit, must be called by the deposit sender on the destination chain.
+    /// @param ethDeposit The ETH deposit struct
+    function cancelDeposit(ETHDeposit memory ethDeposit) external;
+
+    /// @dev Claims a cancelled deposit returning the ETH to the deposit sender on the source chain.
+    /// @param ethDeposit The ETH deposit struct
+    /// @param height The `height` of the checkpoint on the source chain (i.e. the block number or publicationId)
+    /// @param proof Encoded proof of the storage slot where the deposit is stored
+    function claimCancelledDeposit(ETHDeposit memory ethDeposit, uint256 height, bytes memory proof) external;
 }
