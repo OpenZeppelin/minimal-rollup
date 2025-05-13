@@ -19,6 +19,11 @@ path = "offchain/deposit_signal_proof.rs"
 name = "utils"
 path = "offchain/utils.rs"
 
+[[bin]]
+name = "sample_signal_proof"
+path = "offchain/sample_signal_proof.rs"
+
+
 [dependencies]
 alloy = { version = "0.13.0", features = ["node-bindings"] }
 eyre = "0.6.12"

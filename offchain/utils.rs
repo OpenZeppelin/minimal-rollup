@@ -1,6 +1,6 @@
 use alloy::{
     node_bindings::{Anvil, AnvilInstance},
-    primitives::{address, Address, B256},
+    primitives::{address, Address, B256, Bytes},
     providers::{Provider, ProviderBuilder},
     signers::local::PrivateKeySigner,
     sol,
@@ -28,7 +28,7 @@ sol!(
     "./out/ETHBridge.sol/ETHBridge.json"
 );
 
-pub fn get_provider() -> Result<(impl Provider, AnvilInstance)> {
+pub fn get_provider() -> Result<(impl Provider, AnvilInstance, PrivateKeySigner)> {
     let anvil = Anvil::new()
         .block_time(BLOCK_TIME)
         .port(8547_u16)
@@ -38,7 +38,7 @@ pub fn get_provider() -> Result<(impl Provider, AnvilInstance)> {
     let provider = ProviderBuilder::new()
         .wallet(signer.clone())
         .on_http(rpc_url);
-    Ok((provider, anvil))
+    Ok((provider, anvil, signer))
 }
 
 pub async fn deploy_signal_service(
@@ -68,7 +68,7 @@ pub async fn get_proofs(
     provider: &impl Provider,
     slot: B256,
     signal_service: &SignalServiceInstance<(), &impl Provider>,
-) -> Result<()> {
+) -> Result<(SignalProof)> {
     let block_header = provider
         .get_block_by_number(alloy::eips::BlockNumberOrTag::Latest)
         .await?
@@ -79,13 +79,26 @@ pub async fn get_proofs(
         .get_proof(signal_service.address().to_owned(), vec![slot])
         .await?;
 
-    println!("Block Hash: {}", block_header.hash.to_string());
-    println!("State Root: {}", block_header.state_root.to_string());
-    println!("Storage Root: {}", proof.storage_hash.to_string());
-    println!("Account Proof: {}", to_string_pretty(&proof.account_proof)?);
-    println!("Storage Proof: {}", to_string_pretty(&proof.storage_proof)?);
+    let proof = SignalProof {
+        block_hash: block_header.hash,
+        state_root: block_header.state_root,
+        storage_root: proof.storage_hash,
+        slot: slot,
+        account_proof: proof.account_proof,
+        storage_proof: proof.storage_proof[0].clone().proof,
+    };
 
-    Ok(())
+    Ok(proof)
+}
+
+
+pub struct SignalProof {
+    pub block_hash: B256,
+    pub state_root: B256,
+    pub storage_root: B256,
+    pub slot: B256,
+    pub account_proof: Vec<Bytes>,
+    pub storage_proof: Vec<Bytes>,
 }
 
 #[allow(dead_code)]

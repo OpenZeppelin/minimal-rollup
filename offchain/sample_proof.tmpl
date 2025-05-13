@@ -1,0 +1,40 @@
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.28;
+
+// This file is auto-generated with the command `just get-sample-signal-proof`.
+// Do not edit manually.
+// See ISampleProof.t.sol for an explanation of its purpose.
+
+import {ISignalService} from "src/protocol/ISignalService.sol";
+import {ISampleProof} from "./ISampleProof.t.sol";
+
+contract SampleProof is ISampleProof {
+
+    /// @inheritdoc ISampleProof
+    function getSignalServiceAddress() public pure returns (address) {
+        return address({signal_service_address});
+    }
+
+    /// @inheritdoc ISampleProof
+    function getSignalProof() public pure returns (ISignalService.SignalProof memory signalProof) {
+        signalProof = ISignalService.SignalProof({
+            accountProof: new bytes[]({account_proof_size}),
+            storageProof: new bytes[]({storage_proof_size}),
+            stateRoot: bytes32({state_root}),
+            blockHash: bytes32({block_hash})
+        });
+        {populate_account_proof}
+        {populate_storage_proof}
+    }
+
+    /// @inheritdoc ISampleProof
+    function getSignalDetails() public pure returns (address sender, bytes32 value) {
+        sender = address({sender});
+        value = bytes32({value});
+    }
+
+    /// @inheritdoc ISampleProof
+    function getSlot() public pure returns (bytes32 slot) {
+        return {slot};
+    }
+}

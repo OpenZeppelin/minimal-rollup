@@ -8,7 +8,6 @@ import {ISignalService} from "src/protocol/ISignalService.sol";
 /// This contract describes behaviours that should be valid in every state
 /// It can be inherited by any Test contract to run all tests in that state
 abstract contract UniversalTest is InitialState {
-    
     address commitmentPublisher = _randomAddress("commitmentPublisher");
     address alice = _randomAddress("alice");
     address bob = _randomAddress("bob");
