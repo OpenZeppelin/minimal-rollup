@@ -7,7 +7,7 @@ use signal_slot::get_signal_slot;
 mod utils;
 use utils::{deploy_signal_service, deploy_eth_bridge, get_proofs, get_provider};
 
-use alloy::primitives::Bytes;
+use alloy::primitives::{Bytes, U256};
 use std::fs;
 
 
@@ -29,15 +29,16 @@ async fn main() -> Result<()> {
     // In this case, the CrossChainDepositExists.sol test case defines _randomAddress("recipient");
     let recipient= "0x99A270Be1AA5E97633177041859aEEB9a0670fAa".parse()?;
     let data = "";
+    let amount = U256::from(4000000000000000000_u128); // 4 ether
     
     // get the ID from the transaction receipt
-    let tx = eth_bridge.deposit(recipient, data.into()).send().await?.get_receipt().await?;
+    let tx = eth_bridge.deposit(recipient, data.into()).value(amount).send().await?.get_receipt().await?;
     let id = tx.logs().get(0).unwrap().data().clone().data;
     let id_fixed: alloy::primitives::B256 = alloy::primitives::B256::from_slice(&id[..32]);
 
     let slot = get_signal_slot(&id_fixed, &eth_bridge.address());
     let proof   = get_proofs(&provider, slot, &signal_service).await?;
-    let amount = 0;
+
     // This is the first deposit, so the nonce is zero. I think this is acceptable for testing purposes.
     // Other options: read the nonce from the DepositMade event, or add a nonce getter to the ETHBridge contract
     let nonce = 0;
