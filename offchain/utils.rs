@@ -78,7 +78,6 @@ pub async fn get_proofs(
     let proof = SignalProof {
         block_hash: block_header.hash,
         state_root: block_header.state_root,
-        storage_root: proof.storage_hash,
         slot: slot,
         account_proof: proof.account_proof,
         storage_proof: proof.storage_proof[0].clone().proof,
@@ -91,7 +90,6 @@ pub async fn get_proofs(
 pub struct SignalProof {
     pub block_hash: B256,
     pub state_root: B256,
-    pub storage_root: B256,
     pub slot: B256,
     pub account_proof: Vec<Bytes>,
     pub storage_proof: Vec<Bytes>,
