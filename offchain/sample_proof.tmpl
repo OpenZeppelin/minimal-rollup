@@ -9,7 +9,6 @@ import {ISignalService} from "src/protocol/ISignalService.sol";
 import {ISampleProof} from "./ISampleProof.t.sol";
 
 contract SampleProof is ISampleProof {
-
     /// @inheritdoc ISampleProof
     function getSignalServiceAddress() public pure returns (address) {
         return address({signal_service_address});
@@ -35,6 +34,6 @@ contract SampleProof is ISampleProof {
 
     /// @inheritdoc ISampleProof
     function getSlot() public pure returns (bytes32 slot) {
-        return {slot};
+        return bytes32({slot});
     }
 }

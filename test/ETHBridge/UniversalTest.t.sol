@@ -11,7 +11,7 @@ abstract contract UniversalTest is InitialState {
     address bob = _randomAddress("bob");
     address charlie = _randomAddress("charlie");
 
-    function setUp() public override {
+    function setUp() public virtual override {
         super.setUp();
 
         vm.deal(alice, 10 ether);
@@ -108,13 +108,8 @@ abstract contract UniversalTest is InitialState {
     }
 
     function test_deposit_idMatchesGetterFunction() public {
-        IETHBridge.ETHDeposit memory ethDeposit = IETHBridge.ETHDeposit({
-            nonce: getNonce(),
-            from: alice,
-            to: bob,
-            amount: 1 ether,
-            data: ""
-        });
+        IETHBridge.ETHDeposit memory ethDeposit =
+            IETHBridge.ETHDeposit({nonce: getNonce(), from: alice, to: bob, amount: 1 ether, data: ""});
 
         vm.prank(ethDeposit.from);
         bytes32 id = bridge.deposit{value: ethDeposit.amount}(ethDeposit.to, ethDeposit.data);
@@ -123,13 +118,8 @@ abstract contract UniversalTest is InitialState {
     }
 
     function test_deposit_DepositMadeEvent() public {
-        IETHBridge.ETHDeposit memory ethDeposit = IETHBridge.ETHDeposit({
-            nonce: getNonce(),
-            from: alice,
-            to: bob,
-            amount: 1 ether,
-            data: ""
-        });
+        IETHBridge.ETHDeposit memory ethDeposit =
+            IETHBridge.ETHDeposit({nonce: getNonce(), from: alice, to: bob, amount: 1 ether, data: ""});
         bytes32 id = bridge.getDepositId(ethDeposit);
 
         vm.prank(ethDeposit.from);

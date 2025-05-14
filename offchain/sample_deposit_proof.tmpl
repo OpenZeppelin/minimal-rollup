@@ -1,0 +1,47 @@
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.28;
+
+// This file is auto-generated with the command `just get-sample-deposit-proof`.
+// Do not edit manually.
+// See ISampleDepositProof.t.sol for an explanation of its purpose.
+
+import {ISignalService} from "src/protocol/ISignalService.sol";
+import {IETHBridge} from "src/protocol/IETHBridge.sol";
+import {ISampleDepositProof} from "./ISampleDepositProof.t.sol";
+
+contract SampleDepositProof is ISampleDepositProof {
+    /// @inheritdoc ISampleDepositProof
+    function getSourceAddresses() public pure returns (address signalService, address bridge) {
+        signalService = address({signal_service_address});
+        bridge = address({bridge_address});
+    }
+
+    /// @inheritdoc ISampleDepositProof
+    function getDepositSignalProof() public pure returns (ISignalService.SignalProof memory signalProof) {
+        signalProof = ISignalService.SignalProof({
+            accountProof: new bytes[]({account_proof_size}),
+            storageProof: new bytes[]({storage_proof_size}),
+            stateRoot: bytes32({state_root}),
+            blockHash: bytes32({block_hash})
+        });
+        {populate_account_proof}
+        {populate_storage_proof}
+    }
+
+    /// @inheritdoc ISampleDepositProof
+    function getEthDeposit() public pure returns (IETHBridge.ETHDeposit memory deposit) {
+        deposit = IETHBridge.ETHDeposit({
+            nonce: {nonce},
+            from: address({sender}),
+            to: address({recipient}),
+            amount: {amount},
+            data: bytes("{data}")
+        });
+    }
+
+    /// @inheritdoc ISampleDepositProof
+    function getDepositInternals() public pure returns (bytes32 slot, bytes32 id) {
+        slot = bytes32({slot});
+        id = bytes32({id});
+    }
+}

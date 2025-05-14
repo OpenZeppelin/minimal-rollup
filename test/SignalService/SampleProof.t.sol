@@ -20,7 +20,7 @@ contract SampleProof is ISampleProof {
             accountProof: new bytes[](3),
             storageProof: new bytes[](1),
             stateRoot: bytes32(0xa5d8725608e3d53dd7af5cad105ee1ff73a476255cb488d8ac7a19380618fae7),
-            blockHash: bytes32(0x6efd818b4ad28d44f1a95dfd558fd407656ca2f5b57973f692b16486f14ef8fa)
+            blockHash: bytes32(0x8bab06ef1701c57098a59ec450bdab485e1e89fe27bbbc5a2f8c1a27622c7bc1)
         });
 
         signalProof.accountProof[0] =
@@ -41,6 +41,6 @@ contract SampleProof is ISampleProof {
 
     /// @inheritdoc ISampleProof
     function getSlot() public pure returns (bytes32 slot) {
-        return 0x2e0dd2da160ce272c362f0db164918d90b0e72591a2e5cbe15c56eb8d15bda00;
+        return bytes32(0x2e0dd2da160ce272c362f0db164918d90b0e72591a2e5cbe15c56eb8d15bda00);
     }
 }

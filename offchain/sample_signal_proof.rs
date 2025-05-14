@@ -32,7 +32,8 @@ async fn main() -> Result<()> {
 
     
     let template = fs::read_to_string("offchain/sample_proof.tmpl")?;
-    let formatted = template.replace("{signal_service_address}", signal_service.address().to_string().as_str())
+    let formatted = template
+        .replace("{signal_service_address}", signal_service.address().to_string().as_str())
         .replace("{block_hash}", proof.block_hash.to_string().as_str())
         .replace("{state_root}", proof.state_root.to_string().as_str())
         .replace("{account_proof_size}", proof.account_proof.len().to_string().as_str())

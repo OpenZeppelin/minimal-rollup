@@ -3,19 +3,29 @@ pragma solidity ^0.8.28;
 
 import "forge-std/Test.sol";
 
+import {SampleDepositProof} from "./SampleDepositProof.t.sol";
 import {ETHBridge} from "src/protocol/ETHBridge.sol";
 import {SignalService} from "src/protocol/SignalService.sol";
 
 contract InitialState is Test {
     ETHBridge bridge;
     SignalService signalService;
+    address counterpart;
+    SampleDepositProof sampleDepositProof;
 
     address trustedCommitmentPublisher = _randomAddress("trustedCommitmentPublisher");
-    address counterpart = _randomAddress("counterpart");
 
     function setUp() public virtual {
-        signalService = new SignalService();
-        bridge = new ETHBridge(address(signalService), trustedCommitmentPublisher, counterpart);
+        sampleDepositProof = new SampleDepositProof();
+        (address signalServiceAddress, address counterpartAddress) = sampleDepositProof.getSourceAddresses();
+
+        // The SignalService on this chain should be at the same address as the source chain.
+        deployCodeTo("SignalService.sol", signalServiceAddress);
+        signalService = SignalService(signalServiceAddress);
+
+        counterpart = counterpartAddress;
+
+        bridge = new ETHBridge(signalServiceAddress, trustedCommitmentPublisher, counterpart);
     }
 
     function _randomAddress(string memory name) internal pure returns (address) {

@@ -51,16 +51,12 @@ pub async fn deploy_signal_service(
 pub async fn deploy_eth_bridge(
     provider: &impl Provider,
     signal_service: Address,
-    trusted_publisher: Address,
 ) -> Result<ETHBridgeInstance<(), &impl Provider>> {
-    // L2 Eth bridge address
-    let counterpart = address!("0xDC9e4C83bDe3912E9B63A9BF9cE263F3309aB5d4");
-    // WARN: This is a slight hack for now to make sure the contract is deployed on the correct address
-    ETHBridge::deploy(provider, signal_service, trusted_publisher, counterpart).await?;
-
-    let contract =
-        ETHBridge::deploy(provider, signal_service, trusted_publisher, counterpart).await?;
-
+    // The trusted publisher and counterpart are needed to verify signals from the other bridge
+    // In this case, we are only depositing on this bridge
+    // Set both values to an arbitrary dummy address. It is non-zero to pass validation.
+    let unused = address!("0x0000000000000000000000000000000000000001");
+    let contract = ETHBridge::deploy(provider, signal_service, unused, unused).await?;
     Ok(contract)
 }
 

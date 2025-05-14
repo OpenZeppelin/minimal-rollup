@@ -21,8 +21,8 @@ contract CrossChainSignalExists is UniversalTest {
         signalService.storeCommitment(HEIGHT, commitment);
     }
 
-    // This is just a sanity-check. It is not testing any contract behaviour but is just validating consistency with the
-    // sample proof
+    // This is just a sanity-check.
+    // It does not test any contract behaviour but just validates consistency with the sample proof
     function test_expectedSlot() public view {
         (address sender, bytes32 value) = sampleProof.getSignalDetails();
         bytes32 expectedSlot = LibSignal.deriveSlot(value, sender);

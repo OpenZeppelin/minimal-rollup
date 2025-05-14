@@ -3,7 +3,6 @@ pragma solidity ^0.8.28;
 
 import "forge-std/Test.sol";
 
-import {ISampleProof} from "./ISampleProof.t.sol";
 import {SampleProof} from "./SampleProof.t.sol";
 import {SignalService} from "src/protocol/SignalService.sol";
 
