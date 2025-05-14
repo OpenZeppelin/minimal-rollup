@@ -20,7 +20,7 @@ contract SampleProof is ISampleProof {
             accountProof: new bytes[](3),
             storageProof: new bytes[](1),
             stateRoot: bytes32(0xa5d8725608e3d53dd7af5cad105ee1ff73a476255cb488d8ac7a19380618fae7),
-            blockHash: bytes32(0x8bab06ef1701c57098a59ec450bdab485e1e89fe27bbbc5a2f8c1a27622c7bc1)
+            blockHash: bytes32(0x20dd339fcac98e78ba268945313e1eba63bfa9c695b862a3440899e0a29f92ec)
         });
 
         signalProof.accountProof[0] =
