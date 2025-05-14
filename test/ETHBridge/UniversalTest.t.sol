@@ -148,4 +148,18 @@ abstract contract UniversalTest is InitialState {
 
         assertTrue(signalService.isSignalStored(id, address(bridge)), "signal not saved");
     }
+
+    function test_deposit_ETHTransferred() public {
+        uint256 initialAliceBalance = alice.balance;
+        uint256 initialBobBalance = bob.balance;
+        uint256 initialBridgeBalance = address(bridge).balance;
+        uint256 amount = 1 ether;
+
+        vm.prank(alice);
+        bridge.deposit{value: amount}(bob, "");
+
+        assertEq(alice.balance, initialAliceBalance - amount, "source balance mismatch");
+        assertEq(bob.balance, initialBobBalance, "recipient balance changed");
+        assertEq(address(bridge).balance, initialBridgeBalance + amount, "bridge balance mismatch");
+    }
 }

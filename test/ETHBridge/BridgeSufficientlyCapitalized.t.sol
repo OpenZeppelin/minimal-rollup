@@ -39,4 +39,16 @@ contract BridgeSufficientlyCapitalized is CrossChainDepositExists {
         emit IETHBridge.DepositClaimed(id, deposit);
         bridge.claimDeposit(deposit, HEIGHT, proof);
     }
+
+    function test_claimDeposit_shouldSendETH() public {
+        IETHBridge.ETHDeposit memory deposit = sampleDepositProof.getEthDeposit();
+        bytes memory proof = abi.encode(sampleDepositProof.getDepositSignalProof());
+
+        uint256 initialRecipientBalance = recipient.balance;
+        uint256 initialBridgeBalance = address(bridge).balance;
+
+        bridge.claimDeposit(deposit, HEIGHT, proof);
+        assertEq(recipient.balance, initialRecipientBalance + deposit.amount, "recipient balance mismatch");
+        assertEq(address(bridge).balance, initialBridgeBalance - deposit.amount, "bridge balance mismatch");
+    }
 }
