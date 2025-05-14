@@ -35,7 +35,7 @@ async fn main() -> Result<()> {
     println!();
     let (signal, sender) = prompt_sender_and_signal()?;
 
-    let (provider, _anvil) = get_provider()?;
+    let (provider, _, _) = get_provider()?;
 
     let signal_service = deploy_signal_service(&provider).await?;
 

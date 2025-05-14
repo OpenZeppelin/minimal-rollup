@@ -1,6 +1,6 @@
 use alloy::{
     node_bindings::{Anvil, AnvilInstance},
-    primitives::{address, Address, B256, Bytes},
+    primitives::{address, Address, Bytes, B256},
     providers::{Provider, ProviderBuilder},
     signers::local::PrivateKeySigner,
     sol,
@@ -10,7 +10,6 @@ use ETHBridge::ETHBridgeInstance;
 use SignalService::SignalServiceInstance;
 
 use eyre::Result;
-use serde_json::to_string_pretty;
 
 const BLOCK_TIME: u64 = 5;
 
@@ -27,6 +26,15 @@ sol!(
     ETHBridge,
     "./out/ETHBridge.sol/ETHBridge.json"
 );
+
+#[allow(dead_code)]
+pub struct SignalProof {
+    pub block_hash: B256,
+    pub state_root: B256,
+    pub slot: B256,
+    pub account_proof: Vec<Bytes>,
+    pub storage_proof: Vec<Bytes>,
+}
 
 pub fn get_provider() -> Result<(impl Provider, AnvilInstance, PrivateKeySigner)> {
     let anvil = Anvil::new()
@@ -64,7 +72,7 @@ pub async fn get_proofs(
     provider: &impl Provider,
     slot: B256,
     signal_service: &SignalServiceInstance<(), &impl Provider>,
-) -> Result<(SignalProof)> {
+) -> Result<SignalProof> {
     let block_header = provider
         .get_block_by_number(alloy::eips::BlockNumberOrTag::Latest)
         .await?
@@ -84,15 +92,6 @@ pub async fn get_proofs(
     };
 
     Ok(proof)
-}
-
-
-pub struct SignalProof {
-    pub block_hash: B256,
-    pub state_root: B256,
-    pub slot: B256,
-    pub account_proof: Vec<Bytes>,
-    pub storage_proof: Vec<Bytes>,
 }
 
 #[allow(dead_code)]
