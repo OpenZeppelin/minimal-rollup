@@ -39,9 +39,25 @@ contract CrossChainDepositExists is UniversalTest {
 
     function test_claimDeposit_shouldSucceed() public {
         IETHBridge.ETHDeposit memory deposit = sampleDepositProof.getEthDeposit();
-        ISignalService.SignalProof memory signalProof = sampleDepositProof.getDepositSignalProof();
-        bytes memory proof = abi.encode(signalProof);
+        bytes memory proof = abi.encode(sampleDepositProof.getDepositSignalProof());
+        bridge.claimDeposit(deposit, HEIGHT, proof);
+    }
 
+    function test_claimDeposit_shouldSetClaimedFlag() public {
+        IETHBridge.ETHDeposit memory deposit = sampleDepositProof.getEthDeposit();
+        bytes memory proof = abi.encode(sampleDepositProof.getDepositSignalProof());
+        bridge.claimDeposit(deposit, HEIGHT, proof);
+        (, bytes32 id) = sampleDepositProof.getDepositInternals();
+        assertTrue(bridge.claimed(id), "deposit not marked as claimed");
+    }
+
+    function test_claimDeposit_shouldEmitEvent() public {
+        IETHBridge.ETHDeposit memory deposit = sampleDepositProof.getEthDeposit();
+        bytes memory proof = abi.encode(sampleDepositProof.getDepositSignalProof());
+        (, bytes32 id) = sampleDepositProof.getDepositInternals();
+
+        vm.expectEmit();
+        emit IETHBridge.DepositClaimed(id, deposit);
         bridge.claimDeposit(deposit, HEIGHT, proof);
     }
 }
