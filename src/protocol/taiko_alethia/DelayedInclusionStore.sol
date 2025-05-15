@@ -34,6 +34,7 @@ abstract contract DelayedInclusionStore is IDelayedInclusionStore {
     IBlobRefRegistry public immutable blobRefRegistry;
 
     /// @param _inclusionDelay The delay before next set of inclusions can be processed.
+    /// @param _blobRefRegistry The address of the blob reference registry.
     constructor(uint256 _inclusionDelay, address _blobRefRegistry) {
         inclusionDelay = _inclusionDelay;
         blobRefRegistry = IBlobRefRegistry(_blobRefRegistry);

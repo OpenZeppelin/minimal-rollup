@@ -17,6 +17,7 @@ contract MockCheckpointTracker is ICheckpointTracker {
         Checkpoint calldata,
         Checkpoint calldata end,
         uint256 numPublications,
+        uint256 numDelayedPublications,
         bytes calldata proof
     ) external {}
 
