@@ -7,6 +7,8 @@ always_use_create_2_factory = true # Use Foundry's create2 factory in tests(http
 
 gas_reports_ignore = ["MockDelayedInclusionStore", "MockCheckpointTracker", ""]
 
+gas_reports_ignore = ["MockDelayedInclusionStore", "MockCheckpointTracker", ""]
+
 [fmt]
 sort_imports = true
 wrap_comments = true
