@@ -42,7 +42,7 @@ abstract contract CrossChainDepositExists is UniversalTest {
     }
 
     // Returns a deposit with a non-zero amount and no data field
-    // It can be overriden to re-run tests with a different deposit
+    // It can be overridden to re-run tests with a different deposit
     function _depositIdx() internal pure virtual returns (uint256) {
         return 0;
     }
