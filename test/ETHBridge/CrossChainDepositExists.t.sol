@@ -32,12 +32,18 @@ abstract contract CrossChainDepositExists is UniversalTest {
     // It does not test any contract behaviour but just validates consistency with the sample proofs
     function test_depositInternals() public view {
         uint256 nProofs = sampleDepositProof.getNumberOfProofs();
-        for(uint256 i=0; i < nProofs; i++) {
+        for (uint256 i = 0; i < nProofs; i++) {
             IETHBridge.ETHDeposit memory deposit = sampleDepositProof.getEthDeposit(i);
             (bytes32 slot, bytes32 id) = sampleDepositProof.getDepositInternals(i);
 
             assertEq(bridge.getDepositId(deposit), id, "deposit id mismatch");
             assertEq(LibSignal.deriveSlot(id, counterpart), slot, "slot mismatch");
         }
+    }
+
+    // Returns a deposit with a non-zero amount and no data field
+    // It can be overriden to re-run tests with a different deposit
+    function _depositIdx() internal pure virtual returns (uint256) {
+        return 0;
     }
 }

@@ -77,4 +77,11 @@ contract SampleDepositProof is ISampleDepositProof {
         slots.push(slot);
         ids.push(id);
     }
+
+    function getNumberOfProofs() public view returns (uint256 count) {
+        count = signalProofs.length;
+        require(deposits.length == count, "Deposits length mismatch");
+        require(slots.length == count, "Slots length mismatch");
+        require(ids.length == count, "Ids length mismatch");
+    }
 }

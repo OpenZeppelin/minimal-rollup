@@ -23,24 +23,51 @@ contract SampleDepositProof is ISampleDepositProof {
         // Populate proof 0
         accountProof = new bytes[](3);
         accountProof[0] =
-            hex"f90151a0b91a8b7a7e9d3eab90afd81da3725030742f663c6ed8c26657bf00d842a9f4aaa01689b2a5203afd9ea0a0ca3765e4a538c7176e53eac1f8307a344ffc3c6176558080a003c2f506dcc4351bbb1f7943084665e21af2cad3f37618a794167901174fc2caa07b9b5af76aaacfe822062ed002c6db0b494ae66b9dbe3e91c7c398088a92090480a0931c5d4ef4b2277973028722fd557c9eb65b9db5f7788c27005ce5ae5c677a86a04b29efa44ecf50c19b34950cf1d0f05e00568bcc873120fbea9a4e8439de0962a0d0a1bfe5b45d2d863a794f016450a4caca04f3b599e8d1652afca8b752935fd880a0bf9b09e442e044778b354abbadb5ec049d7f5e8b585c3966d476c4fbc9a181d28080a046e3a6bd785b2f60ecc9f58b5302daf708d8328307670dba4b5226236db6f148a0e5c557a0ce3894afeb44c37f3d24247f67dc76a174d8cacc360c1210eef60a7680";
+            hex"f90151a0b91a8b7a7e9d3eab90afd81da3725030742f663c6ed8c26657bf00d842a9f4aaa01689b2a5203afd9ea0a0ca3765e4a538c7176e53eac1f8307a344ffc3c6176558080a0acd0d5394c74002c8044fcc5e18b86c12eac7f28d7bd928dd23020f3080729a8a0f6302dc31ed7de56838cd0748cf8532cf336115b1b4b88ad75b581f79e1efef780a079b78e3e8d6565d6faf94f09a3e79c05da3f4663255a38aecdfd17b6bf25a5dda04b29efa44ecf50c19b34950cf1d0f05e00568bcc873120fbea9a4e8439de0962a0d0a1bfe5b45d2d863a794f016450a4caca04f3b599e8d1652afca8b752935fd880a0bf9b09e442e044778b354abbadb5ec049d7f5e8b585c3966d476c4fbc9a181d28080a008d5acaefa3f89fc421a25cc9ef2906ecb72ab7a9201626ce5e161e6c514dbe8a0e5c557a0ce3894afeb44c37f3d24247f67dc76a174d8cacc360c1210eef60a7680";
         accountProof[1] =
-            hex"f85180808080a01de1625cbf687e609d7804db12584ef214fabb3b641724a737b2f3fc8496957480808080a074ae0767a40fc6fff780050f46a50f6b39ca4edb7faa9669108157a1cd96f40980808080808080";
+            hex"f85180808080a05e10cbcc81a653991ad6f5acfba8b30facc943d4d77a1e9461361de59665e85e80808080a074ae0767a40fc6fff780050f46a50f6b39ca4edb7faa9669108157a1cd96f40980808080808080";
         accountProof[2] =
-            hex"f869a020e659e60b21cc961f64ad47f20523c1d329d4bbda245ef3940a76dc89d0911bb846f8440180a095aad4770cd67977ac25c687f94d3ccaaeb0ae1bf39482feba4717bc2b1b888fa0da147a8683b303efc72285d333a0683c61d218e18e8dbc84e4cbf5885d4a9229";
-        storageProof = new bytes[](1);
-        storageProof[0] = hex"e3a120a4fae02acd15bbf46ecee8fa4a72c97d17c1e2e719ac7517b63a1c1cde135a1801";
+            hex"f869a020e659e60b21cc961f64ad47f20523c1d329d4bbda245ef3940a76dc89d0911bb846f8440180a0f16ae9cbd9fa7f4a1259e5debc440d5e779e7edef20ac93ec3d095feb7336dcda0da147a8683b303efc72285d333a0683c61d218e18e8dbc84e4cbf5885d4a9229";
+        storageProof = new bytes[](2);
+        storageProof[0] =
+            hex"f85180a02863e30453fc835f21fc770459600a7777e29b915a1abe217cb3ea8b6571a8bb8080808080808080a0e1f9589d66b85cc75e2da357788433afcc24be5e18551f33aeb690e2c2a089be808080808080";
+        storageProof[1] = hex"e2a034fae02acd15bbf46ecee8fa4a72c97d17c1e2e719ac7517b63a1c1cde135a1801";
         deposit.nonce = 0;
         deposit.from = address(0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266);
         deposit.to = address(0x99A270Be1AA5E97633177041859aEEB9a0670fAa);
         deposit.amount = 4000000000000000000;
-        deposit.data = bytes("");
+        deposit.data = bytes(hex"");
         _createDeposit(
             accountProof,
             storageProof,
             deposit,
             bytes32(0xc0861da4adda5f350f55acc981f72fcac9ffc3c97d3b55c7525f254986065300),
             bytes32(0x103b147e6dacf071f9fe23d0088a650be67e2412f334115cbc3fa20404b360fd)
+        );
+
+        // Populate proof 1
+        accountProof = new bytes[](3);
+        accountProof[0] =
+            hex"f90151a0b91a8b7a7e9d3eab90afd81da3725030742f663c6ed8c26657bf00d842a9f4aaa01689b2a5203afd9ea0a0ca3765e4a538c7176e53eac1f8307a344ffc3c6176558080a0acd0d5394c74002c8044fcc5e18b86c12eac7f28d7bd928dd23020f3080729a8a0f6302dc31ed7de56838cd0748cf8532cf336115b1b4b88ad75b581f79e1efef780a079b78e3e8d6565d6faf94f09a3e79c05da3f4663255a38aecdfd17b6bf25a5dda04b29efa44ecf50c19b34950cf1d0f05e00568bcc873120fbea9a4e8439de0962a0d0a1bfe5b45d2d863a794f016450a4caca04f3b599e8d1652afca8b752935fd880a0bf9b09e442e044778b354abbadb5ec049d7f5e8b585c3966d476c4fbc9a181d28080a008d5acaefa3f89fc421a25cc9ef2906ecb72ab7a9201626ce5e161e6c514dbe8a0e5c557a0ce3894afeb44c37f3d24247f67dc76a174d8cacc360c1210eef60a7680";
+        accountProof[1] =
+            hex"f85180808080a05e10cbcc81a653991ad6f5acfba8b30facc943d4d77a1e9461361de59665e85e80808080a074ae0767a40fc6fff780050f46a50f6b39ca4edb7faa9669108157a1cd96f40980808080808080";
+        accountProof[2] =
+            hex"f869a020e659e60b21cc961f64ad47f20523c1d329d4bbda245ef3940a76dc89d0911bb846f8440180a0f16ae9cbd9fa7f4a1259e5debc440d5e779e7edef20ac93ec3d095feb7336dcda0da147a8683b303efc72285d333a0683c61d218e18e8dbc84e4cbf5885d4a9229";
+        storageProof = new bytes[](2);
+        storageProof[0] =
+            hex"f85180a02863e30453fc835f21fc770459600a7777e29b915a1abe217cb3ea8b6571a8bb8080808080808080a0e1f9589d66b85cc75e2da357788433afcc24be5e18551f33aeb690e2c2a089be808080808080";
+        storageProof[1] = hex"e2a032244b550e204d9cb9a298654700fb6f593e6fc27070d907ee4ecec30419e36b01";
+        deposit.nonce = 1;
+        deposit.from = address(0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266);
+        deposit.to = address(0x99A270Be1AA5E97633177041859aEEB9a0670fAa);
+        deposit.amount = 4000000000000000000;
+        deposit.data = bytes(hex"7062c09400000000000000000000000000000000000000000000000000000000000004d2");
+        _createDeposit(
+            accountProof,
+            storageProof,
+            deposit,
+            bytes32(0xded19bc26e131c40d7db15c07113941e6c65e1e5bcad6c5e248b2377abc92800),
+            bytes32(0x3ef6eb196677946bf990bfd6811b4a5bdfe50df175ea661f8ba144982c2d246d)
         );
     }
 
@@ -56,12 +83,12 @@ contract SampleDepositProof is ISampleDepositProof {
 
     /// @inheritdoc ISampleDepositProof
     function getStateRoot() public pure returns (bytes32) {
-        return bytes32(0xb7711f031190aae5617914df7c3d4d2d2496031986f5b8dcd6ac7d8daeef424b);
+        return bytes32(0xbd1e9eed45836a4e1da012c340e46206fc746b51d0cf10a1d6ac17b68e337411);
     }
 
     /// @inheritdoc ISampleDepositProof
     function getBlockHash() public pure returns (bytes32) {
-        return bytes32(0x79c4a5b6b93a85f4528227f6a9f069d42c7d616a1d0c050dd5300f014914cd8d);
+        return bytes32(0xdc4edf948d3550d8ad7aad965c56ddfa121a9ac2b276511405430d6f060b9dde);
     }
 
     /// @inheritdoc ISampleDepositProof
@@ -77,14 +104,6 @@ contract SampleDepositProof is ISampleDepositProof {
     /// @inheritdoc ISampleDepositProof
     function getDepositInternals(uint256 idx) public view returns (bytes32 slot, bytes32 id) {
         return (slots[idx], ids[idx]);
-    }
-
-    /// @inheritdoc ISampleDepositProof
-    function getNumberOfProofs() public view returns (uint256 count) {
-        count = signalProofs.length;
-        require(deposits.length == count, "Deposit count mismatch");
-        require(slots.length == count, "Slot count mismatch");
-        require(ids.length == count, "ID count mismatch");
     }
 
     function _createDeposit(
@@ -105,5 +124,12 @@ contract SampleDepositProof is ISampleDepositProof {
         deposits.push(deposit);
         slots.push(slot);
         ids.push(id);
+    }
+
+    function getNumberOfProofs() public view returns (uint256 count) {
+        count = signalProofs.length;
+        require(deposits.length == count, "Deposits length mismatch");
+        require(slots.length == count, "Slots length mismatch");
+        require(ids.length == count, "Ids length mismatch");
     }
 }
