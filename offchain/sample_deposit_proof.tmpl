@@ -10,15 +10,14 @@ import {IETHBridge} from "src/protocol/IETHBridge.sol";
 import {ISampleDepositProof} from "./ISampleDepositProof.t.sol";
 
 contract SampleDepositProof is ISampleDepositProof {
-    /// @inheritdoc ISampleDepositProof
-    function getSourceAddresses() public pure returns (address signalService, address bridge) {
-        signalService = address({signal_service_address});
-        bridge = address({bridge_address});
-    }
 
-    /// @inheritdoc ISampleDepositProof
-    function getDepositSignalProof() public pure returns (ISignalService.SignalProof memory signalProof) {
-        signalProof = ISignalService.SignalProof({
+    ISignalService.SignalProof[] private signalProofs;
+    IETHBridge.ETHDeposit[] private deposits;
+    bytes32[] private slots;
+    bytes32[] private ids;
+
+    constructor() public {
+        ISignalService.SignalProof memory signalProof = ISignalService.SignalProof({
             accountProof: new bytes[]({account_proof_size}),
             storageProof: new bytes[]({storage_proof_size}),
             stateRoot: bytes32({state_root}),
@@ -26,22 +25,41 @@ contract SampleDepositProof is ISampleDepositProof {
         });
         {populate_account_proof}
         {populate_storage_proof}
+
+        signalProofs.push(signalProof);
+
+        deposits.push(
+            IETHBridge.ETHDeposit({
+                nonce: {nonce},
+                from: address({sender}),
+                to: address({recipient}),
+                amount: {amount},
+                data: bytes("{data}")
+            })
+        );
+
+        slots.push(bytes32({slot}));
+        ids.push(bytes32({id}));
     }
 
     /// @inheritdoc ISampleDepositProof
-    function getEthDeposit() public pure returns (IETHBridge.ETHDeposit memory deposit) {
-        deposit = IETHBridge.ETHDeposit({
-            nonce: {nonce},
-            from: address({sender}),
-            to: address({recipient}),
-            amount: {amount},
-            data: bytes("{data}")
-        });
+    function getSourceAddresses() public pure returns (address signalService, address bridge) {
+        signalService = address({signal_service_address});
+        bridge = address({bridge_address});
     }
 
     /// @inheritdoc ISampleDepositProof
-    function getDepositInternals() public pure returns (bytes32 slot, bytes32 id) {
-        slot = bytes32({slot});
-        id = bytes32({id});
+    function getDepositSignalProof() public view returns (ISignalService.SignalProof memory signalProof) {
+        return signalProofs[0];
+    }
+
+    /// @inheritdoc ISampleDepositProof
+    function getEthDeposit() public view returns (IETHBridge.ETHDeposit memory deposit) {
+        return deposits[0];
+    }
+
+    /// @inheritdoc ISampleDepositProof
+    function getDepositInternals() public view returns (bytes32 slot, bytes32 id) {
+        return (slots[0], ids[0]);
     }
 }
