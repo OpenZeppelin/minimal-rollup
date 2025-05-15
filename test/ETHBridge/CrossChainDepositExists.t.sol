@@ -22,19 +22,22 @@ abstract contract CrossChainDepositExists is UniversalTest {
 
     function setUp() public virtual override {
         super.setUp();
-        ISignalService.SignalProof memory signalProof = sampleDepositProof.getDepositSignalProof();
-        bytes32 commitment = keccak256(abi.encodePacked(signalProof.stateRoot, signalProof.blockHash));
+        bytes32 commitment =
+            keccak256(abi.encodePacked(sampleDepositProof.getStateRoot(), sampleDepositProof.getBlockHash()));
         vm.prank(trustedCommitmentPublisher);
         signalService.storeCommitment(HEIGHT, commitment);
     }
 
     // This is just a sanity-check.
-    // It does not test any contract behaviour but just validates consistency with the sample proof
+    // It does not test any contract behaviour but just validates consistency with the sample proofs
     function test_depositInternals() public view {
-        IETHBridge.ETHDeposit memory deposit = sampleDepositProof.getEthDeposit();
-        (bytes32 slot, bytes32 id) = sampleDepositProof.getDepositInternals();
+        uint256 nProofs = sampleDepositProof.getNumberOfProofs();
+        for(uint256 i=0; i < nProofs; i++) {
+            IETHBridge.ETHDeposit memory deposit = sampleDepositProof.getEthDeposit(i);
+            (bytes32 slot, bytes32 id) = sampleDepositProof.getDepositInternals(i);
 
-        assertEq(bridge.getDepositId(deposit), id, "deposit id mismatch");
-        assertEq(LibSignal.deriveSlot(id, counterpart), slot, "slot mismatch");
+            assertEq(bridge.getDepositId(deposit), id, "deposit id mismatch");
+            assertEq(LibSignal.deriveSlot(id, counterpart), slot, "slot mismatch");
+        }
     }
 }

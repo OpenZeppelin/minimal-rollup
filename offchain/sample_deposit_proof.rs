@@ -5,18 +5,34 @@ mod signal_slot;
 use signal_slot::get_signal_slot;
 
 mod utils;
-use utils::{deploy_signal_service, deploy_eth_bridge, get_proofs, get_provider};
+use utils::{deploy_eth_bridge, deploy_signal_service, get_proofs, get_provider, SignalProof};
 
-use alloy::primitives::{Bytes, U256};
+use alloy::primitives::{Address, Bytes, U256};
 use std::fs;
 
 
 fn expand_vector(vec: Vec<Bytes>, name: &str) -> String {
     let mut expanded = String::new();
     for (i, item) in vec.iter().enumerate() {
-        expanded += format!("\n\t\t{}[{}] = hex\"{}\";", name, i, item).replace("0x","").as_str();
+        expanded += format!("\t\t{}[{}] = hex\"{}\";\n", name, i, item).replace("0x","").as_str();
     }
     return expanded;
+}
+
+fn create_deposit_call(proof: SignalProof, nonce: i32, signer: Address, recipient: Address, amount: U256, data: &str, id: Bytes) -> String {
+    let mut result = String::new();
+    result += format!("\n\t\t// Populate proof {}\n", nonce).as_str();
+    result += format!("\t\taccountProof = new bytes[]({});\n", proof.account_proof.len()).as_str();
+    result += expand_vector(proof.account_proof, "accountProof").as_str();
+    result += format!("\t\tstorageProof = new bytes[]({});\n", proof.storage_proof.len()).as_str();
+    result += expand_vector(proof.storage_proof, "storageProof").as_str();
+    result += format!("\t\tdeposit.nonce = {};\n", nonce).as_str();
+    result += format!("\t\tdeposit.from = address({});\n", signer).as_str();
+    result += format!("\t\tdeposit.to = address({});\n", recipient).as_str();
+    result += format!("\t\tdeposit.amount = {};\n", amount).as_str();
+    result += format!("\t\tdeposit.data = bytes(\"{}\");\n", data).as_str();
+    result += format!("\t\t_createDeposit(\n\t\t\taccountProof,\n\t\t\tstorageProof,\n\t\t\tdeposit,\n\t\t\tbytes32({}),\n\t\t\tbytes32({})\n\t\t);\n", proof.slot, id).as_str();
+    return result;
 }
 
 #[tokio::main]
@@ -50,17 +66,7 @@ async fn main() -> Result<()> {
         .replace("{bridge_address}", eth_bridge.address().to_string().as_str())
         .replace("{block_hash}", proof.block_hash.to_string().as_str())
         .replace("{state_root}", proof.state_root.to_string().as_str())
-        .replace("{account_proof_size}", proof.account_proof.len().to_string().as_str())
-        .replace("{storage_proof_size}", proof.storage_proof.len().to_string().as_str())
-        .replace("{populate_account_proof}", &expand_vector(proof.account_proof, "signalProof.accountProof"))
-        .replace("{populate_storage_proof}", &expand_vector(proof.storage_proof, "signalProof.storageProof"))
-        .replace("{nonce}", nonce.to_string().as_str())
-        .replace("{sender}", signer.address().to_string().as_str())
-        .replace("{recipient}", recipient.to_string().as_str())
-        .replace("{amount}", amount.to_string().as_str())
-        .replace("{data}", data)
-        .replace("{slot}", proof.slot.to_string().as_str())
-        .replace("{id}", id.to_string().as_str());
+        .replace("{populate_proofs}", create_deposit_call(proof, nonce, signer.address(), recipient, amount, data, id).as_str());
     println!("{}", formatted);
     Ok(())
 }

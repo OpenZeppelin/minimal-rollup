@@ -17,29 +17,10 @@ contract SampleDepositProof is ISampleDepositProof {
     bytes32[] private ids;
 
     constructor() {
-        ISignalService.SignalProof memory signalProof = ISignalService.SignalProof({
-            accountProof: new bytes[]({account_proof_size}),
-            storageProof: new bytes[]({storage_proof_size}),
-            stateRoot: getStateRoot(),
-            blockHash: getBlockHash()
-        });
-        {populate_account_proof}
-        {populate_storage_proof}
-
-        signalProofs.push(signalProof);
-
-        deposits.push(
-            IETHBridge.ETHDeposit({
-                nonce: {nonce},
-                from: address({sender}),
-                to: address({recipient}),
-                amount: {amount},
-                data: bytes("{data}")
-            })
-        );
-
-        slots.push(bytes32({slot}));
-        ids.push(bytes32({id}));
+        bytes[] memory accountProof;
+        bytes[] memory storageProof;
+        IETHBridge.ETHDeposit memory deposit;
+        {populate_proofs}
     }
 
     /// @inheritdoc ISampleDepositProof
@@ -63,17 +44,37 @@ contract SampleDepositProof is ISampleDepositProof {
     }
 
     /// @inheritdoc ISampleDepositProof
-    function getDepositSignalProof() public view returns (ISignalService.SignalProof memory signalProof) {
-        return signalProofs[0];
+    function getDepositSignalProof(uint256 idx) public view returns (ISignalService.SignalProof memory signalProof) {
+        return signalProofs[idx];
     }
 
     /// @inheritdoc ISampleDepositProof
-    function getEthDeposit() public view returns (IETHBridge.ETHDeposit memory deposit) {
-        return deposits[0];
+    function getEthDeposit(uint256 idx) public view returns (IETHBridge.ETHDeposit memory deposit) {
+        return deposits[idx];
     }
 
     /// @inheritdoc ISampleDepositProof
-    function getDepositInternals() public view returns (bytes32 slot, bytes32 id) {
-        return (slots[0], ids[0]);
+    function getDepositInternals(uint256 idx) public view returns (bytes32 slot, bytes32 id) {
+        return (slots[idx], ids[idx]);
+    }
+
+    function _createDeposit(
+        bytes[] memory accountProof,
+        bytes[] memory storageProof,
+        IETHBridge.ETHDeposit memory deposit,
+        bytes32 slot,
+        bytes32 id
+    ) internal {
+        signalProofs.push(
+            ISignalService.SignalProof({
+                accountProof: accountProof,
+                storageProof: storageProof,
+                stateRoot: getStateRoot(),
+                blockHash: getBlockHash()
+            })
+        );
+        deposits.push(deposit);
+        slots.push(slot);
+        ids.push(id);
     }
 }

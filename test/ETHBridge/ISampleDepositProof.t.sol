@@ -11,7 +11,8 @@ interface ISampleDepositProof {
     function getBridgeAddress() external returns (address);
     function getStateRoot() external returns (bytes32);
     function getBlockHash() external returns (bytes32);
-    function getDepositSignalProof() external returns (ISignalService.SignalProof memory);
-    function getEthDeposit() external returns (IETHBridge.ETHDeposit memory deposit);
-    function getDepositInternals() external returns (bytes32 slot, bytes32 id);
+    function getDepositSignalProof(uint256 idx) external returns (ISignalService.SignalProof memory);
+    function getEthDeposit(uint256 idx) external returns (IETHBridge.ETHDeposit memory deposit);
+    function getDepositInternals(uint256 idx) external returns (bytes32 slot, bytes32 id);
+    function getNumberOfProofs() external view returns (uint256 count);
 }

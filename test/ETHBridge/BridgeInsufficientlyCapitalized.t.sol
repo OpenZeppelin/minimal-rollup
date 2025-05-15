@@ -11,9 +11,12 @@ import {IETHBridge} from "src/protocol/IETHBridge.sol";
 /// that was originally deposited to this bridge.
 /// - on L2, the bridge should be prefunded with enough ETH to cover all L1 ETH.
 contract BridgeInsufficientlyCapitalized is CrossChainDepositExists {
+
+    uint256 constant private DEPOSIT_IDX = 0; // a deposit index with non-zero amount
+
     function test_claimDeposit_shouldRevert() public {
-        IETHBridge.ETHDeposit memory deposit = sampleDepositProof.getEthDeposit();
-        bytes memory proof = abi.encode(sampleDepositProof.getDepositSignalProof());
+        IETHBridge.ETHDeposit memory deposit = sampleDepositProof.getEthDeposit(DEPOSIT_IDX);
+        bytes memory proof = abi.encode(sampleDepositProof.getDepositSignalProof(DEPOSIT_IDX));
 
         vm.expectRevert(IETHBridge.FailedClaim.selector);
         bridge.claimDeposit(deposit, HEIGHT, proof);
