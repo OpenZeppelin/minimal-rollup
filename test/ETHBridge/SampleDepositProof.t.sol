@@ -20,8 +20,8 @@ contract SampleDepositProof is ISampleDepositProof {
         ISignalService.SignalProof memory signalProof = ISignalService.SignalProof({
             accountProof: new bytes[](3),
             storageProof: new bytes[](1),
-            stateRoot: bytes32(0xb7711f031190aae5617914df7c3d4d2d2496031986f5b8dcd6ac7d8daeef424b),
-            blockHash: bytes32(0x7e33c4721cdeeb0a3dafce19a154219f09700c3d4f1a7457e751a436d6b80d68)
+            stateRoot: getStateRoot(),
+            blockHash: getBlockHash()
         });
         
 		signalProof.accountProof[0] = hex"f90151a0b91a8b7a7e9d3eab90afd81da3725030742f663c6ed8c26657bf00d842a9f4aaa01689b2a5203afd9ea0a0ca3765e4a538c7176e53eac1f8307a344ffc3c6176558080a003c2f506dcc4351bbb1f7943084665e21af2cad3f37618a794167901174fc2caa07b9b5af76aaacfe822062ed002c6db0b494ae66b9dbe3e91c7c398088a92090480a0931c5d4ef4b2277973028722fd557c9eb65b9db5f7788c27005ce5ae5c677a86a04b29efa44ecf50c19b34950cf1d0f05e00568bcc873120fbea9a4e8439de0962a0d0a1bfe5b45d2d863a794f016450a4caca04f3b599e8d1652afca8b752935fd880a0bf9b09e442e044778b354abbadb5ec049d7f5e8b585c3966d476c4fbc9a181d28080a046e3a6bd785b2f60ecc9f58b5302daf708d8328307670dba4b5226236db6f148a0e5c557a0ce3894afeb44c37f3d24247f67dc76a174d8cacc360c1210eef60a7680";
@@ -47,9 +47,23 @@ contract SampleDepositProof is ISampleDepositProof {
     }
 
     /// @inheritdoc ISampleDepositProof
-    function getSourceAddresses() public pure returns (address signalService, address bridge) {
-        signalService = address(0x5FbDB2315678afecb367f032d93F642f64180aa3);
-        bridge = address(0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512);
+    function getSignalServiceAddress() public pure returns (address) {
+        return address(0x5FbDB2315678afecb367f032d93F642f64180aa3);
+    }
+
+    /// @inheritdoc ISampleDepositProof
+    function getBridgeAddress() public pure returns (address) {
+        return address(0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512);
+    }
+
+    /// @inheritdoc ISampleDepositProof
+    function getStateRoot() public pure returns (bytes32) {
+        return bytes32(0xb7711f031190aae5617914df7c3d4d2d2496031986f5b8dcd6ac7d8daeef424b);
+    }
+
+    /// @inheritdoc ISampleDepositProof
+    function getBlockHash() public pure returns (bytes32) {
+        return bytes32(0xdff640ffb657722317b90e9efc3bd4f396b3a48e43e7566df310bbf7e7c9c34d);
     }
 
     /// @inheritdoc ISampleDepositProof

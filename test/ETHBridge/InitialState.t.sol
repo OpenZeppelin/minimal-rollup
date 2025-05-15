@@ -17,15 +17,13 @@ contract InitialState is Test {
 
     function setUp() public virtual {
         sampleDepositProof = new SampleDepositProof();
-        (address signalServiceAddress, address counterpartAddress) = sampleDepositProof.getSourceAddresses();
 
         // The SignalService on this chain should be at the same address as the source chain.
-        deployCodeTo("SignalService.sol", signalServiceAddress);
-        signalService = SignalService(signalServiceAddress);
+        signalService = SignalService(sampleDepositProof.getSignalServiceAddress());
+        deployCodeTo("SignalService.sol", address(signalService));
 
-        counterpart = counterpartAddress;
-
-        bridge = new ETHBridge(signalServiceAddress, trustedCommitmentPublisher, counterpart);
+        counterpart = sampleDepositProof.getBridgeAddress();
+        bridge = new ETHBridge(address(signalService), trustedCommitmentPublisher, counterpart);
     }
 
     function _randomAddress(string memory name) internal pure returns (address) {

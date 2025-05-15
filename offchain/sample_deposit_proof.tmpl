@@ -16,12 +16,12 @@ contract SampleDepositProof is ISampleDepositProof {
     bytes32[] private slots;
     bytes32[] private ids;
 
-    constructor() public {
+    constructor() {
         ISignalService.SignalProof memory signalProof = ISignalService.SignalProof({
             accountProof: new bytes[]({account_proof_size}),
             storageProof: new bytes[]({storage_proof_size}),
-            stateRoot: bytes32({state_root}),
-            blockHash: bytes32({block_hash})
+            stateRoot: getStateRoot(),
+            blockHash: getBlockHash()
         });
         {populate_account_proof}
         {populate_storage_proof}
@@ -43,9 +43,23 @@ contract SampleDepositProof is ISampleDepositProof {
     }
 
     /// @inheritdoc ISampleDepositProof
-    function getSourceAddresses() public pure returns (address signalService, address bridge) {
-        signalService = address({signal_service_address});
-        bridge = address({bridge_address});
+    function getSignalServiceAddress() public pure returns (address) {
+        return address({signal_service_address});
+    }
+
+    /// @inheritdoc ISampleDepositProof
+    function getBridgeAddress() public pure returns (address) {
+        return address({bridge_address});
+    }
+
+    /// @inheritdoc ISampleDepositProof
+    function getStateRoot() public pure returns (bytes32) {
+        return bytes32({state_root});
+    }
+
+    /// @inheritdoc ISampleDepositProof
+    function getBlockHash() public pure returns (bytes32) {
+        return bytes32({block_hash});
     }
 
     /// @inheritdoc ISampleDepositProof
