@@ -58,15 +58,17 @@ contract CheckpointTrackerTest is Test {
     }
 
     function test_proveTransition_SuccessfulTransition() public {
-        ICheckpointTracker.Checkpoint memory start =
-            ICheckpointTracker.Checkpoint({publicationId: 0, commitment: keccak256(abi.encode("genesis"))});
         ICheckpointTracker.Checkpoint memory end =
             ICheckpointTracker.Checkpoint({publicationId: 3, commitment: keccak256(abi.encode("end"))});
         uint256 numRelevantPublications = 2;
 
         vm.expectEmit();
         emit ICheckpointTracker.CheckpointUpdated(end);
-        tracker.proveTransition(start, end, numRelevantPublications, ZERO_DELAYED_PUBLICATIONS, proof);
+
+        // Empty checkpoint needed to comply with the interface, but not used in `CheckpointTracker`
+        ICheckpointTracker.Checkpoint memory emptyCheckpoint =
+            ICheckpointTracker.Checkpoint({publicationId: 0, commitment: bytes32(0)});
+        tracker.proveTransition(emptyCheckpoint, end, numRelevantPublications, ZERO_DELAYED_PUBLICATIONS, proof);
 
         ICheckpointTracker.Checkpoint memory provenCheckpoint = tracker.getProvenCheckpoint();
         assertEq(provenCheckpoint.publicationId, end.publicationId);
@@ -74,50 +76,28 @@ contract CheckpointTrackerTest is Test {
     }
 
     function test_proveTransition_RevertWhenEndCommitmentIsZero() public {
-        ICheckpointTracker.Checkpoint memory start =
-            ICheckpointTracker.Checkpoint({publicationId: 0, commitment: keccak256(abi.encode("genesis"))});
         ICheckpointTracker.Checkpoint memory end =
             ICheckpointTracker.Checkpoint({publicationId: 3, commitment: bytes32(0)});
         uint256 numRelevantPublications = 2;
 
+        // Empty checkpoint needed to comply with the interface, but not used in `CheckpointTracker`
+        ICheckpointTracker.Checkpoint memory emptyCheckpoint =
+            ICheckpointTracker.Checkpoint({publicationId: 0, commitment: bytes32(0)});
         vm.expectRevert("Checkpoint commitment cannot be 0");
-        tracker.proveTransition(start, end, numRelevantPublications, ZERO_DELAYED_PUBLICATIONS, proof);
-    }
-
-    function test_proveTransition_RevertWhenStartCheckpointNotLatestProven() public {
-        ICheckpointTracker.Checkpoint memory start =
-            ICheckpointTracker.Checkpoint({publicationId: 1, commitment: keccak256(abi.encode("wrong"))});
-        ICheckpointTracker.Checkpoint memory end =
-            ICheckpointTracker.Checkpoint({publicationId: 3, commitment: keccak256(abi.encode("end"))});
-        uint256 numRelevantPublications = 2;
-
-        vm.expectRevert("Start checkpoint must be the latest proven checkpoint");
-        tracker.proveTransition(start, end, numRelevantPublications, ZERO_DELAYED_PUBLICATIONS, proof);
-    }
-
-    function test_proveTransition_RevertWhenEndPublicationNotAfterStart() public {
-        ICheckpointTracker.Checkpoint memory start =
-            ICheckpointTracker.Checkpoint({publicationId: 0, commitment: keccak256(abi.encode("genesis"))});
-        ICheckpointTracker.Checkpoint memory end =
-            ICheckpointTracker.Checkpoint({publicationId: 0, commitment: keccak256(abi.encode("end"))});
-        // this is nonsensical, but we're testing the publicationId check so I think it makes sense for the other
-        // parameters to match previous tests.
-        uint256 numRelevantPublications = 2;
-
-        vm.expectRevert("End publication must be after the last proven publication");
-        tracker.proveTransition(start, end, numRelevantPublications, ZERO_DELAYED_PUBLICATIONS, proof);
+        tracker.proveTransition(emptyCheckpoint, end, numRelevantPublications, ZERO_DELAYED_PUBLICATIONS, proof);
     }
 
     function test_proveTransition_RevertWhenNumDelayedPublicationsGreaterThanNumPublications() public {
-        ICheckpointTracker.Checkpoint memory start =
-            ICheckpointTracker.Checkpoint({publicationId: 0, commitment: keccak256(abi.encode("genesis"))});
         ICheckpointTracker.Checkpoint memory end =
             ICheckpointTracker.Checkpoint({publicationId: 3, commitment: keccak256(abi.encode("end"))});
         uint256 numRelevantPublications = 2;
         uint256 numDelayedPublications = 3;
 
+        // Empty checkpoint needed to comply with the interface, but not used in `CheckpointTracker`
+        ICheckpointTracker.Checkpoint memory emptyCheckpoint =
+            ICheckpointTracker.Checkpoint({publicationId: 0, commitment: bytes32(0)});
         vm.expectRevert("Number of delayed publications cannot be greater than the total number of publications");
-        tracker.proveTransition(start, end, numRelevantPublications, numDelayedPublications, proof);
+        tracker.proveTransition(emptyCheckpoint, end, numRelevantPublications, numDelayedPublications, proof);
     }
 
     function createSampleFeed() private {
