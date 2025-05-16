@@ -7,7 +7,7 @@ import {SampleDepositProof} from "./SampleDepositProof.t.sol";
 import {ETHBridge} from "src/protocol/ETHBridge.sol";
 import {SignalService} from "src/protocol/SignalService.sol";
 
-contract InitialState is Test {
+abstract contract InitialState is Test {
     ETHBridge bridge;
     SignalService signalService;
     address counterpart;

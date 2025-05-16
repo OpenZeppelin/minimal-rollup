@@ -45,27 +45,31 @@ pub struct DepositSpecification {
 }
 
 fn deposit_specification() -> Vec<DepositSpecification> {
-    return vec![
-        DepositSpecification {
-            // This is an address on the destination chain, so it seems natural to use one generated there
-            // In this case, the CrossChainDepositExists.sol test case defines _randomAddress("recipient");
-            recipient: "0x99A270Be1AA5E97633177041859aEEB9a0670fAa".parse().unwrap(),
-            amount: U256::from(4000000000000000000_u128), // 4 ether
-            data: "".to_string()
-        },
-        // Repeat the deposit using calldata for the mocks/TransferRecipient.sol contract. It encodes `someFunction(1234)`
-        DepositSpecification {
-            recipient: "0x99A270Be1AA5E97633177041859aEEB9a0670fAa".parse().unwrap(),
-            amount: U256::from(4000000000000000000_u128), // 4 ether
-            data: "7062c09400000000000000000000000000000000000000000000000000000000000004d2".to_string()
-        },
-        // Repeat the deposit but pass the invalid argument 1235 to `someFunction` (the call should fail on the destination)
-        DepositSpecification {
-            recipient: "0x99A270Be1AA5E97633177041859aEEB9a0670fAa".parse().unwrap(),
-            amount: U256::from(4000000000000000000_u128), // 4 ether
-            data: "7062c09400000000000000000000000000000000000000000000000000000000000004d3".to_string()
-        },
+
+    // This is an address on the destination chain, so it seems natural to use one generated there
+    // In this case, the CrossChainDepositExists.sol test case defines _randomAddress("recipient");        
+    let recipient = "0x99A270Be1AA5E97633177041859aEEB9a0670fAa";
+    // Use both zero and non-zero amounts (in this case 4 ether)
+    let amounts = vec![0_u128, 4000000000000000000_u128];
+    // Use different calldata to try different functions and inputs
+    let calldata = vec![
+        "", // empty
+        "9b28f6fb00000000000000000000000000000000000000000000000000000000000004d2", // (valid) call to somePayableFunction(1234)
+        "9b28f6fb00000000000000000000000000000000000000000000000000000000000004d3", // (invalid) call to somePayableFunction(1235)
+        "5932a71200000000000000000000000000000000000000000000000000000000000004d2" // (valid) call to `someNonPayableFunction(1234)`
     ];
+
+    let mut specifications = vec![];
+    for amount in amounts {
+        for data in calldata.iter() {
+            specifications.push(DepositSpecification {
+                recipient: recipient.parse().unwrap(),
+                amount: U256::from(amount),
+                data: data.to_string()
+            });
+        }
+    }
+    return specifications;
 }
 
 #[tokio::main]

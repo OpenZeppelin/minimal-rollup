@@ -4,16 +4,8 @@ pragma solidity ^0.8.28;
 import {CrossChainDepositExists} from "./CrossChainDepositExists.t.sol";
 import {IETHBridge} from "src/protocol/IETHBridge.sol";
 
-/// This contract describes behaviours that should be valid when the local bridge has
-/// enough ether to cover the cross chain deposit.
-/// On L1, this would be from a previous deposit (to the L2).
-/// On L2, we assume the bridge is prefunded.
-contract BridgeSufficientlyCapitalized is CrossChainDepositExists {
-    function setUp() public virtual override {
-        super.setUp();
-        vm.deal(address(bridge), sampleDepositProof.getEthDeposit(_depositIdx()).amount);
-    }
-
+/// This contract describes behaviours that should be valid when the deposit is claimable.
+abstract contract DepositIsClaimable is CrossChainDepositExists {
     function test_claimDeposit_shouldSucceed() public {
         IETHBridge.ETHDeposit memory deposit = sampleDepositProof.getEthDeposit(_depositIdx());
         bytes memory proof = abi.encode(sampleDepositProof.getDepositSignalProof(_depositIdx()));
@@ -50,5 +42,16 @@ contract BridgeSufficientlyCapitalized is CrossChainDepositExists {
         bridge.claimDeposit(deposit, HEIGHT, proof);
         assertEq(recipient.balance, initialRecipientBalance + deposit.amount, "recipient balance mismatch");
         assertEq(address(bridge).balance, initialBridgeBalance - deposit.amount, "bridge balance mismatch");
+    }
+}
+
+/// This contract describes behaviours that should be valid when the deposit is not claimable.
+abstract contract DepositIsNotClaimable is CrossChainDepositExists {
+    function test_claimDeposit_shouldRevert() public {
+        IETHBridge.ETHDeposit memory deposit = sampleDepositProof.getEthDeposit(_depositIdx());
+        bytes memory proof = abi.encode(sampleDepositProof.getDepositSignalProof(_depositIdx()));
+
+        vm.expectRevert(IETHBridge.FailedClaim.selector);
+        bridge.claimDeposit(deposit, HEIGHT, proof);
     }
 }

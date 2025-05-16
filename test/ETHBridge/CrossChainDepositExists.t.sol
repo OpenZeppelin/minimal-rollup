@@ -6,14 +6,11 @@ import {UniversalTest} from "./UniversalTest.t.sol";
 import {LibSignal} from "src/libs/LibSignal.sol";
 
 import {IETHBridge} from "src/protocol/IETHBridge.sol";
-import {ISignalService} from "src/protocol/ISignalService.sol";
 
 /// This contract describes behaviours that should be valid when a cross chain deposit exists.
 /// This implies a deposit was made on the counterpart bridge (on another chain) and the commitment
 /// was stored on this chain's signal service.
 /// We use the SampleDepositProof contract to track the deposit details.
-/// @dev The contract is abstract because it should be specialised into the cases where the bridge
-/// does or does not have sufficient ether
 abstract contract CrossChainDepositExists is UniversalTest {
     // the sample deposit is to this address
     address recipient = _randomAddress("recipient");
@@ -41,9 +38,6 @@ abstract contract CrossChainDepositExists is UniversalTest {
         }
     }
 
-    // Returns a deposit with a non-zero amount and no data field
-    // It can be overridden to re-run tests with a different deposit
-    function _depositIdx() internal pure virtual returns (uint256) {
-        return 0;
-    }
+    // Choose the deposit index based on the test case
+    function _depositIdx() internal pure virtual returns (uint256);
 }
