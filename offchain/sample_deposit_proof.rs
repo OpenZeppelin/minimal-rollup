@@ -7,8 +7,8 @@ use signal_slot::get_signal_slot;
 mod utils;
 use utils::{deploy_eth_bridge, deploy_signal_service, get_proofs, get_provider, SignalProof};
 
-use alloy::primitives::{Address, Bytes, U256};
-use alloy::hex::{decode};
+use alloy::primitives::{Address, Bytes, U256, FixedBytes};
+use alloy::hex::decode;
 use std::fs;
 
 
@@ -22,7 +22,7 @@ fn expand_vector(vec: Vec<Bytes>, name: &str) -> String {
     return expanded;
 }
 
-fn create_deposit_call(proof: SignalProof, nonce: i32, signer: Address, recipient: Address, amount: U256, data: &str, id: Bytes) -> String {
+fn create_deposit_call(proof: SignalProof, nonce: usize, signer: Address, recipient: Address, amount: U256, data: &str, id: &FixedBytes<32>) -> String {
     let mut result = String::new();
     result += format!("\n\t\t// Populate proof {}\n", nonce).as_str();
     result += format!("\t\taccountProof = new bytes[]({});\n", proof.account_proof.len()).as_str();
@@ -38,55 +38,79 @@ fn create_deposit_call(proof: SignalProof, nonce: i32, signer: Address, recipien
     return result;
 }
 
+pub struct DepositSpecification {
+    pub recipient: Address,
+    pub amount: U256,
+    pub data: String,
+}
+
+fn deposit_specification() -> Vec<DepositSpecification> {
+    return vec![
+        DepositSpecification {
+            // This is an address on the destination chain, so it seems natural to use one generated there
+            // In this case, the CrossChainDepositExists.sol test case defines _randomAddress("recipient");
+            recipient: "0x99A270Be1AA5E97633177041859aEEB9a0670fAa".parse().unwrap(),
+            amount: U256::from(4000000000000000000_u128), // 4 ether
+            data: "".to_string()
+        },
+        // Repeat the deposit using calldata for the mocks/TransferRecipient.sol contract. It encodes `someFunction(1234)`
+        DepositSpecification {
+            recipient: "0x99A270Be1AA5E97633177041859aEEB9a0670fAa".parse().unwrap(),
+            amount: U256::from(4000000000000000000_u128), // 4 ether
+            data: "7062c09400000000000000000000000000000000000000000000000000000000000004d2".to_string()
+        },
+        // Repeat the deposit but pass the invalid argument 1235 to `someFunction` (the call should fail on the destination)
+        DepositSpecification {
+            recipient: "0x99A270Be1AA5E97633177041859aEEB9a0670fAa".parse().unwrap(),
+            amount: U256::from(4000000000000000000_u128), // 4 ether
+            data: "7062c09400000000000000000000000000000000000000000000000000000000000004d3".to_string()
+        },
+    ];
+}
+
 #[tokio::main]
 async fn main() -> Result<()> {
     let (provider, _anvil, signer) = get_provider()?;
     let signal_service = deploy_signal_service(&provider).await?;
     let eth_bridge = deploy_eth_bridge(&provider, *signal_service.address()).await?;
     
-    // This is an address on the destination chain, so it seems natural to use one generated there
-    // In this case, the CrossChainDepositExists.sol test case defines _randomAddress("recipient");
-    let recipient= "0x99A270Be1AA5E97633177041859aEEB9a0670fAa".parse()?;
-    let amount = U256::from(4000000000000000000_u128); // 4 ether
+    let deposits = deposit_specification();
+    assert!(deposits.len() > 0, "No deposits to prove");
+    let mut ids: Vec<FixedBytes<32>>  = vec![];
+    // Perform all deposits
+    for (_i, spec) in deposits.iter().enumerate() {
+        let tx = eth_bridge.deposit(spec.recipient, decode(spec.data.clone())?.into()).value(spec.amount).send().await?.get_receipt().await?;
+        let id = tx.logs().get(0).unwrap().data().clone().data;
+        ids.push(FixedBytes::from_slice(&id[..32]));
+    }
 
-    let data0 = "";
-    // get the ID from the transaction receipt
-    let tx0 = eth_bridge.deposit(recipient, data0.into()).value(amount).send().await?.get_receipt().await?;
-    let id0 = tx0.logs().get(0).unwrap().data().clone().data;
-    let id0_fixed: alloy::primitives::B256 = alloy::primitives::B256::from_slice(&id0[..32]);
-    // This is the first deposit, so the nonce is zero. I think this is acceptable for testing purposes.
-    // Other options: read the nonce from the DepositMade event, or add a nonce getter to the ETHBridge contract
-    let nonce0 = 0;
+    let mut block_hash = FixedBytes::ZERO;
+    let mut state_root= FixedBytes::ZERO;
+
+    let mut populated_proofs = String::new();
+    for (i, id) in ids.iter().enumerate() {
+        let slot = get_signal_slot(id, &eth_bridge.address());
+        let proof = get_proofs(&provider, slot, &signal_service).await?;
     
-    // Repeat the deposit using calldata for the mocks/TransferRecipient.sol contract. It encodes `someFunction(1234)`
-    let data1 = "7062c09400000000000000000000000000000000000000000000000000000000000004d2";
-    let tx1 = eth_bridge.deposit(recipient, decode(data1)?.into()).value(amount).send().await?.get_receipt().await?;
-    let id1 = tx1.logs().get(0).unwrap().data().clone().data;
-    let id1_fixed: alloy::primitives::B256 = alloy::primitives::B256::from_slice(&id1[..32]);
-    let nonce1 = 1;
+        if i == 0 {
+            block_hash = proof.block_hash;
+            state_root = proof.state_root;
+        } else {
+            assert!(proof.block_hash == block_hash);
+            assert!(proof.state_root == state_root);
+        }
 
-    // After the deposits, retrieve the latest proofs
-    let slot0 = get_signal_slot(&id0_fixed, &eth_bridge.address());
-    let proof0   = get_proofs(&provider, slot0, &signal_service).await?;
-
-    let slot1 = get_signal_slot(&id1_fixed, &eth_bridge.address());
-    let proof1   = get_proofs(&provider, slot1, &signal_service).await?;
-
-    assert!(proof0.block_hash == proof1.block_hash);
-    assert!(proof0.state_root == proof1.state_root);
-
+        let d = &deposits[i];
+        populated_proofs += create_deposit_call(proof, i, signer.address(), d.recipient, d.amount, d.data.as_str(), id).as_str();
+    }
 
     let template = fs::read_to_string("offchain/sample_deposit_proof.tmpl")?;
     let formatted = template
         .replace("{signal_service_address}", signal_service.address().to_string().as_str())
         .replace("{bridge_address}", eth_bridge.address().to_string().as_str())
-        .replace("{block_hash}", proof0.block_hash.to_string().as_str())
-        .replace("{state_root}", proof0.state_root.to_string().as_str())
-        .replace("{populate_proofs}", format!("{}\n{}", 
-            create_deposit_call(proof0, nonce0, signer.address(), recipient, amount, data0, id0).as_str(),
-            create_deposit_call(proof1, nonce1, signer.address(), recipient, amount, data1, id1).as_str()
-            ).as_str()
-    );
+        .replace("{block_hash}", block_hash.to_string().as_str())
+        .replace("{state_root}", state_root.to_string().as_str())
+        .replace("{populate_proofs}", populated_proofs.as_str());
     println!("{}", formatted);
     Ok(())
 }
