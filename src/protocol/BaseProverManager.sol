@@ -111,7 +111,7 @@ abstract contract BaseProverManager is IProposerFees, IProverManager, BalanceAcc
         (uint40 end,) = period.close(_exitDelay(), 0);
 
         // Reward the evictor and slash the prover
-        uint96 evictorIncentive = period.stake.scaleBy(_evictorIncentivePercentage());
+        uint96 evictorIncentive = period.stake.scaleByBPS(_evictorIncentivePercentage());
         _increaseBalance(msg.sender, evictorIncentive);
         period.slash(evictorIncentive);
 
@@ -213,7 +213,7 @@ abstract contract BaseProverManager is IProposerFees, IProverManager, BalanceAcc
     /// @param fee The fee to be outbid (either the current period's fee or next period's winning fee)
     /// @param offeredFee The new bid
     function _ensureSufficientUnderbid(uint96 fee, uint96 offeredFee) internal view virtual {
-        uint96 requiredMaxFee = fee.scaleBy(_maxBidPercentage());
+        uint96 requiredMaxFee = fee.scaleByBPS(_maxBidPercentage());
         require(offeredFee <= requiredMaxFee, "Offered fee not low enough");
     }
 

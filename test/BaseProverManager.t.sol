@@ -14,6 +14,7 @@ import {PublicationFeed} from "src/protocol/PublicationFeed.sol";
 
 import {MockCheckpointTracker} from "test/mocks/MockCheckpointTracker.sol";
 import {NullVerifier} from "test/mocks/NullVerifier.sol";
+import {LibPercentage} from "src/libs/LibPercentage.sol";
 
 // Configuration parameters.
 uint16 constant MAX_BID_PERCENTAGE = 9500; // 95%
@@ -219,7 +220,7 @@ abstract contract BaseProverManagerTest is Test {
         // Capture current period stake before eviction
         LibProvingPeriod.Period memory periodBefore = proverManager.getPeriod(1);
         uint256 stakeBefore = periodBefore.stake;
-        uint256 incentive = _calculatePercentageBPS(stakeBefore, EVICTOR_INCENTIVE_PERCENTAGE);
+        uint256 incentive = LibPercentage.scaleByBPS(stakeBefore, EVICTOR_INCENTIVE_PERCENTAGE);
 
         // Evict the prover
         vm.warp(vm.getBlockTimestamp() + LIVENESS_WINDOW + 1);
@@ -505,7 +506,7 @@ abstract contract BaseProverManagerTest is Test {
 
         uint256 proverBalanceAfter = proverManager.balances(initialProver);
         uint256 expectedBalance = proverBalanceBefore + INITIAL_FEE * numRegularPublications
-            + _calculatePercentage(INITIAL_FEE, DELAYED_FEE_PERCENTAGE) * numDelayedPublications;
+            + LibPercentage.scaleByPercentage(INITIAL_FEE, DELAYED_FEE_PERCENTAGE) * numDelayedPublications;
         assertEq(proverBalanceAfter, expectedBalance, "Prover should receive fees");
     }
 
@@ -849,7 +850,7 @@ abstract contract BaseProverManagerTest is Test {
 
         uint256 initialProverBalanceAfter = proverManager.balances(initialProver);
         uint256 prover1BalanceAfter = proverManager.balances(prover1);
-        uint256 stakeReward = _calculatePercentageBPS(stakeBefore, REWARD_PERCENTAGE);
+        uint256 stakeReward = LibPercentage.scaleByBPS(stakeBefore, REWARD_PERCENTAGE);
         assertEq(prover1BalanceAfter, prover1BalanceBefore + stakeReward, "Prover1 should receive the remaining stake");
         assertEq(initialProverBalanceAfter, initialProverBalanceBefore, "Initial prover should receive nothing");
     }
@@ -906,7 +907,7 @@ abstract contract BaseProverManagerTest is Test {
         assertEq(fee, INITIAL_FEE, "Fee should be the initial fee");
         assertEq(
             delayedFee,
-            _calculatePercentage(INITIAL_FEE, DELAYED_FEE_PERCENTAGE),
+            LibPercentage.scaleByPercentage(INITIAL_FEE, DELAYED_FEE_PERCENTAGE),
             "Delayed fee should be the initial fee"
         );
     }
@@ -927,7 +928,7 @@ abstract contract BaseProverManagerTest is Test {
         assertEq(fee, bidFee, "Fee should be the bid fee");
         assertEq(
             delayedFee,
-            uint96(_calculatePercentage(bidFee, DELAYED_FEE_PERCENTAGE)),
+            uint96(LibPercentage.scaleByPercentage(bidFee, DELAYED_FEE_PERCENTAGE)),
             "Delayed fee should be the bid fee"
         );
     }
@@ -944,7 +945,7 @@ abstract contract BaseProverManagerTest is Test {
         returns (IPublicationFeed.PublicationHeader[] memory)
     {
         uint256 depositAmount =
-            delayed ? _calculatePercentage(fee, DELAYED_FEE_PERCENTAGE) * numPublications : fee * numPublications;
+            delayed ? LibPercentage.scaleByPercentage(fee, DELAYED_FEE_PERCENTAGE) * numPublications : fee * numPublications;
         _deposit(proposer, depositAmount);
 
         IPublicationFeed.PublicationHeader[] memory headers = new IPublicationFeed.PublicationHeader[](numPublications);
@@ -975,17 +976,8 @@ abstract contract BaseProverManagerTest is Test {
     function _deposit(address user, uint256 amount) internal virtual;
 
     function _maxAllowedFee(uint96 fee) internal pure returns (uint96) {
-        return uint96(_calculatePercentageBPS(fee, MAX_BID_PERCENTAGE));
+        return uint96(LibPercentage.scaleByBPS(fee, MAX_BID_PERCENTAGE));
     }
-
-    function _calculatePercentageBPS(uint256 amount, uint16 percentage) internal pure returns (uint256) {
-        return amount * percentage / 10_000;
-    }
-
-    function _calculatePercentage(uint256 amount, uint16 percentage) internal pure returns (uint256) {
-        return amount * percentage / 100;
-    }
-
     function _exit(address prover) internal {
         vm.prank(prover);
         proverManager.exit();
