@@ -62,7 +62,7 @@ contract ETHBridge is IETHBridge, ReentrancyGuardTransient {
     /// @inheritdoc IETHBridge
     function claimDeposit(ETHDeposit memory ethDeposit, uint256 height, bytes memory proof) external nonReentrant {
         bytes32 id = _generateId(ethDeposit);
-        require(getDepositStatus(id) == Status.NONE, AlreadyClaimed());
+        require(getDepositStatus(id) == Status.NONE, DepositAlreadyProcessed());
 
         signalService.verifySignal(height, trustedCommitmentPublisher, counterpart, id, proof);
 
