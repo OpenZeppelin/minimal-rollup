@@ -23,7 +23,15 @@ library LibPercentage {
     /// @param value The number to scale
     /// @param percentage The percentage expressed in basis points
     /// @return _ The scaled value
-    function scaleBy(uint256 value, uint16 percentage) internal pure returns (uint96) {
+    function scaleByBPS(uint256 value, uint16 percentage) internal pure returns (uint96) {
+        return scaleBy(value, percentage, BASIS_POINTS);
+    }
+
+    /// @dev Calculates the percentage of a given value
+    /// @param value The number to scale
+    /// @param percentage The percentage to single-percentage precision (e.g. percentage 50 is 50%)
+    /// @return _ The scaled value
+    function scaleByPercentage(uint256 value, uint16 percentage) internal pure returns (uint96) {
         return scaleBy(value, percentage, BASIS_POINTS);
     }
 }

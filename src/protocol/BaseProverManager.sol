@@ -98,7 +98,7 @@ abstract contract BaseProverManager is IProposerFees, IProverManager {
         // Deduct fee from proposer's balance
         uint96 fee = _periods[periodId].fee;
         if (isDelayed) {
-            fee = fee.scaleBy(_periods[periodId].delayedFeePercentage, LibPercentage.PERCENT);
+            fee = fee.scaleByPercentage(_periods[periodId].delayedFeePercentage);
         }
         _balances[proposer] -= fee;
     }
@@ -151,7 +151,7 @@ abstract contract BaseProverManager is IProposerFees, IProverManager {
         (uint40 end,) = _closePeriod(period, _exitDelay(), 0);
 
         // Reward the evictor and slash the prover
-        uint96 evictorIncentive = period.stake.scaleBy(_evictorIncentivePercentage());
+        uint96 evictorIncentive = period.stake.scaleByBPS(_evictorIncentivePercentage());
         _balances[msg.sender] += evictorIncentive;
         period.stake -= evictorIncentive;
 
@@ -213,7 +213,7 @@ abstract contract BaseProverManager is IProposerFees, IProverManager {
         uint256 delayedPubFee;
 
         if (numDelayedPublications > 0) {
-            uint96 delayedFee = baseFee.scaleBy(period.delayedFeePercentage, LibPercentage.PERCENT);
+            uint96 delayedFee = baseFee.scaleByPercentage(period.delayedFeePercentage);
             delayedPubFee = numDelayedPublications * delayedFee;
         }
 
@@ -232,7 +232,7 @@ abstract contract BaseProverManager is IProposerFees, IProverManager {
         require(provenPublication.timestamp > period.end, "Publication must be after period");
 
         uint96 stake = period.stake;
-        _balances[period.prover] += period.pastDeadline ? stake.scaleBy(_rewardPercentage()) : stake;
+        _balances[period.prover] += period.pastDeadline ? stake.scaleByBPS(_rewardPercentage()) : stake;
         period.stake = 0;
     }
 
@@ -249,7 +249,7 @@ abstract contract BaseProverManager is IProposerFees, IProverManager {
 
         Period storage period = _periods[currentPeriod];
         fee = period.fee;
-        delayedFee = fee.scaleBy(period.delayedFeePercentage, LibPercentage.PERCENT);
+        delayedFee = fee.scaleByPercentage(period.delayedFeePercentage);
     }
 
     /// @notice Get the balance of a user
@@ -276,7 +276,7 @@ abstract contract BaseProverManager is IProposerFees, IProverManager {
     /// @param fee The fee to be outbid (either the current period's fee or next period's winning fee)
     /// @param offeredFee The new bid
     function _ensureSufficientUnderbid(uint96 fee, uint96 offeredFee) internal view virtual {
-        uint96 requiredMaxFee = fee.scaleBy(_maxBidPercentage());
+        uint96 requiredMaxFee = fee.scaleByBPS(_maxBidPercentage());
         require(offeredFee <= requiredMaxFee, "Offered fee not low enough");
     }
 
