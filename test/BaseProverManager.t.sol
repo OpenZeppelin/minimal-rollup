@@ -7,14 +7,12 @@ import {LibProvingPeriod} from "../src/libs/LibProvingPeriod.sol";
 import {BaseProverManager} from "../src/protocol/BaseProverManager.sol";
 import {IProposerFees} from "../src/protocol/IProposerFees.sol";
 import {IProverManager} from "../src/protocol/IProverManager.sol";
-
+import {LibPercentage} from "src/libs/LibPercentage.sol";
 import {ICheckpointTracker} from "src/protocol/ICheckpointTracker.sol";
 import {IPublicationFeed} from "src/protocol/IPublicationFeed.sol";
 import {PublicationFeed} from "src/protocol/PublicationFeed.sol";
-
 import {MockCheckpointTracker} from "test/mocks/MockCheckpointTracker.sol";
 import {NullVerifier} from "test/mocks/NullVerifier.sol";
-import {LibPercentage} from "src/libs/LibPercentage.sol";
 
 // Configuration parameters.
 uint16 constant MAX_BID_PERCENTAGE = 9500; // 95%
@@ -928,7 +926,7 @@ abstract contract BaseProverManagerTest is Test {
         assertEq(fee, bidFee, "Fee should be the bid fee");
         assertEq(
             delayedFee,
-            uint96(LibPercentage.scaleByPercentage(bidFee, DELAYED_FEE_PERCENTAGE)),
+            LibPercentage.scaleByPercentage(bidFee, DELAYED_FEE_PERCENTAGE),
             "Delayed fee should be the bid fee"
         );
     }
@@ -944,8 +942,9 @@ abstract contract BaseProverManagerTest is Test {
         internal
         returns (IPublicationFeed.PublicationHeader[] memory)
     {
-        uint256 depositAmount =
-            delayed ? LibPercentage.scaleByPercentage(fee, DELAYED_FEE_PERCENTAGE) * numPublications : fee * numPublications;
+        uint256 depositAmount = delayed
+            ? LibPercentage.scaleByPercentage(fee, DELAYED_FEE_PERCENTAGE) * numPublications
+            : fee * numPublications;
         _deposit(proposer, depositAmount);
 
         IPublicationFeed.PublicationHeader[] memory headers = new IPublicationFeed.PublicationHeader[](numPublications);
@@ -978,6 +977,7 @@ abstract contract BaseProverManagerTest is Test {
     function _maxAllowedFee(uint96 fee) internal pure returns (uint96) {
         return uint96(LibPercentage.scaleByBPS(fee, MAX_BID_PERCENTAGE));
     }
+
     function _exit(address prover) internal {
         vm.prank(prover);
         proverManager.exit();

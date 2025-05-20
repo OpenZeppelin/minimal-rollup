@@ -10,6 +10,7 @@ import {ICheckpointTracker} from "./ICheckpointTracker.sol";
 import {IProposerFees} from "./IProposerFees.sol";
 import {IProverManager} from "./IProverManager.sol";
 import {IPublicationFeed} from "./IPublicationFeed.sol";
+
 import {ProverManagerConfig} from "./ProverManagerConfig.sol";
 
 abstract contract BaseProverManager is IProposerFees, IProverManager, BalanceAccounting, ProverManagerConfig {
