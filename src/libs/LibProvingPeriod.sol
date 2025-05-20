@@ -134,7 +134,7 @@ library LibProvingPeriod {
     /// @return stakeToReturn The amount of stake to return to the prover. If the original prover missed a proving
     /// deadline, this will be just the reward percentage. The rest of the funds are locked in the contract.
     function finalize(Period storage period, uint16 rewardPercentage) internal returns (uint96 stakeToReturn) {
-        stakeToReturn = period.pastDeadline ? period.stake.scaleBy(rewardPercentage) : period.stake;
+        stakeToReturn = period.pastDeadline ? period.stake.scaleByBPS(rewardPercentage) : period.stake;
         period.prover = address(0);
         period.stake = 0;
     }
