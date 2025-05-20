@@ -1,14 +1,17 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
+import {LibPercentage} from "../libs/LibPercentage.sol";
 import {ICheckpointTracker} from "./ICheckpointTracker.sol";
 import {IProposerFees} from "./IProposerFees.sol";
 import {IProverManager} from "./IProverManager.sol";
 import {IPublicationFeed} from "./IPublicationFeed.sol";
+
 import "@openzeppelin/contracts/utils/math/SafeCast.sol";
 
 abstract contract BaseProverManager is IProposerFees, IProverManager {
     using SafeCast for uint256;
+    using LibPercentage for uint96;
 
     struct Period {
         // SLOT 1
@@ -17,7 +20,7 @@ abstract contract BaseProverManager is IProposerFees, IProverManager {
         // SLOT 2
         // the fee that the prover is willing to charge for proving each publication
         uint96 fee;
-        // the percentage (in bps) of the fee that is charged for delayed publications.
+        // the percentage (with two decimals precision) of the fee that is charged for delayed publications.
         uint16 delayedFeePercentage;
         // the timestamp of the end of the period. Default to zero while the period is open.
         uint40 end;
@@ -94,7 +97,7 @@ abstract contract BaseProverManager is IProposerFees, IProverManager {
         // Deduct fee from proposer's balance
         uint96 fee = _periods[periodId].fee;
         if (isDelayed) {
-            fee = _calculatePercentage(fee, _periods[periodId].delayedFeePercentage).toUint96();
+            fee = fee.scaleByPercentage(_periods[periodId].delayedFeePercentage);
         }
         _balances[proposer] -= fee;
     }
@@ -147,7 +150,7 @@ abstract contract BaseProverManager is IProposerFees, IProverManager {
         (uint40 end,) = _closePeriod(period, _exitDelay(), 0);
 
         // Reward the evictor and slash the prover
-        uint96 evictorIncentive = _calculatePercentage(period.stake, _evictorIncentivePercentage()).toUint96();
+        uint96 evictorIncentive = period.stake.scaleByBPS(_evictorIncentivePercentage());
         _balances[msg.sender] += evictorIncentive;
         period.stake -= evictorIncentive;
 
@@ -209,7 +212,7 @@ abstract contract BaseProverManager is IProposerFees, IProverManager {
         uint256 delayedPubFee;
 
         if (numDelayedPublications > 0) {
-            uint256 delayedFee = _calculatePercentage(baseFee, period.delayedFeePercentage);
+            uint96 delayedFee = baseFee.scaleByPercentage(period.delayedFeePercentage);
             delayedPubFee = numDelayedPublications * delayedFee;
         }
 
@@ -228,8 +231,7 @@ abstract contract BaseProverManager is IProposerFees, IProverManager {
         require(provenPublication.timestamp > period.end, "Publication must be after period");
 
         uint96 stake = period.stake;
-        _balances[period.prover] +=
-            period.pastDeadline ? _calculatePercentage(stake, _rewardPercentage()).toUint96() : stake;
+        _balances[period.prover] += period.pastDeadline ? stake.scaleByBPS(_rewardPercentage()) : stake;
         period.stake = 0;
     }
 
@@ -246,7 +248,7 @@ abstract contract BaseProverManager is IProposerFees, IProverManager {
 
         Period storage period = _periods[currentPeriod];
         fee = period.fee;
-        delayedFee = _calculatePercentage(fee, period.delayedFeePercentage).toUint96();
+        delayedFee = fee.scaleByPercentage(period.delayedFeePercentage);
     }
 
     /// @notice Get the balance of a user
@@ -273,7 +275,7 @@ abstract contract BaseProverManager is IProposerFees, IProverManager {
     /// @param fee The fee to be outbid (either the current period's fee or next period's winning fee)
     /// @param offeredFee The new bid
     function _ensureSufficientUnderbid(uint96 fee, uint96 offeredFee) internal view virtual {
-        uint256 requiredMaxFee = _calculatePercentage(fee, _maxBidPercentage());
+        uint96 requiredMaxFee = fee.scaleByBPS(_maxBidPercentage());
         require(offeredFee <= requiredMaxFee, "Offered fee not low enough");
     }
 
@@ -310,10 +312,9 @@ abstract contract BaseProverManager is IProposerFees, IProverManager {
     /// @return _ The reward percentage
     function _rewardPercentage() internal view virtual returns (uint16);
 
-    /// @dev The percentage (in bps) of the fee that is charged for delayed publications
-    /// @dev It is recommended to set this to >10,000 bps since delayed publications should usually be charged at a
-    /// higher rate
-    /// @return _ The multiplier expressed in basis points. This value should usually be greater than 10,000 bps(100%).
+    /// @dev The percentage of the fee that is charged for delayed publications
+    /// @dev It is recommended to set this to >100 since delayed publications should usually be charged at a higher rate
+    /// @return _ The multiplier as a percentage (two decimals). This value should usually be greater than 100 (100%).
     function _delayedFeePercentage() internal view virtual returns (uint16);
 
     /// @dev Increases `user`'s balance by `amount` and emits a `Deposit` event
@@ -337,14 +338,6 @@ abstract contract BaseProverManager is IProposerFees, IProverManager {
 
         Period storage nextPeriod = _periods[periodId + 1];
         _updatePeriod(nextPeriod, prover, fee, _livenessBond());
-    }
-
-    /// @dev Calculates the percentage of a given numerator scaling up to avoid precision loss
-    /// @param amount The number to calculate the percentage of
-    /// @param bps The percentage expressed in basis points(https://muens.io/solidity-percentages)
-    /// @return _ The calculated percentage of the given numerator
-    function _calculatePercentage(uint256 amount, uint256 bps) private pure returns (uint256) {
-        return (amount * bps) / 10_000;
     }
 
     /// @dev Updates a period with prover information and transfers the liveness bond

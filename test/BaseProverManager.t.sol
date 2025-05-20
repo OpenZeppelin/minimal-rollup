@@ -11,6 +11,7 @@ import {ICheckpointTracker} from "src/protocol/ICheckpointTracker.sol";
 import {IPublicationFeed} from "src/protocol/IPublicationFeed.sol";
 import {PublicationFeed} from "src/protocol/PublicationFeed.sol";
 
+import {LibPercentage} from "src/libs/LibPercentage.sol";
 import {MockCheckpointTracker} from "test/mocks/MockCheckpointTracker.sol";
 import {NullVerifier} from "test/mocks/NullVerifier.sol";
 
@@ -24,7 +25,7 @@ uint96 constant LIVENESS_BOND = 1 ether;
 uint16 constant EVICTOR_INCENTIVE_PERCENTAGE = 500; // 5%
 uint16 constant REWARD_PERCENTAGE = 9000; // 90%
 uint96 constant INITIAL_FEE = 0.1 ether;
-uint16 constant DELAYED_FEE_PERCENTAGE = 15_000; // 150%
+uint16 constant DELAYED_FEE_PERCENTAGE = 150; // 150%
 uint256 constant INITIAL_PERIOD = 1;
 
 abstract contract BaseProverManagerTest is Test {
@@ -218,7 +219,7 @@ abstract contract BaseProverManagerTest is Test {
         // Capture current period stake before eviction
         BaseProverManager.Period memory periodBefore = proverManager.getPeriod(1);
         uint256 stakeBefore = periodBefore.stake;
-        uint256 incentive = _calculatePercentage(stakeBefore, EVICTOR_INCENTIVE_PERCENTAGE);
+        uint256 incentive = LibPercentage.scaleByBPS(stakeBefore, EVICTOR_INCENTIVE_PERCENTAGE);
 
         // Evict the prover
         vm.warp(vm.getBlockTimestamp() + LIVENESS_WINDOW + 1);
@@ -504,7 +505,7 @@ abstract contract BaseProverManagerTest is Test {
 
         uint256 proverBalanceAfter = proverManager.balances(initialProver);
         uint256 expectedBalance = proverBalanceBefore + INITIAL_FEE * numRegularPublications
-            + _calculatePercentage(INITIAL_FEE, DELAYED_FEE_PERCENTAGE) * numDelayedPublications;
+            + LibPercentage.scaleByPercentage(INITIAL_FEE, DELAYED_FEE_PERCENTAGE) * numDelayedPublications;
         assertEq(proverBalanceAfter, expectedBalance, "Prover should receive fees");
     }
 
@@ -848,7 +849,7 @@ abstract contract BaseProverManagerTest is Test {
 
         uint256 initialProverBalanceAfter = proverManager.balances(initialProver);
         uint256 prover1BalanceAfter = proverManager.balances(prover1);
-        uint256 stakeReward = _calculatePercentage(stakeBefore, REWARD_PERCENTAGE);
+        uint256 stakeReward = LibPercentage.scaleByBPS(stakeBefore, REWARD_PERCENTAGE);
         assertEq(prover1BalanceAfter, prover1BalanceBefore + stakeReward, "Prover1 should receive the remaining stake");
         assertEq(initialProverBalanceAfter, initialProverBalanceBefore, "Initial prover should receive nothing");
     }
@@ -905,7 +906,7 @@ abstract contract BaseProverManagerTest is Test {
         assertEq(fee, INITIAL_FEE, "Fee should be the initial fee");
         assertEq(
             delayedFee,
-            _calculatePercentage(INITIAL_FEE, DELAYED_FEE_PERCENTAGE),
+            LibPercentage.scaleByPercentage(INITIAL_FEE, DELAYED_FEE_PERCENTAGE),
             "Delayed fee should be the initial fee"
         );
     }
@@ -926,7 +927,7 @@ abstract contract BaseProverManagerTest is Test {
         assertEq(fee, bidFee, "Fee should be the bid fee");
         assertEq(
             delayedFee,
-            uint96(_calculatePercentage(bidFee, DELAYED_FEE_PERCENTAGE)),
+            uint96(LibPercentage.scaleByPercentage(bidFee, DELAYED_FEE_PERCENTAGE)),
             "Delayed fee should be the bid fee"
         );
     }
@@ -942,8 +943,9 @@ abstract contract BaseProverManagerTest is Test {
         internal
         returns (IPublicationFeed.PublicationHeader[] memory)
     {
-        uint256 depositAmount =
-            delayed ? _calculatePercentage(fee, DELAYED_FEE_PERCENTAGE) * numPublications : fee * numPublications;
+        uint256 depositAmount = delayed
+            ? LibPercentage.scaleByPercentage(fee, DELAYED_FEE_PERCENTAGE) * numPublications
+            : fee * numPublications;
         _deposit(proposer, depositAmount);
 
         IPublicationFeed.PublicationHeader[] memory headers = new IPublicationFeed.PublicationHeader[](numPublications);
@@ -974,11 +976,7 @@ abstract contract BaseProverManagerTest is Test {
     function _deposit(address user, uint256 amount) internal virtual;
 
     function _maxAllowedFee(uint96 fee) internal pure returns (uint96) {
-        return uint96(_calculatePercentage(fee, MAX_BID_PERCENTAGE));
-    }
-
-    function _calculatePercentage(uint256 amount, uint16 percentage) internal pure returns (uint256) {
-        return amount * percentage / 10_000;
+        return uint96(LibPercentage.scaleByBPS(fee, MAX_BID_PERCENTAGE));
     }
 
     function _exit(address prover) internal {
