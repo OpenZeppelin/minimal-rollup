@@ -17,6 +17,8 @@ import {MockERC20} from "test/mocks/MockERC20.sol";
 import {NullVerifier} from "test/mocks/NullVerifier.sol";
 
 import {BaseProverManagerTest} from "./BaseProverManager.t.sol";
+import {BalanceAccounting} from "src/protocol/BalanceAccounting.sol";
+
 import {
     DELAYED_FEE_PERCENTAGE,
     EVICTOR_INCENTIVE_PERCENTAGE,
@@ -194,7 +196,7 @@ contract ERC20ProverManagerTest is BaseProverManagerTest {
     function test_deposit() public {
         vm.prank(prover1);
         vm.expectEmit();
-        emit IProposerFees.Deposit(prover1, DEPOSIT_AMOUNT);
+        emit BalanceAccounting.Deposit(prover1, DEPOSIT_AMOUNT);
         erc20ProverManager.deposit(DEPOSIT_AMOUNT);
 
         uint256 bal = proverManager.balances(prover1);
@@ -252,7 +254,7 @@ contract ERC20ProverManagerTest is BaseProverManagerTest {
         // Withdraw tokens
         vm.prank(prover1);
         vm.expectEmit();
-        emit IProposerFees.Withdrawal(prover1, withdrawAmount);
+        emit BalanceAccounting.Withdrawal(prover1, withdrawAmount);
         proverManager.withdraw(withdrawAmount);
 
         // Get the token balance after withdrawal

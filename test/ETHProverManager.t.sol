@@ -15,6 +15,7 @@ import {MockCheckpointTracker} from "test/mocks/MockCheckpointTracker.sol";
 import {NullVerifier} from "test/mocks/NullVerifier.sol";
 
 import {BaseProverManagerTest} from "./BaseProverManager.t.sol";
+
 import {
     DELAYED_FEE_PERCENTAGE,
     EVICTOR_INCENTIVE_PERCENTAGE,
@@ -28,6 +29,7 @@ import {
     REWARD_PERCENTAGE,
     SUCCESSION_DELAY
 } from "./BaseProverManager.t.sol";
+import {BalanceAccounting} from "src/protocol/BalanceAccounting.sol";
 
 contract ETHProverManagerMock is ETHProverManager {
     constructor(
@@ -120,7 +122,7 @@ contract ETHProverManagerTest is BaseProverManagerTest {
     function test_deposit() public {
         vm.prank(prover1);
         vm.expectEmit();
-        emit IProposerFees.Deposit(prover1, DEPOSIT_AMOUNT);
+        emit BalanceAccounting.Deposit(prover1, DEPOSIT_AMOUNT);
         ethProverManager.deposit{value: DEPOSIT_AMOUNT}();
 
         uint256 bal = proverManager.balances(prover1);
@@ -135,7 +137,7 @@ contract ETHProverManagerTest is BaseProverManagerTest {
         uint256 balanceBefore = prover1.balance;
         vm.prank(prover1);
         vm.expectEmit();
-        emit IProposerFees.Withdrawal(prover1, withdrawAmount);
+        emit BalanceAccounting.Withdrawal(prover1, withdrawAmount);
         proverManager.withdraw(withdrawAmount);
         uint256 balanceAfter = prover1.balance;
 

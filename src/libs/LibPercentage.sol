@@ -32,6 +32,6 @@ library LibPercentage {
     /// @param percentage The percentage to single-percentage precision (e.g. percentage 50 is 50%)
     /// @return _ The scaled value
     function scaleByPercentage(uint256 value, uint16 percentage) internal pure returns (uint96) {
-        return scaleBy(value, percentage, BASIS_POINTS);
+        return scaleBy(value, percentage, PERCENT);
     }
 }
