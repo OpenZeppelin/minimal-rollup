@@ -21,7 +21,7 @@ abstract contract BaseProverManager is IProposerFees, IProverManager, BalanceAcc
     ICheckpointTracker public immutable checkpointTracker;
     IPublicationFeed public immutable publicationFeed;
 
-    /// @notice The current period
+    /// @dev The current period
     uint256 private _currentPeriodId;
     /// @dev Periods represent proving windows
     mapping(uint256 periodId => LibProvingPeriod.Period) private _periods;
