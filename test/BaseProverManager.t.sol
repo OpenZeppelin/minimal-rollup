@@ -83,7 +83,7 @@ abstract contract BaseProverManagerTest is Test {
     }
 
     function test_payPublicationFee_RevertWhen_NotInbox() public {
-        vm.expectRevert("Only the Inbox contract can call this function");
+        vm.expectRevert(BaseProverManager.OnlyInbox.selector);
         proverManager.payPublicationFee(prover1, false);
     }
 
@@ -185,7 +185,7 @@ abstract contract BaseProverManagerTest is Test {
         uint96 insufficientlyReducedFee = maxFee + 1;
 
         vm.prank(prover2);
-        vm.expectRevert("Offered fee not low enough");
+        vm.expectRevert(BaseProverManager.OfferedFeeTooHigh.selector);
         proverManager.bid(insufficientlyReducedFee);
     }
 
@@ -205,7 +205,7 @@ abstract contract BaseProverManagerTest is Test {
         uint96 insufficientlyReducedFee = maxFee + 1;
 
         vm.prank(prover1);
-        vm.expectRevert("Offered fee not low enough");
+        vm.expectRevert(BaseProverManager.OfferedFeeTooHigh.selector);
         proverManager.bid(insufficientlyReducedFee);
     }
 
@@ -246,7 +246,7 @@ abstract contract BaseProverManagerTest is Test {
         // Evict the prover with a publication that is not old enough
         vm.warp(vm.getBlockTimestamp() + LIVENESS_WINDOW);
         vm.prank(evictor);
-        vm.expectRevert("Publication is not old enough");
+        vm.expectRevert(BaseProverManager.PublicationNotOldEnough.selector);
         proverManager.evictProver(header);
     }
 
@@ -260,7 +260,7 @@ abstract contract BaseProverManagerTest is Test {
 
         // Evict the prover with an invalid publication header
         vm.prank(evictor);
-        vm.expectRevert("Invalid publication");
+        vm.expectRevert(BaseProverManager.InvalidPublication.selector);
         proverManager.evictProver(header);
     }
 
@@ -273,7 +273,7 @@ abstract contract BaseProverManagerTest is Test {
         // Evict the prover
         vm.warp(vm.getBlockTimestamp() + LIVENESS_WINDOW + 1);
         vm.prank(evictor);
-        vm.expectRevert("Proving period is closed");
+        vm.expectRevert(BaseProverManager.ProvingPeriodClosed.selector);
         proverManager.evictProver(header);
     }
 
@@ -290,7 +290,7 @@ abstract contract BaseProverManagerTest is Test {
         // Evict the prover
         vm.warp(vm.getBlockTimestamp() + LIVENESS_WINDOW + 1);
         vm.prank(evictor);
-        vm.expectRevert("Publication has been proven");
+        vm.expectRevert(BaseProverManager.PublicationAlreadyProven.selector);
         proverManager.evictProver(header);
     }
 
@@ -317,7 +317,7 @@ abstract contract BaseProverManagerTest is Test {
     function test_exit_RevertWhen_NotCurrentProver() public {
         // Attempt to exit as a non-prover
         vm.prank(prover1);
-        vm.expectRevert("Not current prover");
+        vm.expectRevert(BaseProverManager.OnlyCurrentProver.selector);
         proverManager.exit();
     }
 
@@ -327,7 +327,7 @@ abstract contract BaseProverManagerTest is Test {
 
         // Try to exit again
         vm.prank(initialProver);
-        vm.expectRevert("Period already closed");
+        vm.expectRevert(BaseProverManager.ProvingPeriodClosed.selector);
         proverManager.exit();
     }
 
@@ -407,7 +407,7 @@ abstract contract BaseProverManagerTest is Test {
         _deposit(prover1, DEPOSIT_AMOUNT);
 
         vm.prank(prover1);
-        vm.expectRevert("No proving vacancy");
+        vm.expectRevert(BaseProverManager.NoProvingVacancy.selector);
         proverManager.claimProvingVacancy(0.2 ether);
     }
 
@@ -629,7 +629,7 @@ abstract contract BaseProverManagerTest is Test {
         });
 
         // Attempt to prove with mismatched end checkpoint
-        vm.expectRevert("Last publication does not match end checkpoint");
+        vm.expectRevert(BaseProverManager.LastPublicationMismatch.selector);
         proverManager.prove(
             startCheckpoint, endCheckpoint, startHeader, endHeader, 2, ZERO_DELAYED_PUBLICATIONS, "0x", INITIAL_PERIOD
         );
@@ -657,7 +657,7 @@ abstract contract BaseProverManagerTest is Test {
         });
 
         // Attempt to prove with publication after period end
-        vm.expectRevert("Last publication is after the period");
+        vm.expectRevert(BaseProverManager.LastPublicationIsAfterPeriod.selector);
         proverManager.prove(
             startCheckpoint, endCheckpoint, startHeader, lateHeader, 2, ZERO_DELAYED_PUBLICATIONS, "0x", INITIAL_PERIOD
         );
@@ -678,7 +678,7 @@ abstract contract BaseProverManagerTest is Test {
             commitment: keccak256(abi.encode("commitment2"))
         });
 
-        vm.expectRevert("First publication not immediately after start checkpoint");
+        vm.expectRevert(BaseProverManager.InvalidStartPublication.selector);
         proverManager.prove(
             startCheckpoint, endCheckpoint, firstHeader, lastHeader, 2, ZERO_DELAYED_PUBLICATIONS, "0x", INITIAL_PERIOD
         );
@@ -706,7 +706,7 @@ abstract contract BaseProverManagerTest is Test {
         });
 
         // Attempt to prove with first publication before period 2
-        vm.expectRevert("First publication is before the period");
+        vm.expectRevert(BaseProverManager.FirstPublicationIsBeforePeriod.selector);
         proverManager.prove(
             startCheckpoint,
             endCheckpoint,
@@ -871,7 +871,7 @@ abstract contract BaseProverManagerTest is Test {
         checkpointTracker.setProvenHash(provenCheckpoint);
 
         // Attempt to finalize with unproven publication
-        vm.expectRevert("Publication must be proven");
+        vm.expectRevert(BaseProverManager.PublicationNotProven.selector);
         proverManager.finalizePastPeriod(INITIAL_PERIOD, afterPeriodHeader);
     }
 
@@ -892,7 +892,7 @@ abstract contract BaseProverManagerTest is Test {
         checkpointTracker.setProvenHash(provenCheckpoint);
 
         // Attempt to finalize with unproven publication
-        vm.expectRevert("Publication must be after period");
+        vm.expectRevert(BaseProverManager.PublicationNotAfterPeriod.selector);
         proverManager.finalizePastPeriod(INITIAL_PERIOD, beforePeriodHeader);
     }
 

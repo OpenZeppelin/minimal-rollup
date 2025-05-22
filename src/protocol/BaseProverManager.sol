@@ -26,6 +26,57 @@ abstract contract BaseProverManager is IProposerFees, IProverManager, BalanceAcc
     /// @dev Periods represent proving windows
     mapping(uint256 periodId => LibProvingPeriod.Period) private _periods;
 
+    /// @dev Only inbox can call `payPublicationFee`
+    error OnlyInbox();
+
+    /// @dev Publication header is invalid
+    error InvalidPublication();
+
+    /// @dev Only current prover can call `exit`
+    error OnlyCurrentProver();
+
+    /// @dev Publication has not passed liveness window
+    error PublicationNotOldEnough();
+
+    /// @dev Evict prover called with publication that has already been proven
+    error PublicationAlreadyProven();
+
+    /// @dev Last publication does not exist
+    error LastPublicationDoesNotExist();
+
+    /// @dev End checkpoint does not match last publication
+    error LastPublicationMismatch();
+
+    /// @dev Last publication is after the currentperiod
+    error LastPublicationIsAfterPeriod();
+
+    /// @dev First publication does not exist
+    error FirstPublicationDoesNotExist();
+
+    /// @dev Start publication is not immediately after the start checkpoint
+    error InvalidStartPublication();
+
+    /// @dev First publication timestamp is before the current period
+    error FirstPublicationIsBeforePeriod();
+
+    /// @dev Cannot finalize a period if the last publication has not been proven
+    error PublicationNotProven();
+
+    /// @dev Cannot finalize a period if publication still in the active period
+    error PublicationNotAfterPeriod();
+
+    /// @dev Proving period is closed
+    error ProvingPeriodClosed();
+
+    /// @dev Period is not initialized
+    error PeriodNotInitialized();
+
+    /// @dev Offered fee is higher than the required fee
+    error OfferedFeeTooHigh();
+
+    /// @dev Current period is not vacant
+    error NoProvingVacancy();
+
     /// @dev Initializes the contract state and deposits the initial prover's liveness bond.
     /// The constructor also calls `_claimProvingVacancy`. Publications will actually start in period 1.
     /// @param _inbox The address of the inbox contract
@@ -60,7 +111,7 @@ abstract contract BaseProverManager is IProposerFees, IProverManager, BalanceAcc
     /// @inheritdoc IProposerFees
     /// @dev This function advances to the next period if the current period has ended.
     function payPublicationFee(address proposer, bool isDelayed) external {
-        require(msg.sender == inbox, "Only the Inbox contract can call this function");
+        require(msg.sender == inbox, OnlyInbox());
 
         uint256 periodId = _currentPeriodId;
 
@@ -99,14 +150,14 @@ abstract contract BaseProverManager is IProposerFees, IProverManager, BalanceAcc
     /// @dev This can be called by anyone, and they get `evictorIncentivePercentage` of the liveness bond as an
     /// incentive.
     function evictProver(IPublicationFeed.PublicationHeader calldata publicationHeader) external {
-        require(publicationFeed.validateHeader(publicationHeader), "Invalid publication");
-        require(publicationHeader.timestamp + _livenessWindow() < block.timestamp, "Publication is not old enough");
+        require(publicationFeed.validateHeader(publicationHeader), InvalidPublication());
+        require(publicationHeader.timestamp + _livenessWindow() < block.timestamp, PublicationNotOldEnough());
 
         LibProvingPeriod.Period storage period = _periods[_currentPeriodId];
-        require(period.isOpen(), "Proving period is closed");
+        require(period.isOpen(), ProvingPeriodClosed());
 
         ICheckpointTracker.Checkpoint memory lastProven = checkpointTracker.getProvenCheckpoint();
-        require(publicationHeader.id > lastProven.publicationId, "Publication has been proven");
+        require(publicationHeader.id > lastProven.publicationId, PublicationAlreadyProven());
 
         // We use this to mark the prover as evicted
         (uint40 end,) = period.close(_exitDelay(), 0);
@@ -125,8 +176,8 @@ abstract contract BaseProverManager is IProposerFees, IProverManager, BalanceAcc
     function exit() external {
         LibProvingPeriod.Period storage period = _periods[_currentPeriodId];
         address prover = period.prover;
-        require(msg.sender == prover, "Not current prover");
-        require(period.isOpen(), "Period already closed");
+        require(msg.sender == prover, OnlyCurrentProver());
+        require(period.isOpen(), ProvingPeriodClosed());
 
         (uint40 end, uint40 deadline) = period.close(_exitDelay(), _provingWindow());
         emit ProverExited(prover, end, deadline);
@@ -151,13 +202,13 @@ abstract contract BaseProverManager is IProposerFees, IProverManager, BalanceAcc
         LibProvingPeriod.Period storage period = _periods[periodId];
         uint40 previousPeriodEnd = periodId > 0 ? _periods[periodId - 1].end : 0;
 
-        require(publicationFeed.validateHeader(lastPub), "Last publication does not exist");
-        require(end.publicationId == lastPub.id, "Last publication does not match end checkpoint");
-        require(period.isNotBefore(lastPub.timestamp), "Last publication is after the period");
+        require(publicationFeed.validateHeader(lastPub), LastPublicationDoesNotExist());
+        require(end.publicationId == lastPub.id, LastPublicationMismatch());
+        require(period.isNotBefore(lastPub.timestamp), LastPublicationIsAfterPeriod());
 
-        require(publicationFeed.validateHeader(firstPub), "First publication does not exist");
-        require(start.publicationId + 1 == firstPub.id, "First publication not immediately after start checkpoint");
-        require(firstPub.timestamp > previousPeriodEnd, "First publication is before the period");
+        require(publicationFeed.validateHeader(firstPub), FirstPublicationDoesNotExist());
+        require(start.publicationId + 1 == firstPub.id, InvalidStartPublication());
+        require(firstPub.timestamp > previousPeriodEnd, FirstPublicationIsBeforePeriod());
 
         checkpointTracker.proveTransition(start, end, numPublications, numDelayedPublications, proof);
 
@@ -172,14 +223,14 @@ abstract contract BaseProverManager is IProposerFees, IProverManager, BalanceAcc
     function finalizePastPeriod(uint256 periodId, IPublicationFeed.PublicationHeader calldata provenPublication)
         external
     {
-        require(publicationFeed.validateHeader(provenPublication), "Invalid publication header");
+        require(publicationFeed.validateHeader(provenPublication), InvalidPublication());
 
         ICheckpointTracker.Checkpoint memory lastProven = checkpointTracker.getProvenCheckpoint();
-        require(lastProven.publicationId >= provenPublication.id, "Publication must be proven");
+        require(lastProven.publicationId >= provenPublication.id, PublicationNotProven());
 
         LibProvingPeriod.Period storage period = _periods[periodId];
-        require(period.isInitialized(), "Period not initialized");
-        require(period.isBefore(provenPublication.timestamp), "Publication must be after period");
+        require(period.isInitialized(), PeriodNotInitialized());
+        require(period.isBefore(provenPublication.timestamp), PublicationNotAfterPeriod());
 
         _increaseBalance(period.prover, period.finalize(_rewardPercentage()));
     }
@@ -215,7 +266,7 @@ abstract contract BaseProverManager is IProposerFees, IProverManager, BalanceAcc
     /// @param offeredFee The new bid
     function _ensureSufficientUnderbid(uint96 fee, uint96 offeredFee) internal view virtual {
         uint96 requiredMaxFee = fee.scaleByBPS(_maxBidPercentage());
-        require(offeredFee <= requiredMaxFee, "Offered fee not low enough");
+        require(offeredFee <= requiredMaxFee, OfferedFeeTooHigh());
     }
 
     /// @dev implementation of `IProverManager.claimProvingVacancy` with the option to specify a prover
@@ -227,7 +278,7 @@ abstract contract BaseProverManager is IProposerFees, IProverManager, BalanceAcc
         LibProvingPeriod.Period storage period = _periods[periodId];
         LibProvingPeriod.Period storage nextPeriod = _periods[periodId + 1];
 
-        require(period.isVacant(), "No proving vacancy");
+        require(period.isVacant(), NoProvingVacancy());
         period.close(0, 0);
 
         _decreaseBalance(prover, _livenessBond());
