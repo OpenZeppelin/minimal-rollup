@@ -39,7 +39,7 @@ library LibProvingPeriod {
         bool pastDeadline;
     }
 
-    /// @notice Initializes the period with the given parameters.
+    /// @dev Initializes the period with the given parameters.
     /// @dev The _end_ and _deadline_ default to zero. The _pastDeadline_ flag defaults to false.
     /// @dev This can be called multiple times to set the latest bid while the auction is ongoing.
     function init(Period storage period, address prover, uint96 fee, uint16 delayedFeePercentage, uint96 stake)
@@ -52,45 +52,49 @@ library LibProvingPeriod {
         period.stake = stake;
     }
 
-    /// @notice Whether the period has been initialized
+    /// @dev Whether the period has been initialized
     function isInitialized(Period storage period) internal view returns (bool) {
         return period.prover != address(0);
     }
 
-    /// @notice The period has an end timestamp in the past
+    /// @dev The period has an end timestamp in the past
     function isComplete(Period storage period) internal view returns (bool) {
         return isBefore(period, block.timestamp);
     }
 
-    /// @notice The period fee, scaled by `delayedFeePercentage` if the publication is delayed
+    /// @dev The period fee, scaled by `delayedFeePercentage` if the publication is delayed
     function publicationFee(Period storage period, bool isDelayed) internal view returns (uint96) {
         return isDelayed ? period.fee.scaleBy(period.delayedFeePercentage, LibPercentage.PERCENT) : period.fee;
     }
 
-    /// @notice The period has no end timestamp
+    /// @dev The period has no end timestamp
     function isOpen(Period storage period) internal view returns (bool) {
         return period.end == 0;
     }
 
-    /// @notice The timestamp is after the end of the period (which must be set)
+    /// @dev The timestamp is after the end of the period (which must be set)
     function isBefore(Period storage period, uint256 timestamp) internal view returns (bool) {
         return period.end != 0 && timestamp > period.end;
     }
 
-    /// @notice The timestamp is not after the end of the period
+    /// @dev The timestamp is not after the end of the period
     function isNotBefore(Period storage period, uint256 timestamp) internal view returns (bool) {
         return !isBefore(period, timestamp);
     }
 
-    /// @notice The period has a deadline timestamp in the past
+    /// @dev The period has a deadline timestamp in the past
     function isDeadlinePassed(Period storage period) internal view returns (bool) {
         return block.timestamp > period.deadline && period.deadline != 0;
     }
 
+    /// @dev Whether the period is vacant (i.e. not initialized and open)
     function isVacant(Period storage period) internal view returns (bool) {
         return !isInitialized(period) && isOpen(period);
     }
 
+    /// @dev Returns total fee earned by the period
+    /// @param numPublications The number of publications in the period
+    /// @param numDelayedPublications The number of delayed publications in the period
     function totalFeeEarned(Period storage period, uint256 numPublications, uint256 numDelayedPublications)
         internal
         view
@@ -117,12 +121,12 @@ library LibProvingPeriod {
         period.deadline = deadline;
     }
 
-    /// @notice slash the penalty from the period's stake
+    /// @dev slash the penalty from the period's stake
     function slash(Period storage period, uint96 penalty) internal {
         period.stake -= penalty;
     }
 
-    /// @notice Assign the newProver (and percentage of remaining stake) to the new prover
+    /// @dev Assign the newProver (and percentage of remaining stake) to the new prover
     /// @dev The last prover for the period will be assigned the reward (claimed with `finalizePastPeriod`).
     /// In practice, a single prover will likely close the whole period with one proof.
     function assignReward(Period storage period, address newProver) internal {
@@ -130,7 +134,7 @@ library LibProvingPeriod {
         period.pastDeadline = true;
     }
 
-    /// @notice Reset the prover and stake to zero. This ensures it cannot be finalized again.
+    /// @dev Reset the prover and stake to zero. This ensures it cannot be finalized again.
     /// @return stakeToReturn The amount of stake to return to the prover. If the original prover missed a proving
     /// deadline, this will be just the reward percentage. The rest of the funds are locked in the contract.
     function finalize(Period storage period, uint16 rewardPercentage) internal returns (uint96 stakeToReturn) {
