@@ -285,10 +285,10 @@ abstract contract BaseProverManager is IProposerFees, IProverManager, BalanceAcc
         nextPeriod.init(prover, fee, _delayedFeePercentage(), _livenessBond());
     }
 
-    /// @notice mark the next period as active. Future publications will be assigned to the new period
-    function _advancePeriod() private returns (uint256 periodId) {
-        _currentPeriodId++;
-        periodId = _currentPeriodId;
+    /// @dev mark the next period as active. Future publications will be assigned to the new period
+    function _advancePeriod() private returns (uint256) {
+        uint256 periodId = ++_currentPeriodId;
         emit NewPeriod(periodId);
+        return periodId;
     }
 }
