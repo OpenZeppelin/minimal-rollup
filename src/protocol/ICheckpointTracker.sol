@@ -24,11 +24,13 @@ interface ICheckpointTracker {
     /// @param numPublications The number of publications that need to be processed between the two checkpoints.
     /// Note that this is not necessarily (end.publicationId - start.publicationId) because there could be irrelevant
     /// publications.
+    /// @param numDelayedPublications The number of delayed publications from the total of `numPublications`
     /// @param proof Arbitrary data passed to the `verifier` contract to confirm the transition validity
     function proveTransition(
         Checkpoint calldata start,
         Checkpoint calldata end,
         uint256 numPublications,
+        uint256 numDelayedPublications,
         bytes calldata proof
     ) external;
 }

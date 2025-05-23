@@ -46,6 +46,7 @@ contract CheckpointTracker is ICheckpointTracker {
         Checkpoint calldata,
         Checkpoint calldata end,
         uint256 numPublications,
+        uint256 numDelayedPublications,
         bytes calldata proof
     ) external {
         require(
@@ -53,7 +54,10 @@ contract CheckpointTracker is ICheckpointTracker {
         );
 
         require(end.commitment != 0, "Checkpoint commitment cannot be 0");
-
+        require(
+            numDelayedPublications <= numPublications,
+            "Number of delayed publications cannot be greater than the total number of publications"
+        );
         Checkpoint memory latestProvenCheckpoint = getProvenCheckpoint();
         bytes32 startPublicationHash = publicationFeed.getPublicationHash(latestProvenCheckpoint.publicationId);
         bytes32 endPublicationHash = publicationFeed.getPublicationHash(end.publicationId);
@@ -65,6 +69,7 @@ contract CheckpointTracker is ICheckpointTracker {
             latestProvenCheckpoint.commitment,
             end.commitment,
             numPublications,
+            numDelayedPublications,
             proof
         );
 
