@@ -17,6 +17,7 @@ import {ISignalService} from "./ISignalService.sol";
 ///    - `LibSignal` for signal hashing, storage, and verification logic.
 ///
 /// Signals stored cannot be deleted
+/// IMPORTANT: This contract should be deployed on the same address on both chains.
 /// WARN: this contract does not provide replay protection(signals can be verified multiple times).
 contract SignalService is ISignalService, CommitmentStore {
     using LibSignal for bytes32;
