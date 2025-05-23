@@ -12,6 +12,8 @@ import {IPublicationFeed} from "src/protocol/IPublicationFeed.sol";
 import {PublicationFeed} from "src/protocol/PublicationFeed.sol";
 
 import {LibPercentage} from "src/libs/LibPercentage.sol";
+
+import {SignalService} from "src/protocol/SignalService.sol";
 import {MockCheckpointTracker} from "test/mocks/MockCheckpointTracker.sol";
 import {NullVerifier} from "test/mocks/NullVerifier.sol";
 
@@ -31,6 +33,7 @@ uint256 constant INITIAL_PERIOD = 1;
 abstract contract BaseProverManagerTest is Test {
     BaseProverManager proverManager;
     MockCheckpointTracker checkpointTracker;
+    SignalService signalService;
     NullVerifier verifier;
     PublicationFeed publicationFeed;
     uint256 constant DEPOSIT_AMOUNT = 2 ether;
@@ -45,7 +48,8 @@ abstract contract BaseProverManagerTest is Test {
     address evictor = address(0x203);
 
     function setUp() public virtual {
-        checkpointTracker = new MockCheckpointTracker();
+        signalService = new SignalService();
+        checkpointTracker = new MockCheckpointTracker(address(signalService));
         publicationFeed = new PublicationFeed();
     }
 
