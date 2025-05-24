@@ -45,8 +45,7 @@ import {MessageRelayer} from "src/protocol/taiko_alethia/MessageRelayer.sol";
 /// WARN: There is no relayer protection. In particular:
 ///    - if the ETHDeposit does not invoke receiveMessage, the relayer will not be paid.
 ///    - if receiveMessage is called directly, the tip will be sent to whichever address exists in the
-/// TIP_RECIPIENT_SLOT
-/// (typically address(0)).
+/// TIP_RECIPIENT_SLOT (typically address(0)).
 contract MessageRelayer is ReentrancyGuardTransient, IMessageRelayer {
     using TransientSlot for *;
 
