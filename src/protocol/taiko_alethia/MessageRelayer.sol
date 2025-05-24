@@ -26,10 +26,12 @@ import {MessageRelayer} from "src/protocol/taiko_alethia/MessageRelayer.sol";
 ///    Where encodedData is roughly:
 ///        abi.encodeCall(
 ///            IMessageRelayer.receiveMessage,
-///            address(Alice),
-///            0.1 eth (tip for the relayer),
-///            0 (gas limit),
-///            data (in this case ""),
+///            (
+///                address(Alice),    // to
+///                0.1 ether,        // tip for the relayer
+///                0,                // gas limit
+///                ""                // data (in this case empty)
+///            )
 ///        )
 ///
 /// To relay the message:
@@ -58,6 +60,9 @@ contract MessageRelayer is ReentrancyGuardTransient, IMessageRelayer {
     bytes32 private constant TIP_RECIPIENT_SLOT = 0x833ce1785f54a5ca49991a09a7b058587309bf3687e5f20b7b66fa12132ef6f0;
 
     /// @inheritdoc IMessageRelayer
+    //TODO: should we provide a way for the user to specify a relayer address if they want in order to avoid raicing
+    // conditions? This could be just who gets the tip, so that it can still be filled by anyone, it just sets the right
+    // incentives.
     function relayMessage(
         IETHBridge.ETHDeposit memory ethDeposit,
         uint256 height,
