@@ -4,12 +4,16 @@ pragma solidity ^0.8.28;
 interface ICheckpointTracker {
     struct Checkpoint {
         uint256 publicationId;
+        /// @dev A commitment can be anything that uniquely represents the state of the rollup
+        /// @dev We recommend using the `keccak256(stateRoot, blockHash)` or similar to ensure both uniqueness and being
+        /// able to verify messages across chains
         bytes32 commitment;
     }
 
     /// @notice Emitted when the proven checkpoint is updated
-    /// @param latestCheckpoint the latest proven checkpoint
-    event CheckpointUpdated(Checkpoint latestCheckpoint);
+    /// @param publicationId the publication ID of the latest proven checkpoint
+    /// @param commitment the commitment of the latest proven checkpoint
+    event CheckpointUpdated(uint256 indexed publicationId, bytes32 commitment);
 
     /// @return _ The last proven checkpoint
     function getProvenCheckpoint() external view returns (Checkpoint memory);
