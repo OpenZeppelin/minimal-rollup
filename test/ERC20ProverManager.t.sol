@@ -8,8 +8,8 @@ import {ERC20ProverManager} from "../src/protocol/ERC20ProverManager.sol";
 
 import {IProposerFees} from "../src/protocol/IProposerFees.sol";
 import {ICheckpointTracker} from "src/protocol/ICheckpointTracker.sol";
-import {IPublicationFeed} from "src/protocol/IPublicationFeed.sol";
-import {PublicationFeed} from "src/protocol/PublicationFeed.sol";
+import {IInbox} from "src/protocol/IInbox.sol";
+import {MockInbox} from "test/mocks/MockInbox.sol";
 
 import {MockCheckpointTracker} from "test/mocks/MockCheckpointTracker.sol";
 
@@ -111,14 +111,14 @@ contract ERC20ProverManagerTest is BaseProverManagerTest {
         mockToken.mint(prover2, 10 ether);
         mockToken.mint(evictor, 10 ether);
         mockToken.mint(proposer, 10 ether);
-        mockToken.mint(inbox, 10 ether);
+        mockToken.mint(address(inbox), 10 ether);
 
         // Deploy the ERC20ProverManager to a deterministic address using CREATE2 and approve it to spend tokens from
         // the initial prover before deployment
         bytes memory args = abi.encode(
-            inbox,
+            address(inbox),
             address(checkpointTracker),
-            address(publicationFeed),
+            address(inbox),
             initialProver,
             INITIAL_FEE,
             address(mockToken),
@@ -131,9 +131,9 @@ contract ERC20ProverManagerTest is BaseProverManagerTest {
 
         // Create ProverManager instance
         proverManager = new ERC20ProverManagerMock{salt: SALT}(
-            inbox,
+            address(inbox),
             address(checkpointTracker),
-            address(publicationFeed),
+            address(inbox),
             initialProver,
             INITIAL_FEE,
             address(mockToken),
@@ -157,7 +157,7 @@ contract ERC20ProverManagerTest is BaseProverManagerTest {
         vm.prank(proposer);
         mockToken.approve(address(proverManager), type(uint256).max);
 
-        vm.prank(inbox);
+        vm.prank(address(inbox));
         mockToken.approve(address(proverManager), type(uint256).max);
 
         // Deposit enough as a proposer to pay for publications
@@ -166,7 +166,7 @@ contract ERC20ProverManagerTest is BaseProverManagerTest {
 
         // Create a publication to trigger the new period
         vm.warp(vm.getBlockTimestamp() + 1);
-        vm.prank(inbox);
+        vm.prank(address(inbox));
         proverManager.payPublicationFee(proposer, false);
     }
 
@@ -181,9 +181,9 @@ contract ERC20ProverManagerTest is BaseProverManagerTest {
     function test_constructor_RevertWhen_ZeroTokenAddress() public {
         vm.expectRevert("Token address cannot be 0");
         new ERC20ProverManagerMock(
-            inbox,
+            address(inbox),
             address(checkpointTracker),
-            address(publicationFeed),
+            address(inbox),
             initialProver,
             INITIAL_FEE,
             address(0), // Zero address for token

@@ -8,8 +8,9 @@ import {ETHProverManager} from "../src/protocol/ETHProverManager.sol";
 import {IProposerFees} from "../src/protocol/IProposerFees.sol";
 
 import {ICheckpointTracker} from "src/protocol/ICheckpointTracker.sol";
-import {IPublicationFeed} from "src/protocol/IPublicationFeed.sol";
-import {PublicationFeed} from "src/protocol/PublicationFeed.sol";
+
+import {IInbox} from "src/protocol/IInbox.sol";
+import {MockInbox} from "test/mocks/MockInbox.sol";
 
 import {MockCheckpointTracker} from "test/mocks/MockCheckpointTracker.sol";
 import {NullVerifier} from "test/mocks/NullVerifier.sol";
@@ -83,7 +84,7 @@ contract ETHProverManagerTest is BaseProverManagerTest {
     function setUp() public override {
         super.setUp();
         proverManager = new ETHProverManagerMock{value: LIVENESS_BOND}(
-            inbox, address(checkpointTracker), address(publicationFeed), initialProver, INITIAL_FEE
+            address(inbox), address(checkpointTracker), address(inbox), initialProver, INITIAL_FEE
         );
         ethProverManager = ETHProverManager(payable(address(proverManager)));
 
@@ -97,7 +98,7 @@ contract ETHProverManagerTest is BaseProverManagerTest {
         vm.deal(proposer, 10 ether);
 
         // Fund the Inbox contract.
-        vm.deal(inbox, 10 ether);
+        vm.deal(address(inbox), 10 ether);
 
         // Deposit enough as a proposer to pay for publications
         vm.prank(proposer);
@@ -105,7 +106,7 @@ contract ETHProverManagerTest is BaseProverManagerTest {
 
         // Create a publication to trigger the new period
         vm.warp(vm.getBlockTimestamp() + 1);
-        vm.prank(inbox);
+        vm.prank(address(inbox));
         proverManager.payPublicationFee(proposer, false);
     }
 

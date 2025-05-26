@@ -6,7 +6,8 @@ import {CheckpointTracker} from "src/protocol/CheckpointTracker.sol";
 import {ICheckpointTracker} from "src/protocol/ICheckpointTracker.sol";
 
 import {ICommitmentStore} from "src/protocol/ICommitmentStore.sol";
-import {PublicationFeed} from "src/protocol/PublicationFeed.sol";
+import {IInbox} from "src/protocol/IInbox.sol";
+import {MockInbox} from "test/mocks/MockInbox.sol";
 
 import {SignalService} from "src/protocol/SignalService.sol";
 import {NullVerifier} from "test/mocks/NullVerifier.sol";
@@ -14,7 +15,7 @@ import {NullVerifier} from "test/mocks/NullVerifier.sol";
 contract CheckpointTrackerTest is Test {
     CheckpointTracker tracker;
     NullVerifier verifier;
-    PublicationFeed feed;
+    MockInbox feed;
     SignalService signalService;
     // For the unit tests, we do it without a prover manager
     address proverManager = address(0);
@@ -32,7 +33,7 @@ contract CheckpointTrackerTest is Test {
     function setUp() public {
         verifier = new NullVerifier();
 
-        feed = new PublicationFeed();
+        feed = new MockInbox();
 
         signalService = new SignalService();
 
@@ -117,9 +118,8 @@ contract CheckpointTrackerTest is Test {
     function createSampleFeed() private {
         pubHashes = new bytes32[](NUM_PUBLICATIONS);
 
-        bytes[] memory emptyAttributes = new bytes[](0);
         for (uint256 i; i < NUM_PUBLICATIONS; ++i) {
-            feed.publish(emptyAttributes);
+            feed.publish(0, uint64(block.number)); // 0 blobs, current block
             pubHashes[i] = feed.getPublicationHash(i);
         }
     }
