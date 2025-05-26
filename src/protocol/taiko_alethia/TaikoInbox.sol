@@ -4,14 +4,13 @@ pragma solidity ^0.8.28;
 import {IBlobRefRegistry} from "../../blobs/IBlobRefRegistry.sol";
 
 import {IDelayedInclusionStore} from "../IDelayedInclusionStore.sol";
-import {IPublicationFeed} from "../IPublicationFeed.sol";
 import {DelayedInclusionStore} from "./DelayedInclusionStore.sol";
 
 import {IInbox} from "../IInbox.sol";
 import {ILookahead} from "../ILookahead.sol";
 import {IProposerFees} from "../IProposerFees.sol";
 
-contract TaikoInbox is IInbox, IPublicationFeed, DelayedInclusionStore {
+contract TaikoInbox is IInbox, DelayedInclusionStore {
     struct Metadata {
         uint256 anchorBlockId;
         bytes32 anchorBlockHash;
@@ -113,17 +112,17 @@ contract TaikoInbox is IInbox, IPublicationFeed, DelayedInclusionStore {
         emit Published(pubHash, header, attributes);
     }
 
-    /// @inheritdoc IPublicationFeed
+    /// @inheritdoc IInbox
     function getPublicationHash(uint256 idx) external view returns (bytes32) {
         return _publicationHashes[idx];
     }
 
-    /// @inheritdoc IPublicationFeed
+    /// @inheritdoc IInbox
     function getNextPublicationId() external view returns (uint256) {
         return _publicationHashes.length;
     }
 
-    /// @inheritdoc IPublicationFeed
+    /// @inheritdoc IInbox
     function validateHeader(PublicationHeader calldata header) external view returns (bool) {
         return keccak256(abi.encode(header)) == _publicationHashes[header.id];
     }

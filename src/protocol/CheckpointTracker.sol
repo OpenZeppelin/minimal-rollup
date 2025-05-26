@@ -3,7 +3,7 @@ pragma solidity ^0.8.28;
 
 import {ICheckpointTracker} from "./ICheckpointTracker.sol";
 import {ICommitmentStore} from "./ICommitmentStore.sol";
-import {IPublicationFeed} from "./IPublicationFeed.sol";
+import {IInbox} from "./IInbox.sol";
 import {IVerifier} from "./IVerifier.sol";
 
 contract CheckpointTracker is ICheckpointTracker {
@@ -11,7 +11,7 @@ contract CheckpointTracker is ICheckpointTracker {
     /// the latest verified state of the rollup
     uint256 private _provenPublicationId;
 
-    IPublicationFeed public immutable publicationFeed;
+    IInbox public immutable publicationFeed;
     IVerifier public immutable verifier;
     ICommitmentStore public immutable commitmentStore;
     address public immutable proverManager;
@@ -30,7 +30,7 @@ contract CheckpointTracker is ICheckpointTracker {
     ) {
         // set the genesis checkpoint commitment of the rollup - genesis is trusted to be correct
         require(_genesis != 0, "genesis checkpoint commitment cannot be 0");
-        publicationFeed = IPublicationFeed(_publicationFeed);
+        publicationFeed = IInbox(_publicationFeed);
         uint256 latestPublicationId = publicationFeed.getNextPublicationId() - 1;
 
         verifier = IVerifier(_verifier);

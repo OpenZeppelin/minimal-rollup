@@ -3,9 +3,10 @@ pragma solidity ^0.8.28;
 
 import {LibPercentage} from "../libs/LibPercentage.sol";
 import {ICheckpointTracker} from "./ICheckpointTracker.sol";
+
+import {IInbox} from "./IInbox.sol";
 import {IProposerFees} from "./IProposerFees.sol";
 import {IProverManager} from "./IProverManager.sol";
-import {IPublicationFeed} from "./IPublicationFeed.sol";
 
 import "@openzeppelin/contracts/utils/math/SafeCast.sol";
 
@@ -32,7 +33,7 @@ abstract contract BaseProverManager is IProposerFees, IProverManager {
 
     address public immutable inbox;
     ICheckpointTracker public immutable checkpointTracker;
-    IPublicationFeed public immutable publicationFeed;
+    IInbox public immutable publicationFeed;
 
     /// @notice Common balances for proposers and provers
     mapping(address user => uint256 balance) private _balances;
@@ -64,7 +65,7 @@ abstract contract BaseProverManager is IProposerFees, IProverManager {
 
         inbox = _inbox;
         checkpointTracker = ICheckpointTracker(_checkpointTracker);
-        publicationFeed = IPublicationFeed(_publicationFeed);
+        publicationFeed = IInbox(_publicationFeed);
 
         // Close the first period so every period has a previous one (and an implicit start timestamp)
         // The initial fee and prover will take effect in the block after this one
@@ -134,7 +135,7 @@ abstract contract BaseProverManager is IProposerFees, IProverManager {
     /// @inheritdoc IProverManager
     /// @dev This can be called by anyone, and they get `evictorIncentivePercentage` of the liveness bond as an
     /// incentive.
-    function evictProver(IPublicationFeed.PublicationHeader calldata publicationHeader) external {
+    function evictProver(IInbox.PublicationHeader calldata publicationHeader) external {
         require(publicationFeed.validateHeader(publicationHeader), "Invalid publication");
 
         uint256 publicationTimestamp = publicationHeader.timestamp;
@@ -179,8 +180,8 @@ abstract contract BaseProverManager is IProposerFees, IProverManager {
     function prove(
         ICheckpointTracker.Checkpoint calldata start,
         ICheckpointTracker.Checkpoint calldata end,
-        IPublicationFeed.PublicationHeader calldata firstPub,
-        IPublicationFeed.PublicationHeader calldata lastPub,
+        IInbox.PublicationHeader calldata firstPub,
+        IInbox.PublicationHeader calldata lastPub,
         uint256 numPublications,
         uint256 numDelayedPublications,
         bytes calldata proof,
@@ -220,9 +221,7 @@ abstract contract BaseProverManager is IProposerFees, IProverManager {
     }
 
     /// @inheritdoc IProverManager
-    function finalizePastPeriod(uint256 periodId, IPublicationFeed.PublicationHeader calldata provenPublication)
-        external
-    {
+    function finalizePastPeriod(uint256 periodId, IInbox.PublicationHeader calldata provenPublication) external {
         ICheckpointTracker.Checkpoint memory lastProven = checkpointTracker.getProvenCheckpoint();
         require(publicationFeed.validateHeader(provenPublication), "Invalid publication header");
         require(lastProven.publicationId >= provenPublication.id, "Publication must be proven");
