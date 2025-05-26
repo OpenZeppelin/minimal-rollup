@@ -37,22 +37,11 @@ contract ERC20ProverManagerMock is ERC20ProverManager {
     constructor(
         address _inbox,
         address _checkpointTracker,
-        address _publicationFeed,
         address _initialProver,
         uint96 _initialFee,
         address _token,
         uint256 _initialDeposit
-    )
-        ERC20ProverManager(
-            _inbox,
-            _checkpointTracker,
-            _publicationFeed,
-            _initialProver,
-            _initialFee,
-            _token,
-            _initialDeposit
-        )
-    {}
+    ) ERC20ProverManager(_inbox, _checkpointTracker, _initialProver, _initialFee, _token, _initialDeposit) {}
 
     function _maxBidPercentage() internal view virtual override returns (uint16) {
         return MAX_BID_PERCENTAGE;
@@ -116,13 +105,7 @@ contract ERC20ProverManagerTest is BaseProverManagerTest {
         // Deploy the ERC20ProverManager to a deterministic address using CREATE2 and approve it to spend tokens from
         // the initial prover before deployment
         bytes memory args = abi.encode(
-            address(inbox),
-            address(checkpointTracker),
-            address(inbox),
-            initialProver,
-            INITIAL_FEE,
-            address(mockToken),
-            LIVENESS_BOND
+            address(inbox), address(checkpointTracker), initialProver, INITIAL_FEE, address(mockToken), LIVENESS_BOND
         );
         address proverManagerAddress =
             vm.computeCreate2Address(SALT, hashInitCode(type(ERC20ProverManagerMock).creationCode, args));
@@ -131,13 +114,7 @@ contract ERC20ProverManagerTest is BaseProverManagerTest {
 
         // Create ProverManager instance
         proverManager = new ERC20ProverManagerMock{salt: SALT}(
-            address(inbox),
-            address(checkpointTracker),
-            address(inbox),
-            initialProver,
-            INITIAL_FEE,
-            address(mockToken),
-            LIVENESS_BOND
+            address(inbox), address(checkpointTracker), initialProver, INITIAL_FEE, address(mockToken), LIVENESS_BOND
         );
         erc20ProverManager = ERC20ProverManager(address(proverManager));
 
@@ -183,7 +160,6 @@ contract ERC20ProverManagerTest is BaseProverManagerTest {
         new ERC20ProverManagerMock(
             address(inbox),
             address(checkpointTracker),
-            address(inbox),
             initialProver,
             INITIAL_FEE,
             address(0), // Zero address for token

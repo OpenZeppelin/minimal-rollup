@@ -31,13 +31,10 @@ import {
 } from "./BaseProverManager.t.sol";
 
 contract ETHProverManagerMock is ETHProverManager {
-    constructor(
-        address _inbox,
-        address _checkpointTracker,
-        address _publicationFeed,
-        address _initialProver,
-        uint96 _initialFee
-    ) payable ETHProverManager(_inbox, _checkpointTracker, _publicationFeed, _initialProver, _initialFee) {}
+    constructor(address _inbox, address _checkpointTracker, address _initialProver, uint96 _initialFee)
+        payable
+        ETHProverManager(_inbox, _checkpointTracker, _initialProver, _initialFee)
+    {}
 
     function _maxBidPercentage() internal view virtual override returns (uint16) {
         return MAX_BID_PERCENTAGE;
@@ -84,7 +81,7 @@ contract ETHProverManagerTest is BaseProverManagerTest {
     function setUp() public override {
         super.setUp();
         proverManager = new ETHProverManagerMock{value: LIVENESS_BOND}(
-            address(inbox), address(checkpointTracker), address(inbox), initialProver, INITIAL_FEE
+            address(inbox), address(checkpointTracker), initialProver, INITIAL_FEE
         );
         ethProverManager = ETHProverManager(payable(address(proverManager)));
 

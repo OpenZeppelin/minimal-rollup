@@ -11,27 +11,21 @@ contract CheckpointTracker is ICheckpointTracker {
     /// the latest verified state of the rollup
     uint256 private _provenPublicationId;
 
-    IInbox public immutable publicationFeed;
+    IInbox public immutable inbox;
     IVerifier public immutable verifier;
     ICommitmentStore public immutable commitmentStore;
     address public immutable proverManager;
 
     /// @param _genesis the checkpoint commitment describing the initial state of the rollup
-    /// @param _publicationFeed the input data source that updates the state of this rollup
+    /// @param _inbox the inbox contract that contains the publication feed
     /// @param _verifier a contract that can verify the validity of a transition from one checkpoint to another
     /// @param _proverManager contract responsible for managing the prover auction
     /// @param _commitmentStore contract responsible storing historical commitments
-    constructor(
-        bytes32 _genesis,
-        address _publicationFeed,
-        address _verifier,
-        address _proverManager,
-        address _commitmentStore
-    ) {
+    constructor(bytes32 _genesis, address _inbox, address _verifier, address _proverManager, address _commitmentStore) {
         // set the genesis checkpoint commitment of the rollup - genesis is trusted to be correct
         require(_genesis != 0, "genesis checkpoint commitment cannot be 0");
-        publicationFeed = IInbox(_publicationFeed);
-        uint256 latestPublicationId = publicationFeed.getNextPublicationId() - 1;
+        inbox = IInbox(_inbox);
+        uint256 latestPublicationId = inbox.getNextPublicationId() - 1;
 
         verifier = IVerifier(_verifier);
         commitmentStore = ICommitmentStore(_commitmentStore);
@@ -59,8 +53,8 @@ contract CheckpointTracker is ICheckpointTracker {
             "Number of delayed publications cannot be greater than the total number of publications"
         );
         Checkpoint memory latestProvenCheckpoint = getProvenCheckpoint();
-        bytes32 startPublicationHash = publicationFeed.getPublicationHash(latestProvenCheckpoint.publicationId);
-        bytes32 endPublicationHash = publicationFeed.getPublicationHash(end.publicationId);
+        bytes32 startPublicationHash = inbox.getPublicationHash(latestProvenCheckpoint.publicationId);
+        bytes32 endPublicationHash = inbox.getPublicationHash(end.publicationId);
         require(endPublicationHash != 0, "End publication does not exist");
 
         verifier.verifyProof(
