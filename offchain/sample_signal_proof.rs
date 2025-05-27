@@ -1,4 +1,3 @@
-
 use eyre::Result;
 
 mod signal_slot;
@@ -10,16 +9,18 @@ use utils::{deploy_signal_service, get_proofs, get_provider};
 use alloy::primitives::Bytes;
 use std::fs;
 
-
 fn expand_vector(vec: Vec<Bytes>, name: &str) -> String {
     let mut expanded = String::new();
     for (i, item) in vec.iter().enumerate() {
-        expanded += format!("\n\t\t{}[{}] = hex\"{}\";", name, i, item).replace("0x","").as_str();
+        expanded += format!("\n\t\t{}[{}] = hex\"{}\";", name, i, item)
+            .replace("0x", "")
+            .as_str();
     }
     return expanded;
 }
 
 #[tokio::main]
+#[rustfmt::skip]
 async fn main() -> Result<()> {
     let (provider, _anvil, signer) = get_provider()?;
     let signal_service = deploy_signal_service(&provider).await?;
@@ -46,3 +47,4 @@ async fn main() -> Result<()> {
     println!("{}", formatted);
     Ok(())
 }
+
