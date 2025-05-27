@@ -9,6 +9,7 @@ interface IVerifier {
         bytes32 startCheckPoint,
         bytes32 endCheckPoint,
         uint256 numPublications,
+        uint256 numDelayedPublications,
         bytes calldata proof
     ) external;
 }

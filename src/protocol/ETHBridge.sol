@@ -6,6 +6,9 @@ import {ISignalService} from "./ISignalService.sol";
 import {ReentrancyGuardTransient} from "@openzeppelin/contracts/utils/ReentrancyGuardTransient.sol";
 
 /// @dev ETH bridging contract to send native ETH between L1 <-> L2 using storage proofs.
+/// @dev In contracts to the `SignalService`, this contract does not expect the bridge to be deployed on the same
+/// address on both chains. This is because it is designed so that each rollup has its own independent bridge contract,
+/// and they may furthermore decide to deploy a new version of the bridge in the future.
 ///
 /// IMPORTANT: No recovery mechanism is implemented in case an account creates a deposit that can't be claimed.
 contract ETHBridge is IETHBridge, ReentrancyGuardTransient {
@@ -28,6 +31,7 @@ contract ETHBridge is IETHBridge, ReentrancyGuardTransient {
     constructor(address _signalService, address _trustedCommitmentPublisher, address _counterpart) {
         require(_signalService != address(0), "Empty signal service");
         require(_trustedCommitmentPublisher != address(0), "Empty trusted publisher");
+        require(_counterpart != address(0), "Empty counterpart");
 
         signalService = ISignalService(_signalService);
         trustedCommitmentPublisher = _trustedCommitmentPublisher;
