@@ -177,7 +177,6 @@ abstract contract BaseProverManager is IProposerFees, IProverManager {
         ICheckpointTracker.Checkpoint calldata end,
         IInbox.PublicationHeader calldata firstPub,
         IInbox.PublicationHeader calldata lastPub,
-        uint256 numPublications,
         uint256 numDelayedPublications,
         bytes calldata proof,
         uint256 periodId
@@ -193,6 +192,10 @@ abstract contract BaseProverManager is IProposerFees, IProverManager {
         require(start.publicationId + 1 == firstPub.id, "First publication not immediately after start checkpoint");
         require(firstPub.timestamp > previousPeriodEnd, "First publication is before the period");
 
+        uint256 numPublications = lastPub.id - firstPub.id + 1;
+
+        // TODO: there is a disconnect between start and what the checkpoint tracker is proving. There is a potential
+        // issue for someone providing a start in the past, getting more fees
         checkpointTracker.proveTransition(start, end, numPublications, numDelayedPublications, proof);
 
         bool isPastDeadline = block.timestamp > period.deadline && period.deadline != 0;

@@ -461,7 +461,6 @@ abstract contract BaseProverManagerTest is Test {
             endCheckpoint,
             startHeader,
             endHeader,
-            numRelevantPublications,
             ZERO_DELAYED_PUBLICATIONS,
             "0x", // any proof
             INITIAL_PERIOD
@@ -501,7 +500,6 @@ abstract contract BaseProverManagerTest is Test {
             endCheckpoint,
             startHeader,
             endHeader,
-            numRegularPublications + numDelayedPublications,
             numDelayedPublications,
             "0x", // any proof
             INITIAL_PERIOD
@@ -544,7 +542,6 @@ abstract contract BaseProverManagerTest is Test {
             endCheckpoint,
             startHeader,
             endHeader,
-            numRelevantPublications,
             ZERO_DELAYED_PUBLICATIONS,
             "0x", // any proof
             INITIAL_PERIOD
@@ -565,6 +562,7 @@ abstract contract BaseProverManagerTest is Test {
         uint256 numPublications = 4;
         IInbox.PublicationHeader[] memory headers = _insertPublicationsWithFees(numPublications, INITIAL_FEE, false);
         IInbox.PublicationHeader memory startHeader1 = headers[0];
+        IInbox.PublicationHeader memory endHeader1 = headers[1];
         IInbox.PublicationHeader memory startHeader2 = headers[2];
         IInbox.PublicationHeader memory endHeader2 = headers[3];
 
@@ -578,7 +576,7 @@ abstract contract BaseProverManagerTest is Test {
             commitment: keccak256(abi.encode("commitment1"))
         });
         ICheckpointTracker.Checkpoint memory endCheckpoint = ICheckpointTracker.Checkpoint({
-            publicationId: endHeader2.id,
+            publicationId: endHeader1.id,
             commitment: keccak256(abi.encode("commitment2"))
         });
 
@@ -587,7 +585,7 @@ abstract contract BaseProverManagerTest is Test {
         // Prove the publications with prover1
         vm.prank(prover1);
         proverManager.prove(
-            startCheckpoint, endCheckpoint, startHeader1, endHeader2, 2, ZERO_DELAYED_PUBLICATIONS, "0x", INITIAL_PERIOD
+            startCheckpoint, endCheckpoint, startHeader1, endHeader1, ZERO_DELAYED_PUBLICATIONS, "0x", INITIAL_PERIOD
         );
 
         // Prove the other publications with prover2
@@ -601,16 +599,20 @@ abstract contract BaseProverManagerTest is Test {
         });
         vm.prank(prover2);
         proverManager.prove(
-            startCheckpoint, endCheckpoint, startHeader2, endHeader2, 2, ZERO_DELAYED_PUBLICATIONS, "0x", INITIAL_PERIOD
+            startCheckpoint, endCheckpoint, startHeader2, endHeader2, ZERO_DELAYED_PUBLICATIONS, "0x", INITIAL_PERIOD
         );
 
         // Verify prover1 received the fees
         uint256 prover1BalanceAfter = proverManager.balances(prover1);
-        assertEq(prover1BalanceAfter, prover1BalanceBefore + INITIAL_FEE * 2, "Prover1 should receive the fees");
+        assertEq(
+            prover1BalanceAfter,
+            prover1BalanceBefore + INITIAL_FEE * 2,
+            "Prover1 should receive the fees for 2 publications"
+        );
 
         // Verify prover2 received the fees
         uint256 prover2BalanceAfter = proverManager.balances(prover2);
-        assertEq(prover2BalanceAfter, INITIAL_FEE * 2, "Prover2 should receive the fees");
+        assertEq(prover2BalanceAfter, INITIAL_FEE * 2, "Prover2 should receive the fees for 2 publications");
 
         // Verify the period is marked as past deadline
         BaseProverManager.Period memory periodAfter = proverManager.getPeriod(1);
@@ -635,7 +637,7 @@ abstract contract BaseProverManagerTest is Test {
         // Attempt to prove with mismatched end checkpoint
         vm.expectRevert("Last publication does not match end checkpoint");
         proverManager.prove(
-            startCheckpoint, endCheckpoint, startHeader, endHeader, 2, ZERO_DELAYED_PUBLICATIONS, "0x", INITIAL_PERIOD
+            startCheckpoint, endCheckpoint, startHeader, endHeader, ZERO_DELAYED_PUBLICATIONS, "0x", INITIAL_PERIOD
         );
     }
 
@@ -663,7 +665,7 @@ abstract contract BaseProverManagerTest is Test {
         // Attempt to prove with publication after period end
         vm.expectRevert("Last publication is after the period");
         proverManager.prove(
-            startCheckpoint, endCheckpoint, startHeader, lateHeader, 2, ZERO_DELAYED_PUBLICATIONS, "0x", INITIAL_PERIOD
+            startCheckpoint, endCheckpoint, startHeader, lateHeader, ZERO_DELAYED_PUBLICATIONS, "0x", INITIAL_PERIOD
         );
     }
 
@@ -684,7 +686,7 @@ abstract contract BaseProverManagerTest is Test {
 
         vm.expectRevert("First publication not immediately after start checkpoint");
         proverManager.prove(
-            startCheckpoint, endCheckpoint, firstHeader, lastHeader, 2, ZERO_DELAYED_PUBLICATIONS, "0x", INITIAL_PERIOD
+            startCheckpoint, endCheckpoint, firstHeader, lastHeader, ZERO_DELAYED_PUBLICATIONS, "0x", INITIAL_PERIOD
         );
     }
 
@@ -712,14 +714,7 @@ abstract contract BaseProverManagerTest is Test {
         // Attempt to prove with first publication before period 2
         vm.expectRevert("First publication is before the period");
         proverManager.prove(
-            startCheckpoint,
-            endCheckpoint,
-            earlyHeader,
-            lateHeader,
-            2,
-            ZERO_DELAYED_PUBLICATIONS,
-            "0x",
-            INITIAL_PERIOD + 1
+            startCheckpoint, endCheckpoint, earlyHeader, lateHeader, ZERO_DELAYED_PUBLICATIONS, "0x", INITIAL_PERIOD + 1
         );
     }
 
@@ -756,7 +751,6 @@ abstract contract BaseProverManagerTest is Test {
             endCheckpoint,
             startHeader,
             endHeader,
-            numRelevantPublications,
             ZERO_DELAYED_PUBLICATIONS,
             "0x", // any proof
             INITIAL_PERIOD
@@ -823,7 +817,6 @@ abstract contract BaseProverManagerTest is Test {
             endCheckpoint,
             startHeader,
             endHeader,
-            numRelevantPublications,
             ZERO_DELAYED_PUBLICATIONS,
             "0x", // any proof
             INITIAL_PERIOD
