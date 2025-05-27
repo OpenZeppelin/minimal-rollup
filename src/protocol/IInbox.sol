@@ -20,7 +20,7 @@ interface IInbox {
     /// @notice Publish blobs with anchor block information
     /// @param nBlobs Number of blobs to publish
     /// @param anchorBlockId The anchor block ID
-    function publish(uint256 nBlobs, uint64 anchorBlockId) external payable;
+    function publish(uint256 nBlobs, uint64 anchorBlockId) external;
 
     /// @notice Retrieve a hash representing a previous publication
     /// @param idx The index of the publication hash

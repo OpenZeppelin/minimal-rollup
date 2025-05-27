@@ -46,7 +46,7 @@ contract TaikoInbox is IInbox, DelayedInclusionStore {
     }
 
     /// @inheritdoc IInbox
-    function publish(uint256 nBlobs, uint64 anchorBlockId) external payable {
+    function publish(uint256 nBlobs, uint64 anchorBlockId) external {
         if (address(lookahead) != address(0)) {
             require(lookahead.isCurrentPreconfer(msg.sender), "not current preconfer");
         }

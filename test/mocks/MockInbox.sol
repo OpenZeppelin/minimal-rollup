@@ -14,7 +14,7 @@ contract MockInbox is IInbox {
     }
 
     /// @inheritdoc IInbox
-    function publish(uint256 nBlobs, uint64 anchorBlockId) external payable {
+    function publish(uint256 nBlobs, uint64 anchorBlockId) external {
         // Simple mock implementation
         uint256 id = _publicationHashes.length;
 
