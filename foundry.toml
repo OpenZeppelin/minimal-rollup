@@ -4,7 +4,6 @@ out = "out"
 libs = ["lib"]
 evm_version = "cancun"
 always_use_create_2_factory = true
-rpc_endpoints = { L1 = "http://localhost:8545", L2 = "http://localhost:8546" }
 sender = "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"
 
 gas_reports_ignore = ["MockDelayedInclusionStore", "MockCheckpointTracker", ""]
