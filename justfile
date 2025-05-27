@@ -10,14 +10,6 @@ stop-anvil:
     lsof -ti:8545 | xargs -r kill
     lsof -ti:8546 | xargs -r kill
 
-test +ARGS='':
-    # Run all unit tests
-    forge test {{ARGS}} --no-match-path 'test/signal/**'
-
-test-int +ARGS='':
-    # Run all tests
-    forge test {{ARGS}}
-
 # Get signal proof for a signal and sender 
 get-generic-signal-proof signal sender:
     cargo run --bin generic_signal_proof {{signal}} {{sender}}
