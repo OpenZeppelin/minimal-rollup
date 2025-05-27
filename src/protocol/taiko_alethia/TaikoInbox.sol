@@ -11,6 +11,13 @@ import {ILookahead} from "../ILookahead.sol";
 import {IProposerFees} from "../IProposerFees.sol";
 
 contract TaikoInbox is IInbox, DelayedInclusionStore {
+    /// @dev Caller is not the current preconfer
+    error NotCurrentPreconfer();
+    /// @dev Anchor block ID is too old
+    error AnchorBlockTooOld();
+    /// @dev Blockhash is not available for the anchor block
+    error BlockhashUnavailable();
+
     struct Metadata {
         uint256 anchorBlockId;
         bytes32 anchorBlockHash;
@@ -48,32 +55,32 @@ contract TaikoInbox is IInbox, DelayedInclusionStore {
     /// @inheritdoc IInbox
     function publish(uint256 nBlobs, uint64 anchorBlockId) external {
         if (address(lookahead) != address(0)) {
-            require(lookahead.isCurrentPreconfer(msg.sender), "not current preconfer");
+            require(lookahead.isCurrentPreconfer(msg.sender), NotCurrentPreconfer());
         }
 
         uint256 _lastPublicationId = _publicationHashes.length - 1;
 
         // Build the attribute for the anchor transaction inputs
-        require(anchorBlockId >= block.number - maxAnchorBlockIdOffset, "anchorBlockId too old");
+        require(anchorBlockId >= block.number - maxAnchorBlockIdOffset, AnchorBlockTooOld());
 
         Metadata memory metadata = Metadata({
             anchorBlockId: anchorBlockId,
             anchorBlockHash: blockhash(anchorBlockId),
             isDelayedInclusion: false
         });
-        require(metadata.anchorBlockHash != 0, "blockhash not found");
+        require(metadata.anchorBlockHash != 0, BlockhashUnavailable());
 
         bytes[] memory attributes = new bytes[](3);
         attributes[METADATA] = abi.encode(metadata);
         attributes[LAST_PUBLICATION] = abi.encode(_lastPublicationId);
         attributes[BLOB_REFERENCE] = abi.encode(blobRefRegistry.getRef(_buildBlobIndices(nBlobs)));
 
-        proposerFees.payPublicationFee(msg.sender, false);
-        _lastPublicationId = _publish(attributes).id;
+        _lastPublicationId = _publish(attributes, false).id;
 
         // Publish each delayed inclusion as a separate publication
         IDelayedInclusionStore.Inclusion[] memory inclusions = processDueInclusions();
         uint256 nInclusions = inclusions.length;
+
         // Metadata is the same as the regular publication, so we just set `isDelayedInclusion` to true
         metadata.isDelayedInclusion = true;
         for (uint256 i; i < nInclusions; ++i) {
@@ -81,15 +88,17 @@ contract TaikoInbox is IInbox, DelayedInclusionStore {
             attributes[LAST_PUBLICATION] = abi.encode(_lastPublicationId);
             attributes[BLOB_REFERENCE] = abi.encode(inclusions[i]);
 
-            proposerFees.payPublicationFee(msg.sender, true);
-            _lastPublicationId = _publish(attributes).id;
+            _lastPublicationId = _publish(attributes, true).id;
         }
     }
 
     /// @dev Internal implementation of publication logic
     /// @param attributes The data to publish
+    /// @param isDelayed Whether this is a delayed inclusion publication
     /// @return header The publication header
-    function _publish(bytes[] memory attributes) internal returns (PublicationHeader memory header) {
+    function _publish(bytes[] memory attributes, bool isDelayed) internal returns (PublicationHeader memory header) {
+        proposerFees.payPublicationFee(msg.sender, isDelayed);
+
         uint256 nAttributes = attributes.length;
         bytes32[] memory attributeHashes = new bytes32[](nAttributes);
         for (uint256 i; i < nAttributes; ++i) {
