@@ -192,11 +192,15 @@ abstract contract BaseProverManager is IProposerFees, IProverManager {
         require(start.publicationId + 1 == firstPub.id, "First publication not immediately after start checkpoint");
         require(firstPub.timestamp > previousPeriodEnd, "First publication is before the period");
 
-        uint256 numPublications = lastPub.id - firstPub.id + 1;
+        ICheckpointTracker.Checkpoint memory lastProven = checkpointTracker.getProvenCheckpoint();
+        // Only count publications that have not been proven yet for the fee calculation
+        uint256 numPublications = lastPub.id - lastProven.publicationId;
+        require(
+            numDelayedPublications <= numPublications,
+            "Number of delayed publications cannot be greater than the total number of publications"
+        );
 
-        // TODO: there is a disconnect between start and what the checkpoint tracker is proving. There is a potential
-        // issue for someone providing a start in the past, getting more fees
-        checkpointTracker.proveTransition(start, end, numPublications, numDelayedPublications, proof);
+        checkpointTracker.proveTransition(start, end, numDelayedPublications, proof);
 
         bool isPastDeadline = block.timestamp > period.deadline && period.deadline != 0;
         if (isPastDeadline) {

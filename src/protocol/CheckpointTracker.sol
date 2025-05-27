@@ -35,11 +35,12 @@ contract CheckpointTracker is ICheckpointTracker {
     }
 
     /// @inheritdoc ICheckpointTracker
-    /// @dev This function does not use the `start` checkpoint since we don't support parallel transitions.
+    /// @dev Accepts the last proven checkpoint(or an older one) as the start checkpoint. The reason we allow for an
+    /// older checkpoint is to prevent cases where a prover spends time generating a larger proof and the checkpoint
+    /// changes under his feet.
     function proveTransition(
-        Checkpoint calldata,
+        Checkpoint calldata start,
         Checkpoint calldata end,
-        uint256 numPublications,
         uint256 numDelayedPublications,
         bytes calldata proof
     ) external {
@@ -48,23 +49,19 @@ contract CheckpointTracker is ICheckpointTracker {
         );
 
         require(end.commitment != 0, "Checkpoint commitment cannot be 0");
-        require(
-            numDelayedPublications <= numPublications,
-            "Number of delayed publications cannot be greater than the total number of publications"
-        );
+
         Checkpoint memory latestProvenCheckpoint = getProvenCheckpoint();
-        bytes32 startPublicationHash = inbox.getPublicationHash(latestProvenCheckpoint.publicationId);
+        require(
+            start.publicationId <= latestProvenCheckpoint.publicationId,
+            "Start publication cannot be after latest proven checkpoint"
+        );
+
+        bytes32 startPublicationHash = inbox.getPublicationHash(start.publicationId);
         bytes32 endPublicationHash = inbox.getPublicationHash(end.publicationId);
         require(endPublicationHash != 0, "End publication does not exist");
 
         verifier.verifyProof(
-            startPublicationHash,
-            endPublicationHash,
-            latestProvenCheckpoint.commitment,
-            end.commitment,
-            numPublications,
-            numDelayedPublications,
-            proof
+            startPublicationHash, endPublicationHash, start.commitment, end.commitment, numDelayedPublications, proof
         );
 
         _updateCheckpoint(end.publicationId, end.commitment);

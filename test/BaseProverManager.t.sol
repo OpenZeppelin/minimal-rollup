@@ -587,6 +587,8 @@ abstract contract BaseProverManagerTest is Test {
         proverManager.prove(
             startCheckpoint, endCheckpoint, startHeader1, endHeader1, ZERO_DELAYED_PUBLICATIONS, "0x", INITIAL_PERIOD
         );
+        // Simulate advancing the checkpoint in the tracker
+        checkpointTracker.setProvenHash(endCheckpoint);
 
         // Prove the other publications with prover2
         startCheckpoint = ICheckpointTracker.Checkpoint({
@@ -617,6 +619,52 @@ abstract contract BaseProverManagerTest is Test {
         // Verify the period is marked as past deadline
         BaseProverManager.Period memory periodAfter = proverManager.getPeriod(1);
         assertTrue(periodAfter.pastDeadline, "Period should be marked as past deadline");
+    }
+
+    function test_prove_WithAlreadyProvenStartCheckpoint() public {
+        // Setup: Create publications and pay for the fees
+        uint256 numPublications = 4;
+        IInbox.PublicationHeader[] memory headers = _insertPublicationsWithFees(numPublications, INITIAL_FEE, false);
+
+        IInbox.PublicationHeader memory startHeader1 = headers[0];
+        IInbox.PublicationHeader memory endHeader1 = headers[1];
+
+        ICheckpointTracker.Checkpoint memory startCheckpoint1 = ICheckpointTracker.Checkpoint({
+            publicationId: startHeader1.id - 1,
+            commitment: keccak256(abi.encode("commitment1"))
+        });
+        ICheckpointTracker.Checkpoint memory endCheckpoint1 = ICheckpointTracker.Checkpoint({
+            publicationId: endHeader1.id,
+            commitment: keccak256(abi.encode("commitment2"))
+        });
+
+        // Simulate advancing the checkpoint in the tracker
+        checkpointTracker.setProvenHash(endCheckpoint1);
+
+        IInbox.PublicationHeader memory startHeader2 = startHeader1; // This is already proven
+        IInbox.PublicationHeader memory endHeader2 = headers[3];
+
+        ICheckpointTracker.Checkpoint memory startCheckpoint2 = startCheckpoint1;
+        ICheckpointTracker.Checkpoint memory endCheckpoint2 = ICheckpointTracker.Checkpoint({
+            publicationId: endHeader2.id,
+            commitment: keccak256(abi.encode("commitment4"))
+        });
+
+        uint256 proverBalanceBefore = proverManager.balances(initialProver);
+
+        // Prove the second batch of publications
+        proverManager.prove(
+            startCheckpoint2, endCheckpoint2, startHeader2, endHeader2, ZERO_DELAYED_PUBLICATIONS, "0x", INITIAL_PERIOD
+        );
+
+        uint256 proverBalanceAfter = proverManager.balances(initialProver);
+
+        // Should only receive fees for publications 2 and 3, which have not been proven yet
+        assertEq(
+            proverBalanceAfter,
+            proverBalanceBefore + INITIAL_FEE * 2,
+            "Prover should only receive fees for newly proven publications"
+        );
     }
 
     function test_prove_RevertWhen_LastPublicationDoesNotMatchEndCheckpoint() public {
@@ -715,6 +763,31 @@ abstract contract BaseProverManagerTest is Test {
         vm.expectRevert("First publication is before the period");
         proverManager.prove(
             startCheckpoint, endCheckpoint, earlyHeader, lateHeader, ZERO_DELAYED_PUBLICATIONS, "0x", INITIAL_PERIOD + 1
+        );
+    }
+
+    function test_prove_RevertWhen_NumDelayedPublicationsGreaterThanNumPublications() public {
+        // Setup: Create publications
+        IInbox.PublicationHeader memory startHeader = _insertPublication();
+        IInbox.PublicationHeader memory endHeader = _insertPublication();
+
+        // Create checkpoints
+        ICheckpointTracker.Checkpoint memory startCheckpoint = ICheckpointTracker.Checkpoint({
+            publicationId: startHeader.id - 1,
+            commitment: keccak256(abi.encode("commitment1"))
+        });
+        ICheckpointTracker.Checkpoint memory endCheckpoint = ICheckpointTracker.Checkpoint({
+            publicationId: endHeader.id,
+            commitment: keccak256(abi.encode("commitment2"))
+        });
+
+        // Set numDelayedPublications greater than numPublications
+        uint256 tooManyDelayedPublications = 3; // More than the 2 publications we've inserted
+
+        // Attempt to prove with invalid number of delayed publications
+        vm.expectRevert("Number of delayed publications cannot be greater than the total number of publications");
+        proverManager.prove(
+            startCheckpoint, endCheckpoint, startHeader, endHeader, tooManyDelayedPublications, "0x", INITIAL_PERIOD
         );
     }
 

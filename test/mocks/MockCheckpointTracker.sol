@@ -16,13 +16,7 @@ contract MockCheckpointTracker is ICheckpointTracker {
     }
 
     /// @notice Do nothing. All checkpoints and proofs are accepted.
-    function proveTransition(
-        Checkpoint calldata,
-        Checkpoint calldata end,
-        uint256 numPublications,
-        uint256 numDelayedPublications,
-        bytes calldata proof
-    ) external {
+    function proveTransition(Checkpoint calldata, Checkpoint calldata end, uint256, bytes calldata) external {
         commitmentStore.storeCommitment(end.publicationId, end.commitment);
     }
 
