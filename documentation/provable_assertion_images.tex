@@ -85,24 +85,11 @@
 \end{tikzpicture}
 \fi
 
-% Compare L2 transaction to L1 transaction
-\ifnum \sourceNo = 2
-\begin{tikzpicture}[framed]
-    \timeline
-    \lOneTransactions
-    \lTwoTransactions
-    \publication
-
-    \node[draw, lOneTx, fill=orange] at (tx-2-2) {};
-    \node[draw, lTwoTx, fill=green] at (l2Tx-2-1) {};
-\end{tikzpicture}
-\fi
-
 % L2 publications may span multiple L1 slots
 \renewcommand{\anchorBlockNum}{0}
 \renewcommand{\numLTwoBlocks}{13}
 
-\ifnum \sourceNo = 3
+\ifnum \sourceNo = 2
 \begin{tikzpicture}[framed]
     \timeline
     \lOneTransactions
@@ -126,7 +113,7 @@
 }
 
 % Snapshot after L2 transaction
-\ifnum \sourceNo = 4
+\ifnum \sourceNo = 3
 \begin{tikzpicture}[framed]
     \timeline
 
@@ -147,7 +134,7 @@
 }
 
 % Anchor block hash is validated
-\ifnum \sourceNo = 5
+\ifnum \sourceNo = 4
 \begin{tikzpicture}[framed]
     \timeline
 
@@ -164,7 +151,7 @@
 \fi
 
 % Anchor block hash is validated
-\ifnum \sourceNo = 6
+\ifnum \sourceNo = 5
 \begin{tikzpicture}[framed]
     \timeline
 

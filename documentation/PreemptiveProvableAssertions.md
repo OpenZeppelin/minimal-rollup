@@ -25,18 +25,11 @@ L2 transactions are derived from data published in an L1 transaction. Typically,
 
 <p align="center"><img src="./provable_assertion_images.1.png"/></p>
 
-Now consider the question: does any particular L2 transaction (green in this example) execute before the previous L1 transaction (orange)?
+We are also focussed on potential functionality that can be offered by an L2 sequencer with monopoly rights until a particular slot, typically spanning several L1 blocks (although just two are depicted here).
+
 <p align="center"><img src="./provable_assertion_images.2.png"/></p>
 
-In the context of composability, we are considering how the content of one transaction can be influenced by another, rather than metadata like block timestamps. Even so, this is ambiguous because it depends on the interpretation.
-
-If you consider the final transcript that reaches consensus, only the L1 ordering (after accounting for any re-orgs) is meaningful. The orange transaction clearly comes first because it can affect how the transactions in the L2 publication are processed, whereas the reverse is not true. This interpretation is also consistent with my previous claim that L2 transactions are derived from the L1 publication, which suggests they don't exist until they are recorded on L1.
-
-On the other hand L2 blocks are actually constructed before the corresponding L1 block and may even be preconfirmed, which means the sequencer cannot freely modify them without paying some penalty. L1 transactions might be constructed in response to L2 preconfirmations, even if they are positioned first in the final transcript. This is particularly true whenever an L2 publication spans multiple L1 slots, which is the typical behaviour.
-
-<p align="center"><img src="./provable_assertion_images.3.png"/></p>
-
-In this article we are focussed on potential functionality that can be offered by the monopoly sequencer for one particular slot (or one that has made the appropriate agreements), so they can credibly offer execution preconfirmations. Therefore, we will default to the second interpretation where L2 blocks are continuously created and finalized (in the sense that the sequencer won't change them) before they are posted to L1. Even if we 
+Such a sequencer would be partially limited in their flexibility to reorganise L2 transactions over several slots, because they may offer preconfirmations or liveness guarantees to users. Whenever we discuss a transaction occurring on L2 before it is actually published to L1, we really just mean that it can influence later transactions and the sequencer is unlikely to remove or delay it. For simplicity, this article will default to describing L2 blocks as if they are continuously created and finalized in real time.
 
 ## Anchor blocks
 
@@ -51,11 +44,11 @@ For example, consider a snapshot spanning a cross-chain token deposit and a few 
 - the token recipient (or anyone else) provides a Merkle proof to an L2 bridge contract demonstrating that the deposit was saved under the relevant storage root within the L1 state root. This convinces the L2 bridge that the deposit occured on L1, so it releases or mints the L2 tokens (light green).
 - those tokens are now immediately available to interact with the rest of the L2 ecosystem in future transactions and blocks.
 
-<p align="center"><img src="./provable_assertion_images.4.png"/></p>
+<p align="center"><img src="./provable_assertion_images.3.png"/></p>
 
 Note that at this point the sequencer has directly asserted the L1 state without justification. Although it is public information (in the sense that anyone can retrieve the value from an L1 node), this cannot be validated from inside the L2 EVM so L2 contracts must simply trust that it was correct. A sequencer that passes an invalid state root could fabricate a plausible alternate history that would be self-consistent from within the L2 EVM. This is eventually resolved when the bundle is published to the L1 inbox contract, which queries the relevant block hash so it can be compared to the injected state root.
 
-<p align="center"><img src="./provable_assertion_images.5.png"/></p>
+<p align="center"><img src="./provable_assertion_images.4.png"/></p>
 
 ### Security architecture
 
@@ -93,4 +86,4 @@ This idea was [introduced by Nethermind](https://ethresear.ch/t/same-slot-l1-l2-
 
 As noted, the anchor block mechanism requires the Inbox contract to query the block hash of the relevant L1 block, which implies it cannot be used to react to transactions included in the current L1 block. However, an L2 sequencer that can predict a particular L1 transaction will be included in the publication block (either because this is a based rollup or the sequencer has seen an L1 preconfirmation) can assert that claim immediately in the L2.
 
-<p align="center"><img src="./provable_assertion_images.6.png"/></p>
+<p align="center"><img src="./provable_assertion_images.5.png"/></p>
