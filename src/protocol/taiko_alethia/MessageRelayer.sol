@@ -82,22 +82,21 @@ contract MessageRelayer is ReentrancyGuardTransient, IMessageRelayer {
         address tipRecipient = TIP_RECIPIENT_SLOT.asAddress().tload();
 
         uint256 valueToSend = msg.value - tip;
-        bool success;
+        bool forwardMessageSuccess;
 
         if (gasLimit == 0) {
-            (success,) = to.call{value: valueToSend}(data);
+            (forwardMessageSuccess,) = to.call{value: valueToSend}(data);
         } else {
             require(gasLimit <= gasleft(), InsufficientGas());
-            (success,) = to.call{value: valueToSend, gas: gasLimit}(data);
+            (forwardMessageSuccess,) = to.call{value: valueToSend, gas: gasLimit}(data);
         }
 
-        require(success, MessageForwardingFailed());
+        require(forwardMessageSuccess, MessageForwardingFailed());
 
         TIP_RECIPIENT_SLOT.asAddress().tstore(address(0));
 
-        (bool success,) = tipRecipient.call{value: msg.value}("");
-        require(success, TipSendingFailed());
-
+        (bool tipCallSuccess,) = tipRecipient.call{value: msg.value}("");
+        require(tipCallSuccess, TipSendingFailed());
         emit MessageForwarded(to, valueToSend, data, tipRecipient, tip);
     }
 }
