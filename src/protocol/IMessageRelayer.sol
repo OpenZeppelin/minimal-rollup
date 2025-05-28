@@ -20,7 +20,7 @@ interface IMessageRelayer {
     error MessageForwardingFailed();
 
     /// @dev Tip transfer failed
-    error TipSendingFailed();
+    error TipTransferFailed();
 
     /// @notice Executes the claimDeposit function on the ETHBridge.
     /// @dev Implements any intermediary step to claim the deposit (i.e. stores tipRecipient address)
