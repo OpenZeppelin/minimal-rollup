@@ -10,10 +10,11 @@ This article will unpack that statement and provide some example use cases. We w
 
 - Background information about rollup communication, focussing on timing.
 - Anchor blocks for reading L1 state.
-- A structure to generalise the same-slot message passing mechanism.
+- Same-slot message passing.
 - A mechanism for realtime L1 reads.
 - A mechanism for interdependent L2 transactions.
 - A mechanism for cross-rollup assertions.
+- A suggested implementation framework.
 
 ## Background
 
@@ -71,7 +72,7 @@ In this case, the complete procedure is:
     - the anchor transaction is called exactly once at the start of every block.
     - the block number and state root arguments are consistent with the block hash queried by the L1 inbox.
 
-In this way, a sequencer that asserts the wrong state root would invalidate the whole publication, just like they would if they violated any other state-transition rules, like exceeding the block gas limit. Any L2 transaction that reacted to the invalid root (by minting tokens that did not have a matching L1 deposit, for instance) would be contained inside an invalid publication, so it would not be included in the final transaction history.
+In this way, a sequencer that asserts the wrong state root would invalidate the whole publication, just like they would if they violated any other state-transition rules like exceeding the block gas limit. Any L2 transaction that reacted to the invalid root (by minting tokens that did not have a matching L1 deposit, for instance) would be contained inside an invalid publication, so it would not be included in the final transaction history.
 
 As we have seen, the sequencer's claim when constructing the anchor transaction is not strictly "this is the state root of the latest L1 block" but rather "this state root is consistent with the block hash that will be retrieved in the publication block". This describes a general pattern that we can use whenever:
 
@@ -84,6 +85,32 @@ As we have seen, the sequencer's claim when constructing the anchor transaction 
 
 This idea was [introduced by Nethermind](https://ethresear.ch/t/same-slot-l1-l2-message-passing/21186) and as noted in that post, it can be combined with their fast-withdrawal mechanism to perform a same-slot round-trip operation. Here I will just focus on the assert-and-prove structure of the L1-to-L2 message.
 
-As noted, the anchor block mechanism requires the Inbox contract to query the block hash of the relevant L1 block, which implies it cannot be used to react to transactions included in the current L1 block. However, an L2 sequencer that can predict a particular L1 transaction will be included in the publication block (either because this is a based rollup or the sequencer has seen an L1 preconfirmation) can assert that claim immediately in the L2.
+As noted, the anchor block mechanism requires the Inbox contract to query the block hash of the relevant L1 block, which implies it does not support reacting to transactions included in the current L1 block. However, an L2 sequencer that can predict that a particular L1 transaction will be included in the publication block (orange in this example) can assert that claim immediately in the L2.
 
 <p align="center"><img src="./provable_assertion_images.5.png"/></p>
+
+For a same-slot deposit, the procedure would be:
+
+- a user signs a transaction that deposits to an L1 bridge contract.
+- the L2 sequencer believes this transaction will be included before their own publication transaction and it will succeed.
+    - typically this implies the L2 sequencer is also the L1 sequencer (i.e. it is a based rollup) but it could also be achieved with L1 preconfirmations.
+- the sequencer constructs the corresponding "signal" (a hash of the deposit details) and passes it to the anchor transaction, which saves it in the L2 state. This should be interpreted as an assertion from the sequencer that the deposit will occur on L1.
+- this convinces the L2 bridge, so it releases or mints the L2 tokens.
+- the sequencer continues to build L2 blocks, and possibly preconfirms them.
+- eventually the sequencer submits the whole bundle to the L1 Inbox contract.
+- the Inbox contract executes an "existence query" to confirm that the signal was recorded in L1 storage. It also saves (a hash of) the signal along with the publication.
+- the rollup's state transition function, implemented by the rollup nodes, validates the consistency of the entire bundle, which includes confirming (among many other things) that the signal injected in the anchor transaction matches the one validated by the Inbox contract.
+
+As before, this ensures that the sequencer's assertion is confirmed at publication time, or the entire bundle is invalid.
+
+### Generalisation preview
+
+This structure allows for some pretty direct generalisations. In particular, the Taiko Inbox contract is not actually interacting with the same-slot L1 transaction at all, but merely confirms the existence of the signal it would produce in a dedicated `SignalService` contract. The Inbox could also look for evidence of any other L1 transaction (eg. oracle updates, airdrops, DAO votes, etc) that leave remnants in publically accessible L1 storage. The mechanism works directly as long as the sequencer knows that:
+- the L1 transaction will be included before their own publication, and
+- nothing can happen in the mean time to invalidate it. In most cases, this requires the previous L1 block to have been already published.
+
+It's also possible to make the target L1 call directly from the L1 Inbox, which removes the need to update storage, but the proposer would need to cover the gas costs.
+
+More interestingly, instead of simply insisting the signal exists, the Inbox could save (a hash of) whatever a set of arbitrary queries happen to return. In this way, the Inbox would be responsible for taking L1 actions and retrieving L1 state but would not need to know about the L2 assertions, or evaluate whether they were confirmed. This could be deferred to more complex L2 logic. For example, the sequencer could assert that a transaction will _not_ happen on L1, or it could assert that a DAO proposal will have at least X votes before knowing exactly how many votes it will have.
+
+This will be clearer when we discuss my suggested implementation.

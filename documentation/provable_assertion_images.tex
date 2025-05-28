@@ -159,13 +159,11 @@
     \lTwoTransactions
     \publication
     
-    \node[draw, lOneTx, fill=orange] at (tx-2-2) {};
-    \node[draw, lTwoTx, fill=orange] (assertion) at (l2Tx-9-1) {};
-    \draw[->, orange] (tx-2-2.west) to[bend right] (assertion.north);
+    \node[draw, lOneTx, fill=orange] at (tx-2-1) {};
+    \node[draw, lTwoTx, fill=orange, minimum width=0.1cm, anchor=west] (assertion) at (l2Tx-9-0.west) {};
+    \draw[->, orange] (tx-2-1.west) to[bend right] (assertion.north);
 
     \node[draw, lTwoTx, fill=green] at (l2Tx-9-2) {};
-
-
 \end{tikzpicture}
 \fi
 
