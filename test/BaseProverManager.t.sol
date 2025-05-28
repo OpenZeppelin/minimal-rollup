@@ -15,14 +15,14 @@ import {MockCheckpointTracker} from "test/mocks/MockCheckpointTracker.sol";
 import {NullVerifier} from "test/mocks/NullVerifier.sol";
 
 // Configuration parameters.
-uint16 constant MAX_BID_PERCENTAGE = 9500; // 95%
+uint16 constant MAX_BID_FRACTION = 9500; // 95%
 uint40 constant LIVENESS_WINDOW = 60; // 60 seconds
 uint40 constant SUCCESSION_DELAY = 10;
 uint40 constant EXIT_DELAY = 10;
 uint40 constant PROVING_WINDOW = 30;
 uint96 constant LIVENESS_BOND = 1 ether;
-uint16 constant EVICTOR_INCENTIVE_PERCENTAGE = 500; // 5%
-uint16 constant REWARD_PERCENTAGE = 9000; // 90%
+uint16 constant EVICTOR_INCENTIVE_FRACTION = 500; // 5%
+uint16 constant REWARD_FRACTION = 9000; // 90%
 uint96 constant INITIAL_FEE = 0.1 ether;
 uint16 constant DELAYED_FEE_PERCENTAGE = 150; // 150%
 uint256 constant INITIAL_PERIOD = 1;
@@ -218,7 +218,7 @@ abstract contract BaseProverManagerTest is Test {
         // Capture current period stake before eviction
         LibProvingPeriod.Period memory periodBefore = proverManager.getPeriod(1);
         uint256 stakeBefore = periodBefore.stake;
-        uint256 incentive = LibPercentage.scaleByBPS(stakeBefore, EVICTOR_INCENTIVE_PERCENTAGE);
+        uint256 incentive = LibPercentage.scaleByBPS(stakeBefore, EVICTOR_INCENTIVE_FRACTION);
 
         // Evict the prover
         vm.warp(vm.getBlockTimestamp() + LIVENESS_WINDOW + 1);
@@ -848,7 +848,7 @@ abstract contract BaseProverManagerTest is Test {
 
         uint256 initialProverBalanceAfter = proverManager.balances(initialProver);
         uint256 prover1BalanceAfter = proverManager.balances(prover1);
-        uint256 stakeReward = LibPercentage.scaleByBPS(stakeBefore, REWARD_PERCENTAGE);
+        uint256 stakeReward = LibPercentage.scaleByBPS(stakeBefore, REWARD_FRACTION);
         assertEq(prover1BalanceAfter, prover1BalanceBefore + stakeReward, "Prover1 should receive the remaining stake");
         assertEq(initialProverBalanceAfter, initialProverBalanceBefore, "Initial prover should receive nothing");
     }
@@ -975,7 +975,7 @@ abstract contract BaseProverManagerTest is Test {
     function _deposit(address user, uint256 amount) internal virtual;
 
     function _maxAllowedFee(uint96 fee) internal pure returns (uint96) {
-        return uint96(LibPercentage.scaleByBPS(fee, MAX_BID_PERCENTAGE));
+        return uint96(LibPercentage.scaleByBPS(fee, MAX_BID_FRACTION));
     }
 
     function _exit(address prover) internal {

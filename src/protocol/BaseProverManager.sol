@@ -123,7 +123,7 @@ abstract contract BaseProverManager is IProposerFees, IProverManager, BalanceAcc
     }
 
     /// @inheritdoc IProverManager
-    /// @dev The offered fee has to be at most `maxBidPercentage` of the current best price.
+    /// @dev The offered fee has to be at most `maxBidFraction` of the current best price.
     /// @dev The current best price may be the current prover's fee or the fee of the next bid, depending on whether the
     /// period is open or closed.
     function bid(uint96 offeredFee) external {
@@ -147,7 +147,7 @@ abstract contract BaseProverManager is IProposerFees, IProverManager, BalanceAcc
     }
 
     /// @inheritdoc IProverManager
-    /// @dev This can be called by anyone, and they get `evictorIncentivePercentage` of the liveness bond as an
+    /// @dev This can be called by anyone, and they get `evictorIncentiveFraction` of the liveness bond as an
     /// incentive.
     function evictProver(IPublicationFeed.PublicationHeader calldata publicationHeader) external {
         require(publicationFeed.validateHeader(publicationHeader), InvalidPublication());
@@ -163,7 +163,7 @@ abstract contract BaseProverManager is IProposerFees, IProverManager, BalanceAcc
         (uint40 end,) = period.close(_exitDelay(), 0);
 
         // Reward the evictor and slash the prover
-        uint96 evictorIncentive = period.stake.scaleByBPS(_evictorIncentivePercentage());
+        uint96 evictorIncentive = period.stake.scaleByBPS(_evictorIncentiveFraction());
         _increaseBalance(msg.sender, evictorIncentive);
         period.slash(evictorIncentive);
 
@@ -232,7 +232,7 @@ abstract contract BaseProverManager is IProposerFees, IProverManager, BalanceAcc
         require(period.isInitialized(), PeriodNotInitialized());
         require(period.isBefore(provenPublication.timestamp), PublicationNotAfterPeriod());
 
-        _increaseBalance(period.prover, period.finalize(_rewardPercentage()));
+        _increaseBalance(period.prover, period.finalize(_rewardFraction()));
     }
 
     /// @inheritdoc IProposerFees
@@ -261,11 +261,11 @@ abstract contract BaseProverManager is IProposerFees, IProverManager, BalanceAcc
         return _periods[periodId];
     }
 
-    /// @dev Ensure the offered fee is low enough. It must be at most `maxBidPercentage` of the fee it is outbidding
+    /// @dev Ensure the offered fee is low enough. It must be at most `maxBidFraction` of the fee it is outbidding
     /// @param fee The fee to be outbid (either the current period's fee or next period's winning fee)
     /// @param offeredFee The new bid
     function _ensureSufficientUnderbid(uint96 fee, uint96 offeredFee) internal view virtual {
-        uint96 requiredMaxFee = fee.scaleByBPS(_maxBidPercentage());
+        uint96 requiredMaxFee = fee.scaleByBPS(_maxBidFraction());
         require(offeredFee <= requiredMaxFee, OfferedFeeTooHigh());
     }
 

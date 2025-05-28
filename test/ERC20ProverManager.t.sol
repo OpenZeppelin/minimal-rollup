@@ -21,15 +21,15 @@ import {BalanceAccounting} from "src/protocol/BalanceAccounting.sol";
 
 import {
     DELAYED_FEE_PERCENTAGE,
-    EVICTOR_INCENTIVE_PERCENTAGE,
+    EVICTOR_INCENTIVE_FRACTION,
     EXIT_DELAY,
     INITIAL_FEE,
     INITIAL_PERIOD,
     LIVENESS_BOND,
     LIVENESS_WINDOW,
-    MAX_BID_PERCENTAGE,
+    MAX_BID_FRACTION,
     PROVING_WINDOW,
-    REWARD_PERCENTAGE,
+    REWARD_FRACTION,
     SUCCESSION_DELAY
 } from "./BaseProverManager.t.sol";
 
@@ -56,8 +56,8 @@ contract ERC20ProverManagerMock is ERC20ProverManager {
         )
     {}
 
-    function _maxBidPercentage() internal view virtual override returns (uint16) {
-        return MAX_BID_PERCENTAGE;
+    function _maxBidFraction() internal view virtual override returns (uint16) {
+        return MAX_BID_FRACTION;
     }
 
     function _livenessWindow() internal view virtual override returns (uint40) {
@@ -80,12 +80,12 @@ contract ERC20ProverManagerMock is ERC20ProverManager {
         return LIVENESS_BOND;
     }
 
-    function _evictorIncentivePercentage() internal view virtual override returns (uint16) {
-        return EVICTOR_INCENTIVE_PERCENTAGE;
+    function _evictorIncentiveFraction() internal view virtual override returns (uint16) {
+        return EVICTOR_INCENTIVE_FRACTION;
     }
 
-    function _rewardPercentage() internal view virtual override returns (uint16) {
-        return REWARD_PERCENTAGE;
+    function _rewardFraction() internal view virtual override returns (uint16) {
+        return REWARD_FRACTION;
     }
 
     function _delayedFeePercentage() internal view virtual override returns (uint16) {
