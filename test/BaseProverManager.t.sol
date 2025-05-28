@@ -40,13 +40,12 @@ abstract contract BaseProverManagerTest is Test {
     uint256 constant ZERO_DELAYED_PUBLICATIONS = 0;
 
     // Addresses used for testing.
-    address inbox = vm.addr(0x100);
-    address initialProver = vm.addr(0x101);
-    address prover1 = vm.addr(0x200);
-    address prover2 = vm.addr(0x201);
-    address proposer = vm.addr(0x202);
-    address evictor = vm.addr(0x203);
-    address rollupOperator = vm.addr(0x204);
+    address inbox = address(0x100);
+    address initialProver = address(0x101);
+    address prover1 = address(0x200);
+    address prover2 = address(0x201);
+    address proposer = address(0x202);
+    address evictor = address(0x203);
 
     function setUp() public virtual {
         signalService = new SignalService();
