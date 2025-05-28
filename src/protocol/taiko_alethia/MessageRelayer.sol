@@ -71,8 +71,6 @@ contract MessageRelayer is ReentrancyGuardTransient, IMessageRelayer {
         TIP_RECIPIENT_SLOT.asAddress().tstore(tipRecipient);
 
         ethBridge.claimDeposit(ethDeposit, height, proof);
-
-        emit Relayed(ethDeposit, tipRecipient);
     }
 
     /// @inheritdoc IMessageRelayer
@@ -94,10 +92,12 @@ contract MessageRelayer is ReentrancyGuardTransient, IMessageRelayer {
         }
 
         require(success, MessageForwardingFailed());
-        emit MessageForwarded(to, valueToSend, data);
 
         TIP_RECIPIENT_SLOT.asAddress().tstore(address(0));
 
-        payable(tipRecipient).transfer(tip);
+        (bool success,) = tipRecipient.call{value: msg.value}("");
+        require(success, TipSendingFailed());
+
+        emit MessageForwarded(to, valueToSend, data, tipRecipient, tip);
     }
 }

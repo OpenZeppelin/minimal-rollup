@@ -5,22 +5,22 @@ pragma solidity ^0.8.0;
 import {IETHBridge} from "./IETHBridge.sol";
 
 interface IMessageRelayer {
-    /// @dev Emitted when a deposit has been successfully claimed.
-    /// @param ethDeposit Deposit claimed
-    /// @param tipRecipient Address that will receive the tip
-    event Relayed(IETHBridge.ETHDeposit indexed ethDeposit, address tipRecipient);
-
     /// @dev Emitted when a message has been successfully forwarded.
     /// @param to Address forwarded to
     /// @param amount Amount forwarded
     /// @param data Data forwarded
-    event MessageForwarded(address indexed to, uint256 amount, bytes data);
+    /// @param tipRecipient Address that received the tip
+    /// @param tip Tip received
+    event MessageForwarded(address indexed to, uint256 amount, bytes data, address tipRecipient, uint256 tip);
 
     /// @dev Relayer did not provide a high enough gas amount
     error InsufficientGas();
 
     /// @dev Message forwarding failed
     error MessageForwardingFailed();
+
+    /// @dev Tip transfer failed
+    error TipSendingFailed();
 
     /// @notice Executes the claimDeposit function on the ETHBridge.
     /// @dev Implements any intermediary step to claim the deposit (i.e. stores tipRecipient address)
