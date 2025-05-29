@@ -149,9 +149,9 @@ contract PrisonersDilemma is IPrisonersDilemma {
 }
 ```
 
-The standard way to solve this is for both participants to delegate their voting rights to an external coordination contract. It cannot be a 7702-enhanced EOA because that is not binding. This adds complexity because both participants need to validate that there are no loopholes in the contract, and adds overhead timing overhead to account for delegating the rights, and recovering from the possibility of a non-responsive partner.
+The standard way to solve this is for both participants to delegate their voting rights to an external coordination contract. It cannot be a 7702-enhanced EOA because that is not binding. This adds complexity because both participants need to validate that there are no loopholes in the contract, and adds timing overhead to account for delegating the rights, and recovering from the possibility of a non-responsive partner.
 
-Using assertions, each participant can unilaterally declare their intent by executing (either through a contract or 7702-enhanced EOA) the following snippet.
+Using assertions, each participant can declare their intent unilaterally by executing (either through a contract or 7702-enhanced EOA) the following snippet.
 
 ```solidity
 // retrieve my partner's choice recorded in the next block
@@ -172,3 +172,9 @@ Assume both participants create and publish such a transaction. The sequencer ca
 - prove the assertions in the next block.
 
 This allows users to simply state their desired outcome, offloading the coordination and complexity to the block builders.
+
+It also allows complex transactions to progressively resolve over time. For example, consider a user who offers to withdraw funds from their DeFi investment and provide an unsecured loan to anyone as long as the funds are returned with some minimum interest payment, potentially shared with the builder to justify the effort. This is like offering a flash loan in the sense that no collateral is required and the loan must be repaid or it never occurred, but it could span several L1 slots (as long as it's still within the sequencer's publication window).
+
+The offer transaction will sit in the L2 mempool until the sequencer knows that it can fulfill the condition (i.e. there is another transaction that accepts the loan and repays the full amount with interest). At this point, the sequencer can assert that the loan will be repaid and preconfirm the offer transaction. The rest of the ecosystem can build on the knowledge that that loan will be repaid, by emitting events or preemptively paying out dividends (from non-loaned funds).
+
+However, the sequencer does not have to confirm the particular loan. They could wait to see how the rest of the ecosystem develops to see if there is a more profitable sequence of transactions. This could involve L1 deposits or oracle updates that can be asserted in L2, or it could just be new transactions in the L2 mempool. Once the specific loan sequence is chosen, the sequencer can confirm those transactions and then prove that the assertion was fulfilled.
