@@ -5,7 +5,9 @@ import {IETHBridge} from "./IETHBridge.sol";
 import {ISignalService} from "./ISignalService.sol";
 import {ReentrancyGuardTransient} from "@openzeppelin/contracts/utils/ReentrancyGuardTransient.sol";
 
-/// @dev ETH bridging contract to send native ETH between L1 <-> L2 using storage proofs.
+/// @dev In contrast to the `SignalService`, this contract does not expect the bridge to be deployed on the same
+/// address on both chains. This is because it is designed so that each rollup has its own independent bridge contract,
+/// and they may furthermore decide to deploy a new version of the bridge in the future.
 contract ETHBridge is IETHBridge, ReentrancyGuardTransient {
     mapping(bytes32 id => bool) private _claimed;
 

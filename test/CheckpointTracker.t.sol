@@ -26,10 +26,10 @@ contract CheckpointTrackerTest is Test {
     bytes32[] hashes;
     bytes proof;
 
-    uint256 NUM_PUBLICATIONS;
+    uint256 constant NUM_PUBLICATIONS = 20;
+    uint256 constant ZERO_DELAYED_PUBLICATIONS = 0;
 
     function setUp() public {
-        NUM_PUBLICATIONS = 20;
         verifier = new NullVerifier();
 
         feed = new PublicationFeed();
@@ -82,7 +82,7 @@ contract CheckpointTrackerTest is Test {
         // Empty checkpoint needed to comply with the interface, but not used in `CheckpointTracker`
         ICheckpointTracker.Checkpoint memory emptyCheckpoint =
             ICheckpointTracker.Checkpoint({publicationId: 0, commitment: bytes32(0)});
-        tracker.proveTransition(emptyCheckpoint, end, numRelevantPublications, proof);
+        tracker.proveTransition(emptyCheckpoint, end, numRelevantPublications, ZERO_DELAYED_PUBLICATIONS, proof);
 
         ICheckpointTracker.Checkpoint memory provenCheckpoint = tracker.getProvenCheckpoint();
         assertEq(provenCheckpoint.publicationId, end.publicationId);
@@ -94,11 +94,24 @@ contract CheckpointTrackerTest is Test {
             ICheckpointTracker.Checkpoint({publicationId: 3, commitment: bytes32(0)});
         uint256 numRelevantPublications = 2;
 
-        vm.expectRevert("Checkpoint commitment cannot be 0");
         // Empty checkpoint needed to comply with the interface, but not used in `CheckpointTracker`
         ICheckpointTracker.Checkpoint memory emptyCheckpoint =
             ICheckpointTracker.Checkpoint({publicationId: 0, commitment: bytes32(0)});
-        tracker.proveTransition(emptyCheckpoint, end, numRelevantPublications, proof);
+        vm.expectRevert("Checkpoint commitment cannot be 0");
+        tracker.proveTransition(emptyCheckpoint, end, numRelevantPublications, ZERO_DELAYED_PUBLICATIONS, proof);
+    }
+
+    function test_proveTransition_RevertWhenNumDelayedPublicationsGreaterThanNumPublications() public {
+        ICheckpointTracker.Checkpoint memory end =
+            ICheckpointTracker.Checkpoint({publicationId: 3, commitment: keccak256(abi.encode("end"))});
+        uint256 numRelevantPublications = 2;
+        uint256 numDelayedPublications = 3;
+
+        // Empty checkpoint needed to comply with the interface, but not used in `CheckpointTracker`
+        ICheckpointTracker.Checkpoint memory emptyCheckpoint =
+            ICheckpointTracker.Checkpoint({publicationId: 0, commitment: bytes32(0)});
+        vm.expectRevert("Number of delayed publications cannot be greater than the total number of publications");
+        tracker.proveTransition(emptyCheckpoint, end, numRelevantPublications, numDelayedPublications, proof);
     }
 
     function createSampleFeed() private {
