@@ -3,7 +3,6 @@
 \usetikzlibrary{positioning}
 \usetikzlibrary {shapes.geometric}
 \usetikzlibrary {backgrounds}
-\usepackage[nomessages]{fp}
 
 \tikzstyle{lOneBlock} = [circle, draw, fill=lightgray, inner sep=2]
 \tikzstyle{lOneTx} = [rectangle, minimum width=1cm, minimum height = 0.1cm, inner sep=0, outer sep=0]
@@ -49,6 +48,7 @@
 \newcommand{\numLTwoBlocks}{6}
 \newcommand{\pubTx}{tx-2-3}
 \newcommand{\anchorBlock}{lOneBlock\anchorBlockNum}
+\newcommand{\anchorColor}{magenta}
 
 \newcommand{\lTwoTransactions}{
     \node[yshift=-0.3cm, xshift=0.5cm] (blockPos) at (\anchorBlock) {};
@@ -106,11 +106,12 @@
     \clip (t0 |- top) rectangle (bottom);
 }
 
-\newcommand{\injectAnchor}{
-    \node[draw, lOneBlock, fill=magenta] at (\anchorBlock) {};
-    \node[draw, lTwoTx, fill=magenta, minimum width=0.1cm, anchor=west] at (l2Tx-0-0.west) {};
-    \draw[->, magenta] (\anchorBlock.south) to[bend right] (l2Tx-0-0.west);
+\newcommand{\injectAnchorToBlock}[1]{
+    \node[draw, lOneBlock, fill=\anchorColor] at (\anchorBlock) {};
+    \node[draw, lTwoTx, fill=\anchorColor, minimum width=0.1cm, anchor=west] at (l2Tx-#1-0.west) {};
+    \draw[->, \anchorColor] (\anchorBlock.south) to[bend right] (l2Tx-#1-0.west);
 }
+\newcommand{\injectAnchor}{\injectAnchorToBlock{0}}
 
 % Snapshot after L2 transaction
 \ifnum \sourceNo = 3
@@ -129,8 +130,8 @@
 \fi
 
 \newcommand{\validateAnchor}{
-    \node[draw, lOneTx, fill=magenta, minimum width=0.1cm, anchor=west] at (\pubTx.west) {};
-    \draw[->, magenta] (\anchorBlock.north east) to[bend left] (\pubTx.west);
+    \node[draw, lOneTx, fill=\anchorColor, minimum width=0.1cm, anchor=west] (anchorValidation) at (\pubTx.west) {};
+    \draw[->, \anchorColor] (\anchorBlock.north east) to[bend left] (anchorValidation.west);
 }
 
 % Anchor block hash is validated
@@ -150,7 +151,7 @@
 \end{tikzpicture}
 \fi
 
-% Anchor block hash is validated
+% Same Slot Assertion
 \ifnum \sourceNo = 5
 \begin{tikzpicture}[framed]
     \timeline
@@ -164,6 +165,23 @@
     \draw[->, orange] (tx-2-1.west) to[bend right] (assertion.north);
 
     \node[draw, lTwoTx, fill=green] at (l2Tx-9-2) {};
+\end{tikzpicture}
+\fi
+
+% Multiple anchor blocks
+\ifnum \sourceNo = 6
+\begin{tikzpicture}[framed]
+    \timeline
+
+    \lOneTransactions
+    \lTwoTransactions
+    \publication
+    \injectAnchor
+
+    \renewcommand{\anchorBlockNum}{1}
+    \renewcommand{\anchorColor}{brown}
+    \injectAnchorToBlock{8}
+    \validateAnchor
 \end{tikzpicture}
 \fi
 

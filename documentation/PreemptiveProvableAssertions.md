@@ -2,7 +2,7 @@
 
 ## Overview
 
-I'd like to describe a mechanism to extend the flexibility of rollups. The core insight was introduced in Nethermind's [Same Slot L1->L2 Message Passing](https://ethresear.ch/t/same-slot-l1-l2-message-passing/21186) design and I would generalise it to the statement:
+I'd like to describe a mechanism to extend the flexibility of rollups. I learned the core insight through Taiko's anchor transaction mechanism and Nethermind's [Same Slot L1->L2 Message Passing](https://ethresear.ch/t/same-slot-l1-l2-message-passing/21186) design, and I would generalise it to the statement:
 
 > L2 users (and contracts) can rely on arbitrary assertions about future state, provided their transactions are conditioned on those assertions eventually being proven.
 
@@ -13,7 +13,7 @@ This article will unpack that statement and provide some example use cases. We w
 - Same-slot message passing.
 - A mechanism for realtime L1 reads.
 - A mechanism for interdependent L2 transactions.
-- A mechanism for cross-rollup assertions.
+- Mechanisms for cross-rollup assertions.
 - A suggested implementation framework.
 
 ## Background
@@ -26,7 +26,7 @@ L2 transactions are derived from data published in an L1 transaction. Typically,
 
 <p align="center"><img src="./provable_assertion_images.1.png"/></p>
 
-We are also focussed on potential functionality that can be offered by an L2 sequencer with monopoly rights until a particular slot, typically spanning several L1 blocks (although just two are depicted here).
+We are focussed on potential functionality that can be offered by an L2 sequencer with monopoly rights until a particular slot, typically spanning several L1 blocks (although just two are depicted here).
 
 <p align="center"><img src="./provable_assertion_images.2.png"/></p>
 
@@ -38,7 +38,7 @@ We need a mechanism to send messages from L1 to L2, so that L2 users and contrac
 
 The L2 sequencer is required to start each block with an _anchor transaction_, and pass in a recent L1 block number and state root as arguments. Any user can then prove that a particular storage value is consistent with the latest state root, and the rest of the chain can proceed with this knowledge.
 
-For example, consider a snapshot spanning a cross-chain token deposit and a few subsequent L2 blocks:
+For example, consider a scenario spanning a cross-chain token deposit and a few subsequent L2 blocks:
 
 - an L1 bridge contract receives the tokens and records this fact in L1 storage (the dark green transaction in the below diagram).
 - the L2 sequencer passes the latest L1 state root (pink) to the anchor transaction at the start of an L2 block.
@@ -111,6 +111,15 @@ This structure allows for some pretty direct generalisations. In particular, the
 
 It's also possible to make the target L1 call directly from the L1 Inbox, which removes the need to update storage, but the proposer would need to cover the gas costs.
 
-More interestingly, instead of simply insisting the signal exists, the Inbox could save (a hash of) whatever a set of arbitrary queries happen to return. In this way, the Inbox would be responsible for taking L1 actions and retrieving L1 state but would not need to know about the L2 assertions, or evaluate whether they were confirmed. This could be deferred to more complex L2 logic. For example, the sequencer could assert that a transaction will _not_ happen on L1, or it could assert that a DAO proposal will have at least X votes before knowing exactly how many votes it will have.
+More interestingly, instead of simply insisting the signal exists, the Inbox could save (a hash of) whatever a set of arbitrary queries happen to return. In this way, the Inbox would be responsible for taking L1 actions and retrieving L1 state but would not need to know about the L2 assertions, or evaluate whether they were confirmed. This could be deferred to more complex L2 logic. For example, the sequencer could assert that a transaction will _not_ happen on L1, or it could assert that a DAO proposal will have at least X votes at publication time, before knowing exactly how many votes it will have.
 
-This will be clearer when we discuss my suggested implementation.
+This should be clearer when we discuss my suggested implementation.
+
+## Realtime L1 reads
+
+When an L2 publication spans several L1 slots, it will be useful if every intermediate L1 state root is asserted in the L2 state as soon as it's known, which would allow the L2 contracts to respond to L1 updates as they occur. This could be achieved straightforwardly by applying the anchor mechanism to every block.
+
+Naively this appears to require the Inbox to make a different `blockhash` call for each intermediate block, but as an optimisation, the sequencer could reproduce the entire chain of L1 block headers on L2 (starting from the last validated one) when proving the assertions. If the last block hash is validated on L1, this implicitly validates the entire chain.
+
+<p align="center"><img src="./provable_assertion_images.6.png"/></p>
+
