@@ -6,7 +6,7 @@
 
 \tikzstyle{lOneBlock} = [circle, draw, fill=lightgray, inner sep=2]
 \tikzstyle{lOneTx} = [rectangle, minimum width=1cm, minimum height = 0.1cm, inner sep=0, outer sep=0]
-\tikzstyle{lTwoTx} = [rectangle, blue, minimum width=0.4cm, minimum height = 0.1cm, inner sep=0, outer sep=0]
+\tikzstyle{lTwoTx} = [rectangle, \rollupColor, minimum width=0.4cm, minimum height = 0.1cm, inner sep=0, outer sep=0]
 \tikzstyle{background rectangle} = [fill=white]
 
 
@@ -46,12 +46,16 @@
 % This makes it easier to reuse variables between different diagrams and also makes the diagram commands more readable
 \newcommand{\anchorBlockNum}{1}
 \newcommand{\numLTwoBlocks}{6}
+\newcommand{\rollupName}{A}
+\newcommand{\rollupColor}{blue}
+\newcommand{\rollupOffset}{-0.3cm}
 \newcommand{\pubTx}{tx-2-3}
 \newcommand{\anchorBlock}{lOneBlock\anchorBlockNum}
 \newcommand{\anchorColor}{magenta}
 
+
 \newcommand{\lTwoTransactions}{
-    \node[yshift=-0.3cm, xshift=0.5cm] (blockPos) at (\anchorBlock) {};
+    \node[yshift=\rollupOffset, xshift=0.5cm] (blockPos) at (\anchorBlock) {};
     \foreach \idx in {0,...,\numLTwoBlocks}{
         \node (lTwoBlock\idx)  at (blockPos) {};
         \node (blockPos) at (blockPos)[xshift=0.5cm] {};
@@ -60,16 +64,16 @@
     \foreach \blockIdx in {0,...,\numLTwoBlocks} {
         \node (txPos) at (lTwoBlock\blockIdx) {};
         \foreach \txIdx in {0,...,4}{
-            \node[draw, lTwoTx, anchor=north] (l2Tx-\blockIdx-\txIdx) at (txPos) {};
-            \node (txPos) at (l2Tx-\blockIdx-\txIdx.south) {};
+            \node[draw, lTwoTx, anchor=north] (l2Tx-\rollupName-\blockIdx-\txIdx) at (txPos) {};
+            \node (txPos) at (l2Tx-\rollupName-\blockIdx-\txIdx.south) {};
         }
     }
 }
 
 \newcommand{\publication}{
-    \node[draw, lOneTx, fill=blue] at (\pubTx) {};
-    \node[xshift=-0.1cm, yshift=0.1cm] (topLeft) at (l2Tx-0-0.north west) {};
-    \node[xshift=0.1cm, yshift=-0.1cm] (bottomRight) at (l2Tx-\numLTwoBlocks-4.south east) {};
+    \node[draw, lOneTx, fill=\rollupColor] at (\pubTx) {};
+    \node[xshift=-0.1cm, yshift=0.1cm] (topLeft) at (l2Tx-\rollupName-0-0.north west) {};
+    \node[xshift=0.1cm, yshift=-0.1cm] (bottomRight) at (l2Tx-\rollupName-\numLTwoBlocks-4.south east) {};
     \draw[very thin] (topLeft) rectangle (bottomRight) {};
     \draw[very thin] (topLeft) -- (\pubTx.north west);
     \draw[very thin] (bottomRight |- topLeft) -- (\pubTx.north east);
@@ -108,8 +112,8 @@
 
 \newcommand{\injectAnchorToBlock}[1]{
     \node[draw, lOneBlock, fill=\anchorColor] at (\anchorBlock) {};
-    \node[draw, lTwoTx, fill=\anchorColor, minimum width=0.1cm, anchor=west] at (l2Tx-#1-0.west) {};
-    \draw[->, \anchorColor] (\anchorBlock.south) to[bend right] (l2Tx-#1-0.west);
+    \node[draw, lTwoTx, fill=\anchorColor, minimum width=0.1cm, anchor=west] at (l2Tx-\rollupName-#1-0.west) {};
+    \draw[->, \anchorColor] (\anchorBlock.south) to[bend right] (l2Tx-\rollupName-#1-0.west);
 }
 \newcommand{\injectAnchor}{\injectAnchorToBlock{0}}
 
@@ -125,7 +129,7 @@
     \injectAnchor
 
     \node[draw, lOneTx, fill=teal] at (tx-0-4) {};
-    \node[draw, lTwoTx, fill=green] at (l2Tx-1-2) {};
+    \node[draw, lTwoTx, fill=green] at (l2Tx-A-1-2) {};
 \end{tikzpicture}
 \fi
 
@@ -146,7 +150,7 @@
     \validateAnchor
 
     \node[draw, lOneTx, fill=teal] at (tx-0-4) {};
-    \node[draw, lTwoTx, fill=green] at (l2Tx-1-2) {};
+    \node[draw, lTwoTx, fill=green] at (l2Tx-A-1-2) {};
 
 \end{tikzpicture}
 \fi
@@ -161,10 +165,10 @@
     \publication
     
     \node[draw, lOneTx, fill=orange] at (tx-2-1) {};
-    \node[draw, lTwoTx, fill=orange, minimum width=0.1cm, anchor=west] (assertion) at (l2Tx-9-0.west) {};
+    \node[draw, lTwoTx, fill=orange, minimum width=0.1cm, anchor=west] (assertion) at (l2Tx-A-9-0.west) {};
     \draw[->, orange] (tx-2-1.west) to[bend right] (assertion.north);
 
-    \node[draw, lTwoTx, fill=green] at (l2Tx-9-2) {};
+    \node[draw, lTwoTx, fill=green] at (l2Tx-A-9-2) {};
 \end{tikzpicture}
 \fi
 
@@ -196,10 +200,39 @@
     \lOneTransactions
     \lTwoTransactions
 
-    \node[draw, lTwoTx, fill=green] at (l2Tx-1-3) {};
-    \node[draw, lTwoTx, fill=olive] at (l2Tx-3-1) {};
-    \node[draw, lTwoTx, fill=olive, minimum width=0.1cm, anchor=west] (assertion) at (l2Tx-1-2.west) {};
-    \draw[->, olive] (l2Tx-3-1.west) to[bend right] (assertion);
+    \node[draw, lTwoTx, fill=green] at (l2Tx-A-1-3) {};
+    \node[draw, lTwoTx, fill=olive] at (l2Tx-A-3-1) {};
+    \node[draw, lTwoTx, fill=olive, minimum width=0.1cm, anchor=west] (assertion) at (l2Tx-A-1-2.west) {};
+    \draw[->, olive] (l2Tx-A-3-1.west) to[bend right] (assertion);
+\end{tikzpicture}
+\fi
+
+% Cross rollup atomicity
+\ifnum \sourceNo = 8
+\begin{tikzpicture}[framed]
+    \timeline
+
+    \lOneTransactions
+    \lTwoTransactions
+    \publication
+    \node[draw, lTwoTx, fill=cyan] at (l2Tx-A-1-3) {};
+    \node[draw, lTwoTx, fill=violet, minimum width=0.1cm, anchor=west] (assertionA) at (l2Tx-A-1-1.west) {};
+
+
+    \renewcommand{\rollupName}{B}
+    \renewcommand{\rollupColor}{brown}
+    \renewcommand{\rollupOffset}{-1.1cm}
+    \renewcommand{\pubTx}{tx-2-4}
+    
+    \lTwoTransactions
+    \publication
+    \node[draw, lTwoTx, fill=violet] at (l2Tx-B-5-1) {};
+    \node[draw, lTwoTx, fill=cyan, minimum width=0.1cm, anchor=west] (assertionB) at (l2Tx-B-3-3.west) {};
+
+    \draw[->, violet] (l2Tx-B-5-1.north) to[bend right] (assertionA.east);
+    \draw[->, cyan] (l2Tx-A-1-3.south) to[bend right] (assertionB.west);
+
+
 \end{tikzpicture}
 \fi
 

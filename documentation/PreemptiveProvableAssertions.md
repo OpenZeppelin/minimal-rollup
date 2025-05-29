@@ -149,13 +149,13 @@ contract PrisonersDilemma is IPrisonersDilemma {
 }
 ```
 
-The standard way to solve this is for both participants to delegate their voting rights to an external coordination contract. It cannot be a 7702-enhanced EOA because that is not binding. This adds complexity because both participants need to validate that there are no loopholes in the contract, and adds timing overhead to account for delegating the rights, and recovering from the possibility of a non-responsive partner.
+The standard way to solve this is for both participants to delegate their voting rights to an external coordination contract. It cannot be a 7702-enhanced EOA because that is not binding. This adds complexity because both participants need to validate that there are no loopholes in the coordination contract, and adds timing overhead to account for delegating the rights and recovering from the possibility of a non-responsive partner.
 
 Using assertions, each participant can declare their intent unilaterally by executing (either through a contract or 7702-enhanced EOA) the following snippet.
 
 ```solidity
 // retrieve my partner's choice recorded in the next block
-// (we could use the same block but using the next block helps to emphasise the concept)
+// we could use the same block but using the next block helps to emphasise the concept
 partnerChoice = assertions.futureState(
     block.number + 1, 
     prisonersDilemma, 
@@ -178,3 +178,25 @@ It also allows complex transactions to progressively resolve over time. For exam
 The offer transaction will sit in the L2 mempool until the sequencer knows that it can fulfill the condition (i.e. there is another transaction that accepts the loan and repays the full amount with interest). At this point, the sequencer can assert that the loan will be repaid and preconfirm the offer transaction. The rest of the ecosystem can build on the knowledge that that loan will be repaid, by emitting events or preemptively paying out dividends (from non-loaned funds).
 
 However, the sequencer does not have to confirm the particular loan. They could wait to see how the rest of the ecosystem develops to see if there is a more profitable sequence of transactions. This could involve L1 deposits or oracle updates that can be asserted in L2, or it could just be new transactions in the L2 mempool. Once the specific loan sequence is chosen, the sequencer can confirm those transactions and then prove that the assertion was fulfilled.
+
+## Cross-rollup assertions
+
+The same pattern can be extended to provide cross-rollup atomicity, with some additional dependencies or assumptions. Consider a swap where Alice sends 10 ETH to Bob (light blue) on rollup A, in exchange for Bob sending Alice 10 ETH (purple) on rollup B. The goal is to ensure neither transaction can be included without the other, which is achieved by requiring the sequencer to assert the existence of the other transaction into both rollups. Each transaction will revert if the relevant assertion has not been made.
+
+<p align="center"><img src="./provable_assertion_images.8.png"/></p>
+
+The particular mechanism and the corresponding security properties depend on the underlying assumptions, so let's explore some options.
+
+### Setting
+
+In this article we assume that the cross-rollup mechanism is implemented by an entity with temporary monopoly sequencing rights for all relevant rollups up to a given L1 slot. This is a natural scenario when dealing with based rollups, where each sequencer can opt in to whichever rollups they choose to support. However, we do not assume any agreements between rollups to guarantee shared sequencing. While there are many composability advantages that can be achieved with enshrined shared sequencing, it does require strong coordination and permissioning rules and may be inaccessible to smaller rollups and appchains.
+
+Instead, we expect a dynamic process where different sequencers can freely opt in or out of different rollups, or could be banned or have insufficient stake for some but not all rollups. This context creates a very strong requirement that complicates composability: the state of a rollup must be entirely derivable in the rollup's node from the information available on L1, even if it depends on activity occuring on another rollup.
+
+To understand this requirement, consider how our desired atomic transactions would be included:
+
+- an opportunity arises when a particular entity can sequence transactions for both rollup A and rollup B.
+- this sequencer includes both interdependent transactions in their publications. Alice's transaction on rollup A should only succeed if Bob's transaction succeeds on rollup B.
+- once the bundles are published, anyone running nodes for both rollups can reconstruct the state of both rollups and can confirm that both transactions succeeded.
+- however, the next rollup A sequencer may not be running a rollup B node or know anything about the rollup B state. If they are unable to determine whether Bob's transaction succeeded on rollup B, they do not know whether Alice's transaction should succeed on rollup A. In this scenario, the rollup A sequencer could not determine the current state of rollup A, so they could not build on top of it.
+- therefore, the information about whether Bob's transaction succeeded must somehow be available on L1 as soon as the next sequencer starts building (i.e. as soon as the rollup A bundle is published).
