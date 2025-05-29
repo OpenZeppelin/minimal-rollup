@@ -140,7 +140,7 @@ contract PrisonersDilemma is IPrisonersDilemma {
 	
 	function choose(uint256 choice) public {
 		require(choices[msg.sender] == 0);
-		choices[msg.sender] == choice;
+		choices[msg.sender] = choice;
 	}
 
 	function payout() public {
