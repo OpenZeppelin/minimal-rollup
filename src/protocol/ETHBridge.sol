@@ -6,10 +6,8 @@ import {ISignalService} from "./ISignalService.sol";
 import {ReentrancyGuardTransient} from "@openzeppelin/contracts/utils/ReentrancyGuardTransient.sol";
 
 /// @dev ETH bridging contract to send native ETH between L1 <-> L2 using storage proofs.
-///
-/// IMPORTANT: No recovery mechanism is implemented in case an account creates a deposit that can't be claimed.
 contract ETHBridge is IETHBridge, ReentrancyGuardTransient {
-    mapping(bytes32 id => Status status) private _depositStatus;
+    mapping(bytes32 id => bool) private _claimed;
 
     /// Incremental nonce to generate unique deposit IDs.
     uint256 private _globalDepositNonce;
@@ -35,11 +33,8 @@ contract ETHBridge is IETHBridge, ReentrancyGuardTransient {
     }
 
     /// @inheritdoc IETHBridge
-    /// @dev The `NONE` status does not indicate that the deposit does not exist
-    /// but rather that the deposit has not been processed yet (it may also not exist),
-    /// use isSignalStored to verify the existence of a deposit.
-    function getDepositStatus(bytes32 id) public view returns (Status) {
-        return _depositStatus[id];
+    function getDepositStatus(bytes32 id) public view returns (bool) {
+        return _claimed[id];
     }
 
     /// @inheritdoc IETHBridge
@@ -48,8 +43,8 @@ contract ETHBridge is IETHBridge, ReentrancyGuardTransient {
     }
 
     /// @inheritdoc IETHBridge
-    function deposit(address to, bytes memory data) public payable returns (bytes32 id) {
-        ETHDeposit memory ethDeposit = ETHDeposit(_globalDepositNonce, msg.sender, to, msg.value, data);
+    function deposit(address to, bytes memory data, address canceler) public payable returns (bytes32 id) {
+        ETHDeposit memory ethDeposit = ETHDeposit(_globalDepositNonce, msg.sender, to, msg.value, data, canceler);
         id = _generateId(ethDeposit);
         unchecked {
             ++_globalDepositNonce;
@@ -61,45 +56,36 @@ contract ETHBridge is IETHBridge, ReentrancyGuardTransient {
 
     /// @inheritdoc IETHBridge
     function claimDeposit(ETHDeposit memory ethDeposit, uint256 height, bytes memory proof) external nonReentrant {
-        bytes32 id = _generateId(ethDeposit);
-        require(getDepositStatus(id) == Status.NONE, DepositAlreadyProcessed());
-
-        signalService.verifySignal(height, trustedCommitmentPublisher, counterpart, id, proof);
-
-        _depositStatus[id] = Status.PROCESSED;
-        _sendETH(ethDeposit.to, ethDeposit.amount, ethDeposit.data);
-
+        bytes32 id = _claimDeposit(ethDeposit, ethDeposit.to, ethDeposit.amount, ethDeposit.data, height, proof);
         emit DepositClaimed(id, ethDeposit);
     }
 
     /// @inheritdoc IETHBridge
-    function cancelDeposit(ETHDeposit memory ethDeposit) external {
-        bytes32 id = _generateId(ethDeposit);
-        require(msg.sender == ethDeposit.from, OnlyDepositer());
-        require(getDepositStatus(id) == Status.NONE, DepositAlreadyProcessed());
+    function cancelDeposit(ETHDeposit memory ethDeposit, address claimee, uint256 height, bytes memory proof)
+        external
+    {
+        require(msg.sender == ethDeposit.canceler, OnlyCanceler());
 
-        _depositStatus[id] = Status.CANCELLED;
+        bytes32 id = _claimDeposit(ethDeposit, claimee, ethDeposit.amount, bytes(""), height, proof);
 
-        bytes32 cancelledDepositId = id ^ bytes32(uint256(Status.CANCELLED));
-        signalService.sendSignal(cancelledDepositId);
-
-        emit DepositCancelled(id, cancelledDepositId);
+        emit DepositCancelled(id, claimee);
     }
 
-    /// @inheritdoc IETHBridge
-    function claimCancelledDeposit(ETHDeposit memory ethDeposit, uint256 height, bytes memory proof)
-        external
-        nonReentrant
-    {
-        bytes32 id = _generateId(ethDeposit);
-        require(getDepositStatus(id) == Status.NONE, DepositAlreadyProcessed());
-        bytes32 cancelledDepositId = id ^ bytes32(uint256(Status.CANCELLED));
+    function _claimDeposit(
+        ETHDeposit memory ethDeposit,
+        address to,
+        uint256 amount,
+        bytes memory data,
+        uint256 height,
+        bytes memory proof
+    ) internal returns (bytes32 id) {
+        id = _generateId(ethDeposit);
+        require(!getDepositStatus(id), DepositAlreadyProcessed());
 
-        signalService.verifySignal(height, trustedCommitmentPublisher, counterpart, cancelledDepositId, proof);
+        signalService.verifySignal(height, trustedCommitmentPublisher, counterpart, id, proof);
 
-        _depositStatus[id] = Status.PROCESSED;
-        //CHECK: send to depositor or from.. should be the same address by i feel from is safer
-        _sendETH(ethDeposit.from, ethDeposit.amount, "");
+        _claimed[id] = true;
+        _sendETH(to, amount, data);
     }
 
     /// @dev Function to transfer ETH to the receiver but ignoring the returndata.

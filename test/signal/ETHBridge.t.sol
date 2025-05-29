@@ -44,7 +44,8 @@ contract BridgeETHState is BaseState {
         vm.prank(defaultSender);
         vm.deal(defaultSender, senderBalanceL1);
         bytes memory emptyData = "";
-        depositIdOne = L1EthBridge.deposit{value: depositAmount}(defaultSender, emptyData);
+        address canceler = address(0);
+        depositIdOne = L1EthBridge.deposit{value: depositAmount}(defaultSender, emptyData, canceler);
     }
 }
 
@@ -73,7 +74,7 @@ contract ETHBridgeTest is BridgeETHState2 {
         assertEq(defaultSender.balance, senderBalanceL1 - depositAmount);
 
         vm.selectFork(L2Fork);
-        assert(L2EthBridge.getDepositStatus(depositIdOne) == IETHBridge.Status.PROCESSED);
+        assert(L2EthBridge.getDepositStatus(depositIdOne) == true);
         assertEq(defaultSender.balance, senderBalanceL2);
     }
 }
@@ -117,8 +118,9 @@ contract ClaimDepositTest is CommitmentStoredState {
             ISignalService.SignalProof(accountProof, storageProof, stateRoot, blockHash);
         bytes memory encodedProof = abi.encode(signalProof);
 
+        address canceler = address(0);
         IETHBridge.ETHDeposit memory depositOne =
-            IETHBridge.ETHDeposit(0, defaultSender, defaultSender, depositAmount, bytes(""));
+            IETHBridge.ETHDeposit(0, defaultSender, defaultSender, depositAmount, bytes(""), canceler);
 
         vm.selectFork(L2Fork);
         L2EthBridge.claimDeposit(depositOne, commitmentHeight, encodedProof);
