@@ -123,3 +123,52 @@ Naively this appears to require the Inbox to make a different `blockhash` call f
 
 <p align="center"><img src="./provable_assertion_images.6.png"/></p>
 
+## Interdependent L2 transactions
+
+One category of state that the sequencer can predict is the L2 state within the publication that they are constructing. Having decided to respect some constraint about future state, they can assert that claim immediately so L2 contracts can rely on it.
+
+<p align="center"><img src="./provable_assertion_images.7.png"/></p>
+
+This could simplify interdependent transactions. For example, consider a literal Prisoner's Dilemma contract.
+
+```solidity
+contract PrisonersDilemma is IPrisonersDilemma {
+	const uint256 COOPERATE = 1;
+	const uint256 DEFECT = 2;
+	
+	mapping(address participant => uint256 choice) public choices;
+	
+	function choose(uint256 choice) public {
+		require(choices[msg.sender] == 0);
+		choices[msg.sender] == choice;
+	}
+
+	function payout() public {
+		// partition rewards according to the Prisoner's dilemma payout table
+	}
+}
+```
+
+The standard way to solve this is for both participants to delegate their voting rights to an external coordination contract. It cannot be a 7702-enhanced EOA because that is not binding. This adds complexity because both participants need to validate that there are no loopholes in the contract, and adds overhead timing overhead to account for delegating the rights, and recovering from the possibility of a non-responsive partner.
+
+Using assertions, each participant can unilaterally declare their intent by executing (either through a contract or 7702-enhanced EOA) the following snippet.
+
+```solidity
+// retrieve my partner's choice recorded in the next block
+// (we could use the same block but using the next block helps to emphasise the concept)
+partnerChoice = assertions.futureState(
+    block.number + 1, 
+    prisonersDilemma, 
+    abi.encodeCall(IPrisonersDilemma.choices, partner)
+)
+require(partnerChoice == COOPERATE);
+prisonersDilemma.choose(COOPERATE);
+```
+
+Assume both participants create and publish such a transaction. The sequencer can then:
+- recognise that if either transaction succeeds, the other one will too.
+- make both assertions (i.e. claim that the `choices` call will return `COOPERATE` for both participants in the next block).
+- include both transactions in the current block.
+- prove the assertions in the next block.
+
+This allows users to simply state their desired outcome, offloading the coordination and complexity to the block builders.
