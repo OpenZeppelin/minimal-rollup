@@ -200,3 +200,10 @@ To understand this requirement, consider how our desired atomic transactions wou
 - once the bundles are published, anyone running nodes for both rollups can reconstruct the state of both rollups and can confirm that both transactions succeeded.
 - however, the next rollup A sequencer may not be running a rollup B node or know anything about the rollup B state. If they are unable to determine whether Bob's transaction succeeded on rollup B, they do not know whether Alice's transaction should succeed on rollup A. In this scenario, the rollup A sequencer could not determine the current state of rollup A, so they could not build on top of it.
 - therefore, the information about whether Bob's transaction succeeded must somehow be available on L1 as soon as the next sequencer starts building (i.e. as soon as the rollup A bundle is published).
+
+
+### Realtime proving
+
+This problem is trivially solved when we have real time proving. Any sequencer that created a cross-rollup assertion would be required to include a proof of the publication's correctness when it is posted. In this way, the validated final state of rollup B (available on L1) could be used to prove the cross-rollup assertion in rollup A, just like all other assertions in this article that are provable at publication time. This implies the rollup A state would be immediately derivable using a rollup A node.
+
+Unfortunately, realtime proving is currently only possible for simple app chains with trivial state-transition functions.
