@@ -207,3 +207,23 @@ To understand this requirement, consider how our desired atomic transactions wou
 This problem is trivially solved when we have real time proving. Any sequencer that created a cross-rollup assertion would be required to include a proof of the publication's correctness when it is posted. In this way, the validated final state of rollup B (available on L1) could be used to prove the cross-rollup assertion in rollup A, just like all other assertions in this article that are provable at publication time. This implies the rollup A state would be immediately derivable using a rollup A node.
 
 Unfortunately, realtime proving is currently only possible for simple app chains with trivial state-transition functions.
+
+### Staked claim
+
+An intermediate mechanism would be to require all sequencers to post the final rollup state with each publication. This would be part of the rollup specification, so an incorrect state root would invalidate the whole publication. By default, sequencers would be incentivised to post the correct value to ensure they receive the publication fees, to retain any staked deposit, and to remain part of the rollup's sequencer set.
+
+With this mechanism, cross-rollup assertions could be proven against the _claimed state_, whether or not it is eventually proven correct. Using the cross-chain swap example:
+
+- the sequencer would decide to include both interdependent transactions.
+- on rollup A, they assert that Bob will send 10 ETH to Alice on rollup B.
+- Alice's transfer on rollup A succeeds (after checking the assertion).
+- the sequencer continues to build L2 blocks on both rollups, and possibly preconfirms them.
+- eventually both bundles are submitted to their respective Inbox contracts, along with the claimed state roots.
+- the rollup A Inbox contract saves the claimed rollup B state root along with the rollup A publication.
+- the rollup A's state transition function validates the consistency of the entire bundle, which includes confirming (among many other things) that Bob's transaction is recorded in the claimed rollup B state root (so the assertion is proven).
+
+Note that there is an extra level of indirection, which introduces a new risk. All the assertions in the article are treated as validity conditions for the whole bundle, so L2 contracts can build on them, blindly assuming they are correct. If they are not proven, any dependent transactions are discarded (or will revert) anyway. However, in this case, the assertion is only that Bob's transaction is recorded in the _claimed_ rollup B state root. This assertion could be correct even if the claim is eventually proven to be incorrect (i.e. the sequencer posted an invalid rollup B state root). In this scenario:
+- Alice's transaction would be included in rollup B, but the whole rollup B publication would be discarded.
+- The sequencer would lose all transacion fees associated with the discarded rollup B publication, along with any deposited stake.
+
+This mechanism should only be considered if the cost to the sequencer is large enough to deter defecting in this way.
