@@ -31,7 +31,7 @@ abstract contract BaseProverManager is IProposerFees, IProverManager {
         bool pastDeadline;
     }
 
-    IInbox immutable inbox;
+    IInbox public immutable inbox;
     ICheckpointTracker public immutable checkpointTracker;
 
     /// @notice Common balances for proposers and provers
