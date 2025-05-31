@@ -30,8 +30,8 @@ contract TaikoInbox is IInbox, DelayedInclusionStore {
 
     // attributes associated with the publication
     uint256 private constant METADATA = 0;
-    uint256 private constant LAST_PUBLICATION = 1;
-    uint256 private constant BLOB_REFERENCE = 2;
+    uint256 private constant BLOB_REFERENCE = 1;
+    uint256 private constant NUM_ATTRIBUTES = 2;
 
     bytes32[] private _publicationHashes;
 
@@ -58,8 +58,6 @@ contract TaikoInbox is IInbox, DelayedInclusionStore {
             require(lookahead.isCurrentPreconfer(msg.sender), NotCurrentPreconfer());
         }
 
-        uint256 _lastPublicationId = _publicationHashes.length - 1;
-
         // Build the attribute for the anchor transaction inputs
         require(anchorBlockId >= block.number - maxAnchorBlockIdOffset, AnchorBlockTooOld());
 
@@ -70,12 +68,11 @@ contract TaikoInbox is IInbox, DelayedInclusionStore {
         });
         require(metadata.anchorBlockHash != 0, BlockhashUnavailable());
 
-        bytes[] memory attributes = new bytes[](3);
+        bytes[] memory attributes = new bytes[](NUM_ATTRIBUTES);
         attributes[METADATA] = abi.encode(metadata);
-        attributes[LAST_PUBLICATION] = abi.encode(_lastPublicationId);
         attributes[BLOB_REFERENCE] = abi.encode(blobRefRegistry.getRef(_buildBlobIndices(nBlobs)));
 
-        _lastPublicationId = _publish(attributes, false).id;
+        _publish(attributes, false);
 
         // Publish each delayed inclusion as a separate publication
         IDelayedInclusionStore.Inclusion[] memory inclusions = processDueInclusions();
@@ -85,18 +82,16 @@ contract TaikoInbox is IInbox, DelayedInclusionStore {
         metadata.isDelayedInclusion = true;
         for (uint256 i; i < nInclusions; ++i) {
             attributes[METADATA] = abi.encode(metadata);
-            attributes[LAST_PUBLICATION] = abi.encode(_lastPublicationId);
             attributes[BLOB_REFERENCE] = abi.encode(inclusions[i]);
 
-            _lastPublicationId = _publish(attributes, true).id;
+            _publish(attributes, true);
         }
     }
 
     /// @dev Internal implementation of publication logic
     /// @param attributes The data to publish
     /// @param isDelayed Whether this is a delayed inclusion publication
-    /// @return header The publication header
-    function _publish(bytes[] memory attributes, bool isDelayed) internal returns (PublicationHeader memory header) {
+    function _publish(bytes[] memory attributes, bool isDelayed) internal {
         proposerFees.payPublicationFee(msg.sender, isDelayed);
 
         uint256 nAttributes = attributes.length;
@@ -106,7 +101,7 @@ contract TaikoInbox is IInbox, DelayedInclusionStore {
         }
 
         uint256 id = _publicationHashes.length;
-        header = PublicationHeader({
+        PublicationHeader memory header = PublicationHeader({
             id: id,
             prevHash: _publicationHashes[id - 1],
             publisher: msg.sender,
