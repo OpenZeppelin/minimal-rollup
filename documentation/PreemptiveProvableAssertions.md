@@ -224,6 +224,6 @@ With this mechanism, cross-rollup assertions could be proven against the _claime
 
 Note that there is an extra level of indirection, which introduces a new risk. All the assertions in the article are treated as validity conditions for the whole bundle, so L2 contracts can build on them, blindly assuming they are correct. If they are not proven, any dependent transactions are discarded (or will revert) anyway. However, in this case, the assertion is only that Bob's transaction is recorded in the _claimed_ rollup B state root. This assertion could be correct even if the claim is eventually proven to be incorrect (i.e. the sequencer posted an invalid rollup B state root). In this scenario:
 - Alice's transaction would be included in rollup B, but the whole rollup B publication would be discarded.
-- The sequencer would lose all transacion fees associated with the discarded rollup B publication, along with any deposited stake.
+- The sequencer would lose all transaction fees associated with the discarded rollup B publication, along with any deposited stake.
 
 This mechanism should only be considered if the cost to the sequencer is large enough to deter defecting in this way.
