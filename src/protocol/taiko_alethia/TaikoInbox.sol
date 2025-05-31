@@ -4,7 +4,6 @@ pragma solidity ^0.8.28;
 import {IBlobRefRegistry} from "../../blobs/IBlobRefRegistry.sol";
 
 import {IDelayedInclusionStore} from "../IDelayedInclusionStore.sol";
-import {IPublicationFeed} from "../IPublicationFeed.sol";
 import {DelayedInclusionStore} from "./DelayedInclusionStore.sol";
 
 import {IInbox} from "../IInbox.sol";
@@ -12,81 +11,129 @@ import {ILookahead} from "../ILookahead.sol";
 import {IProposerFees} from "../IProposerFees.sol";
 
 contract TaikoInbox is IInbox, DelayedInclusionStore {
+    /// @dev Caller is not the current preconfer
+    error NotCurrentPreconfer();
+    /// @dev Anchor block ID is too old
+    error AnchorBlockTooOld();
+    /// @dev Blockhash is not available for the anchor block
+    error BlockhashUnavailable();
+
     struct Metadata {
         uint256 anchorBlockId;
         bytes32 anchorBlockHash;
         bool isDelayedInclusion;
     }
 
-    IPublicationFeed public immutable publicationFeed;
     ILookahead public immutable lookahead;
     IProposerFees public immutable proposerFees;
-
     uint256 public immutable maxAnchorBlockIdOffset;
-
-    uint64 public lastPublicationId;
 
     // attributes associated with the publication
     uint256 private constant METADATA = 0;
-    uint256 private constant LAST_PUBLICATION = 1;
-    uint256 private constant BLOB_REFERENCE = 2;
+    uint256 private constant BLOB_REFERENCE = 1;
+    uint256 private constant NUM_ATTRIBUTES = 2;
+
+    bytes32[] private _publicationHashes;
 
     constructor(
-        address _publicationFeed,
         address _lookahead,
         address _blobRefRegistry,
         uint256 _maxAnchorBlockIdOffset,
         address _proposerFees,
         uint256 _inclusionDelay
     ) DelayedInclusionStore(_inclusionDelay, _blobRefRegistry) {
-        publicationFeed = IPublicationFeed(_publicationFeed);
+        require(_proposerFees != address(0), "Invalid proposer fees address");
+
         lookahead = ILookahead(_lookahead);
         maxAnchorBlockIdOffset = _maxAnchorBlockIdOffset;
         proposerFees = IProposerFees(_proposerFees);
+
+        // guarantee there is always a previous hash
+        _publicationHashes.push(0);
     }
 
-    function publish(uint256 nBlobs, uint64 anchorBlockId) external payable {
+    /// @inheritdoc IInbox
+    function publish(uint256 nBlobs, uint64 anchorBlockId) external {
         if (address(lookahead) != address(0)) {
-            require(lookahead.isCurrentPreconfer(msg.sender), "not current preconfer");
+            require(lookahead.isCurrentPreconfer(msg.sender), NotCurrentPreconfer());
         }
 
-        uint256 _lastPublicationId = lastPublicationId;
-
         // Build the attribute for the anchor transaction inputs
-        require(anchorBlockId >= block.number - maxAnchorBlockIdOffset, "anchorBlockId too old");
+        require(anchorBlockId >= block.number - maxAnchorBlockIdOffset, AnchorBlockTooOld());
 
         Metadata memory metadata = Metadata({
             anchorBlockId: anchorBlockId,
             anchorBlockHash: blockhash(anchorBlockId),
             isDelayedInclusion: false
         });
-        require(metadata.anchorBlockHash != 0, "blockhash not found");
+        require(metadata.anchorBlockHash != 0, BlockhashUnavailable());
 
-        bytes[] memory attributes = new bytes[](3);
+        bytes[] memory attributes = new bytes[](NUM_ATTRIBUTES);
         attributes[METADATA] = abi.encode(metadata);
-        attributes[LAST_PUBLICATION] = abi.encode(_lastPublicationId);
         attributes[BLOB_REFERENCE] = abi.encode(blobRefRegistry.getRef(_buildBlobIndices(nBlobs)));
 
-        proposerFees.payPublicationFee(msg.sender, false);
-        _lastPublicationId = publicationFeed.publish(attributes).id;
+        _publish(attributes, false);
 
         // Publish each delayed inclusion as a separate publication
         IDelayedInclusionStore.Inclusion[] memory inclusions = processDueInclusions();
         uint256 nInclusions = inclusions.length;
+
         // Metadata is the same as the regular publication, so we just set `isDelayedInclusion` to true
         metadata.isDelayedInclusion = true;
         for (uint256 i; i < nInclusions; ++i) {
             attributes[METADATA] = abi.encode(metadata);
-            attributes[LAST_PUBLICATION] = abi.encode(_lastPublicationId);
             attributes[BLOB_REFERENCE] = abi.encode(inclusions[i]);
 
-            proposerFees.payPublicationFee(msg.sender, true);
-            _lastPublicationId = publicationFeed.publish(attributes).id;
+            _publish(attributes, true);
         }
-
-        lastPublicationId = uint64(_lastPublicationId);
     }
 
+    /// @dev Internal implementation of publication logic
+    /// @param attributes The data to publish
+    /// @param isDelayed Whether this is a delayed inclusion publication
+    function _publish(bytes[] memory attributes, bool isDelayed) internal {
+        proposerFees.payPublicationFee(msg.sender, isDelayed);
+
+        uint256 nAttributes = attributes.length;
+        bytes32[] memory attributeHashes = new bytes32[](nAttributes);
+        for (uint256 i; i < nAttributes; ++i) {
+            attributeHashes[i] = keccak256(attributes[i]);
+        }
+
+        uint256 id = _publicationHashes.length;
+        PublicationHeader memory header = PublicationHeader({
+            id: id,
+            prevHash: _publicationHashes[id - 1],
+            publisher: msg.sender,
+            timestamp: block.timestamp,
+            blockNumber: block.number,
+            attributesHash: keccak256(abi.encode(attributeHashes))
+        });
+
+        bytes32 pubHash = keccak256(abi.encode(header));
+        _publicationHashes.push(pubHash);
+
+        emit Published(pubHash, header, attributes);
+    }
+
+    /// @inheritdoc IInbox
+    function getPublicationHash(uint256 idx) external view returns (bytes32) {
+        return _publicationHashes[idx];
+    }
+
+    /// @inheritdoc IInbox
+    function getNextPublicationId() external view returns (uint256) {
+        return _publicationHashes.length;
+    }
+
+    /// @inheritdoc IInbox
+    function validateHeader(PublicationHeader calldata header) external view returns (bool) {
+        return keccak256(abi.encode(header)) == _publicationHashes[header.id];
+    }
+
+    /// @dev Builds blob indices array for the given number of blobs
+    /// @param nBlobs Number of blobs to create indices for
+    /// @return blobIndices Array of blob indices
     function _buildBlobIndices(uint256 nBlobs) private pure returns (uint256[] memory blobIndices) {
         blobIndices = new uint256[](nBlobs);
         for (uint256 i; i < nBlobs; ++i) {

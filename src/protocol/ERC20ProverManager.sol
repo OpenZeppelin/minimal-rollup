@@ -18,12 +18,11 @@ abstract contract ERC20ProverManager is BaseProverManager, IERC20Depositor {
     constructor(
         address _inbox,
         address _checkpointTracker,
-        address _publicationFeed,
         address _initialProver,
         uint96 _initialFee,
         address _token,
         uint256 _initialDeposit
-    ) BaseProverManager(_inbox, _checkpointTracker, _publicationFeed, _initialProver, _initialFee, _initialDeposit) {
+    ) BaseProverManager(_inbox, _checkpointTracker, _initialProver, _initialFee, _initialDeposit) {
         require(_token != address(0), "Token address cannot be 0");
         require(
             _initialDeposit >= _livenessBond(), "Initial deposit must be greater than or equal to the liveness bond"

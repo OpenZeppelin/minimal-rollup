@@ -8,13 +8,10 @@ import {IETHDepositor} from "./IProverManager.sol";
 /// @notice Implementation of the `BaseProverManager` contract that uses ETH for bids, stake and paying for publication
 /// fees.
 abstract contract ETHProverManager is BaseProverManager, IETHDepositor {
-    constructor(
-        address _inbox,
-        address _checkpointTracker,
-        address _publicationFeed,
-        address _initialProver,
-        uint96 _initialFee
-    ) payable BaseProverManager(_inbox, _checkpointTracker, _publicationFeed, _initialProver, _initialFee, msg.value) {
+    constructor(address _inbox, address _checkpointTracker, address _initialProver, uint96 _initialFee)
+        payable
+        BaseProverManager(_inbox, _checkpointTracker, _initialProver, _initialFee, msg.value)
+    {
         require(
             msg.value >= _livenessBond(),
             "The amount of ETH deposited must be greater than or equal to the livenessBond"

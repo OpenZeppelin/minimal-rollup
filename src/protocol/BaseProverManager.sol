@@ -3,9 +3,10 @@ pragma solidity ^0.8.28;
 
 import {LibPercentage} from "../libs/LibPercentage.sol";
 import {ICheckpointTracker} from "./ICheckpointTracker.sol";
+
+import {IInbox} from "./IInbox.sol";
 import {IProposerFees} from "./IProposerFees.sol";
 import {IProverManager} from "./IProverManager.sol";
-import {IPublicationFeed} from "./IPublicationFeed.sol";
 
 import "@openzeppelin/contracts/utils/math/SafeCast.sol";
 
@@ -30,9 +31,8 @@ abstract contract BaseProverManager is IProposerFees, IProverManager {
         bool pastDeadline;
     }
 
-    address public immutable inbox;
+    IInbox public immutable inbox;
     ICheckpointTracker public immutable checkpointTracker;
-    IPublicationFeed public immutable publicationFeed;
 
     /// @notice Common balances for proposers and provers
     mapping(address user => uint256 balance) private _balances;
@@ -45,26 +45,22 @@ abstract contract BaseProverManager is IProposerFees, IProverManager {
     /// The constructor also calls `_claimProvingVacancy`. Publications will actually start in period 1.
     /// @param _inbox The address of the inbox contract
     /// @param _checkpointTracker The address of the checkpoint tracker contract
-    /// @param _publicationFeed The address of the publication feed contract
     /// @param _initialProver The address that will be designated as the initial prover
     /// @param _initialFee The fee for the initial period
     /// @param _initialDeposit The initial deposit that will be added to the `_initialProver`'s balance
     constructor(
         address _inbox,
         address _checkpointTracker,
-        address _publicationFeed,
         address _initialProver,
         uint96 _initialFee,
         uint256 _initialDeposit
     ) {
         require(_inbox != address(0), "Inbox address cannot be 0");
         require(_checkpointTracker != address(0), "Checkpoint tracker address cannot be 0");
-        require(_publicationFeed != address(0), "Publication feed address cannot be 0");
         require(_initialProver != address(0), "Initial prover address cannot be 0");
 
-        inbox = _inbox;
+        inbox = IInbox(_inbox);
         checkpointTracker = ICheckpointTracker(_checkpointTracker);
-        publicationFeed = IPublicationFeed(_publicationFeed);
 
         // Close the first period so every period has a previous one (and an implicit start timestamp)
         // The initial fee and prover will take effect in the block after this one
@@ -83,7 +79,7 @@ abstract contract BaseProverManager is IProposerFees, IProverManager {
     /// @inheritdoc IProposerFees
     /// @dev This function advances to the next period if the current period has ended.
     function payPublicationFee(address proposer, bool isDelayed) external {
-        require(msg.sender == inbox, "Only the Inbox contract can call this function");
+        require(msg.sender == address(inbox), "Only the Inbox contract can call this function");
 
         uint256 periodId = _currentPeriodId;
 
@@ -134,8 +130,8 @@ abstract contract BaseProverManager is IProposerFees, IProverManager {
     /// @inheritdoc IProverManager
     /// @dev This can be called by anyone, and they get `evictorIncentivePercentage` of the liveness bond as an
     /// incentive.
-    function evictProver(IPublicationFeed.PublicationHeader calldata publicationHeader) external {
-        require(publicationFeed.validateHeader(publicationHeader), "Invalid publication");
+    function evictProver(IInbox.PublicationHeader calldata publicationHeader) external {
+        require(inbox.validateHeader(publicationHeader), "Invalid publication");
 
         uint256 publicationTimestamp = publicationHeader.timestamp;
         require(publicationTimestamp + _livenessWindow() < block.timestamp, "Publication is not old enough");
@@ -179,9 +175,8 @@ abstract contract BaseProverManager is IProposerFees, IProverManager {
     function prove(
         ICheckpointTracker.Checkpoint calldata start,
         ICheckpointTracker.Checkpoint calldata end,
-        IPublicationFeed.PublicationHeader calldata firstPub,
-        IPublicationFeed.PublicationHeader calldata lastPub,
-        uint256 numPublications,
+        IInbox.PublicationHeader calldata firstPub,
+        IInbox.PublicationHeader calldata lastPub,
         uint256 numDelayedPublications,
         bytes calldata proof,
         uint256 periodId
@@ -189,15 +184,23 @@ abstract contract BaseProverManager is IProposerFees, IProverManager {
         Period storage period = _periods[periodId];
         uint40 previousPeriodEnd = periodId > 0 ? _periods[periodId - 1].end : 0;
 
-        require(publicationFeed.validateHeader(lastPub), "Last publication does not exist");
+        require(inbox.validateHeader(lastPub), "Last publication does not exist");
         require(end.publicationId == lastPub.id, "Last publication does not match end checkpoint");
         require(period.end == 0 || lastPub.timestamp <= period.end, "Last publication is after the period");
 
-        require(publicationFeed.validateHeader(firstPub), "First publication does not exist");
+        require(inbox.validateHeader(firstPub), "First publication does not exist");
         require(start.publicationId + 1 == firstPub.id, "First publication not immediately after start checkpoint");
         require(firstPub.timestamp > previousPeriodEnd, "First publication is before the period");
 
-        checkpointTracker.proveTransition(start, end, numPublications, numDelayedPublications, proof);
+        ICheckpointTracker.Checkpoint memory lastProven = checkpointTracker.getProvenCheckpoint();
+        // Only count publications that have not been proven yet for the fee calculation
+        uint256 numPublications = lastPub.id - lastProven.publicationId;
+        require(
+            numDelayedPublications <= numPublications,
+            "Number of delayed publications cannot be greater than the total number of publications"
+        );
+
+        checkpointTracker.proveTransition(start, end, numDelayedPublications, proof);
 
         bool isPastDeadline = block.timestamp > period.deadline && period.deadline != 0;
         if (isPastDeadline) {
@@ -220,11 +223,9 @@ abstract contract BaseProverManager is IProposerFees, IProverManager {
     }
 
     /// @inheritdoc IProverManager
-    function finalizePastPeriod(uint256 periodId, IPublicationFeed.PublicationHeader calldata provenPublication)
-        external
-    {
+    function finalizePastPeriod(uint256 periodId, IInbox.PublicationHeader calldata provenPublication) external {
         ICheckpointTracker.Checkpoint memory lastProven = checkpointTracker.getProvenCheckpoint();
-        require(publicationFeed.validateHeader(provenPublication), "Invalid publication header");
+        require(inbox.validateHeader(provenPublication), "Invalid publication header");
         require(lastProven.publicationId >= provenPublication.id, "Publication must be proven");
 
         Period storage period = _periods[periodId];
