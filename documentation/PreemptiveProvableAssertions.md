@@ -57,7 +57,7 @@ Let's review the security architecture implied by this mechanism. Constraints on
 - rules of the rollup, enforced by the L2 nodes and validity proofs.
 - other commitments (such as preconfirmations), enforced by economic stake and reputation.
 
-The anchor block requirement (and other assertions described in this article) fall into the first category. This means that all relevant information needs to be available on L1 and when using ZK or TEE proofs, it also needs to be verifiable from within the L1 EVM. This is achieved by some combination of:
+The anchor block requirement (and other assertions described in this article) fall into the first category. This means that all relevant information needs to be available on L1, and it also needs to be verifiable from within the L1 EVM when using ZK or TEE proofs. This is achieved by some combination of:
 - performing relevant validations in the L1 Inbox contract at publication time.
 - saving a hash of the available information at publication time, so it can be use to constrain the inputs to an off-chain proof.
 
@@ -77,7 +77,7 @@ In this way, a sequencer that asserts the wrong state root would invalidate the 
 As we have seen, the sequencer's claim when constructing the anchor transaction is not strictly "this is the state root of the latest L1 block" but rather "this state root is consistent with the block hash that will be retrieved in the publication block". This describes a general pattern that we can use whenever:
 
 - the sequencer knows something that they want to assert inside the L2 EVM, so that L2 users and contracts can build on it.
-- the information needed to prove the claim will eventually be verifiable in the L1 EVM at publication time.
+- any L1 information needed to prove the claim will eventually be available in the L1 EVM at publication time. Note that this does not mean the claim itself needs to be verified on L1, just that the final publication can contain a mixture of sequencer-provided data and L1-validated data.
 - the rollup's state transition function requires the claim to be proven for the publication to be valid.
 
 
@@ -105,7 +105,7 @@ As before, this ensures that the sequencer's assertion is confirmed at publicati
 
 ### Generalisation preview
 
-This structure allows for some pretty direct generalisations. In particular, the Taiko Inbox contract is not actually interacting with the same-slot L1 transaction at all, but merely confirms the existence of the signal it would produce in a dedicated `SignalService` contract. The Inbox could also look for evidence of any other L1 transaction (eg. oracle updates, airdrops, DAO votes, etc) that leave remnants in publically accessible L1 storage. The mechanism works directly as long as the sequencer knows that:
+This structure allows for some pretty direct generalisations. In particular, the Taiko Inbox contract is not actually interacting with the same-slot L1 transaction at all, but merely confirms the existence of the signal it would produce in a dedicated `SignalService` contract. The Inbox could also look for evidence of any other L1 transaction (eg. oracle updates, airdrops, DAO votes, etc) that leave remnants in publicly accessible L1 storage. The mechanism works directly as long as the sequencer knows that:
 - the L1 transaction will be included before their own publication, and
 - nothing can happen in the mean time to invalidate it. In most cases, this requires the previous L1 block to have been already published.
 
@@ -117,7 +117,7 @@ This should be clearer when we discuss my suggested implementation.
 
 ## Realtime L1 reads
 
-When an L2 publication spans several L1 slots, it will be useful if every intermediate L1 state root is asserted in the L2 state as soon as it's known, which would allow the L2 contracts to respond to L1 updates as they occur. This could be achieved straightforwardly by applying the anchor mechanism to every block.
+When an L2 publication spans several L1 slots, it will be useful if every intermediate L1 state root is asserted in the L2 state as soon as it's known, which would allow the L2 contracts to respond to L1 updates as they occur (for instance, the light green transaction could depend on the dark green one even though it appears in the middle of the publication). This could be achieved straightforwardly by applying the anchor mechanism to every block.
 
 Naively this appears to require the Inbox to make a different `blockhash` call for each intermediate block, but as an optimisation, the sequencer could reproduce the entire chain of L1 block headers on L2 (starting from the last validated one) when proving the assertions. If the last block hash is validated on L1, this implicitly validates the entire chain.
 
@@ -149,7 +149,7 @@ contract PrisonersDilemma is IPrisonersDilemma {
 }
 ```
 
-The standard way to solve this is for both participants to delegate their voting rights to an external coordination contract. It cannot be a 7702-enhanced EOA because that is not binding. This adds complexity because both participants need to validate that there are no loopholes in the coordination contract, and adds timing overhead to account for delegating the rights and recovering from the possibility of a non-responsive partner.
+The standard way to solve this is for both participants to delegate their voting rights to an external coordination contract. It cannot be a 7702-enhanced EOA because that would not be binding (a participant can always change the code). This adds complexity because both participants need to validate that there are no loopholes in the coordination contract, and adds timing overhead to account for delegating the rights and recovering from the possibility of a non-responsive partner.
 
 Using assertions, each participant can declare their intent unilaterally by executing (either through a contract or 7702-enhanced EOA) the following snippet.
 
@@ -177,7 +177,7 @@ It also allows complex transactions to progressively resolve over time. For exam
 
 The offer transaction will sit in the L2 mempool until the sequencer knows that it can fulfill the condition (i.e. there is another transaction that accepts the loan and repays the full amount with interest). At this point, the sequencer can assert that the loan will be repaid and preconfirm the offer transaction. The rest of the ecosystem can build on the knowledge that that loan will be repaid, by emitting events or preemptively paying out dividends (from non-loaned funds).
 
-However, the sequencer does not have to confirm the particular loan. They could wait to see how the rest of the ecosystem develops to see if there is a more profitable sequence of transactions. This could involve L1 deposits or oracle updates that can be asserted in L2, or it could just be new transactions in the L2 mempool. Once the specific loan sequence is chosen, the sequencer can confirm those transactions and then prove that the assertion was fulfilled.
+However, the sequencer does not have to confirm the particular transaction that justified the assertion. Instead, they could wait to see how the rest of the ecosystem develops in case there is a more profitable sequence of transactions. This could involve L1 deposits or oracle updates that can be asserted in L2, or it could just be new transactions in the L2 mempool. Once the specific loan sequence is chosen, the sequencer can include (and possibly preconfirm) those transactions and then prove that the assertion was fulfilled.
 
 ## Cross-rollup assertions
 
@@ -189,7 +189,7 @@ The particular mechanism and the corresponding security properties depend on the
 
 ### Setting
 
-In this article we assume that the cross-rollup mechanism is implemented by an entity with temporary monopoly sequencing rights for all relevant rollups up to a given L1 slot. This is a natural scenario when dealing with based rollups, where each sequencer can opt in to whichever rollups they choose to support. However, we do not assume any agreements between rollups to guarantee shared sequencing. While there are many composability advantages that can be achieved with enshrined shared sequencing, it does require strong coordination and permissioning rules and may be inaccessible to smaller rollups and appchains.
+In this article we assume that the cross-rollup mechanism is implemented by an entity with temporary monopoly sequencing rights for all relevant rollups up to a given L1 slot. This is a natural scenario when dealing with based rollups, where each sequencer can opt in to whichever rollups they choose to support. However, we do not assume any agreements between rollups to guarantee shared sequencing. While there are many composability advantages that can be achieved with enshrined shared sequencing, it also requires strong coordination and permissioning rules and may be inaccessible to smaller rollups and appchains.
 
 Instead, we expect a dynamic process where different sequencers can freely opt in or out of different rollups, or could be banned or have insufficient stake for some but not all rollups. This context creates a very strong requirement that complicates composability: the state of a rollup must be entirely derivable in the rollup's node from the information available on L1, even if it depends on activity occuring on another rollup.
 
@@ -198,13 +198,13 @@ To understand this requirement, consider how our desired atomic transactions wou
 - an opportunity arises when a particular entity can sequence transactions for both rollup A and rollup B.
 - this sequencer includes both interdependent transactions in their publications. Alice's transaction on rollup A should only succeed if Bob's transaction succeeds on rollup B.
 - once the bundles are published, anyone running nodes for both rollups can reconstruct the state of both rollups and can confirm that both transactions succeeded.
-- however, the next rollup A sequencer may not be running a rollup B node or know anything about the rollup B state. If they are unable to determine whether Bob's transaction succeeded on rollup B, they do not know whether Alice's transaction should succeed on rollup A. In this scenario, the rollup A sequencer could not determine the current state of rollup A, so they could not build on top of it.
+- however, the next rollup A sequencer may not be running a rollup B node or know anything about the rollup B state. If they are unable to determine whether Bob's transaction succeeded on rollup B, they do not know whether Alice's transaction should succeed on rollup A. The rollup B state will eventually be proven on L1, but until then the rollup A sequencer cannot determine the current state of rollup A so they cannot build on top of it and the rollup will stall.
 - therefore, the information about whether Bob's transaction succeeded must somehow be available on L1 as soon as the next sequencer starts building (i.e. as soon as the rollup A bundle is published).
 
 
 ### Realtime proving
 
-This problem is trivially solved when we have real time proving. Any sequencer that created a cross-rollup assertion would be required to include a proof of the publication's correctness when it is posted. In this way, the validated final state of rollup B (available on L1) could be used to prove the cross-rollup assertion in rollup A, just like all other assertions in this article that are provable at publication time. This implies the rollup A state would be immediately derivable using a rollup A node.
+This problem is trivially solved when we have real time proving. Any sequencer that created a cross-rollup assertion would be required to include a proof of the publication's correctness when it is posted. In this way, the validated final state of rollup B (available on L1) could be used to prove the cross-rollup assertion in rollup A, just like all other assertions in this article that are provable at publication time.
 
 Unfortunately, realtime proving is currently only possible for simple app chains with trivial state-transition functions.
 
@@ -212,18 +212,18 @@ Unfortunately, realtime proving is currently only possible for simple app chains
 
 An intermediate mechanism would be to require all sequencers to post the final rollup state with each publication. This would be part of the rollup specification, so an incorrect state root would invalidate the whole publication. By default, sequencers would be incentivised to post the correct value to ensure they receive the publication fees, to retain any staked deposit, and to remain part of the rollup's sequencer set.
 
-With this mechanism, cross-rollup assertions could be proven against the _claimed state_, whether or not it is eventually proven correct. Using the cross-chain swap example:
+With this mechanism, cross-rollup assertions could be proven against the _claimed state_, whether or not it is eventually proven correct. Using the cross-chain swap example (focussing on one side for simplicity, but the other side is symmetrical):
 
 - the sequencer would decide to include both interdependent transactions.
 - on rollup A, they assert that Bob will send 10 ETH to Alice on rollup B.
-- Alice's transfer on rollup A succeeds (after checking the assertion).
+- Alice's transaction on rollup A confirms the assertion and then executes the transfer.
 - the sequencer continues to build L2 blocks on both rollups, and possibly preconfirms them.
 - eventually both bundles are submitted to their respective Inbox contracts, along with the claimed state roots.
 - the rollup A Inbox contract saves the claimed rollup B state root along with the rollup A publication.
 - the rollup A's state transition function validates the consistency of the entire bundle, which includes confirming (among many other things) that Bob's transaction is recorded in the claimed rollup B state root (so the assertion is proven).
 
-Note that there is an extra level of indirection, which introduces a new risk. All the assertions in the article are treated as validity conditions for the whole bundle, so L2 contracts can build on them, blindly assuming they are correct. If they are not proven, any dependent transactions are discarded (or will revert) anyway. However, in this case, the assertion is only that Bob's transaction is recorded in the _claimed_ rollup B state root. This assertion could be correct even if the claim is eventually proven to be incorrect (i.e. the sequencer posted an invalid rollup B state root). In this scenario:
-- Alice's transaction would be included in rollup B, but the whole rollup B publication would be discarded.
+Note that there is an extra level of indirection, which introduces a new risk. All the assertions in the article are treated as validity conditions for the whole bundle, so L2 contracts can build on them, blindly assuming they are correct. If they are not proven, any dependent transactions are discarded (or will revert) anyway. However, in this case, the assertion is only that Bob's transaction is recorded in the _claimed_ rollup B state root. This assertion could be correct even if the claimed state root is eventually proven to be incorrect. In this scenario:
+- Alice's transaction would be included in rollup A, but the whole rollup B publication would be discarded (so Alice would end up sending a one-sided transfer).
 - The sequencer would lose all transaction fees associated with the discarded rollup B publication, along with any deposited stake.
 
 This mechanism should only be considered if the cost to the sequencer is large enough to deter defecting in this way.
