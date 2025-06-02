@@ -71,14 +71,17 @@
     }
 }
 
-\newcommand{\publication}{
+
+% Usage: \partialPublication{startBlock}{endBlock}
+\newcommand{\partialPublication}[2]{
     \node[draw, lOneTx, fill=\rollupColor] at (\pubTx) {};
-    \node[xshift=-0.1cm, yshift=0.1cm] (topLeft) at (l2Tx-\rollupName-0-0.north west) {};
-    \node[xshift=0.1cm, yshift=-0.1cm] (bottomRight) at (l2Tx-\rollupName-\numLTwoBlocks-4.south east) {};
+    \node[xshift=-0.1cm, yshift=0.1cm] (topLeft) at (l2Tx-\rollupName-#1-0.north west) {};
+    \node[xshift=0.1cm, yshift=-0.1cm] (bottomRight) at (l2Tx-\rollupName-#2-4.south east) {};
     \draw[inner sep=0, outer sep=0, rounded corners, \rollupColor] (topLeft) rectangle (bottomRight) {};
     \node[inner sep=0, outer sep=0] (top) at ($(topLeft)!0.5!(bottomRight |- topLeft)$) {};
     \draw[inner sep=0, outer sep=0, ->, \rollupColor] (top) to[in=180] (\pubTx.west);
 }
+\newcommand{\publication}{\partialPublication{0}{\numLTwoBlocks}}
 
 % Introduce L2 chain
 \ifnum \sourceNo = 1
@@ -239,6 +242,26 @@
 
 \end{tikzpicture}
 \fi
+
+% Sub-publication proof
+\ifnum \sourceNo = 9
+\begin{tikzpicture}[framed]
+    \timeline
+    \lOneTransactions
+    \lTwoTransactions
+    % The first partial publication overlaps with L2 block 5. I will remove that block for clarity
+    % There is probably an intelligent way to do this using \clip but I will just overwrite it
+    \node[xshift=-0.05cm, yshift=0.05cm] (topLeft) at (l2Tx-A-5-0.north west) {};
+    \node[xshift=0.05cm, yshift=-0.05cm] (bottomRight) at (l2Tx-A-5-4.south east) {};
+    \fill[white] (topLeft) rectangle (bottomRight);
+
+    \partialPublication{0}{4}
+    \renewcommand{\pubTx}{tx-2-4}
+    \partialPublication{6}{\numLTwoBlocks}
+
+\end{tikzpicture}
+\fi
+
 
 \end{document}
 

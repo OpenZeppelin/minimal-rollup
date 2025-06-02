@@ -227,3 +227,11 @@ Note that there is an extra level of indirection, which introduces a new risk. A
 - The sequencer would lose all transaction fees associated with the discarded rollup B publication, along with any deposited stake.
 
 This mechanism should only be considered if the cost to the sequencer is large enough to deter defecting in this way.
+
+### Sub-publication proving
+
+Now that [sub-slot proving has been demonstrated](https://x.com/SuccinctLabs/status/1924845712921264562), we should consider designs where sequencers provide sub-publication proofs. We could imagine dividing the publication into blocks that come with a publication-time proof, and blocks that are yet to be proven. For simplicity, we could think of this as two different publications transactions (although they do not need to be).
+
+<p align="center"><img src="./provable_assertion_images.9.png"/></p>
+
+It's worth noting that proving any blocks in a publication implies ensuring the entire previous publication is already proven. In this case we could use the realtime proving mechanism, as long as the sequencer only makes cross-chain assertions about transactions in L2 blocks that they know they will be able to prove in time. Of course, blocks that consume or build on the assertion can still be proven after the publication.
