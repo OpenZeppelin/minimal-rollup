@@ -3,29 +3,27 @@ pragma solidity ^0.8.28;
 
 import "forge-std/Test.sol";
 
+import {LibProvingPeriod} from "../src/libs/LibProvingPeriod.sol";
 import {BaseProverManager} from "../src/protocol/BaseProverManager.sol";
 import {IProposerFees} from "../src/protocol/IProposerFees.sol";
 import {IProverManager} from "../src/protocol/IProverManager.sol";
-
+import {LibPercentage} from "src/libs/LibPercentage.sol";
 import {ICheckpointTracker} from "src/protocol/ICheckpointTracker.sol";
 import {IPublicationFeed} from "src/protocol/IPublicationFeed.sol";
 import {PublicationFeed} from "src/protocol/PublicationFeed.sol";
-
-import {LibPercentage} from "src/libs/LibPercentage.sol";
-
 import {SignalService} from "src/protocol/SignalService.sol";
 import {MockCheckpointTracker} from "test/mocks/MockCheckpointTracker.sol";
 import {NullVerifier} from "test/mocks/NullVerifier.sol";
 
 // Configuration parameters.
-uint16 constant MAX_BID_PERCENTAGE = 9500; // 95%
+uint16 constant MAX_BID_FRACTION = 9500; // 95%
 uint40 constant LIVENESS_WINDOW = 60; // 60 seconds
 uint40 constant SUCCESSION_DELAY = 10;
 uint40 constant EXIT_DELAY = 10;
 uint40 constant PROVING_WINDOW = 30;
 uint96 constant LIVENESS_BOND = 1 ether;
-uint16 constant EVICTOR_INCENTIVE_PERCENTAGE = 500; // 5%
-uint16 constant REWARD_PERCENTAGE = 9000; // 90%
+uint16 constant EVICTOR_INCENTIVE_FRACTION = 500; // 5%
+uint16 constant REWARD_FRACTION = 9000; // 90%
 uint96 constant INITIAL_FEE = 0.1 ether;
 uint16 constant DELAYED_FEE_PERCENTAGE = 150; // 150%
 uint256 constant INITIAL_PERIOD = 1;
@@ -88,7 +86,7 @@ abstract contract BaseProverManagerTest is Test {
     }
 
     function test_payPublicationFee_RevertWhen_NotInbox() public {
-        vm.expectRevert("Only the Inbox contract can call this function");
+        vm.expectRevert(BaseProverManager.OnlyInbox.selector);
         proverManager.payPublicationFee(prover1, false);
     }
 
@@ -107,7 +105,7 @@ abstract contract BaseProverManagerTest is Test {
         proverManager.bid(maxAllowedFee);
 
         // Check that period 2 has been created
-        BaseProverManager.Period memory period = proverManager.getPeriod(2);
+        LibProvingPeriod.Period memory period = proverManager.getPeriod(2);
 
         assertEq(period.prover, prover1, "Bid not recorded for new period");
         assertEq(period.fee, maxAllowedFee, "Offered fee not set correctly");
@@ -140,7 +138,7 @@ abstract contract BaseProverManagerTest is Test {
         proverManager.bid(secondBidFee);
 
         // Check that period 2 now has prover2 as the prover
-        BaseProverManager.Period memory period = proverManager.getPeriod(2);
+        LibProvingPeriod.Period memory period = proverManager.getPeriod(2);
         assertEq(period.prover, prover2, "Prover2 should now be the next prover");
         assertEq(period.fee, secondBidFee, "Fee should be updated to prover2's bid");
 
@@ -164,7 +162,7 @@ abstract contract BaseProverManagerTest is Test {
         vm.prank(prover1);
         proverManager.bid(bidFee);
 
-        BaseProverManager.Period memory period = proverManager.getPeriod(1);
+        LibProvingPeriod.Period memory period = proverManager.getPeriod(1);
         assertEq(
             period.end,
             timestampBefore + SUCCESSION_DELAY,
@@ -190,7 +188,7 @@ abstract contract BaseProverManagerTest is Test {
         uint96 insufficientlyReducedFee = maxFee + 1;
 
         vm.prank(prover2);
-        vm.expectRevert("Offered fee not low enough");
+        vm.expectRevert(BaseProverManager.OfferedFeeTooHigh.selector);
         proverManager.bid(insufficientlyReducedFee);
     }
 
@@ -210,7 +208,7 @@ abstract contract BaseProverManagerTest is Test {
         uint96 insufficientlyReducedFee = maxFee + 1;
 
         vm.prank(prover1);
-        vm.expectRevert("Offered fee not low enough");
+        vm.expectRevert(BaseProverManager.OfferedFeeTooHigh.selector);
         proverManager.bid(insufficientlyReducedFee);
     }
 
@@ -221,9 +219,9 @@ abstract contract BaseProverManagerTest is Test {
         IPublicationFeed.PublicationHeader memory header = _insertPublication();
 
         // Capture current period stake before eviction
-        BaseProverManager.Period memory periodBefore = proverManager.getPeriod(1);
+        LibProvingPeriod.Period memory periodBefore = proverManager.getPeriod(1);
         uint256 stakeBefore = periodBefore.stake;
-        uint256 incentive = LibPercentage.scaleByBPS(stakeBefore, EVICTOR_INCENTIVE_PERCENTAGE);
+        uint256 incentive = LibPercentage.scaleByBPS(stakeBefore, EVICTOR_INCENTIVE_FRACTION);
 
         // Evict the prover
         vm.warp(vm.getBlockTimestamp() + LIVENESS_WINDOW + 1);
@@ -235,7 +233,7 @@ abstract contract BaseProverManagerTest is Test {
         proverManager.evictProver(header);
 
         // Verify period 1 is marked as evicted and its stake reduced
-        BaseProverManager.Period memory periodAfter = proverManager.getPeriod(1);
+        LibProvingPeriod.Period memory periodAfter = proverManager.getPeriod(1);
         assertEq(periodAfter.deadline, vm.getBlockTimestamp() + EXIT_DELAY, "Prover should be evicted");
         assertEq(periodAfter.end, vm.getBlockTimestamp() + EXIT_DELAY, "Period end not set correctly");
         assertEq(periodAfter.stake, stakeBefore - incentive, "Stake not reduced correctly");
@@ -251,7 +249,7 @@ abstract contract BaseProverManagerTest is Test {
         // Evict the prover with a publication that is not old enough
         vm.warp(vm.getBlockTimestamp() + LIVENESS_WINDOW);
         vm.prank(evictor);
-        vm.expectRevert("Publication is not old enough");
+        vm.expectRevert(BaseProverManager.PublicationNotOldEnough.selector);
         proverManager.evictProver(header);
     }
 
@@ -265,7 +263,7 @@ abstract contract BaseProverManagerTest is Test {
 
         // Evict the prover with an invalid publication header
         vm.prank(evictor);
-        vm.expectRevert("Invalid publication");
+        vm.expectRevert(BaseProverManager.InvalidPublication.selector);
         proverManager.evictProver(header);
     }
 
@@ -278,7 +276,7 @@ abstract contract BaseProverManagerTest is Test {
         // Evict the prover
         vm.warp(vm.getBlockTimestamp() + LIVENESS_WINDOW + 1);
         vm.prank(evictor);
-        vm.expectRevert("Proving period is not active");
+        vm.expectRevert(BaseProverManager.ProvingPeriodClosed.selector);
         proverManager.evictProver(header);
     }
 
@@ -295,7 +293,7 @@ abstract contract BaseProverManagerTest is Test {
         // Evict the prover
         vm.warp(vm.getBlockTimestamp() + LIVENESS_WINDOW + 1);
         vm.prank(evictor);
-        vm.expectRevert("Publication has been proven");
+        vm.expectRevert(BaseProverManager.PublicationAlreadyProven.selector);
         proverManager.evictProver(header);
     }
 
@@ -312,7 +310,7 @@ abstract contract BaseProverManagerTest is Test {
         proverManager.exit();
 
         // Check that period 1 now has an end time and deadline set
-        BaseProverManager.Period memory period = proverManager.getPeriod(1);
+        LibProvingPeriod.Period memory period = proverManager.getPeriod(1);
         assertEq(period.end, vm.getBlockTimestamp() + EXIT_DELAY, "Exit did not set period end correctly");
         assertEq(
             period.deadline, vm.getBlockTimestamp() + EXIT_DELAY + PROVING_WINDOW, "Proving deadline not set correctly"
@@ -322,7 +320,7 @@ abstract contract BaseProverManagerTest is Test {
     function test_exit_RevertWhen_NotCurrentProver() public {
         // Attempt to exit as a non-prover
         vm.prank(prover1);
-        vm.expectRevert("Not current prover");
+        vm.expectRevert(BaseProverManager.OnlyCurrentProver.selector);
         proverManager.exit();
     }
 
@@ -332,7 +330,7 @@ abstract contract BaseProverManagerTest is Test {
 
         // Try to exit again
         vm.prank(initialProver);
-        vm.expectRevert("Prover already exited");
+        vm.expectRevert(BaseProverManager.ProvingPeriodClosed.selector);
         proverManager.exit();
     }
 
@@ -359,12 +357,12 @@ abstract contract BaseProverManagerTest is Test {
         proverManager.claimProvingVacancy(newFee);
 
         // Check that period 2(the vacant period) has been closed correctly
-        BaseProverManager.Period memory period2 = proverManager.getPeriod(2);
+        LibProvingPeriod.Period memory period2 = proverManager.getPeriod(2);
         assertEq(period2.end, vm.getBlockTimestamp(), "Period 2 end timestamp should be the current timestamp");
         assertEq(period2.deadline, vm.getBlockTimestamp(), "Period 2 deadline should be the current timestamp");
 
         // Check that period 3 has been created correctly
-        BaseProverManager.Period memory period3 = proverManager.getPeriod(3);
+        LibProvingPeriod.Period memory period3 = proverManager.getPeriod(3);
         assertEq(period3.prover, prover1, "Prover1 should be the new prover");
         assertEq(period3.fee, newFee, "Fee should be set to the new fee");
         assertEq(period3.stake, LIVENESS_BOND, "Liveness bond should be locked");
@@ -412,7 +410,7 @@ abstract contract BaseProverManagerTest is Test {
         _deposit(prover1, DEPOSIT_AMOUNT);
 
         vm.prank(prover1);
-        vm.expectRevert("No proving vacancy");
+        vm.expectRevert(BaseProverManager.NoProvingVacancy.selector);
         proverManager.claimProvingVacancy(0.2 ether);
     }
 
@@ -551,7 +549,7 @@ abstract contract BaseProverManagerTest is Test {
         );
 
         // Verify period 1 has been updated
-        BaseProverManager.Period memory periodAfter = proverManager.getPeriod(1);
+        LibProvingPeriod.Period memory periodAfter = proverManager.getPeriod(1);
         assertEq(periodAfter.prover, prover1, "Prover should be updated to the new prover");
         assertTrue(periodAfter.pastDeadline, "Period should be marked as past deadline");
 
@@ -614,7 +612,7 @@ abstract contract BaseProverManagerTest is Test {
         assertEq(prover2BalanceAfter, INITIAL_FEE * 2, "Prover2 should receive the fees");
 
         // Verify the period is marked as past deadline
-        BaseProverManager.Period memory periodAfter = proverManager.getPeriod(1);
+        LibProvingPeriod.Period memory periodAfter = proverManager.getPeriod(1);
         assertTrue(periodAfter.pastDeadline, "Period should be marked as past deadline");
     }
 
@@ -634,7 +632,7 @@ abstract contract BaseProverManagerTest is Test {
         });
 
         // Attempt to prove with mismatched end checkpoint
-        vm.expectRevert("Last publication does not match end checkpoint");
+        vm.expectRevert(BaseProverManager.LastPublicationMismatch.selector);
         proverManager.prove(
             startCheckpoint, endCheckpoint, startHeader, endHeader, 2, ZERO_DELAYED_PUBLICATIONS, "0x", INITIAL_PERIOD
         );
@@ -662,7 +660,7 @@ abstract contract BaseProverManagerTest is Test {
         });
 
         // Attempt to prove with publication after period end
-        vm.expectRevert("Last publication is after the period");
+        vm.expectRevert(BaseProverManager.LastPublicationIsAfterPeriod.selector);
         proverManager.prove(
             startCheckpoint, endCheckpoint, startHeader, lateHeader, 2, ZERO_DELAYED_PUBLICATIONS, "0x", INITIAL_PERIOD
         );
@@ -683,7 +681,7 @@ abstract contract BaseProverManagerTest is Test {
             commitment: keccak256(abi.encode("commitment2"))
         });
 
-        vm.expectRevert("First publication not immediately after start checkpoint");
+        vm.expectRevert(BaseProverManager.InvalidStartPublication.selector);
         proverManager.prove(
             startCheckpoint, endCheckpoint, firstHeader, lastHeader, 2, ZERO_DELAYED_PUBLICATIONS, "0x", INITIAL_PERIOD
         );
@@ -711,7 +709,7 @@ abstract contract BaseProverManagerTest is Test {
         });
 
         // Attempt to prove with first publication before period 2
-        vm.expectRevert("First publication is before the period");
+        vm.expectRevert(BaseProverManager.FirstPublicationIsBeforePeriod.selector);
         proverManager.prove(
             startCheckpoint,
             endCheckpoint,
@@ -781,7 +779,7 @@ abstract contract BaseProverManagerTest is Test {
         proverManager.finalizePastPeriod(INITIAL_PERIOD, afterPeriodHeader);
 
         // Verify a portion of the stake was transferred to the prover
-        BaseProverManager.Period memory periodAfter = proverManager.getPeriod(INITIAL_PERIOD);
+        LibProvingPeriod.Period memory periodAfter = proverManager.getPeriod(INITIAL_PERIOD);
         assertEq(periodAfter.stake, 0, "Stake should be zero after finalization");
 
         uint256 initialProverBalanceAfter = proverManager.balances(initialProver);
@@ -848,12 +846,12 @@ abstract contract BaseProverManagerTest is Test {
         proverManager.finalizePastPeriod(INITIAL_PERIOD, afterPeriodHeader);
 
         // Verify a portion of the stake was transferred to prover1
-        BaseProverManager.Period memory periodAfter = proverManager.getPeriod(INITIAL_PERIOD);
+        LibProvingPeriod.Period memory periodAfter = proverManager.getPeriod(INITIAL_PERIOD);
         assertEq(periodAfter.stake, 0, "Stake should be zero after finalization");
 
         uint256 initialProverBalanceAfter = proverManager.balances(initialProver);
         uint256 prover1BalanceAfter = proverManager.balances(prover1);
-        uint256 stakeReward = LibPercentage.scaleByBPS(stakeBefore, REWARD_PERCENTAGE);
+        uint256 stakeReward = LibPercentage.scaleByBPS(stakeBefore, REWARD_FRACTION);
         assertEq(prover1BalanceAfter, prover1BalanceBefore + stakeReward, "Prover1 should receive the remaining stake");
         assertEq(initialProverBalanceAfter, initialProverBalanceBefore, "Initial prover should receive nothing");
     }
@@ -876,7 +874,7 @@ abstract contract BaseProverManagerTest is Test {
         checkpointTracker.setProvenHash(provenCheckpoint);
 
         // Attempt to finalize with unproven publication
-        vm.expectRevert("Publication must be proven");
+        vm.expectRevert(BaseProverManager.PublicationNotProven.selector);
         proverManager.finalizePastPeriod(INITIAL_PERIOD, afterPeriodHeader);
     }
 
@@ -897,7 +895,7 @@ abstract contract BaseProverManagerTest is Test {
         checkpointTracker.setProvenHash(provenCheckpoint);
 
         // Attempt to finalize with unproven publication
-        vm.expectRevert("Publication must be after period");
+        vm.expectRevert(BaseProverManager.PublicationNotAfterPeriod.selector);
         proverManager.finalizePastPeriod(INITIAL_PERIOD, beforePeriodHeader);
     }
 
@@ -931,7 +929,7 @@ abstract contract BaseProverManagerTest is Test {
         assertEq(fee, bidFee, "Fee should be the bid fee");
         assertEq(
             delayedFee,
-            uint96(LibPercentage.scaleByPercentage(bidFee, DELAYED_FEE_PERCENTAGE)),
+            LibPercentage.scaleByPercentage(bidFee, DELAYED_FEE_PERCENTAGE),
             "Delayed fee should be the bid fee"
         );
     }
@@ -980,7 +978,7 @@ abstract contract BaseProverManagerTest is Test {
     function _deposit(address user, uint256 amount) internal virtual;
 
     function _maxAllowedFee(uint96 fee) internal pure returns (uint96) {
-        return uint96(LibPercentage.scaleByBPS(fee, MAX_BID_PERCENTAGE));
+        return uint96(LibPercentage.scaleByBPS(fee, MAX_BID_FRACTION));
     }
 
     function _exit(address prover) internal {
