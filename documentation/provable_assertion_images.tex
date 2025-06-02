@@ -3,6 +3,7 @@
 \usetikzlibrary{positioning}
 \usetikzlibrary {shapes.geometric}
 \usetikzlibrary {backgrounds}
+\usetikzlibrary {calc}
 
 \tikzstyle{lOneBlock} = [circle, draw, fill=lightgray, inner sep=2]
 \tikzstyle{lOneTx} = [rectangle, minimum width=1cm, minimum height = 0.1cm, inner sep=0, outer sep=0]
@@ -74,9 +75,9 @@
     \node[draw, lOneTx, fill=\rollupColor] at (\pubTx) {};
     \node[xshift=-0.1cm, yshift=0.1cm] (topLeft) at (l2Tx-\rollupName-0-0.north west) {};
     \node[xshift=0.1cm, yshift=-0.1cm] (bottomRight) at (l2Tx-\rollupName-\numLTwoBlocks-4.south east) {};
-    \draw[very thin] (topLeft) rectangle (bottomRight) {};
-    \draw[very thin] (topLeft) -- (\pubTx.north west);
-    \draw[very thin] (bottomRight |- topLeft) -- (\pubTx.north east);
+    \draw[inner sep=0, outer sep=0, rounded corners, \rollupColor] (topLeft) rectangle (bottomRight) {};
+    \node[inner sep=0, outer sep=0] (top) at ($(topLeft)!0.5!(bottomRight |- topLeft)$) {};
+    \draw[inner sep=0, outer sep=0, ->, \rollupColor] (top) to[in=180] (\pubTx.west);
 }
 
 % Introduce L2 chain
@@ -91,7 +92,7 @@
 
 % L2 publications may span multiple L1 slots
 \renewcommand{\anchorBlockNum}{0}
-\renewcommand{\numLTwoBlocks}{13}
+\renewcommand{\numLTwoBlocks}{14}
 
 \ifnum \sourceNo = 2
 \begin{tikzpicture}[framed]

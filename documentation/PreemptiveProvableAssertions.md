@@ -4,7 +4,7 @@
 
 I'd like to describe a mechanism to extend the flexibility of rollups. I learned the core insight through Taiko's anchor transaction mechanism and Nethermind's [Same Slot L1->L2 Message Passing](https://ethresear.ch/t/same-slot-l1-l2-message-passing/21186) design, and I would generalise it to the statement:
 
-> L2 users (and contracts) can rely on arbitrary assertions about future state, provided their transactions are conditioned on those assertions eventually being proven.
+> L2 users and contracts can rely on arbitrary assertions about future state, provided their transactions are conditioned on those assertions eventually being proven.
 
 This article will unpack that statement and provide some example use cases. We will cover:
 
