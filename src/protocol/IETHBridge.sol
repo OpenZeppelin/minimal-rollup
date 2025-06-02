@@ -17,7 +17,7 @@ interface IETHBridge {
         uint256 amount;
         // Any calldata to be sent to the receiver in case of a contract
         bytes data;
-        // Address that is allowed to cancel the deposit (zero address means deposit is uncancellable)
+        // Address that is allowed to cancel the deposit on the destination chain (zero address means deposit is uncancellable)
         address canceler;
     }
 
