@@ -101,7 +101,7 @@ contract MessageRelayer is ReentrancyGuardTransient, IMessageRelayer {
 
         TIP_RECIPIENT_SLOT.asAddress().tstore(address(0));
 
-        (bool tipCallSuccess,) = tipRecipient.call{value: msg.value}("");
+        (bool tipCallSuccess,) = tipRecipient.call{value: tip}("");
         require(tipCallSuccess, TipTransferFailed());
         emit MessageForwarded(to, valueToSend, data, tipRecipient, tip);
     }
