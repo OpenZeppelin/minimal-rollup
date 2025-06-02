@@ -74,7 +74,7 @@ contract ETHBridgeTest is BridgeETHState2 {
         assertEq(defaultSender.balance, senderBalanceL1 - depositAmount);
 
         vm.selectFork(L2Fork);
-        assert(L2EthBridge.getDepositStatus(depositIdOne) == true);
+        assert(L2EthBridge.processed(depositIdOne) == true);
         assertEq(defaultSender.balance, senderBalanceL2);
     }
 }
