@@ -48,12 +48,13 @@ contract CheckpointTracker is ICheckpointTracker {
             proverManager == address(0) || msg.sender == proverManager, "Only the prover manager can call this function"
         );
 
-        require(end.commitment != 0, "Checkpoint commitment cannot be 0");
+        require(start.commitment != 0, "Start checkpoint commitment cannot be 0");
+        require(end.commitment != 0, "End checkpoint commitment cannot be 0");
 
         Checkpoint memory latestProvenCheckpoint = getProvenCheckpoint();
         require(
             start.publicationId <= latestProvenCheckpoint.publicationId,
-            "Start publication cannot be after latest proven checkpoint"
+            "Start publication must precede latest proven checkpoint"
         );
 
         bytes32 startPublicationHash = inbox.getPublicationHash(start.publicationId);

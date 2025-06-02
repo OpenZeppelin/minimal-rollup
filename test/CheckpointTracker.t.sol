@@ -73,16 +73,14 @@ contract CheckpointTrackerTest is Test {
     // }
     //
     function test_proveTransition_SuccessfulTransition() public {
+        ICheckpointTracker.Checkpoint memory start =
+            ICheckpointTracker.Checkpoint({publicationId: 0, commitment: keccak256(abi.encode("start"))});
         ICheckpointTracker.Checkpoint memory end =
             ICheckpointTracker.Checkpoint({publicationId: 3, commitment: keccak256(abi.encode("end"))});
 
         vm.expectEmit();
         emit ICheckpointTracker.CheckpointUpdated(end.publicationId, end.commitment);
-
-        // Empty checkpoint needed to comply with the interface, but not used in `CheckpointTracker`
-        ICheckpointTracker.Checkpoint memory emptyCheckpoint =
-            ICheckpointTracker.Checkpoint({publicationId: 0, commitment: bytes32(0)});
-        tracker.proveTransition(emptyCheckpoint, end, ZERO_DELAYED_PUBLICATIONS, proof);
+        tracker.proveTransition(start, end, ZERO_DELAYED_PUBLICATIONS, proof);
 
         ICheckpointTracker.Checkpoint memory provenCheckpoint = tracker.getProvenCheckpoint();
         assertEq(provenCheckpoint.publicationId, end.publicationId);
@@ -90,14 +88,13 @@ contract CheckpointTrackerTest is Test {
     }
 
     function test_proveTransition_RevertWhenEndCommitmentIsZero() public {
+        ICheckpointTracker.Checkpoint memory start =
+            ICheckpointTracker.Checkpoint({publicationId: 0, commitment: keccak256(abi.encode("start"))});
         ICheckpointTracker.Checkpoint memory end =
             ICheckpointTracker.Checkpoint({publicationId: 3, commitment: bytes32(0)});
 
-        // Empty checkpoint needed to comply with the interface, but not used in `CheckpointTracker`
-        ICheckpointTracker.Checkpoint memory emptyCheckpoint =
-            ICheckpointTracker.Checkpoint({publicationId: 0, commitment: bytes32(0)});
-        vm.expectRevert("Checkpoint commitment cannot be 0");
-        tracker.proveTransition(emptyCheckpoint, end, ZERO_DELAYED_PUBLICATIONS, proof);
+        vm.expectRevert("End checkpoint commitment cannot be 0");
+        tracker.proveTransition(start, end, ZERO_DELAYED_PUBLICATIONS, proof);
     }
 
     function createSampleFeed() private {
