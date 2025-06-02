@@ -32,10 +32,9 @@ contract MockInbox is IInbox {
         _headers[id] = header;
 
         // Create mock attributes
-        bytes[] memory attributes = new bytes[](3);
+        bytes[] memory attributes = new bytes[](2);
         attributes[0] = abi.encode("metadata");
-        attributes[1] = abi.encode(id - 1); // last publication
-        attributes[2] = abi.encode("blobRef");
+        attributes[1] = abi.encode("blobRef");
 
         emit Published(pubHash, header, attributes);
     }
