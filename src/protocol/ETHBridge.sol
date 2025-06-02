@@ -58,7 +58,7 @@ contract ETHBridge is IETHBridge, ReentrancyGuardTransient {
 
     /// @inheritdoc IETHBridge
     function claimDeposit(ETHDeposit memory ethDeposit, uint256 height, bytes memory proof) external nonReentrant {
-        bytes32 id = _claimDeposit(ethDeposit, ethDeposit.to, ethDeposit.amount, ethDeposit.data, height, proof);
+        bytes32 id = _claimDeposit(ethDeposit, ethDeposit.to, ethDeposit.data, height, proof);
         emit DepositClaimed(id, ethDeposit);
     }
 
@@ -68,7 +68,7 @@ contract ETHBridge is IETHBridge, ReentrancyGuardTransient {
     {
         require(msg.sender == ethDeposit.canceler, OnlyCanceler());
 
-        bytes32 id = _claimDeposit(ethDeposit, claimee, ethDeposit.amount, bytes(""), height, proof);
+        bytes32 id = _claimDeposit(ethDeposit, claimee, bytes(""), height, proof);
 
         emit DepositCancelled(id, claimee);
     }
@@ -76,7 +76,6 @@ contract ETHBridge is IETHBridge, ReentrancyGuardTransient {
     function _claimDeposit(
         ETHDeposit memory ethDeposit,
         address to,
-        uint256 amount,
         bytes memory data,
         uint256 height,
         bytes memory proof
@@ -87,7 +86,7 @@ contract ETHBridge is IETHBridge, ReentrancyGuardTransient {
         signalService.verifySignal(height, trustedCommitmentPublisher, counterpart, id, proof);
 
         _claimed[id] = true;
-        _sendETH(to, amount, data);
+        _sendETH(to, ethDeposit.amount, data);
     }
 
     /// @dev Function to transfer ETH to the receiver but ignoring the returndata.
