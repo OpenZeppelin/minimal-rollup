@@ -58,7 +58,7 @@ contract MessageRelayer is ReentrancyGuardTransient, IMessageRelayer {
     // keccak256("TIP_RECIPIENT_SLOT")
     bytes32 private constant TIP_RECIPIENT_SLOT = 0x833ce1785f54a5ca49991a09a7b058587309bf3687e5f20b7b66fa12132ef6f0;
     // Buffer to make sure enough gas is forwarded to the external call.
-    uint256 private constant BUFFER = 1500;
+    uint256 private constant BUFFER = 20_000;
 
     /// @inheritdoc IMessageRelayer
     //TODO: should we provide a way for the user to specify a relayer address if they want in order to avoid raicing
