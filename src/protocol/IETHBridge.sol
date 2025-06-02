@@ -66,7 +66,7 @@ interface IETHBridge {
     /// @param proof Encoded proof of the storage slot where the deposit is stored
     function claimDeposit(ETHDeposit memory ethDeposit, uint256 height, bytes memory proof) external;
 
-    /// @dev Initiates a cancel on the deposit, must be called by the deposit sender on the destination chain.
+    /// @dev Initiates a cancel on the deposit, must be called by the canceler on the destination chain.
     /// @param ethDeposit The ETH deposit struct
     /// @param claimee The address that will receive the cancelled deposit
     /// @param height The `height` of the checkpoint on the source chain (i.e. the block number or publicationId)
