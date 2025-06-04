@@ -16,19 +16,21 @@ import {MockCheckpointTracker} from "test/mocks/MockCheckpointTracker.sol";
 import {NullVerifier} from "test/mocks/NullVerifier.sol";
 
 import {BaseProverManagerTest} from "./BaseProverManager.t.sol";
+
 import {
     DELAYED_FEE_PERCENTAGE,
-    EVICTOR_INCENTIVE_PERCENTAGE,
+    EVICTOR_INCENTIVE_FRACTION,
     EXIT_DELAY,
     INITIAL_FEE,
     INITIAL_PERIOD,
     LIVENESS_BOND,
     LIVENESS_WINDOW,
-    MAX_BID_PERCENTAGE,
+    MAX_BID_FRACTION,
     PROVING_WINDOW,
-    REWARD_PERCENTAGE,
+    REWARD_FRACTION,
     SUCCESSION_DELAY
 } from "./BaseProverManager.t.sol";
+import {BalanceAccounting} from "src/protocol/BalanceAccounting.sol";
 
 contract ETHProverManagerMock is ETHProverManager {
     constructor(address _inbox, address _checkpointTracker, address _initialProver, uint96 _initialFee)
@@ -36,8 +38,8 @@ contract ETHProverManagerMock is ETHProverManager {
         ETHProverManager(_inbox, _checkpointTracker, _initialProver, _initialFee)
     {}
 
-    function _maxBidPercentage() internal view virtual override returns (uint16) {
-        return MAX_BID_PERCENTAGE;
+    function _maxBidFraction() internal view virtual override returns (uint16) {
+        return MAX_BID_FRACTION;
     }
 
     function _livenessWindow() internal view virtual override returns (uint40) {
@@ -60,12 +62,12 @@ contract ETHProverManagerMock is ETHProverManager {
         return LIVENESS_BOND;
     }
 
-    function _evictorIncentivePercentage() internal view virtual override returns (uint16) {
-        return EVICTOR_INCENTIVE_PERCENTAGE;
+    function _evictorIncentiveFraction() internal view virtual override returns (uint16) {
+        return EVICTOR_INCENTIVE_FRACTION;
     }
 
-    function _rewardPercentage() internal view virtual override returns (uint16) {
-        return REWARD_PERCENTAGE;
+    function _rewardFraction() internal view virtual override returns (uint16) {
+        return REWARD_FRACTION;
     }
 
     function _delayedFeePercentage() internal view virtual override returns (uint16) {
@@ -118,7 +120,7 @@ contract ETHProverManagerTest is BaseProverManagerTest {
     function test_deposit() public {
         vm.prank(prover1);
         vm.expectEmit();
-        emit IProposerFees.Deposit(prover1, DEPOSIT_AMOUNT);
+        emit BalanceAccounting.Deposit(prover1, DEPOSIT_AMOUNT);
         ethProverManager.deposit{value: DEPOSIT_AMOUNT}();
 
         uint256 bal = proverManager.balances(prover1);
@@ -133,7 +135,7 @@ contract ETHProverManagerTest is BaseProverManagerTest {
         uint256 balanceBefore = prover1.balance;
         vm.prank(prover1);
         vm.expectEmit();
-        emit IProposerFees.Withdrawal(prover1, withdrawAmount);
+        emit BalanceAccounting.Withdrawal(prover1, withdrawAmount);
         proverManager.withdraw(withdrawAmount);
         uint256 balanceAfter = prover1.balance;
 

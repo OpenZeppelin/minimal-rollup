@@ -49,8 +49,8 @@ contract ETHBridge is IETHBridge, ReentrancyGuardTransient {
     }
 
     /// @inheritdoc IETHBridge
-    function deposit(address to, bytes memory data) public payable returns (bytes32 id) {
-        ETHDeposit memory ethDeposit = ETHDeposit(_globalDepositNonce, msg.sender, to, msg.value, data);
+    function deposit(address to, bytes memory data, address relayer) public payable returns (bytes32 id) {
+        ETHDeposit memory ethDeposit = ETHDeposit(_globalDepositNonce, msg.sender, to, msg.value, data, relayer);
         id = _generateId(ethDeposit);
         unchecked {
             ++_globalDepositNonce;
