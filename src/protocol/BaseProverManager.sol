@@ -145,8 +145,8 @@ abstract contract BaseProverManager is IProposerFees, IProverManager, BalanceAcc
     /// @inheritdoc IProverManager
     /// @dev This can be called by anyone, and they get `evictorIncentiveFraction` of the liveness bond as an
     /// incentive.
-    function evictProver(IPublicationFeed.PublicationHeader calldata publicationHeader) external {
-        require(publicationFeed.validateHeader(publicationHeader), InvalidPublication());
+    function evictProver(IInbox.PublicationHeader calldata publicationHeader) external {
+        require(inbox.validateHeader(publicationHeader), InvalidPublication());
         require(publicationHeader.timestamp + _livenessWindow() < block.timestamp, PublicationNotOldEnough());
 
         LibProvingPeriod.Period storage period = _periods[_currentPeriodId];
@@ -197,11 +197,11 @@ abstract contract BaseProverManager is IProposerFees, IProverManager, BalanceAcc
         LibProvingPeriod.Period storage period = _periods[periodId];
         uint40 previousPeriodEnd = periodId > 0 ? _periods[periodId - 1].end : 0;
 
-        require(publicationFeed.validateHeader(lastPub), LastPublicationDoesNotExist());
+        require(inbox.validateHeader(lastPub), LastPublicationDoesNotExist());
         require(end.publicationId == lastPub.id, LastPublicationMismatch());
         require(period.isNotBefore(lastPub.timestamp), LastPublicationIsAfterPeriod());
 
-        require(publicationFeed.validateHeader(firstPub), FirstPublicationDoesNotExist());
+        require(inbox.validateHeader(firstPub), FirstPublicationDoesNotExist());
         require(start.publicationId + 1 == firstPub.id, InvalidStartPublication());
         require(firstPub.timestamp > previousPeriodEnd, FirstPublicationIsBeforePeriod());
 
@@ -223,10 +223,8 @@ abstract contract BaseProverManager is IProposerFees, IProverManager, BalanceAcc
     }
 
     /// @inheritdoc IProverManager
-    function finalizePastPeriod(uint256 periodId, IPublicationFeed.PublicationHeader calldata provenPublication)
-        external
-    {
-        require(publicationFeed.validateHeader(provenPublication), InvalidPublication());
+    function finalizePastPeriod(uint256 periodId, IInbox.PublicationHeader calldata provenPublication) external {
+        require(inbox.validateHeader(provenPublication), InvalidPublication());
 
         ICheckpointTracker.Checkpoint memory lastProven = checkpointTracker.getProvenCheckpoint();
         require(lastProven.publicationId >= provenPublication.id, PublicationNotProven());

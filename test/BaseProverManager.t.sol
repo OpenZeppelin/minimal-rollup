@@ -9,9 +9,14 @@ import {IProposerFees} from "../src/protocol/IProposerFees.sol";
 import {IProverManager} from "../src/protocol/IProverManager.sol";
 import {LibPercentage} from "src/libs/LibPercentage.sol";
 import {ICheckpointTracker} from "src/protocol/ICheckpointTracker.sol";
+
+import {IInbox} from "src/protocol/IInbox.sol";
 import {SignalService} from "src/protocol/SignalService.sol";
 import {MockCheckpointTracker} from "test/mocks/MockCheckpointTracker.sol";
+import {MockInbox} from "test/mocks/MockInbox.sol";
 import {NullVerifier} from "test/mocks/NullVerifier.sol";
+
+import {LibPercentage} from "src/libs/LibPercentage.sol";
 
 // Configuration parameters.
 uint16 constant MAX_BID_FRACTION = 9500; // 95%
