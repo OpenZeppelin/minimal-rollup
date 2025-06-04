@@ -2,7 +2,7 @@
 pragma solidity ^0.8.28;
 
 import {ICheckpointTracker} from "./ICheckpointTracker.sol";
-import {IPublicationFeed} from "./IPublicationFeed.sol";
+import {IInbox} from "./IInbox.sol";
 
 interface IProverManager {
     /// @notice Emitted when a prover bids to prove a period
@@ -50,7 +50,7 @@ interface IProverManager {
 
     /// @notice Evicts a prover that has been inactive, marking the prover for slashing
     /// @param publicationHeader The publication header that the caller is claiming is too old and hasn't been proven
-    function evictProver(IPublicationFeed.PublicationHeader calldata publicationHeader) external;
+    function evictProver(IInbox.PublicationHeader calldata publicationHeader) external;
 
     /// @notice Submits a proof.
     /// @dev If called after the period has passed its proving deadline, the caller becomes the prover for the
@@ -61,17 +61,15 @@ interface IProverManager {
     /// @param firstPub The first publication header in the transition. Note that since checkpoints refer to the
     /// publication they follow, this should have an id `start.publicationId + 1`
     /// @param lastPub The last publication header in the transition
-    /// @param numPublications The number of publications to process. This is not implied by the start/end publication
-    /// ids because the `PublicationFeed` is shared and may contain publications not relevant for this rollup
-    /// @param numDelayedPublications The number of delayed publications from the total of `numPublications`
+    /// @param numDelayedPublications The number of delayed publications from the total number of publications being
+    /// proven
     /// @param proof Arbitrary data passed to the `verifier` contract to confirm the transition validity
     /// @param periodId The id of the period for which the proof is submitted
     function prove(
         ICheckpointTracker.Checkpoint calldata start,
         ICheckpointTracker.Checkpoint calldata end,
-        IPublicationFeed.PublicationHeader calldata firstPub,
-        IPublicationFeed.PublicationHeader calldata lastPub,
-        uint256 numPublications,
+        IInbox.PublicationHeader calldata firstPub,
+        IInbox.PublicationHeader calldata lastPub,
         uint256 numDelayedPublications,
         bytes calldata proof,
         uint256 periodId
@@ -82,8 +80,7 @@ interface IProverManager {
     /// @param provenPublication A publication that the caller is claiming has been proven and is after the period end
     /// @dev If there is a proven publication after the period, it implies the whole period has been proven.
     /// @dev We assume there will always be a suitable proven publication.
-    function finalizePastPeriod(uint256 periodId, IPublicationFeed.PublicationHeader calldata provenPublication)
-        external;
+    function finalizePastPeriod(uint256 periodId, IInbox.PublicationHeader calldata provenPublication) external;
 }
 
 interface IERC20Depositor {
