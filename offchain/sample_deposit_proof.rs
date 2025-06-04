@@ -56,6 +56,7 @@ pub struct DepositSpecification {
     pub recipient: Address,
     pub amount: U256,
     pub data: String,
+    pub relayer: Address,
 }
 
 fn deposit_specification() -> Vec<DepositSpecification> {
@@ -72,6 +73,8 @@ fn deposit_specification() -> Vec<DepositSpecification> {
         "5932a71200000000000000000000000000000000000000000000000000000000000004d2", // (valid) call to `someNonPayableFunction(1234)`
     ];
 
+    let relayer = Address::ZERO;
+
     let mut specifications = vec![];
     for amount in amounts {
         for data in calldata.iter() {
@@ -79,6 +82,7 @@ fn deposit_specification() -> Vec<DepositSpecification> {
                 recipient: recipient.parse().unwrap(),
                 amount: U256::from(amount),
                 data: data.to_string(),
+                relayer,
             });
         }
     }
@@ -97,7 +101,11 @@ async fn main() -> Result<()> {
     // Perform all deposits
     for (_i, spec) in deposits.iter().enumerate() {
         let tx = eth_bridge
-            .deposit(spec.recipient, decode(spec.data.clone())?.into())
+            .deposit(
+                spec.recipient,
+                decode(spec.data.clone())?.into(),
+                spec.relayer,
+            )
             .value(spec.amount)
             .send()
             .await?
@@ -152,4 +160,3 @@ async fn main() -> Result<()> {
     println!("{}", formatted);
     Ok(())
 }
-

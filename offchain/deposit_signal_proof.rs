@@ -1,4 +1,4 @@
-use alloy::primitives::{address, bytes, U256};
+use alloy::primitives::{address, bytes, Address, U256};
 use eyre::Result;
 
 mod utils;
@@ -22,6 +22,7 @@ async fn main() -> Result<()> {
     let data = bytes!();
     let sender = address!("0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266");
     let amount = U256::from(4000000000000000000_u128);
+    let relayer = Address::ZERO;
 
     let (provider, _, _) = get_provider()?;
 
@@ -37,7 +38,7 @@ async fn main() -> Result<()> {
     println!("Deployed ETH bridge at address: {}", eth_bridge.address());
 
     println!("Sending ETH deposit...");
-    let builder = eth_bridge.deposit(sender, data).value(amount);
+    let builder = eth_bridge.deposit(sender, data, relayer).value(amount);
     let tx = builder.send().await?.get_receipt().await?;
 
     // Get deposit ID from the transaction receipt logs
