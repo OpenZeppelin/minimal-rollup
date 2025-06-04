@@ -27,6 +27,7 @@ fn create_deposit_call(
     recipient: Address,
     amount: U256,
     data: &str,
+    relayer: Address,
     id: &FixedBytes<32>,
 ) -> String {
     let mut result = String::new();
@@ -48,6 +49,7 @@ fn create_deposit_call(
     result += format!("\t\tdeposit.to = address({});\n", recipient).as_str();
     result += format!("\t\tdeposit.amount = {};\n", amount).as_str();
     result += format!("\t\tdeposit.data = bytes(hex\"{}\");\n", data).as_str();
+    result += format!("\t\tdeposit.relayer = address({});\n", relayer).as_str();
     result += format!("\t\t_createDeposit(\n\t\t\taccountProof,\n\t\t\tstorageProof,\n\t\t\tdeposit,\n\t\t\tbytes32({}),\n\t\t\tbytes32({})\n\t\t);\n", proof.slot, id).as_str();
     return result;
 }
@@ -139,6 +141,7 @@ async fn main() -> Result<()> {
             d.recipient,
             d.amount,
             d.data.as_str(),
+            d.relayer,
             id,
         )
         .as_str();
