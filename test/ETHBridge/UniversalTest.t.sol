@@ -23,12 +23,12 @@ abstract contract UniversalTest is InitialState {
         uint256 snapshotId = vm.snapshot();
 
         vm.prank(alice);
-        bytes32 id0 = bridge.deposit(charlie, "");
+        bytes32 id0 = bridge.deposit(charlie, "", anyRelayer);
 
         vm.revertTo(snapshotId);
 
         vm.prank(alice);
-        bytes32 id1 = bridge.deposit(charlie, "");
+        bytes32 id1 = bridge.deposit(charlie, "", anyRelayer);
 
         assertEq(id0, id1, "identical deposits produce different ids");
     }
@@ -37,12 +37,12 @@ abstract contract UniversalTest is InitialState {
         uint256 snapshotId = vm.snapshot();
 
         vm.prank(alice);
-        bytes32 id0 = bridge.deposit(charlie, "");
+        bytes32 id0 = bridge.deposit(charlie, "", anyRelayer);
 
         vm.revertTo(snapshotId);
 
         vm.prank(bob);
-        bytes32 id1 = bridge.deposit(charlie, "");
+        bytes32 id1 = bridge.deposit(charlie, "", anyRelayer);
 
         assertNotEq(id0, id1, "different caller produces same id");
     }
@@ -52,11 +52,11 @@ abstract contract UniversalTest is InitialState {
 
         uint256 snapshotId = vm.snapshot();
 
-        bytes32 id0 = bridge.deposit(bob, "");
+        bytes32 id0 = bridge.deposit(bob, "", anyRelayer);
 
         vm.revertTo(snapshotId);
 
-        bytes32 id1 = bridge.deposit(charlie, "");
+        bytes32 id1 = bridge.deposit(charlie, "", anyRelayer);
 
         assertNotEq(id0, id1, "different recipient produces same id");
     }
@@ -66,11 +66,11 @@ abstract contract UniversalTest is InitialState {
 
         uint256 snapshotId = vm.snapshot();
 
-        bytes32 id0 = bridge.deposit{value: 0.5 ether}(bob, "");
+        bytes32 id0 = bridge.deposit{value: 0.5 ether}(bob, "", anyRelayer);
 
         vm.revertTo(snapshotId);
 
-        bytes32 id1 = bridge.deposit{value: 1 ether}(bob, "");
+        bytes32 id1 = bridge.deposit{value: 1 ether}(bob, "", anyRelayer);
 
         assertNotEq(id0, id1, "different value produces same id");
     }
@@ -80,11 +80,11 @@ abstract contract UniversalTest is InitialState {
 
         uint256 snapshotId = vm.snapshot();
 
-        bytes32 id0 = bridge.deposit(bob, "");
+        bytes32 id0 = bridge.deposit(bob, "", anyRelayer);
 
         vm.revertTo(snapshotId);
 
-        bytes32 id1 = bridge.deposit(bob, "somedata");
+        bytes32 id1 = bridge.deposit(bob, "somedata", anyRelayer);
 
         assertNotEq(id0, id1, "different value produces same id");
     }
@@ -93,7 +93,7 @@ abstract contract UniversalTest is InitialState {
         uint256 initialNonce = getNonce();
 
         vm.startPrank(alice);
-        bridge.deposit(bob, "");
+        bridge.deposit(bob, "", anyRelayer);
 
         assertEq(getNonce(), initialNonce + 1, "nonce not incremented");
     }
@@ -101,50 +101,62 @@ abstract contract UniversalTest is InitialState {
     function test_deposit_duplicateDepositsProduceDifferentIds() public {
         vm.startPrank(alice);
 
-        bytes32 id0 = bridge.deposit(bob, "");
-        bytes32 id1 = bridge.deposit(bob, "");
+        bytes32 id0 = bridge.deposit(bob, "", anyRelayer);
+        bytes32 id1 = bridge.deposit(bob, "", anyRelayer);
 
         assertNotEq(id0, id1, "duplicate deposits produce same id");
     }
 
     function test_deposit_idMatchesGetterFunction() public {
-        IETHBridge.ETHDeposit memory ethDeposit =
-            IETHBridge.ETHDeposit({nonce: getNonce(), from: alice, to: bob, amount: 1 ether, data: ""});
+        IETHBridge.ETHDeposit memory ethDeposit = IETHBridge.ETHDeposit({
+            nonce: getNonce(),
+            from: alice,
+            to: bob,
+            amount: 1 ether,
+            data: "",
+            relayer: anyRelayer
+        });
 
         vm.prank(ethDeposit.from);
-        bytes32 id = bridge.deposit{value: ethDeposit.amount}(ethDeposit.to, ethDeposit.data);
+        bytes32 id = bridge.deposit{value: ethDeposit.amount}(ethDeposit.to, ethDeposit.data, anyRelayer);
 
         assertEq(id, bridge.getDepositId(ethDeposit), "id does not match getter");
     }
 
     function test_deposit_DepositMadeEvent() public {
-        IETHBridge.ETHDeposit memory ethDeposit =
-            IETHBridge.ETHDeposit({nonce: getNonce(), from: alice, to: bob, amount: 1 ether, data: ""});
+        IETHBridge.ETHDeposit memory ethDeposit = IETHBridge.ETHDeposit({
+            nonce: getNonce(),
+            from: alice,
+            to: bob,
+            amount: 1 ether,
+            data: "",
+            relayer: anyRelayer
+        });
         bytes32 id = bridge.getDepositId(ethDeposit);
 
         vm.prank(ethDeposit.from);
         vm.expectEmit();
         emit IETHBridge.DepositMade(id, ethDeposit);
-        bridge.deposit{value: ethDeposit.amount}(ethDeposit.to, ethDeposit.data);
+        bridge.deposit{value: ethDeposit.amount}(ethDeposit.to, ethDeposit.data, anyRelayer);
     }
 
     function test_deposit_signalNotSavedUnderCaller() public {
         vm.prank(alice);
-        bytes32 id = bridge.deposit(bob, "");
+        bytes32 id = bridge.deposit(bob, "", anyRelayer);
 
         assertFalse(signalService.isSignalStored(id, alice), "signal saved under caller");
     }
 
     function test_deposit_signalNotSavedUnderRecipient() public {
         vm.prank(alice);
-        bytes32 id = bridge.deposit(bob, "");
+        bytes32 id = bridge.deposit(bob, "", anyRelayer);
 
         assertFalse(signalService.isSignalStored(id, bob), "signal saved under recipient");
     }
 
     function test_deposit_signalSavedUnderBridge() public {
         vm.prank(alice);
-        bytes32 id = bridge.deposit(bob, "");
+        bytes32 id = bridge.deposit(bob, "", anyRelayer);
 
         assertTrue(signalService.isSignalStored(id, address(bridge)), "signal not saved");
     }
@@ -156,7 +168,7 @@ abstract contract UniversalTest is InitialState {
         uint256 amount = 1 ether;
 
         vm.prank(alice);
-        bridge.deposit{value: amount}(bob, "");
+        bridge.deposit{value: amount}(bob, "", anyRelayer);
 
         assertEq(alice.balance, initialAliceBalance - amount, "source balance mismatch");
         assertEq(bob.balance, initialBobBalance, "recipient balance changed");
