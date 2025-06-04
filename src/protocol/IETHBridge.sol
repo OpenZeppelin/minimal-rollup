@@ -17,6 +17,9 @@ interface IETHBridge {
         uint256 amount;
         // Any calldata to be sent to the receiver in case of a contract
         bytes data;
+        // Allows depositer to specify a relayer address if they want
+        // in order to avoid race conditions (zero address to allow any relayer)
+        address relayer;
         // Address that is allowed to cancel the deposit on the destination chain (zero address means deposit is
         // uncancellable)
         address canceler;
@@ -57,8 +60,12 @@ interface IETHBridge {
     /// @dev Creates an ETH deposit with `msg.value`
     /// @param to The receiver of the deposit
     /// @param data Any calldata to be sent to the receiver in case of a contract
+    /// @param relayer Address of the allowed relayer (0 for any)
     /// @param canceler Address that is allowed to cancel the deposit (zero address means deposit is uncancellable)
-    function deposit(address to, bytes memory data, address canceler) external payable returns (bytes32 id);
+    function deposit(address to, bytes memory data, address relayer, address canceler)
+        external
+        payable
+        returns (bytes32 id);
 
     /// @dev Claims an ETH deposit created by the sender (`from`) with `nonce`. The `value` ETH claimed  is
     /// sent to the receiver (`to`) after verifying a storage proof.
