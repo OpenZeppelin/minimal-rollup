@@ -117,11 +117,13 @@ This should be clearer when we discuss my suggested implementation.
 
 ## Realtime L1 reads
 
-When an L2 publication spans several L1 slots, it will be useful if every intermediate L1 state root is asserted in the L2 state as soon as it's known, which would allow the L2 contracts to respond to L1 updates as they occur (for instance, the light green transaction could depend on the dark green one even though it appears in the middle of the publication). This could be achieved straightforwardly by applying the anchor mechanism to every block.
+When an L2 publication spans several L1 slots, it will be useful if every intermediate L1 state root is asserted in the L2 state as soon as it's known, which would allow the L2 contracts to respond to L1 updates as they occur. For example, the dark green transaction could be an update to an ENS resolver, or a new price in a price feed. The light green transaction could be a DeFi protocol that responds to that change immediately (as soon as the state is asserted), even though it occured in the middle of a publication. This could be achieved straightforwardly by applying the anchor mechanism to every block.
 
 Naively this appears to require the Inbox to make a different `blockhash` call for each intermediate block, but as an optimisation, the sequencer could reproduce the entire chain of L1 block headers on L2 (starting from the last validated one) when proving the assertions. If the last block hash is validated on L1, this implicitly validates the entire chain.
 
 <p align="center"><img src="./provable_assertion_images.6.png"/></p>
+
+It's worth noting that this mechanism _allows_ the sequencer to provide realtime updates, but it does not compel them to do so. The rollup can be designed to enforce rules like "the L1 block hash needs to be asserted before any L2 transaction with a later timestamp", but that is a statement about the final order that is recorded (which is under the sequencer's control), not when it happened in realworld time. We would still rely on preconfirmations or other external mechanisms to constrain how long a sequencer can delay providing the latest block header.
 
 ## Interdependent L2 transactions
 
