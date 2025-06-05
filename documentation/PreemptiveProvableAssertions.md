@@ -235,3 +235,86 @@ Now that [sub-slot proving has been demonstrated](https://x.com/SuccinctLabs/sta
 <p align="center"><img src="./provable_assertion_images.9.png"/></p>
 
 It's worth noting that proving any blocks in a publication implies ensuring the entire previous publication is already proven. In this case we could use the realtime proving mechanism, as long as the sequencer only makes cross-chain assertions about transactions in L2 blocks that they know they will be able to prove in time. Of course, blocks that consume or build on the assertion can still be proven after the publication.
+
+## Implementation Framework
+
+I believe rollup designs should support the general pattern of making assertions, but they should not be opinionated about which particular assertions are valid or how they should be resolved. Instead, individual sequencers should decide which assertions (if any) they support, and L2 users and contracts should decide which ones to rely on. This implicitly means L2 users are responsible for ensuring the proving mechanism chosen by the sequencer will reliably confirm the assertion.
+
+The basic structure is a mapping (in an L2 contract) of unproven assertions that must be empty at the start and end of every publication. The `assertionId` is a hash of anything necessary to define the assertion as well as the `msg.sender` that created it, and it can only be cleared by the same address. 
+
+```solidity
+mapping(bytes32 assertionId => uint256 value) public assertions;
+```
+
+### Creating unproven assertions
+
+For example, anyone could deploy a `RealtimeL1State` contract that asserts statements like _"at L1 block B the state was S"_ and the assertion ID would be `keccak256(abi.encode(address(realtimeL1State), B, S))`. The sequencer could invoke that contract whenever they want to update the L2 about the latest L1 state, creating a sequence of unproven assertions. The rollup will enforce (explained below) that these assertions are cleared by the end of the publication.
+
+At this point, L2 users or contracts can see the assertions in the mapping, and can rely on them if they can be convinced that the `RealtimeL1State` contract will only clear the assertion if it's proven to be consistent with the L1 history. They can use the asserted state to convince other contracts (that trust the `RealtimeL1State` contract) that a particular L1 contract had a particular value in storage.
+
+Similarly, anyone could deploy a `FutureL2State` contract that asserts statements like _"at some point during L2 block B, calldata C invoked on destination D by this contract will succeed and return the value V"_ and the assertion ID would be `keccak256(abi.encode(address(futureL2State), B, C, D))`. The sequencer could invoke that contract to guarantee that they will respect this condition, and L2 users or contracts can progress under this assumption.
+
+Lastly, anyone could deploy a `PublicationTimeCall` contract that asserts statements like _"calldata C invoked on destination D by the Inbox contract at publication time will succeed and return the value V"_. They may want to allow generic conditions on the return value to cover cases where the sequencer knows the relevant property of _V_ without knowing it exactly. Interestingly, this could include cases where the sequencer is guaranteeing statements about their own publication, such as _"this L2 transaction will be included if the L1 DAO votes for it"_. To allow for this flexibiity, the assertion could be generalised to _"calldata C invoked on destination D by the Inbox contract at publication time will succeed and return a value that can be passed to L2 function F (also at publication time) to return the value V"_. The assertion ID would be `keccak256(abi.encode(address(publicationTimeCall), C, D, F, V))`. The intuition here is that the Inbox needs to perform the L1 calls and save (a hash of) the results, but user-defined L2 contracts can describe the assertion and evaluate whether it is proven. Note that this mechanism can be used to cover queries for publicly available state (eg. previous deposits in a bridge, oracle updates, DAO vote tallies), actual L1 state-changing actions (eg. depositting in a bridge, updating an oracle, voting in a DAO) or values describing other rollups (eg. the latest proven state or the state claimed by the sequencer).
+
+As the publication is being built, it will contain a growing collection of assertions that need to be proven.
+
+<p align="center"><img src="./provable_assertion_images.10.png"/></p>
+
+### Proving assertions
+
+Assertions that only rely on L2 state can be resolved within the publication. For example, the `FutureL2State` assertion (that _"at some point during L2 block B, calldata C invoked on destination D by this contract will succeed and return the value V"_) can be cleared in block _B_ by making the call and ensuring it returns the correct value. The sequencer must ensure that such a transaction is included for the publication to be valid.
+
+The ones that require L1 state would need assistance from the rollup state-transition-function (implemented by the rollup nodes). For example, if the `RealtimeL1State` contract was provided with the block hash of L1 block _X_:
+
+- anyone could provide the entire L1 header to prove it has the expected hash.
+- since the header includes the state root and the previous block hash, both of these values would be proven.
+- this could be repeated with the hash of block _X-1_ to find the state root of block _X-1_ and the hash of block _X-2_.
+- this could be repeated to cover all L1 state roots that occurred during the publication.
+
+The question is how to ensure the provided hash for block _X_ was accurate. My suggestion is to gather all the relevant L1 data in the Inbox contract, which should cover the latest L1 block hash and the result of all calls specified by the sequencer. The hash of this data (let's call it the _consistency hash_) will be included as part of the publication. Then, each publication should include an end-of-publication transaction that:
+
+- accepts the consistency hash
+- passes it (and any relevant information) to the assertion contracts, which can clear the assertions after validating they have been fulfilled.
+- reverts if any unproven assertions remain.
+
+The state-transition-function will guarantee that:
+- this is the final transaction in the publication.
+- the input hash matches the value computed on L1.
+- the transaction succeeds.
+
+This ensures that each assertion is proven according to the standards of the contract that created it, potentially using publication-time L1 data.
+
+<p align="center"><img src="./provable_assertion_images.11.png"/></p>
+
+Note that since the consistency hash (orange in the diagram) is included in the end-of-publication transaction, this mechanism assumes the sequencer will be able to predict its value before publishing the bundle, which implies one of the following:
+
+- this is a based rollup
+- the result of the queries cannot be changed between the time the sequencer creates the end-of-publication transaction and the time the publication is confirmed in L1 (which would be the most common situation).
+- the sequencer has received the relevant L1 preconfirmations.
+
+This mechanism creates a minor complication for the staked cross-rollup assertion option. In that scenario, the sequencer is required to publish the claimed state of the rollup after the publication. However, rollup B's claimed state would be part of rollup A's consistency hash, which means it would affect rollup A's final state. A two-way cross-rollup assertion using this mechanism would introduce a circular dependency. This could be resolved by noting the end-of-publication transaction has a very specific and predictable impact on the final state (it clears unproven assertions), but for simplicity and to avoid complications associated with gas costs the mechanism could be altered to require the sequencer to provide the state immediately before the end-of-publication transaction.
+
+### Assigning roles
+
+An interesting question to consider is who has the authority and incentive to make and prove assertions. As described, the sequencer is allowed to include an arbitrary list of L1 calls to make when publishing their bundle. The rollup only enforces that a recent L1 block hash (chosen by the sequencer) and the result of these calls will be faithfully passed to the end-of-publication L2 transaction and that this transaction succeeds. The rest of the logic is contained within regular L2 contracts, which must be invoked with regular L2 transactions that pay L2 gas.
+
+Since the sequencer is providing an additional service for users, they would likely charge for:
+- any increased L1 gas costs that they incur (eg. to pay for additional queries in the Inbox)
+- any L2 gas costs that they incur (eg. to make or prove an assertion)
+- any opportunities they may lose from constraining their options when building publications.
+- any effort it takes to validate whether they will be able to prove any assertions that the users want (eg. ensuring an L1 query will have a predictable result at publication time).
+
+As a convenience, I recommend the assertion contract only allows new assertions to be created by an `asserter` address that is set by anyone when it is zero, and reset to zero in the end-of-publication transaction. This allows the sequencer to choose a trusted `asserter` address at the start of the publication. This is not strictly necessary because the sequencer can also refuse to include transactions that make unendorsed assertions, but it provides a mechanism for the sequencer to coordinate with users and to defer the costs. In particular, the `asserter` address could be a contract that allows anyone to make any assertion as long as they provide enough upfront evidence and pay enough fees. For example:
+
+- a user that claims the block hash for L1 block _B_ is _H_ could provide the L1 header that is needed for the proof, along with enough funds to cover the `blockhash` query on L1.
+- a user that wants an assertion that some property will be true in L2 block _X_ could also sign the proof transaction that will need to be sequenced in block _X_.
+
+The sequencer is still responsible for ensuring all assertions are proven (so they should only include transactions that make valid provable assertions) but this mechanism defers much of the analysis and cost to the user. It also allows users to create the assertion and react to that assertion within the same transaction, so they remove the risk of signing transactions that might revert if the assertion is not made beforehand.
+
+
+
+
+
+
+
+

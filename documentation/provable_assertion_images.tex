@@ -263,6 +263,47 @@
 \fi
 
 
+% A collection of assertions
+\ifnum \sourceNo = 10
+\begin{tikzpicture}[framed]
+    \timeline
+
+    \snapshotAt{7.25}
+    
+    \lOneTransactions
+    \lTwoTransactions
+
+    \foreach \block/\tx in {1/2, 3/3, 4/2, 4/4, 7/1, 10/3} {
+        \node[draw, lTwoTx, fill=magenta] at (l2Tx-A-\block-\tx) {};
+    }
+    
+\end{tikzpicture}
+\fi
+
+% The end-of-publication assertion
+\ifnum \sourceNo = 11
+\begin{tikzpicture}[framed]
+    \timeline
+
+    \lOneTransactions
+    \lTwoTransactions
+
+    \foreach \block/\tx in {1/2, 3/3, 4/2, 4/4, 7/1, 10/3} {
+        \node[draw, lTwoTx, fill=magenta] at (l2Tx-A-\block-\tx) {};
+    }
+    
+
+    \node[draw, lTwoTx, fill=gray] (finalBlock) at (l2Tx-A-\numLTwoBlocks-4) {};
+    \publication
+
+    \newcommand{\artifactColor}{orange}
+    \node[draw, lTwoTx, fill=\artifactColor, minimum width=0.1cm, anchor=west] (injected) at (finalBlock.west) {};
+    \node[draw, lOneTx, fill=\artifactColor, minimum width=0.1cm, anchor=east] (computed) at (\pubTx.east) {};
+    \draw[->, \artifactColor] (computed) to[out=270, in=90] (injected);
+\end{tikzpicture}
+\fi
+
+
 \end{document}
 
 
