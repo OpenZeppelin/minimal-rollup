@@ -311,7 +311,7 @@ As a convenience, I recommend the assertion contract only allows new assertions 
 - a user that claims the block hash for L1 block _B_ is _H_ could provide the L1 header that is needed for the proof, along with enough funds to cover the `blockhash` query on L1.
 - a user that wants an assertion that some property will be true in L2 block _X_ could also sign the proof transaction that will need to be sequenced in block _X_.
 
-The sequencer is still responsible for ensuring all assertions are proven (so they should only include transactions that make valid provable assertions) but this mechanism defers much of the analysis and cost to the user. It also allows users to create the assertion and react to that assertion within the same transaction, so they remove the risk of signing transactions that might revert if the assertion is not made beforehand.
+The sequencer is still responsible for ensuring all assertions are proven (so they should only include transactions that make valid provable assertions) but this mechanism defers much of the analysis and cost to the user. It also allows users to create the assertion and react to that assertion within the same transaction, so they remove the risk of signing transactions that might revert if the assertion is not made beforehand. In some sense, this makes it possible for users to create transcript-level (rather than EVM-level) conditions on transactions, such that the transactions can only be included in the presence of other transactions.
 
 
 
