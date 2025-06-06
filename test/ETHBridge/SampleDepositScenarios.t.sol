@@ -54,7 +54,7 @@ abstract contract NonzeroETH_ValidCallToNonpayableFn is CrossChainDepositExists 
 }
 
 abstract contract NonzeroETH_ValidCallToRelayer is CrossChainDepositExists {
-    function _depositIdx() {
-        return 8;
+    function _depositIdx() internal pure override returns (uint256) {
+        return 9;
     }
 }

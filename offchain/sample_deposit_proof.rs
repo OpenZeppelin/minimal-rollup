@@ -1,3 +1,6 @@
+use alloy::primitives::utils::parse_units;
+use alloy::sol;
+use alloy::sol_types::SolCall;
 use eyre::Result;
 
 mod signal_slot;
@@ -6,9 +9,14 @@ use signal_slot::get_signal_slot;
 mod utils;
 use utils::{deploy_eth_bridge, deploy_signal_service, get_proofs, get_provider, SignalProof};
 
-use alloy::hex::decode;
+use alloy::hex::{self, decode};
 use alloy::primitives::{Address, Bytes, FixedBytes, U256};
 use std::fs;
+
+sol! {
+       function receiveMessage(address to, uint256 tip, uint256 gasLimit, bytes memory data) external payable;
+
+}
 
 fn expand_vector(vec: Vec<Bytes>, name: &str) -> String {
     let mut expanded = String::new();
@@ -67,12 +75,24 @@ fn deposit_specification() -> Vec<DepositSpecification> {
     let recipient = "0x99A270Be1AA5E97633177041859aEEB9a0670fAa";
     // Use both zero and non-zero amounts (in this case 4 ether)
     let amounts = vec![0_u128, 4000000000000000000_u128];
+
+    let relayer_calldata = hex::encode(
+        receiveMessageCall {
+            to: recipient.parse().unwrap(),
+            tip: parse_units("0.1", "ether").unwrap().into(),
+            gasLimit: U256::from(0),
+            data: Bytes::new(),
+        }
+        .abi_encode(),
+    );
+
     // Use different calldata to try different functions and inputs
     let calldata = vec![
         "",                                                                         // empty
         "9b28f6fb00000000000000000000000000000000000000000000000000000000000004d2", // (valid) call to somePayableFunction(1234)
         "9b28f6fb00000000000000000000000000000000000000000000000000000000000004d3", // (invalid) call to somePayableFunction(1235)
         "5932a71200000000000000000000000000000000000000000000000000000000000004d2", // (valid) call to `someNonPayableFunction(1234)`
+        relayer_calldata.as_str(), // (valid) call to `relayMessage(recipient, tip, forward amount, data)`
     ];
 
     let relayer = Address::ZERO;

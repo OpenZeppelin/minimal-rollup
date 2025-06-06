@@ -45,13 +45,13 @@ pub fn get_provider() -> Result<(impl Provider, AnvilInstance, PrivateKeySigner)
     let rpc_url = anvil.endpoint_url();
     let provider = ProviderBuilder::new()
         .wallet(signer.clone())
-        .on_http(rpc_url);
+        .connect_http(rpc_url);
     Ok((provider, anvil, signer))
 }
 
 pub async fn deploy_signal_service(
     provider: &impl Provider,
-) -> Result<SignalServiceInstance<(), &impl Provider>> {
+) -> Result<SignalServiceInstance<&impl Provider>> {
     let contract = SignalService::deploy(provider).await?;
     Ok(contract)
 }
@@ -59,7 +59,7 @@ pub async fn deploy_signal_service(
 pub async fn deploy_eth_bridge(
     provider: &impl Provider,
     signal_service: Address,
-) -> Result<ETHBridgeInstance<(), &impl Provider>> {
+) -> Result<ETHBridgeInstance<&impl Provider>> {
     // The trusted publisher and counterpart are needed to verify signals from the other bridge
     // In this case, we are only depositing on this bridge
     // Set both values to an arbitrary dummy address. It is non-zero to pass validation.
@@ -71,7 +71,7 @@ pub async fn deploy_eth_bridge(
 pub async fn get_proofs(
     provider: &impl Provider,
     slot: B256,
-    signal_service: &SignalServiceInstance<(), &impl Provider>,
+    signal_service: &SignalServiceInstance<&impl Provider>,
 ) -> Result<SignalProof> {
     let block_header = provider
         .get_block_by_number(alloy::eips::BlockNumberOrTag::Latest)

@@ -6,10 +6,11 @@ import {IETHBridge} from "src/protocol/IETHBridge.sol";
 
 /// This contract describes behaviours that should be valid when the deposit is claimable.
 abstract contract DepositIsClaimableByRelayer is CrossChainDepositExists {
-    function test_claimDeposit_shouldSucceed() public {
+    function test_relayMessage_shouldSucceed() public {
         IETHBridge.ETHDeposit memory deposit = sampleDepositProof.getEthDeposit(_depositIdx());
         bytes memory proof = abi.encode(sampleDepositProof.getDepositSignalProof(_depositIdx()));
-        bridge.claimDeposit(deposit, HEIGHT, proof);
+        messageRelayer.relayMessage(deposit, HEIGHT, proof, address(0));
+        // bridge.claimDeposit(deposit, HEIGHT, proof);
     }
 
     // function test_claimDeposit_shouldSetClaimedFlag() public {

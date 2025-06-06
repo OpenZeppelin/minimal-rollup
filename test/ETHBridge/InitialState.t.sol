@@ -14,6 +14,7 @@ abstract contract InitialState is Test {
     address counterpart;
     SampleDepositProof sampleDepositProof;
     MessageRelayer messageRelayer;
+    address public tipReceiver = vm.addr(121212);
     // zero address means any relayer is allowed
     address anyRelayer = address(0);
 

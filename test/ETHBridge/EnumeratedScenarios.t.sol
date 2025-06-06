@@ -13,6 +13,7 @@ import {
     NonzeroETH_NoCalldata,
     NonzeroETH_ValidCallToNonpayableFn,
     NonzeroETH_ValidCallToPayableFn,
+    NonzeroETH_ValidCallToRelayer,
     ZeroETH_InvalidCallToPayableFn,
     ZeroETH_NoCalldata,
     ZeroETH_ValidCallToNonpayableFn,
@@ -44,7 +45,7 @@ contract SimpleDepositToEOA is
 }
 
 contract RelayedDepositToEOA is
-    NonzeroETH_NoCalldata,
+    NonzeroETH_ValidCallToRelayer,
     RecipientIsAnEOA,
     BridgeSufficientlyCapitalized,
     DepositIsClaimableByRelayer
