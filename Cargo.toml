@@ -1,4 +1,5 @@
 [package]
+
 name = "minimal-rollup"
 version = "0.1.0"
 edition = "2021"
@@ -18,6 +19,15 @@ path = "offchain/deposit_signal_proof.rs"
 [[bin]]
 name = "utils"
 path = "offchain/utils.rs"
+
+[[bin]]
+name = "sample_signal_proof"
+path = "offchain/sample_signal_proof.rs"
+
+[[bin]]
+name = "sample_deposit_proof"
+path = "offchain/sample_deposit_proof.rs"
+
 
 [dependencies]
 alloy = { version = "0.13.0", features = ["node-bindings"] }
