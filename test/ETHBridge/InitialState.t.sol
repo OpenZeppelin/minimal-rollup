@@ -6,12 +6,14 @@ import "forge-std/Test.sol";
 import {SampleDepositProof} from "./SampleDepositProof.t.sol";
 import {ETHBridge} from "src/protocol/ETHBridge.sol";
 import {SignalService} from "src/protocol/SignalService.sol";
+import {MessageRelayer} from "src/protocol/taiko_alethia/MessageRelayer.sol";
 
 abstract contract InitialState is Test {
     ETHBridge bridge;
     SignalService signalService;
     address counterpart;
     SampleDepositProof sampleDepositProof;
+    MessageRelayer messageRelayer;
     // zero address means any relayer is allowed
     address anyRelayer = address(0);
 
@@ -26,6 +28,7 @@ abstract contract InitialState is Test {
 
         counterpart = sampleDepositProof.getBridgeAddress();
         bridge = new ETHBridge(address(signalService), trustedCommitmentPublisher, counterpart);
+        messageRelayer = new MessageRelayer(address(bridge));
     }
 
     function _randomAddress(string memory name) internal pure returns (address) {

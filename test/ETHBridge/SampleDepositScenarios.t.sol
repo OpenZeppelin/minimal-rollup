@@ -52,3 +52,9 @@ abstract contract NonzeroETH_ValidCallToNonpayableFn is CrossChainDepositExists 
         return 7;
     }
 }
+
+abstract contract NonzeroETH_ValidCallToRelayer is CrossChainDepositExists {
+    function _depositIdx() {
+        return 8;
+    }
+}
