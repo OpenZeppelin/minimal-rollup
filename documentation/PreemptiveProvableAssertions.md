@@ -195,7 +195,7 @@ In this article we assume that the cross-rollup mechanism is implemented by an e
 
 Instead, we expect a dynamic process where different sequencers can freely opt in or out of different rollups, or could be banned or have insufficient stake for some but not all rollups. This context creates a very strong requirement that complicates composability: the state of a rollup must be entirely derivable in the rollup's node from the information available on L1, even if it depends on activity occurring on another rollup.
 
-To understand this requirement, consider how our desired atomic transactions would be included:
+To understand this requirement, consider how our desired atomic transactions would be included (focussing on one side for simplicity, but the other side is symmetrical):
 
 - an opportunity arises when a particular entity can sequence transactions for both rollup A and rollup B.
 - this sequencer includes both interdependent transactions in their publications. Alice's transaction on rollup A should only succeed if Bob's transaction succeeds on rollup B.
