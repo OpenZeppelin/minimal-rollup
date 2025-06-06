@@ -35,7 +35,7 @@ import {MessageRelayer} from "src/protocol/taiko_alethia/MessageRelayer.sol";
 ///        )
 ///
 /// To relay the message:
-///    1. Any address on the destination chain can call relayMessage
+///    1. A user may specify an address on the destination chain that can call relayMessage (or any if it is 0)
 ///    2. This will call claimDeposit on the ETHBridge
 ///    3. If the original message was specified correctly, this will call receiveMessage on this contract
 ///    4. This will call the message recipient and send the tip to the relayer
@@ -61,9 +61,6 @@ contract MessageRelayer is ReentrancyGuardTransient, IMessageRelayer {
     uint256 private constant BUFFER = 20_000;
 
     /// @inheritdoc IMessageRelayer
-    //TODO: should we provide a way for the user to specify a relayer address if they want in order to avoid raicing
-    // conditions? This could be just who gets the tip, so that it can still be filled by anyone, it just sets the right
-    // incentives.
     function relayMessage(
         IETHBridge.ETHDeposit memory ethDeposit,
         uint256 height,
