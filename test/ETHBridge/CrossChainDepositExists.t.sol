@@ -17,6 +17,8 @@ abstract contract CrossChainDepositExists is UniversalTest {
 
     uint256 HEIGHT = 1;
 
+    uint256 tipAmount = 0.1 ether;
+
     function setUp() public virtual override {
         super.setUp();
         bytes32 commitment =

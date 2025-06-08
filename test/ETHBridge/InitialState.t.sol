@@ -13,12 +13,13 @@ abstract contract InitialState is Test {
     SignalService signalService;
     address counterpart;
     SampleDepositProof sampleDepositProof;
-    MessageRelayer messageRelayer;
-    address public tipReceiver = vm.addr(121212);
     // zero address means any relayer is allowed
     address anyRelayer = address(0);
 
     address trustedCommitmentPublisher = _randomAddress("trustedCommitmentPublisher");
+
+    MessageRelayer messageRelayer;
+    address tipRecipient;
 
     function setUp() public virtual {
         sampleDepositProof = new SampleDepositProof();
@@ -29,7 +30,6 @@ abstract contract InitialState is Test {
 
         counterpart = sampleDepositProof.getBridgeAddress();
         bridge = new ETHBridge(address(signalService), trustedCommitmentPublisher, counterpart);
-        messageRelayer = new MessageRelayer(address(bridge));
     }
 
     function _randomAddress(string memory name) internal pure returns (address) {

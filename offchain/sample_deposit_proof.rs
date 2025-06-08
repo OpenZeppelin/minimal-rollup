@@ -10,7 +10,7 @@ mod utils;
 use utils::{deploy_eth_bridge, deploy_signal_service, get_proofs, get_provider, SignalProof};
 
 use alloy::hex::{self, decode};
-use alloy::primitives::{Address, Bytes, FixedBytes, U256};
+use alloy::primitives::{address, Address, Bytes, FixedBytes, U256};
 use std::fs;
 
 sol! {
@@ -72,13 +72,15 @@ pub struct DepositSpecification {
 fn deposit_specification() -> Vec<DepositSpecification> {
     // This is an address on the destination chain, so it seems natural to use one generated there
     // In this case, the CrossChainDepositExists.sol test case defines _randomAddress("recipient");
-    let recipient = "0x99A270Be1AA5E97633177041859aEEB9a0670fAa";
+    let recipient = address!("0x99A270Be1AA5E97633177041859aEEB9a0670fAa");
     // Use both zero and non-zero amounts (in this case 4 ether)
     let amounts = vec![0_u128, 4000000000000000000_u128];
 
+    let relayer_address = address!("0xbf9fBFf01664500A33080Da5d437028b07DFcC55");
+
     let relayer_calldata = hex::encode(
         receiveMessageCall {
-            to: recipient.parse().unwrap(),
+            to: recipient,
             tip: parse_units("0.1", "ether").unwrap().into(),
             gasLimit: U256::from(0),
             data: Bytes::new(),
@@ -92,19 +94,34 @@ fn deposit_specification() -> Vec<DepositSpecification> {
         "9b28f6fb00000000000000000000000000000000000000000000000000000000000004d2", // (valid) call to somePayableFunction(1234)
         "9b28f6fb00000000000000000000000000000000000000000000000000000000000004d3", // (invalid) call to somePayableFunction(1235)
         "5932a71200000000000000000000000000000000000000000000000000000000000004d2", // (valid) call to `someNonPayableFunction(1234)`
-        relayer_calldata.as_str(), // (valid) call to `relayMessage(recipient, tip, forward amount, data)`
     ];
 
-    let relayer = Address::ZERO;
+    let relayer_calldata = vec![
+        // (valid) call to `relayMessage(recipient, tip, forward amount, data)`
+        relayer_calldata.as_str(),
+    ];
+
+    let zero_relayer = Address::ZERO;
 
     let mut specifications = vec![];
-    for amount in amounts {
+    for amount in &amounts {
         for data in calldata.iter() {
             specifications.push(DepositSpecification {
-                recipient: recipient.parse().unwrap(),
-                amount: U256::from(amount),
+                recipient,
+                amount: U256::from(*amount),
                 data: data.to_string(),
-                relayer,
+                relayer: zero_relayer,
+            });
+        }
+    }
+
+    for amount in &amounts {
+        for data in relayer_calldata.iter() {
+            specifications.push(DepositSpecification {
+                recipient: relayer_address,
+                amount: U256::from(*amount),
+                data: data.to_string(),
+                relayer: zero_relayer,
             });
         }
     }
