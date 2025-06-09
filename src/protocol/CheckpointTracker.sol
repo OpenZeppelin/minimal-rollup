@@ -58,6 +58,7 @@ contract CheckpointTracker is ICheckpointTracker {
         );
 
         // Only count publications that have not been proven yet for `numPublications`
+        // TODO: We should also ensure that `numDelayedPublications` only accounts for unproven publications
         uint256 numPublications = end.publicationId - latestProvenCheckpoint.publicationId;
         require(
             numDelayedPublications <= numPublications,
