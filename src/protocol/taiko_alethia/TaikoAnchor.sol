@@ -44,15 +44,10 @@ contract TaikoAnchor {
     /// @param _anchorBlockId The latest L1 block known to the L2 blocks in this publication
     /// @param _anchorBlockHash The block hash of the L1 anchor block
     /// @param _parentGasUsed The gas used in the parent block
-    /// @param _asserter An address that can make preemptive assertions during this publication that the proposer will
-    /// need to prove at publication time
-    function anchor(
-        uint256 _publicationId,
-        uint256 _anchorBlockId,
-        bytes32 _anchorBlockHash,
-        bytes32 _parentGasUsed,
-        address _asserter
-    ) external onlyFromPermittedSender {
+    function anchor(uint256 _publicationId, uint256 _anchorBlockId, bytes32 _anchorBlockHash, bytes32 _parentGasUsed)
+        external
+        onlyFromPermittedSender
+    {
         // Make sure this function can only succeed once per publication
         require(_publicationId > lastPublicationId, "publicationId too small");
         lastPublicationId = _publicationId;

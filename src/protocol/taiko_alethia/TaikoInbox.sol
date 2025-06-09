@@ -9,7 +9,7 @@ import {IDelayedInclusionStore} from "../IDelayedInclusionStore.sol";
 import {IInbox} from "../IInbox.sol";
 import {ILookahead} from "../ILookahead.sol";
 
-import {L1Query} from "./preemptive_assertions/L1QueriesPublicationTime.sol";
+import {CallSpecification} from "./assertions/PublicationTimeCall.sol";
 
 contract TaikoInbox is IInbox {
     struct Metadata {
@@ -31,7 +31,7 @@ contract TaikoInbox is IInbox {
     uint256 private constant METADATA = 0;
     uint256 private constant LAST_PUBLICATION = 1;
     uint256 private constant BLOB_REFERENCE = 2;
-    uint256 private constant L1_QUERIES = 3;
+    uint256 private constant L1_CALLS = 3;
 
     constructor(
         address _publicationFeed,
@@ -47,7 +47,7 @@ contract TaikoInbox is IInbox {
         maxAnchorBlockIdOffset = _maxAnchorBlockIdOffset;
     }
 
-    function publish(uint256 nBlobs, uint64 anchorBlockId, L1Query[] calldata queries) external {
+    function publish(uint256 nBlobs, uint64 anchorBlockId, CallSpecification[] calldata callSpecs) external {
         if (address(lookahead) != address(0)) {
             require(lookahead.isCurrentPreconfer(msg.sender), "not current preconfer");
         }
@@ -65,20 +65,20 @@ contract TaikoInbox is IInbox {
         require(metadata.anchorBlockHash != 0, "blockhash not found");
 
         // Perform preemptively asserted queries
-        uint256 nQueries = queries.length;
-        uint256[] memory results = new uint256[](nQueries);
-        for (uint256 i = 0; i < nQueries; i++) {
-            require(queries[i].destination != address(publicationFeed), "Cannot query publication feed");
-            (bool success, bytes memory returndata) = queries[i].destination.call(queries[i].callData);
+        uint256 nCalls = callSpecs.length;
+        bytes32[] memory returnHashes = new bytes32[](nCalls);
+        for (uint256 i = 0; i < nCalls; i++) {
+            require(callSpecs[i].destination != address(publicationFeed), "Cannot call publication feed");
+            (bool success, bytes memory returndata) = callSpecs[i].destination.call(callSpecs[i].callData);
             require(success, "Query failed");
-            results[i] = abi.decode(returndata, (uint256));
+            returnHashes[i] = keccak256(returndata);
         }
 
         bytes[] memory attributes = new bytes[](4);
         attributes[METADATA] = abi.encode(metadata);
         attributes[LAST_PUBLICATION] = abi.encode(_lastPublicationId);
         attributes[BLOB_REFERENCE] = abi.encode(blobRefRegistry.getRef(_buildBlobIndices(nBlobs)));
-        attributes[L1_QUERIES] = abi.encode(queries, results);
+        attributes[L1_CALLS] = abi.encode(callSpecs, returnHashes);
 
         _lastPublicationId = publicationFeed.publish(attributes).id;
 
@@ -87,7 +87,7 @@ contract TaikoInbox is IInbox {
         uint256 nInclusions = inclusions.length;
         // Metadata is the same as the regular publication, so we just set `isDelayedInclusion` to true
         metadata.isDelayedInclusion = true;
-        delete attributes[L1_QUERIES];
+        delete attributes[L1_CALLS];
         for (uint256 i; i < nInclusions; ++i) {
             attributes[METADATA] = abi.encode(metadata);
             attributes[LAST_PUBLICATION] = abi.encode(_lastPublicationId);

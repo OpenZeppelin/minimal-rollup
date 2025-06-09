@@ -24,8 +24,7 @@ contract RealtimeL1State is Asserter {
     /// which will need to be resolved at some point.
     function resolveUsingNextAssertion(uint256 l1BlockNumber) external {
         bytes32 blockHashFromHeader = preemptiveAssertions.getAssertion(_blockHashKey(l1BlockNumber));
-        bytes32 blockHashFromNextHeader =
-            preemptiveAssertions.getAssertion(_parentHashKey(l1BlockNumber + 1));
+        bytes32 blockHashFromNextHeader = preemptiveAssertions.getAssertion(_parentHashKey(l1BlockNumber + 1));
         require(blockHashFromHeader == blockHashFromNextHeader, InconsistentBlockHashAssertions());
         _clearAssertions(l1BlockNumber);
     }
@@ -34,8 +33,7 @@ contract RealtimeL1State is Asserter {
         require(attributeHashes[0] == keccak256(encodedMetadata), "Invalid metadata");
         (TaikoInbox.Metadata memory metadata) = abi.decode(encodedMetadata, (TaikoInbox.Metadata));
 
-        bytes32 assertedAnchorBlockHash =
-            preemptiveAssertions.getAssertion(_blockHashKey(metadata.anchorBlockId));
+        bytes32 assertedAnchorBlockHash = preemptiveAssertions.getAssertion(_blockHashKey(metadata.anchorBlockId));
         require(assertedAnchorBlockHash == metadata.anchorBlockHash, AnchorBlockHashNotAsserted());
         _clearAssertions(metadata.anchorBlockId);
     }

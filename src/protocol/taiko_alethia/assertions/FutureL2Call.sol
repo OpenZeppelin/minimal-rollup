@@ -4,7 +4,6 @@ pragma solidity ^0.8.28;
 import {Asserter} from "./Asserter.sol";
 
 contract FutureL2Call is Asserter {
-    
     constructor(address _anchor, address _preemptiveAssertions) Asserter(_anchor, _preemptiveAssertions) {}
 
     function assertFutureCall(
@@ -16,11 +15,7 @@ contract FutureL2Call is Asserter {
         preemptiveAssertions.createAssertion(_key(l2BlockNumber, destination, callData), keccak256(returnData));
     }
 
-    function resolveCall(
-        uint256 l2BlockNumber,
-        address destination,
-        bytes calldata callData
-    ) external {
+    function resolveCall(uint256 l2BlockNumber, address destination, bytes calldata callData) external {
         require(block.number == l2BlockNumber, "Incorrect L2 block");
         bytes32 key = _key(l2BlockNumber, destination, callData);
         bytes32 assertedReturnHash = preemptiveAssertions.getAssertion(key);
@@ -32,8 +27,11 @@ contract FutureL2Call is Asserter {
         preemptiveAssertions.removeAssertion(key);
     }
 
-   
-    function _key(uint256 l2BlockNumber, address destination, bytes calldata callData) internal pure returns (bytes32) {
+    function _key(uint256 l2BlockNumber, address destination, bytes calldata callData)
+        internal
+        pure
+        returns (bytes32)
+    {
         return keccak256(abi.encode(l2BlockNumber, destination, callData));
     }
 
@@ -42,5 +40,4 @@ contract FutureL2Call is Asserter {
     function _resolve(bytes32[] calldata, bytes calldata) internal pure override {
         assert(false);
     }
-
 }
