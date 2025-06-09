@@ -2,9 +2,9 @@
 
 pragma solidity ^0.8.28;
 
+import {IInbox} from "src/protocol/IInbox.sol";
 import {ILookahead} from "src/protocol/ILookahead.sol";
 import {IProposerFees} from "src/protocol/IProposerFees.sol";
-import {IPublicationFeed} from "src/protocol/IPublicationFeed.sol";
 import {DelayedInclusionStore} from "src/protocol/taiko_alethia/DelayedInclusionStore.sol";
 
 contract MockDelayedInclusionStore is DelayedInclusionStore {
