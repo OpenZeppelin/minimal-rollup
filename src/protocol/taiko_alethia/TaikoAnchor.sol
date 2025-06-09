@@ -1,14 +1,16 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
-import {PreemptiveProvableAssertions} from "./preemptive_assertions/PreemptiveProvableAssertions.sol";
+import {TaikoInbox} from "./TaikoInbox.sol";
+import {Asserter} from "./assertions/Asserter.sol";
+import {PreemptiveAssertions} from "./assertions/PreemptiveAssertions.sol";
 
 contract TaikoAnchor {
     event Anchor(uint256 publicationId, uint256 anchorBlockId, bytes32 anchorBlockHash, bytes32 parentGasUsed);
 
     uint256 public immutable fixedBaseFee;
     address public immutable permittedSender; // 0x0000777735367b36bC9B61C50022d9D0700dB4Ec
-    PreemptiveProvableAssertions public immutable preemptiveAssertions;
+    PreemptiveAssertions public immutable preemptiveAssertions;
 
     uint256 public lastAnchorBlockId;
     uint256 public lastPublicationId;
@@ -22,7 +24,7 @@ contract TaikoAnchor {
     }
 
     // This constructor is only used in test as the contract will be pre-deployed in the L2 genesis
-    constructor(uint256 _fixedBaseFee, address _permittedSender, PreemptiveProvableAssertions _preemptiveAssertions) {
+    constructor(uint256 _fixedBaseFee, address _permittedSender, PreemptiveAssertions _preemptiveAssertions) {
         require(_fixedBaseFee > 0, "fixedBaseFee must be greater than 0");
         fixedBaseFee = _fixedBaseFee;
         permittedSender = _permittedSender;
@@ -76,21 +78,33 @@ contract TaikoAnchor {
 
         _verifyBaseFee(_parentGasUsed);
 
-        preemptiveAssertions.setAsserter(_asserter);
-
         emit Anchor(_publicationId, _anchorBlockId, _anchorBlockHash, _parentGasUsed);
     }
 
     /// @dev The node software will guarantee and the prover will verify the following:
     /// 1. This function can only be transacted as the last transaction in the last L2 block derived from the same
     /// publication. It does not have to exist if it is not required;
-    /// 2. This function's gas limit is a fixed value;
-    /// 3. This function will not revert
-    /// 4. The attributesHash parameter matches the corresponding field in the publication header
+    /// 2. This function will not revert
+    /// 3. The attributesHash parameter matches the corresponding field in the publication header
     /// @param attributesHash the field in the publication header that represents all the attributes
-    /// @param proofs Any data that should be passed to the preemptiveAssertions contract
-    function endPublication(bytes32 attributesHash, bytes calldata proofs) external onlyFromPermittedSender {
-        preemptiveAssertions.resolveAssertions(attributesHash, proofs);
+    /// @param attributeHashes the list of attribute hashes that were used to create the combined attributesHash
+    /// @param asserters The list of Asserter contracts that have unproven assertions (to be resolved in this call)
+    /// @param proofs The list of proofs to pass to the Asserter contracts (one per contract) to resolve the assertions
+    function endPublication(
+        bytes32 attributesHash,
+        bytes32[] calldata attributeHashes,
+        Asserter[] calldata asserters,
+        bytes[] calldata proofs
+    ) external {
+        require(asserters.length == proofs.length, "Asserters and proofs length mismatch");
+        require(attributesHash == keccak256(abi.encode(attributeHashes)), "Invalid attributes");
+
+        for (uint256 i = 0; i < asserters.length; i++) {
+            Asserter asserter = asserters[i];
+            asserter.resolve(attributeHashes, proofs[i]);
+        }
+
+        require(preemptiveAssertions.nUnproven() == 0, "Some assertions remain unproven");
     }
 
     /// @dev Calculates the aggregated ancestor block hash for the given block ID
