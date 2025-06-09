@@ -6,7 +6,7 @@ evm_version = "cancun"
 always_use_create_2_factory = true
 sender = "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"
 
-gas_reports_ignore = ["MockDelayedInclusionStore", "MockCheckpointTracker", ""]
+gas_reports_ignore = ["MockDelayedInclusionStore", "MockCheckpointTracker", "SampleDepositProofs"]
 
 remappings = [
     "@optimism/=lib/optimism/",

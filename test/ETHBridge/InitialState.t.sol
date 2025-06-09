@@ -6,6 +6,7 @@ import "forge-std/Test.sol";
 import {SampleDepositProof} from "./SampleDepositProof.t.sol";
 import {ETHBridge} from "src/protocol/ETHBridge.sol";
 import {SignalService} from "src/protocol/SignalService.sol";
+import {MessageRelayer} from "src/protocol/taiko_alethia/MessageRelayer.sol";
 
 abstract contract InitialState is Test {
     ETHBridge bridge;
@@ -16,6 +17,9 @@ abstract contract InitialState is Test {
     address anyRelayer = address(0);
 
     address trustedCommitmentPublisher = _randomAddress("trustedCommitmentPublisher");
+
+    MessageRelayer messageRelayer;
+    address tipRecipient;
 
     function setUp() public virtual {
         sampleDepositProof = new SampleDepositProof();

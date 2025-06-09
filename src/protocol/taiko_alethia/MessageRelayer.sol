@@ -79,9 +79,11 @@ contract MessageRelayer is ReentrancyGuardTransient, IMessageRelayer {
         payable
         nonReentrant
     {
+        require(msg.value >= tip, InsufficientValue());
+        uint256 valueToSend = msg.value - tip;
+
         address tipRecipient = TIP_RECIPIENT_SLOT.asAddress().tload();
 
-        uint256 valueToSend = msg.value - tip;
         bool forwardMessageSuccess;
 
         if (gasLimit == 0) {

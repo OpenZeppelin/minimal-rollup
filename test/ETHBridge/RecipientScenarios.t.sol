@@ -5,12 +5,22 @@ import "forge-std/console.sol";
 
 import {CrossChainDepositExists} from "./CrossChainDepositExists.t.sol";
 
+import {MessageRelayer} from "src/protocol/taiko_alethia/MessageRelayer.sol";
+
 /// This contract describes behaviours that should be valid when the deposit recipient is a TransferRecipient contract.
 abstract contract RecipientIsAContract is CrossChainDepositExists {
     function setUp() public virtual override {
         super.setUp();
         // Set the recipient to be a TransferRecipient contract
         deployCodeTo("TransferRecipient", recipient);
+    }
+}
+
+abstract contract RecipientIsRelayer is CrossChainDepositExists {
+    function setUp() public virtual override {
+        super.setUp();
+        messageRelayer = new MessageRelayer(address(bridge));
+        tipRecipient = _randomAddress("tipRecipient");
     }
 }
 
