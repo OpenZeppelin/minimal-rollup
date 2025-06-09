@@ -32,14 +32,11 @@ jobs:
         run: |
           forge --version
 
-      - name: Install Just
-        uses: taiki-e/install-action@just
-
       # Do not count negative and fuzz tests toward gas calculations since they can add noise
       # (https://book.getfoundry.sh/guides/best-practices?highlight=best%20pr#general-test-guidance)
       - name: Run Forge tests
         run: |
-          forge test --no-match-test "(RevertWhen|testFuzz)"  --no-match-path "test/signal/**" --gas-report --color never | tee gasreport.ansi
+          forge test --no-match-test "(RevertWhen|testFuzz)" --gas-report --color never | tee gasreport.ansi
         id: test
 
       - name: Compare gas reports

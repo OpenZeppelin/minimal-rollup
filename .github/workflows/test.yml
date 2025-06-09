@@ -36,10 +36,7 @@ jobs:
           forge build --sizes
         id: build
 
-      - name: Install Just
-        uses: taiki-e/install-action@just
-
       - name: Run Forge tests
         run: |
-          just test -vvv
+          forge test -vvv
         id: test
