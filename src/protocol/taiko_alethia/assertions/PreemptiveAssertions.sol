@@ -40,7 +40,11 @@ contract PreemptiveAssertions is IPreemptiveAssertions {
         delete assertion.value;
     }
 
-    function getAssertion(bytes32 key, address asserter) external view returns (bytes32 value) {
+    function getAssertion(bytes32 key) external view returns (bytes32 value) {
+        return getAssertion(key, msg.sender);
+    }
+
+    function getAssertion(bytes32 key, address asserter) public view returns (bytes32 value) {
         bytes32 assertionId = _assertionId(key, asserter);
         Assertion storage assertion = assertions[assertionId];
         require(_exists(assertion), AssertionDoesNotExist());
