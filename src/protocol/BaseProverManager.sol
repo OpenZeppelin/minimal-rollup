@@ -205,15 +205,7 @@ abstract contract BaseProverManager is IProposerFees, IProverManager, BalanceAcc
         require(start.publicationId + 1 == firstPub.id, InvalidStartPublication());
         require(firstPub.timestamp > previousPeriodEnd, FirstPublicationIsBeforePeriod());
 
-        ICheckpointTracker.Checkpoint memory lastProven = checkpointTracker.getProvenCheckpoint();
-        // Only count publications that have not been proven yet for the fee calculation
-        uint256 numPublications = lastPub.id - lastProven.publicationId;
-        require(
-            numDelayedPublications <= numPublications,
-            "Number of delayed publications cannot be greater than the total number of publications"
-        );
-
-        checkpointTracker.proveTransition(start, end, numDelayedPublications, proof);
+        uint256 numPublications = checkpointTracker.proveTransition(start, end, numDelayedPublications, proof);
 
         if (period.isDeadlinePassed()) {
             period.assignReward(msg.sender);

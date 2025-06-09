@@ -43,7 +43,7 @@ contract CheckpointTracker is ICheckpointTracker {
         Checkpoint calldata end,
         uint256 numDelayedPublications,
         bytes calldata proof
-    ) external {
+    ) external returns (uint256) {
         require(
             proverManager == address(0) || msg.sender == proverManager, "Only the prover manager can call this function"
         );
@@ -57,6 +57,13 @@ contract CheckpointTracker is ICheckpointTracker {
             "Start publication must precede latest proven checkpoint"
         );
 
+        // Only count publications that have not been proven yet for `numPublications`
+        uint256 numPublications = end.publicationId - latestProvenCheckpoint.publicationId;
+        require(
+            numDelayedPublications <= numPublications,
+            "Number of delayed publications cannot be greater than the total number of publications"
+        );
+
         bytes32 startPublicationHash = inbox.getPublicationHash(start.publicationId);
         bytes32 endPublicationHash = inbox.getPublicationHash(end.publicationId);
         require(endPublicationHash != 0, "End publication does not exist");
@@ -66,6 +73,8 @@ contract CheckpointTracker is ICheckpointTracker {
         );
 
         _updateCheckpoint(end.publicationId, end.commitment);
+
+        return numPublications;
     }
 
     /// @inheritdoc ICheckpointTracker
