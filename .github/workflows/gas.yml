@@ -32,9 +32,6 @@ jobs:
         run: |
           forge --version
 
-      - name: Install Just
-        uses: taiki-e/install-action@just
-
       # Do not count negative and fuzz tests toward gas calculations since they can add noise
       # (https://book.getfoundry.sh/guides/best-practices?highlight=best%20pr#general-test-guidance)
       - name: Run Forge tests
