@@ -10,4 +10,5 @@ interface IPreemptiveAssertions {
     error AssertionExists();
     error AssertionDoesNotExist();
     error AssertionMustExistAndBeUnproven();
+    error CallerIsNotPauser();
 }
