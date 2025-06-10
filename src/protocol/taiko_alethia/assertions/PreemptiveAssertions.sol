@@ -2,9 +2,9 @@
 pragma solidity ^0.8.28;
 
 import {IPreemptiveAssertions} from "./IPreemptiveAssertions.sol";
-import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
+import {PublicationPauser} from "./PublicationPauser.sol";
 
-contract PreemptiveAssertions is IPreemptiveAssertions, Pausable {
+contract PreemptiveAssertions is IPreemptiveAssertions, PublicationPauser {
     // Assertion statuses
     uint256 constant UNKNOWN = 0;
     uint256 constant UNPROVEN = 1;
@@ -14,41 +14,7 @@ contract PreemptiveAssertions is IPreemptiveAssertions, Pausable {
 
     mapping(bytes32 assertionId => Assertion) private assertions;
 
-    address private immutable anchor;
-    address private pauser = address(0);
-
-    constructor(address _anchor) {
-        anchor = _anchor;
-        _pause();
-    }
-
-    // PAUSE FUNCTIONALITY
-
-    modifier onlyPauser() {
-        require(msg.sender == pauser, CallerIsNotPauser());
-        _;
-    }
-
-    /// @dev There is no access control. The sequencer should ensure it is first called with a trusted address.
-    function setPauser(address _pauser) external {
-        require(pauser == address(0), PauserAlreadySet());
-        pauser = _pauser;
-    }
-
-    function removePauser() external {
-        require(msg.sender == anchor, CallerIsNotAnchor());
-        pauser = address(0);
-    }
-
-    function pause() external onlyPauser {
-        _pause();
-    }
-
-    function unpause() external onlyPauser {
-        _unpause();
-    }
-
-    // ASSERTION FUNCTIONALITY
+    constructor(address _anchor) PublicationPauser(_anchor) {}
 
     function createAssertion(bytes32 key, bytes32 val) external whenNotPaused {
         Assertion storage assertion = assertions[_assertionId(key)];
@@ -87,8 +53,6 @@ contract PreemptiveAssertions is IPreemptiveAssertions, Pausable {
         require(_exists(assertion), AssertionDoesNotExist());
         return assertion.value;
     }
-
-    // INTERNAL FUNCTIONS
 
     function _assertionId(bytes32 key) internal view returns (bytes32) {
         return _assertionId(key, msg.sender);
