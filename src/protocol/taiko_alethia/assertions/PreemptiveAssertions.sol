@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
+import {CalledByAnchor} from "./CalledByAnchor.sol";
 import {IPreemptiveAssertions} from "./IPreemptiveAssertions.sol";
 import {PublicationPauser} from "./PublicationPauser.sol";
 
@@ -14,7 +15,7 @@ contract PreemptiveAssertions is IPreemptiveAssertions, PublicationPauser {
 
     mapping(bytes32 assertionId => Assertion) private assertions;
 
-    constructor(address _anchor) PublicationPauser(_anchor) {}
+    constructor(address _anchor) CalledByAnchor(_anchor) {}
 
     function createAssertion(bytes32 key, bytes32 val) external whenNotPaused {
         Assertion storage assertion = assertions[_assertionId(key)];

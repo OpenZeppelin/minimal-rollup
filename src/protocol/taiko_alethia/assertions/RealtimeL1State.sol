@@ -2,14 +2,19 @@
 pragma solidity ^0.8.28;
 
 import {TaikoInbox} from "../TaikoInbox.sol";
+
 import {Asserter} from "./Asserter.sol";
+import {CalledByAnchor} from "./CalledByAnchor.sol";
 import {LibBlockHeader} from "src/libs/LibBlockHeader.sol";
 
 contract RealtimeL1State is Asserter {
     error InconsistentBlockHashAssertions();
     error AnchorBlockHashNotAsserted();
 
-    constructor(address _anchor, address _preemptiveAssertions) Asserter(_anchor, _preemptiveAssertions) {}
+    constructor(address _anchor, address _preemptiveAssertions)
+        CalledByAnchor(_anchor)
+        Asserter(_preemptiveAssertions)
+    {}
 
     function assertL1Header(uint256 l1BlockNumber, LibBlockHeader.BlockHeader memory header) external {
         bytes32 blockHash = keccak256(abi.encode(header)); // TODO: confirm the hash encoding

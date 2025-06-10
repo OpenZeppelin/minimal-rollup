@@ -2,9 +2,13 @@
 pragma solidity ^0.8.28;
 
 import {Asserter} from "./Asserter.sol";
+import {CalledByAnchor} from "./CalledByAnchor.sol";
 
 contract FutureL2Call is Asserter {
-    constructor(address _anchor, address _preemptiveAssertions) Asserter(_anchor, _preemptiveAssertions) {}
+    constructor(address _anchor, address _preemptiveAssertions)
+        CalledByAnchor(_anchor)
+        Asserter(_preemptiveAssertions)
+    {}
 
     function assertFutureCall(
         uint256 l2BlockNumber,

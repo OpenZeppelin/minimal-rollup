@@ -1,22 +1,14 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
+import {CalledByAnchor} from "./CalledByAnchor.sol";
 import {PreemptiveAssertions} from "./PreemptiveAssertions.sol";
 
-abstract contract Asserter {
-    address public immutable anchor;
+abstract contract Asserter is CalledByAnchor {
     PreemptiveAssertions public immutable preemptiveAssertions;
 
-    error CallerNotAnchor();
-
-    constructor(address _anchor, address _preemptiveAssertions) {
-        anchor = _anchor;
+    constructor(address _preemptiveAssertions) {
         preemptiveAssertions = PreemptiveAssertions(_preemptiveAssertions);
-    }
-
-    modifier onlyAnchor() {
-        require(msg.sender == anchor, CallerNotAnchor());
-        _;
     }
 
     function resolve(bytes32[] calldata attributeHashes, bytes calldata proof) external onlyAnchor {

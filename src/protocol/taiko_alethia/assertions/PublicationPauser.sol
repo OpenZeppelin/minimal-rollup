@@ -1,18 +1,16 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
+import {CalledByAnchor} from "./CalledByAnchor.sol";
 import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
 
-abstract contract PublicationPauser is Pausable {
+abstract contract PublicationPauser is Pausable, CalledByAnchor {
     address private pauser = address(0);
-    address private immutable anchor;
 
     error CallerIsNotPauser();
     error PauserIsAlreadySet();
-    error CallerIsNotAnchor();
 
-    constructor(address _anchor) {
-        anchor = _anchor;
+    constructor() {
         _pause(); // Start in paused state
     }
 
@@ -27,16 +25,15 @@ abstract contract PublicationPauser is Pausable {
         pauser = _pauser;
     }
 
-    function removePauser() external {
-        require(msg.sender == anchor, CallerIsNotAnchor());
-        pauser = address(0);
-    }
-
     function pause() external onlyPauser {
         _pause();
     }
 
     function unpause() external onlyPauser {
         _unpause();
+    }
+
+    function removePauser() external onlyAnchor {
+        pauser = address(0);
     }
 }
