@@ -14,28 +14,30 @@ contract PreemptiveAssertions is IPreemptiveAssertions, Pausable {
 
     mapping(bytes32 assertionId => Assertion) private assertions;
 
-    bytes32 private constant PAUSER_ID = keccak256("pauser");
+    address private immutable anchor;
+    address private pauser = address(0);
 
-    constructor() {
+    constructor(address _anchor) {
+        anchor = _anchor;
         _pause();
     }
 
     // PAUSE FUNCTIONALITY
 
     modifier onlyPauser() {
-        require(assertions[PAUSER_ID].value == bytes32(uint256(uint160(msg.sender))), CallerIsNotPauser());
+        require(msg.sender == pauser, CallerIsNotPauser());
         _;
     }
 
     /// @dev There is no access control. The sequencer should ensure it is first called with a trusted address.
-    /// @dev Use an assertion to save the pauser address, to guarantee it is cleared by the end of the publication
-    function setPauser(address pauser) external {
-        require(assertions[PAUSER_ID].status == UNKNOWN, "Pauser already set");
-        _createAssertion(PAUSER_ID, bytes32(uint256(uint160(pauser))));
+    function setPauser(address _pauser) external {
+        require(pauser == address(0), PauserAlreadySet());
+        pauser = _pauser;
     }
 
-    function removePauser() external onlyPauser {
-        _removeAssertion(PAUSER_ID);
+    function removePauser() external {
+        require(msg.sender == anchor, CallerIsNotAnchor());
+        pauser = address(0);
     }
 
     function pause() external onlyPauser {
@@ -49,11 +51,21 @@ contract PreemptiveAssertions is IPreemptiveAssertions, Pausable {
     // ASSERTION FUNCTIONALITY
 
     function createAssertion(bytes32 key, bytes32 val) external whenNotPaused {
-        _createAssertion(_assertionId(key), val);
+        Assertion storage assertion = assertions[_assertionId(key)];
+        require(!_exists(assertion), AssertionExists());
+        assertion.status = UNPROVEN;
+        assertion.value = val;
+        nUnproven++;
     }
 
     function removeAssertion(bytes32 key) external {
-        _removeAssertion(_assertionId(key));
+        Assertion storage assertion = assertions[_assertionId(key)];
+        require(_exists(assertion), AssertionDoesNotExist());
+        if (assertion.status == UNPROVEN) {
+            nUnproven--;
+        }
+        delete assertion.status;
+        delete assertion.value;
     }
 
     /// @dev This should be used when the assertion has been proven but it should remain in the mapping
@@ -77,24 +89,6 @@ contract PreemptiveAssertions is IPreemptiveAssertions, Pausable {
     }
 
     // INTERNAL FUNCTIONS
-
-    function _createAssertion(bytes32 id, bytes32 val) internal {
-        Assertion storage assertion = assertions[id];
-        require(!_exists(assertion), AssertionExists());
-        assertion.status = UNPROVEN;
-        assertion.value = val;
-        nUnproven++;
-    }
-
-    function _removeAssertion(bytes32 id) internal {
-        Assertion storage assertion = assertions[id];
-        require(_exists(assertion), AssertionDoesNotExist());
-        if (assertion.status == UNPROVEN) {
-            nUnproven--;
-        }
-        delete assertion.status;
-        delete assertion.value;
-    }
 
     function _assertionId(bytes32 key) internal view returns (bytes32) {
         return _assertionId(key, msg.sender);
