@@ -298,7 +298,7 @@ This mechanism creates a minor complication for the staked cross-rollup assertio
 
 ### Assigning roles
 
-An interesting question to consider is who has the authority and incentive to make and prove assertions. As described, the sequencer is allowed to include an arbitrary list of L1 calls to make when publishing their bundle. The rollup only enforces that a recent L1 block hash (chosen by the sequencer) and the result of these calls will be faithfully passed to the end-of-publication L2 transaction and that this transaction succeeds. The rest of the logic is contained within regular L2 contracts, which must be invoked with regular L2 transactions that pay L2 gas.
+An interesting question to consider is who has the authority and incentive to make and prove assertions. As described, the sequencer is allowed to include an arbitrary list of L1 calls to make when publishing their bundle. The rollup node only enforces that a recent L1 block hash (chosen by the sequencer) and the result of these calls will be faithfully passed to the end-of-publication L2 transaction and that this transaction succeeds. The rest of the logic is contained within regular L2 contracts, which must be invoked with regular L2 transactions that pay L2 gas.
 
 Since the sequencer is providing an additional service for users, they would likely charge for:
 - any increased L1 gas costs that they incur (eg. to pay for additional queries in the Inbox)
@@ -306,7 +306,7 @@ Since the sequencer is providing an additional service for users, they would lik
 - any opportunities they may lose from constraining their options when building publications.
 - any effort it takes to validate whether they will be able to prove any assertions that the users want (eg. ensuring an L1 query will have a predictable result at publication time).
 
-As a convenience, I recommend the assertion contract only allows new assertions to be created by an `asserter` address that is set by anyone when it is zero, and reset to zero in the end-of-publication transaction. This allows the sequencer to choose a trusted `asserter` address at the start of the publication. This is not strictly necessary because the sequencer can also refuse to include transactions that make unendorsed assertions, but it provides a mechanism for the sequencer to coordinate with users and to defer the costs. In particular, the `asserter` address could be a contract that allows anyone to make any assertion as long as they provide enough upfront evidence and pay enough fees. For example:
+As a convenience, I recommend the assertion contract to be enabled and disabled by a `pauser` address that is set by anyone when it is zero and reset to zero in the end-of-publication transaction, which allows the sequencer to set a trusted `pauser` address at the start of the publication. This is not strictly necessary because the sequencer can also refuse to include transactions that make unendorsed assertions, but it provides a mechanism for the sequencer to coordinate with users and to defer the costs. In particular, the `pauser` address could be a contract that allows assertions when the user provides enough upfront evidence and pays enough fees. For example:
 
 - a user that claims the block hash for L1 block _B_ is _H_ could provide the L1 header that is needed for the proof, along with enough funds to cover the `blockhash` query on L1.
 - a user that wants an assertion that some property will be true in L2 block _X_ could also sign the proof transaction that will need to be sequenced in block _X_.
