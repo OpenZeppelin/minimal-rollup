@@ -127,6 +127,7 @@ contract TaikoAnchor {
         }
 
         require(preemptiveAssertions.nUnproven() == 0, "Some assertions remain unproven");
+        preemptiveAssertions.removePauser();
     }
 
     function l1BlockHashes(uint256 blockId) external view returns (bytes32 blockHash) {
