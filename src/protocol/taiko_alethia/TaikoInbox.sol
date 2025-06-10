@@ -52,6 +52,10 @@ contract TaikoInbox is IInbox, DelayedInclusionStore {
         _publicationHashes.push(0);
     }
 
+    function blobHash(uint256 blobIndex) external view returns (bytes32) {
+        blobhash(blobIndex);
+    }
+
     /// @inheritdoc IInbox
     function publish(uint256 nBlobs, uint64 anchorBlockId) external {
         if (address(lookahead) != address(0)) {

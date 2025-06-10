@@ -20,15 +20,17 @@ contract DeployTaikoInbox is Script {
     uint256 private maxAnchorBlockIdOffset;
     address private proposerFeesAddr;
     uint256 private inclusionDelay;
+    MockProposerFees public mockProposerFees;
+    BlobRefRegistry public blobRefRegistry;
 
     function setUp() public {
+        mockProposerFees = new MockProposerFees();
+        blobRefRegistry = new BlobRefRegistry();
         // Deploy MockProposerFees contract
-        MockProposerFees mockProposerFees = new MockProposerFees();
-        BlobRefRegistry blobRefRegistry = new BlobRefRegistry();
         // Load values from environment variables or use defaults
         lookaheadAddr = vm.envOr("LOOKAHEAD_ADDRESS", address(0));
         blobRefRegistryAddr = address(blobRefRegistry);
-        maxAnchorBlockIdOffset = vm.envOr("MAX_ANCHOR_BLOCK_ID_OFFSET", uint256(256));
+        maxAnchorBlockIdOffset = 50;
         proposerFeesAddr = address(mockProposerFees);
         inclusionDelay = vm.envOr("INCLUSION_DELAY", uint256(3600)); // Default: 1 hour
     }
@@ -40,6 +42,12 @@ contract DeployTaikoInbox is Script {
         // Deploy TaikoInbox contract
         TaikoInbox taikoInbox =
             new TaikoInbox(lookaheadAddr, blobRefRegistryAddr, maxAnchorBlockIdOffset, proposerFeesAddr, inclusionDelay);
+
+        // taikoInbox.publish(1, 250);
+        // uint256[] memory blobIndices = new uint256[](2);
+        // blobIndices[0] = 0;
+        // blobIndices[1] = 1;
+        // blobRefRegistry.registerRef(blobIndices);
 
         // Stop broadcasting
         vm.stopBroadcast();
