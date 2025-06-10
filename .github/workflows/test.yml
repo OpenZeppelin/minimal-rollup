@@ -10,9 +10,6 @@ env:
 
 jobs:
   check:
-    strategy:
-      fail-fast: true
-
     name: Foundry project
     runs-on: ubuntu-latest
     steps:
@@ -23,7 +20,7 @@ jobs:
       - name: Install Foundry
         uses: foundry-rs/foundry-toolchain@v1
         with:
-          version: nightly
+          version: stable
 
       - name: Show Forge version
         run: |
@@ -39,7 +36,10 @@ jobs:
           forge build --sizes
         id: build
 
+      - name: Install Just
+        uses: taiki-e/install-action@just
+
       - name: Run Forge tests
         run: |
-          forge test -vvv
+          just test -vvv
         id: test

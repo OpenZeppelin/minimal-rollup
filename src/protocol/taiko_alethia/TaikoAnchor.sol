@@ -1,22 +1,28 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
-import {TaikoInbox} from "./TaikoInbox.sol";
+import {ICommitmentStore} from "../ICommitmentStore.sol";
 import {Asserter} from "./assertions/Asserter.sol";
 import {PreemptiveAssertions} from "./assertions/PreemptiveAssertions.sol";
+import {LibBlockHeader} from "src/libs/LibBlockHeader.sol";
 
 contract TaikoAnchor {
     event Anchor(uint256 publicationId, uint256 anchorBlockId, bytes32 anchorBlockHash, bytes32 parentGasUsed);
+
+    /// @dev The header provided does not match the block hash
+    /// @param headerHash The header hash
+    error HeaderMismatch(bytes32 headerHash);
 
     uint256 public immutable fixedBaseFee;
     address public immutable permittedSender; // 0x0000777735367b36bC9B61C50022d9D0700dB4Ec
     PreemptiveAssertions public immutable preemptiveAssertions;
 
+    ICommitmentStore public immutable commitmentStore;
+
     uint256 public lastAnchorBlockId;
     uint256 public lastPublicationId;
     bytes32 public circularBlocksHash;
     mapping(uint256 blockId => bytes32 blockHash) public blockHashes;
-    mapping(uint256 blockId => bytes32 blockHash) public l1BlockHashes;
 
     modifier onlyFromPermittedSender() {
         require(msg.sender == permittedSender, "sender not golden touch");
@@ -24,10 +30,20 @@ contract TaikoAnchor {
     }
 
     // This constructor is only used in test as the contract will be pre-deployed in the L2 genesis
-    constructor(uint256 _fixedBaseFee, address _permittedSender, PreemptiveAssertions _preemptiveAssertions) {
+    /// @param _fixedBaseFee The fixed base fee for the rollup
+    /// @param _permittedSender The address of the sender that can call the anchor function
+    /// @param _commitmentStore contract responsible storing historical commitments
+    /// @param _preemptiveAssertions The contract that handles preemptive assertions
+    constructor(
+        uint256 _fixedBaseFee,
+        address _permittedSender,
+        address _commitmentStore,
+        PreemptiveAssertions _preemptiveAssertions
+    ) {
         require(_fixedBaseFee > 0, "fixedBaseFee must be greater than 0");
         fixedBaseFee = _fixedBaseFee;
         permittedSender = _permittedSender;
+        commitmentStore = ICommitmentStore(_commitmentStore);
         preemptiveAssertions = _preemptiveAssertions;
 
         uint256 parentId = block.number - 1;
@@ -39,15 +55,22 @@ contract TaikoAnchor {
     /// 1. This function is transacted as the first transaction in the first L2 block derived from the same publication;
     /// 2. This function's gas limit is a fixed value;
     /// 3. This function will not revert;
-    /// 4. The parameters correspond to the real L1 state.
+    /// 4. The parameters correspond to the real L1 state, except _anchorBlockHeader is validated in this function
+    /// rather than the node
+    /// @dev The anchor block header is provided in order to extract the L1 state root needed for storage verification
+    /// logic (i.e. verifying an L1 signal)
     /// @param _publicationId The publication that contains this anchor transaction (as the first transaction)
     /// @param _anchorBlockId The latest L1 block known to the L2 blocks in this publication
     /// @param _anchorBlockHash The block hash of the L1 anchor block
+    /// @param _anchorBlockHeader The block header of the L1 anchor block
     /// @param _parentGasUsed The gas used in the parent block
-    function anchor(uint256 _publicationId, uint256 _anchorBlockId, bytes32 _anchorBlockHash, bytes32 _parentGasUsed)
-        external
-        onlyFromPermittedSender
-    {
+    function anchor(
+        uint256 _publicationId,
+        uint256 _anchorBlockId,
+        bytes32 _anchorBlockHash,
+        LibBlockHeader.BlockHeader calldata _anchorBlockHeader,
+        bytes32 _parentGasUsed
+    ) external onlyFromPermittedSender {
         // Make sure this function can only succeed once per publication
         require(_publicationId > lastPublicationId, "publicationId too small");
         lastPublicationId = _publicationId;
@@ -59,7 +82,11 @@ contract TaikoAnchor {
         // Persist anchor block hashes
         if (_anchorBlockId > lastAnchorBlockId) {
             lastAnchorBlockId = _anchorBlockId;
-            l1BlockHashes[_anchorBlockId] = _anchorBlockHash;
+            bytes32 headerHash = keccak256(abi.encode(_anchorBlockHeader));
+            require(headerHash == _anchorBlockHash, HeaderMismatch(headerHash));
+            bytes32 commitment = keccak256(abi.encode(_anchorBlockHeader.stateRoot, _anchorBlockHash));
+            // Stores the state of the other chain
+            commitmentStore.storeCommitment(_anchorBlockId, commitment);
         }
 
         // Store the parent block hash in the _blockhashes mapping
@@ -100,6 +127,10 @@ contract TaikoAnchor {
         }
 
         require(preemptiveAssertions.nUnproven() == 0, "Some assertions remain unproven");
+    }
+
+    function l1BlockHashes(uint256 blockId) external view returns (bytes32 blockHash) {
+        return commitmentStore.commitmentAt(address(this), blockId);
     }
 
     /// @dev Calculates the aggregated ancestor block hash for the given block ID

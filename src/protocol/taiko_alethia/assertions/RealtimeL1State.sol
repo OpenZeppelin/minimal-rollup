@@ -3,7 +3,7 @@ pragma solidity ^0.8.28;
 
 import {TaikoInbox} from "../TaikoInbox.sol";
 import {Asserter} from "./Asserter.sol";
-import {LibBlockHeader} from "./LibBlockHeader.sol";
+import {LibBlockHeader} from "src/libs/LibBlockHeader.sol";
 
 contract RealtimeL1State is Asserter {
     error InconsistentBlockHashAssertions();

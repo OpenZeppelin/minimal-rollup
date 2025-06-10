@@ -2,53 +2,93 @@
 pragma solidity ^0.8.28;
 
 import {ICheckpointTracker} from "./ICheckpointTracker.sol";
+import {ICommitmentStore} from "./ICommitmentStore.sol";
 import {IPublicationFeed} from "./IPublicationFeed.sol";
 import {IVerifier} from "./IVerifier.sol";
 
 contract CheckpointTracker is ICheckpointTracker {
-    /// @notice The hash of the current proven checkpoint representing the latest verified state of the rollup
-    /// @dev Previous checkpoints are not stored here but are synchronized to the `SignalService`
-    /// @dev A checkpoint commitment is any value (typically a state root) that uniquely identifies
-    /// the state of the rollup at a specific point in time
-    bytes32 public provenHash;
+    /// @dev The publication id of the current proven checkpoint representing
+    /// the latest verified state of the rollup
+    uint256 private _provenPublicationId;
 
     IPublicationFeed public immutable publicationFeed;
-
-    // This would usually be retrieved dynamically as in the current Taiko implementation, but for simplicity we are
-    // just setting it in the constructor
     IVerifier public immutable verifier;
+    ICommitmentStore public immutable commitmentStore;
+    address public immutable proverManager;
 
     /// @param _genesis the checkpoint commitment describing the initial state of the rollup
     /// @param _publicationFeed the input data source that updates the state of this rollup
     /// @param _verifier a contract that can verify the validity of a transition from one checkpoint to another
-    constructor(bytes32 _genesis, address _publicationFeed, address _verifier) {
+    /// @param _proverManager contract responsible for managing the prover auction
+    /// @param _commitmentStore contract responsible storing historical commitments
+    constructor(
+        bytes32 _genesis,
+        address _publicationFeed,
+        address _verifier,
+        address _proverManager,
+        address _commitmentStore
+    ) {
         // set the genesis checkpoint commitment of the rollup - genesis is trusted to be correct
         require(_genesis != 0, "genesis checkpoint commitment cannot be 0");
-
         publicationFeed = IPublicationFeed(_publicationFeed);
-        verifier = IVerifier(_verifier);
+        uint256 latestPublicationId = publicationFeed.getNextPublicationId() - 1;
 
-        Checkpoint memory genesisCheckpoint = Checkpoint({publicationId: 0, commitment: _genesis});
-        provenHash = keccak256(abi.encode(genesisCheckpoint));
-        emit CheckpointUpdated(provenHash);
+        verifier = IVerifier(_verifier);
+        commitmentStore = ICommitmentStore(_commitmentStore);
+        proverManager = _proverManager;
+
+        _updateCheckpoint(latestPublicationId, _genesis);
     }
 
     /// @inheritdoc ICheckpointTracker
-    function proveTransition(Checkpoint calldata start, Checkpoint calldata end, bytes calldata proof) external {
+    /// @dev This function does not use the `start` checkpoint since we don't support parallel transitions.
+    function proveTransition(
+        Checkpoint calldata,
+        Checkpoint calldata end,
+        uint256 numPublications,
+        uint256 numDelayedPublications,
+        bytes calldata proof
+    ) external {
+        require(
+            proverManager == address(0) || msg.sender == proverManager, "Only the prover manager can call this function"
+        );
+
         require(end.commitment != 0, "Checkpoint commitment cannot be 0");
-
-        bytes32 startCheckpointHash = keccak256(abi.encode(start));
-        require(startCheckpointHash == provenHash, "Start checkpoint must be the latest proven checkpoint");
-
-        require(start.publicationId < end.publicationId, "End publication must be after the last proven publication");
-
-        bytes32 startPublicationHash = publicationFeed.getPublicationHash(start.publicationId);
+        require(
+            numDelayedPublications <= numPublications,
+            "Number of delayed publications cannot be greater than the total number of publications"
+        );
+        Checkpoint memory latestProvenCheckpoint = getProvenCheckpoint();
+        bytes32 startPublicationHash = publicationFeed.getPublicationHash(latestProvenCheckpoint.publicationId);
         bytes32 endPublicationHash = publicationFeed.getPublicationHash(end.publicationId);
         require(endPublicationHash != 0, "End publication does not exist");
 
-        verifier.verifyProof(startPublicationHash, endPublicationHash, start.commitment, end.commitment, proof);
+        verifier.verifyProof(
+            startPublicationHash,
+            endPublicationHash,
+            latestProvenCheckpoint.commitment,
+            end.commitment,
+            numPublications,
+            numDelayedPublications,
+            proof
+        );
 
-        provenHash = keccak256(abi.encode(end));
-        emit TransitionProven(start, end);
+        _updateCheckpoint(end.publicationId, end.commitment);
+    }
+
+    /// @inheritdoc ICheckpointTracker
+    function getProvenCheckpoint() public view returns (Checkpoint memory provenCheckpoint) {
+        provenCheckpoint.publicationId = _provenPublicationId;
+        provenCheckpoint.commitment = commitmentStore.commitmentAt(address(this), provenCheckpoint.publicationId);
+    }
+
+    /// @dev Updates the proven checkpoint to a new publication ID and commitment
+    /// @dev Stores the commitment in the commitment store and emits an event
+    /// @param publicationId The ID of the publication to set as the latest proven checkpoint
+    /// @param commitment The checkpoint commitment representing the state at the given publication ID
+    function _updateCheckpoint(uint256 publicationId, bytes32 commitment) internal {
+        _provenPublicationId = publicationId;
+        commitmentStore.storeCommitment(publicationId, commitment);
+        emit CheckpointUpdated(publicationId, commitment);
     }
 }

@@ -1,0 +1,60 @@
+name: Report gas diff
+
+on:
+  push:
+  pull_request:
+    paths:
+      - src/**
+      - test/**
+      - foundry.toml
+      - .github/workflows/gas.yml
+  workflow_dispatch:
+
+env:
+  FOUNDRY_PROFILE: ci
+
+jobs:
+  compare_gas_reports:
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install Foundry
+        uses: foundry-rs/foundry-toolchain@v1
+        with:
+          version: nightly
+
+      - name: Show Forge version
+        run: |
+          forge --version
+
+      - name: Install Just
+        uses: taiki-e/install-action@just
+
+      # Do not count negative and fuzz tests toward gas calculations since they can add noise
+      # (https://book.getfoundry.sh/guides/best-practices?highlight=best%20pr#general-test-guidance)
+      - name: Run Forge tests
+        run: |
+          forge test --no-match-test "(RevertWhen|testFuzz)"  --no-match-path "test/signal/**" --gas-report --color never | tee gasreport.ansi
+        id: test
+
+      - name: Compare gas reports
+        uses: Rubilmax/foundry-gas-diff@v3
+        with:
+          summaryQuantile: 0.9 # only display the 10% most significant gas diffs in the summary (defaults to 20%)
+          sortCriteria: avg,max # sort diff rows by criteria
+          sortOrders: desc,asc
+          base: ${{ github.base_ref }}
+        id: gas_diff
+
+      - name: Add gas diff to sticky comment
+        if: github.event_name == 'pull_request' || github.event_name == 'pull_request_target'
+        uses: marocchino/sticky-pull-request-comment@v2
+        with:
+          # delete the comment in case changes no longer impact gas costs
+          delete: ${{ !steps.gas_diff.outputs.markdown }}
+          message: ${{ steps.gas_diff.outputs.markdown }}
