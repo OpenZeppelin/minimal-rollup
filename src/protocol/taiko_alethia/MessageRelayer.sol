@@ -20,7 +20,8 @@ import {MessageRelayer} from "src/protocol/taiko_alethia/MessageRelayer.sol";
 ///    from: msg.sender,
 ///    to: address(MessageRelayer),
 ///    amount: 1.1 eth,
-///    data: encodedData
+///    data: encodedData,
+///    context: abi.encode(address(Bob)) // Where Bob is the allowed relayer. Set to empty bytes to allow any relayer.
 ///    }
 ///
 ///    Where encodedData is roughly:
@@ -35,7 +36,7 @@ import {MessageRelayer} from "src/protocol/taiko_alethia/MessageRelayer.sol";
 ///        )
 ///
 /// To relay the message:
-///    1. Any address on the destination chain can call relayMessage
+///    1. The allowed relayer calls `relayMessage` if set. Otherwise, anyone can call `relayMessage`.
 ///    2. This will call claimDeposit on the ETHBridge
 ///    3. If the original message was specified correctly, this will call receiveMessage on this contract
 ///    4. This will call the message recipient and send the tip to the relayer
@@ -62,7 +63,6 @@ contract MessageRelayer is ReentrancyGuardTransient, IMessageRelayer {
 
     /// @inheritdoc IMessageRelayer
     /// @dev For relayer selection, encode the allowed relayer address in the context field of the ETHDeposit.
-    /// If context is 20 bytes, it will be decoded as the allowed relayer address.
     /// Use address(0) or empty context to allow any relayer.
     function relayMessage(
         IETHBridge.ETHDeposit memory ethDeposit,
@@ -71,7 +71,7 @@ contract MessageRelayer is ReentrancyGuardTransient, IMessageRelayer {
         address tipRecipient
     ) external {
         address allowedRelayer = address(0);
-        if (ethDeposit.context.length == 20) {
+        if (ethDeposit.context.length == 32) {
             allowedRelayer = abi.decode(ethDeposit.context, (address));
         }
         require(allowedRelayer == address(0) || allowedRelayer == msg.sender, InvalidRelayer());
