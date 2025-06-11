@@ -41,7 +41,7 @@ async fn main() -> Result<()> {
     println!("Deployed ETH bridge at address: {}", eth_bridge.address());
 
     println!("Sending ETH deposit...");
-    let builder = eth_bridge.deposit(sender, data).value(amount);
+    let builder = eth_bridge.deposit(sender, data, bytes!()).value(amount);
     let tx = builder.send().await?.get_receipt().await?;
 
     // Get deposit ID from the transaction receipt logs
