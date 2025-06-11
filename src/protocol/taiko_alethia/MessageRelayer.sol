@@ -61,16 +61,21 @@ contract MessageRelayer is ReentrancyGuardTransient, IMessageRelayer {
     uint256 private constant BUFFER = 20_000;
 
     /// @inheritdoc IMessageRelayer
-    //TODO: should we provide a way for the user to specify a relayer address if they want in order to avoid raicing
-    // conditions? This could be just who gets the tip, so that it can still be filled by anyone, it just sets the right
-    // incentives.
+    /// @dev For relayer selection, encode the allowed relayer address in the context field of the ETHDeposit.
+    /// If context is 20 bytes, it will be decoded as the allowed relayer address.
+    /// Use address(0) or empty context to allow any relayer.
     function relayMessage(
         IETHBridge.ETHDeposit memory ethDeposit,
         uint256 height,
         bytes memory proof,
         address tipRecipient
     ) external {
-        require(msg.sender == ethDeposit.relayer || ethDeposit.relayer == address(0), InvalidRelayer());
+        address allowedRelayer = address(0);
+        if (ethDeposit.context.length == 20) {
+            allowedRelayer = abi.decode(ethDeposit.context, (address));
+        }
+        require(allowedRelayer == address(0) || allowedRelayer == msg.sender, InvalidRelayer());
+
         TIP_RECIPIENT_SLOT.asAddress().tstore(tipRecipient);
 
         ethBridge.claimDeposit(ethDeposit, height, proof);

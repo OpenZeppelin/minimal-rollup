@@ -44,8 +44,8 @@ contract BridgeETHState is BaseState {
         vm.prank(defaultSender);
         vm.deal(defaultSender, senderBalanceL1);
         bytes memory emptyData = "";
-        address relayer = address(0);
-        depositIdOne = L1EthBridge.deposit{value: depositAmount}(defaultSender, emptyData, relayer);
+        bytes memory context = "";
+        depositIdOne = L1EthBridge.deposit{value: depositAmount}(defaultSender, emptyData, context);
     }
 }
 
@@ -117,10 +117,10 @@ contract ClaimDepositTest is CommitmentStoredState {
         ISignalService.SignalProof memory signalProof =
             ISignalService.SignalProof(accountProof, storageProof, stateRoot, blockHash);
         bytes memory encodedProof = abi.encode(signalProof);
-        address relayer = address(0);
+        bytes memory context = "";
 
         IETHBridge.ETHDeposit memory depositOne =
-            IETHBridge.ETHDeposit(0, defaultSender, defaultSender, depositAmount, bytes(""), relayer);
+            IETHBridge.ETHDeposit(0, defaultSender, defaultSender, depositAmount, bytes(""), context);
 
         vm.selectFork(L2Fork);
         L2EthBridge.claimDeposit(depositOne, commitmentHeight, encodedProof);
