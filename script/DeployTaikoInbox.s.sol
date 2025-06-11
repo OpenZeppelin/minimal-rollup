@@ -16,23 +16,13 @@ import {console} from "forge-std/console.sol";
 contract DeployTaikoInbox is Script {
     // Default values that can be overridden via environment variables
     address private lookaheadAddr;
-    address private blobRefRegistryAddr;
     uint256 private maxAnchorBlockIdOffset;
-    address private proposerFeesAddr;
     uint256 private inclusionDelay;
-    MockProposerFees public mockProposerFees;
-    BlobRefRegistry public blobRefRegistry;
 
     function setUp() public {
-        mockProposerFees = new MockProposerFees();
-        blobRefRegistry = new BlobRefRegistry();
-        // Deploy MockProposerFees contract
-        // Load values from environment variables or use defaults
-        lookaheadAddr = vm.envOr("LOOKAHEAD_ADDRESS", address(0));
-        blobRefRegistryAddr = address(blobRefRegistry);
-        maxAnchorBlockIdOffset = 50;
-        proposerFeesAddr = address(mockProposerFees);
-        inclusionDelay = vm.envOr("INCLUSION_DELAY", uint256(3600)); // Default: 1 hour
+        lookaheadAddr = address(0);
+        maxAnchorBlockIdOffset = uint256(50);
+        inclusionDelay = uint256(3600); // Default: 1 hour
     }
 
     function run() public returns (TaikoInbox) {
@@ -40,10 +30,14 @@ contract DeployTaikoInbox is Script {
         vm.startBroadcast();
 
         // Deploy TaikoInbox contract
-        TaikoInbox taikoInbox =
-            new TaikoInbox(lookaheadAddr, blobRefRegistryAddr, maxAnchorBlockIdOffset, proposerFeesAddr, inclusionDelay);
 
-        // taikoInbox.publish(1, 250);
+        MockProposerFees mockProposerFees = new MockProposerFees();
+        BlobRefRegistry blobRefRegistry = new BlobRefRegistry();
+        TaikoInbox taikoInbox = new TaikoInbox(
+            lookaheadAddr, address(blobRefRegistry), maxAnchorBlockIdOffset, address(mockProposerFees), inclusionDelay
+        );
+
+        // taikoInbox.publish(1, 550);
         // uint256[] memory blobIndices = new uint256[](2);
         // blobIndices[0] = 0;
         // blobIndices[1] = 1;
@@ -55,9 +49,9 @@ contract DeployTaikoInbox is Script {
         // Log deployment information
         console.log("TaikoInbox deployed at:", address(taikoInbox));
         console.log("Lookahead address:", lookaheadAddr);
-        console.log("BlobRefRegistry address:", blobRefRegistryAddr);
+        console.log("BlobRefRegistry address:", address(blobRefRegistry));
         console.log("Max anchor block ID offset:", maxAnchorBlockIdOffset);
-        console.log("ProposerFees address:", proposerFeesAddr);
+        console.log("ProposerFees address:", address(mockProposerFees));
         console.log("Inclusion delay:", inclusionDelay);
 
         return taikoInbox;
