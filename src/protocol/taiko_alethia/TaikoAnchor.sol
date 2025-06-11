@@ -21,7 +21,7 @@ struct BlockHeader {
     bytes extraData;
     bytes32 mixedHash;
     uint64 nonce;
-    bytes32 baseFeePerGas;
+    uint256 baseFeePerGas;
     bytes32 withdrawalsRoot;
     uint64 blobGasUsed;
     uint64 excessBlobGas;
