@@ -10,42 +10,13 @@
 \tikzstyle{lTwoTx} = [rectangle, \rollupColor, minimum width=0.4cm, minimum height = 0.1cm, inner sep=0, outer sep=0]
 \tikzstyle{background rectangle} = [fill=white]
 
-
-\newcommand{\timeline}{
-    \node (t0) at (0,0) {};
-    \node (tEnd) at (10,0) {};
-    \draw (t0) [->, thick]  -- (tEnd);
-    \foreach \idx in {0,...,2}{
-        \node (lOneBlock\idx) [lOneBlock] at (1 + \idx * 4, 0) {};
-    };
-}
-
-\newcommand{\lOneTransactions}{
-    \foreach \blockIdx in {0,...,2}{
-        \node (txPos) at (0, 1) {};
-        \foreach \txIdx in {0,...,5} {
-            \node[draw, lOneTx, anchor=north] (tx-\blockIdx-\txIdx) at (lOneBlock\blockIdx |- txPos) {};
-            \node (txPos) at (tx-\blockIdx-\txIdx.south) {};
-        }
-    };
-    \node[yshift=0.1cm, anchor=south] at (tx-0-0.north) {\tiny \texttt{Block x-2}};
-    \node[yshift=0.1cm, anchor=south] at (tx-1-0.north) {\tiny \texttt{Block x-1}};
-    \node[yshift=0.1cm, anchor=south] at (tx-2-0.north) {\tiny \texttt{Block x}};
-}
-
 \begin{document}
 
-% Introduce L1 chain
-\ifnum \sourceNo = 0
-\begin{tikzpicture}[framed]
-    \timeline
-    \lOneTransactions
-\end{tikzpicture}
-\fi
 
 % Instead of passing parameters to the diagram commands, define them as variables
 % This makes it easier to reuse variables between different diagrams and also makes the diagram commands more readable
 \newcommand{\anchorBlockNum}{1}
+\newcommand{\numLOneBlocks}{2}
 \newcommand{\numLTwoBlocks}{6}
 \newcommand{\rollupName}{A}
 \newcommand{\rollupColor}{blue}
@@ -53,6 +24,29 @@
 \newcommand{\pubTx}{tx-2-3}
 \newcommand{\anchorBlock}{lOneBlock\anchorBlockNum}
 \newcommand{\anchorColor}{magenta}
+\newcommand{\blockNumbers}{0/Block x-2, 1/Block x-1, 2/Block x}
+
+\newcommand{\timeline}{
+    \node (t0) at (0,0) {};
+    \node (tEnd) at (10,0) {};
+    \draw (t0) [->, thick]  -- (tEnd);
+    \foreach \idx in {0,...,\numLOneBlocks}{
+        \node (lOneBlock\idx) [lOneBlock] at (1 + \idx * 4, 0) {};
+    };
+}
+
+\newcommand{\lOneTransactions}{
+    \foreach \blockIdx in {0,...,\numLOneBlocks}{
+        \node (txPos) at (0, 1) {};
+        \foreach \txIdx in {0,...,5} {
+            \node[draw, lOneTx, anchor=north] (tx-\blockIdx-\txIdx) at (lOneBlock\blockIdx |- txPos) {};
+            \node (txPos) at (tx-\blockIdx-\txIdx.south) {};
+        }
+    };
+    \foreach \block\name in \blockNumbers {
+        \node[yshift=0.1cm, anchor=south] at (tx-\block-0.north) {\tiny \texttt{\name}};
+    }
+}
 
 
 \newcommand{\lTwoTransactions}{
@@ -82,6 +76,14 @@
     \draw[inner sep=0, outer sep=0, ->, \rollupColor] (top) to[in=180] (\pubTx.west);
 }
 \newcommand{\publication}{\partialPublication{0}{\numLTwoBlocks}}
+
+% Introduce L1 chain
+\ifnum \sourceNo = 0
+\begin{tikzpicture}[framed]
+    \timeline
+    \lOneTransactions
+\end{tikzpicture}
+\fi
 
 % Introduce L2 chain
 \ifnum \sourceNo = 1
@@ -296,6 +298,159 @@
     \node[draw, lTwoTx, fill=gray] (finalBlock) at (l2Tx-A-\numLTwoBlocks-4) {};
     \publication
 
+    \newcommand{\artifactColor}{orange}
+    \node[draw, lTwoTx, fill=\artifactColor, minimum width=0.1cm, anchor=west] (injected) at (finalBlock.west) {};
+    \node[draw, lOneTx, fill=\artifactColor, minimum width=0.1cm, anchor=east] (computed) at (\pubTx.east) {};
+    \draw[->, \artifactColor] (computed) to[out=270, in=90] (injected);
+\end{tikzpicture}
+\fi
+
+\renewcommand{\blockNumbers}{0/Block 98, 1/Block 99, 2/Block 100}
+
+% RealtimeL1State walkthrough (Context)
+\ifnum \sourceNo = 12
+\begin{tikzpicture}[framed]
+    \timeline
+
+    \snapshotAt{1.5}
+    \lOneTransactions
+    \node[draw, lOneTx, fill=violet] at (tx-0-2) {};
+\end{tikzpicture}
+\fi
+
+% RealtimeL1State walkthrough (Step 1)
+\ifnum \sourceNo = 13
+\begin{tikzpicture}[framed]
+    \timeline
+
+    \snapshotAt{1.75}
+    \lOneTransactions
+    \lTwoTransactions
+    \injectAnchor
+    \node[draw, lOneTx, fill=violet] at (tx-0-2) {};
+\end{tikzpicture}
+\fi
+
+% RealtimeL1State walkthrough (Step 2)
+\ifnum \sourceNo = 14
+\begin{tikzpicture}[framed]
+    \timeline
+
+    \snapshotAt{4.25}
+    \lOneTransactions
+    \lTwoTransactions
+    \injectAnchor
+    
+    \node[draw, lOneTx, fill=violet] at (tx-0-2) {};
+    \node[draw, lTwoTx, fill=cyan] at (l2Tx-A-0-2) {};
+\end{tikzpicture}
+\fi
+
+% RealtimeL1State walkthrough (Step 3)
+\ifnum \sourceNo = 15
+\begin{tikzpicture}[framed]
+    \timeline
+
+    \snapshotAt{5.75}
+    \lOneTransactions
+    \renewcommand{\numLTwoBlocks}{7}
+    \lTwoTransactions
+    % \publication
+    \injectAnchor
+   
+    \node[draw, lOneTx, fill=violet] at (tx-0-2) {};
+    \node[draw, lTwoTx, fill=cyan] at (l2Tx-A-0-2) {};
+    \node[draw, lOneTx, fill=teal] at (tx-1-4) {};
+\end{tikzpicture}
+\fi
+
+% RealtimeL1State walkthrough (Step 4)
+\ifnum \sourceNo = 16
+\begin{tikzpicture}[framed]
+    \timeline
+
+    \snapshotAt{5.75}
+    \lOneTransactions
+    \lTwoTransactions
+    \injectAnchor
+
+    \renewcommand{\anchorBlockNum}{1}
+    \renewcommand{\anchorColor}{brown}
+    \injectAnchorToBlock{8}
+    
+    \node[draw, lOneTx, fill=violet] at (tx-0-2) {};
+    \node[draw, lTwoTx, fill=cyan] at (l2Tx-A-0-2) {};
+    \node[draw, lOneTx, fill=teal] at (tx-1-4) {};
+\end{tikzpicture}
+\fi
+
+% RealtimeL1State walkthrough (Step 5)
+\ifnum \sourceNo = 17
+\begin{tikzpicture}[framed]
+    \timeline
+
+    \snapshotAt{7.75}
+    \lOneTransactions
+    \lTwoTransactions
+    \injectAnchor
+
+    \renewcommand{\anchorBlockNum}{1}
+    \renewcommand{\anchorColor}{brown}
+    \injectAnchorToBlock{8}
+    
+    \node[draw, lOneTx, fill=violet] at (tx-0-2) {};
+    \node[draw, lTwoTx, fill=cyan] at (l2Tx-A-0-2) {};
+    \node[draw, lOneTx, fill=teal] at (tx-1-4) {};
+\end{tikzpicture}
+\fi
+
+% RealtimeL1State walkthrough (Step 7)
+\ifnum \sourceNo = 18
+\begin{tikzpicture}[framed]
+    \timeline
+
+    \renewcommand{\numLOneBlocks}{1}
+    \renewcommand{\blockNumbers}{0/98, 1/99}
+    \snapshotAt{8.75}
+    \lOneTransactions
+    \lTwoTransactions
+    % \publication
+    \injectAnchor
+
+    \renewcommand{\anchorBlockNum}{1}
+    \renewcommand{\anchorColor}{brown}
+    \injectAnchorToBlock{8}
+    
+    \node[draw, lOneTx, fill=violet] at (tx-0-2) {};
+    \node[draw, lTwoTx, fill=cyan] at (l2Tx-A-0-2) {};
+    \node[draw, lOneTx, fill=teal] at (tx-1-4) {};
+
+    \node[draw, lTwoTx, fill=gray] (finalBlock) at (l2Tx-A-\numLTwoBlocks-4) {};
+    \newcommand{\artifactColor}{orange}
+    \node[draw, lTwoTx, fill=\artifactColor, minimum width=0.1cm, anchor=west] (injected) at (finalBlock.west) {};
+    % \node[draw, lOneTx, fill=\artifactColor, minimum width=0.1cm, anchor=east] (computed) at (\pubTx.east) {};
+    % \draw[->, \artifactColor] (computed) to[out=270, in=90] (injected);
+\end{tikzpicture}
+\fi
+
+% RealtimeL1State walkthrough (Step 8)
+\ifnum \sourceNo = 19
+\begin{tikzpicture}[framed]
+    \timeline
+    \lOneTransactions
+    \lTwoTransactions
+    \publication
+    \injectAnchor
+
+    \renewcommand{\anchorBlockNum}{1}
+    \renewcommand{\anchorColor}{brown}
+    \injectAnchorToBlock{8}
+    
+    \node[draw, lOneTx, fill=violet] at (tx-0-2) {};
+    \node[draw, lTwoTx, fill=cyan] at (l2Tx-A-0-2) {};
+    \node[draw, lOneTx, fill=teal] at (tx-1-4) {};
+
+    \node[draw, lTwoTx, fill=gray] (finalBlock) at (l2Tx-A-\numLTwoBlocks-4) {};
     \newcommand{\artifactColor}{orange}
     \node[draw, lTwoTx, fill=\artifactColor, minimum width=0.1cm, anchor=west] (injected) at (finalBlock.west) {};
     \node[draw, lOneTx, fill=\artifactColor, minimum width=0.1cm, anchor=east] (computed) at (\pubTx.east) {};

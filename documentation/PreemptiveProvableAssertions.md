@@ -15,6 +15,7 @@ This article will unpack that statement and provide some example use cases. We w
 - A mechanism for interdependent L2 transactions.
 - Mechanisms for cross-rollup assertions.
 - A suggested implementation framework.
+- An example walkthrough.
 
 ## Background
 
@@ -323,17 +324,113 @@ Since the sequencer is providing an additional service for users, they would lik
 - any opportunities they may lose from constraining their options when building publications.
 - any effort it takes to validate whether they will be able to prove any assertions that the users want (eg. ensuring an L1 query will have a predictable result at publication time).
 
-As a convenience, I recommend the assertion contract to be enabled and disabled by a `pauser` address that is set by anyone when it is zero and reset to zero in the end-of-publication transaction, which allows the sequencer to set a trusted `pauser` address at the start of the publication. This is not strictly necessary because the sequencer can also refuse to include transactions that make unendorsed assertions, but it provides a mechanism for the sequencer to coordinate with users and to defer the costs. In particular, the `pauser` address could be a contract that allows assertions when the user provides enough upfront evidence and pays enough fees. For example:
+As a convenience, I recommend the assertion contract to be enabled and disabled by a `pauser` address that is set by anyone when it is zero and reset to zero in the end-of-publication transaction, which allows the sequencer to set a trusted `pauser` address at the start of the publication. This is not strictly necessary because the sequencer can also refuse to include transactions that make unendorsed assertions, but it provides a mechanism for the sequencer to coordinate with users and to defer the costs. In particular, the `pauser` address could be a contract that only allows assertions from a whitelisted set, and may require the user to provide enough upfront evidence and pay enough fees. For example:
 
 - a user that claims the block hash for L1 block _B_ is _H_ could provide the L1 header that is needed for the proof, along with enough funds to cover the `blockhash` query on L1.
 - a user that wants an assertion that some property will be true in L2 block _X_ could also sign the proof transaction that will need to be sequenced in block _X_.
 
-The sequencer is still responsible for ensuring all assertions are proven (so they should only include transactions that make valid provable assertions) but this mechanism defers much of the analysis and cost to the user. It also allows users to create the assertion and react to that assertion within the same transaction, so they remove the risk of signing transactions that might revert if the assertion is not made beforehand. In some sense, this makes it possible for users to create transcript-level (rather than EVM-level) conditions on transactions, such that the transactions can only be included in the presence of other transactions.
+The sequencer is still responsible for ensuring all assertions are proven (so they should only include transactions that make valid provable assertions) but this mechanism defers some of the analysis and cost to the user. It also allows users to create the assertion and react to that assertion within the same transaction, so they remove the risk of signing transactions that might revert if the assertion is not made beforehand. In some sense, this makes it possible for users to create transcript-level (rather than EVM-level) conditions on transactions, such that the transactions can only be included in the presence of other transactions.
+
+## Example walkthrough
+
+Let's walkthrough a possible price-feed example in detail using the [sample `PreemptiveAssertions` and `RealtimeL1State` contracts](https://github.com/OpenZeppelin/minimal-rollup/pull/78) deployed on L2.
+
+#### Context
+
+Assume there is a monopoly sequencer until L1 block 100, and the price feed has just updated (purple) in block 98. Of course, this mechanism can be naturally extended to cover several L1 blocks.
+
+<p align="center"><img src="./provable_assertion_images.12.png"/></p>
+
+#### Step 1
+
+Alice would like to inform an L2 oracle of that new price, so she retrieves the block header for L1 block 98 and calls 
+
+```solidity
+realtimeL1State.assertL1Header(98, header);
+```
+
+The sequencer should only include this transaction if it corresponds to the real header. They could also ensure that Alice pays a fee to cover the eventual `blockhash(99)` call on L1 (possibly using the `pauser` mechanism).
+
+This creates three assertions:
+
+- the blockhash of L1 block 98 is the hash of the provided `header`
+- the parent hash of L1 block 98 is the `header.parentHash` field (unused in this example)
+- the state root of block 98 is the `header.stateRoot` (pink in the diagram)
+
+<p align="center"><img src="./provable_assertion_images.13.png"/></p>
+
+#### Step 2
+
+We assume the L2 oracle trusts assertions made by the `realtimeL1State` contract (which actually implies the developers of the L2 oracle believe that the `RealtimeL1State` code correctly validates the assertion it makes). It should be designed to retrieve the latest L1 state root assertion when invoked.
+
+Alice can provide a Merkle proof to the relevant storage location against the asserted state root to prove the latest price at the end of L1 block 98 (light blue).
+
+The rest of the L2 ecosystem can proceed using this price.
+
+<p align="center"><img src="./provable_assertion_images.14.png"/></p>
+
+### Step 3
+
+The price feed updates (dark green) in block 99.
+
+<p align="center"><img src="./provable_assertion_images.15.png"/></p>
+
+### Step 4
+
+Bob would like to inform the L2 oracle of that new price, so he retrieves the block header for L1 block 99 and calls 
+
+```solidity
+realtimeL1State.assertL1Header(99, header);
+```
+
+As before, the sequencer should only include this transaction if it corresponds to the real header (and Bob has paid the required fees).
+
+This creates three more assertions:
+
+- the blockhash of L1 block 99 is the hash of the provided `header`
+- the parent hash of L1 block 99 is the `header.parentHash` field
+- the state root of block 99 is the `header.stateRoot` (brown in the diagram)
+
+<p align="center"><img src="./provable_assertion_images.16.png"/></p>
 
 
+### Step 5
 
+As before, anyone can use the asserted state root to prove the latest price at the end of L1 block 99, and the rest of the L2 ecosystem will proceed using this price.
 
+<p align="center"><img src="./provable_assertion_images.17.png"/></p>
 
+### Step 6
 
+Once the block 99 header has been asserted, the block 98 assertions are no longer necessary. At this point, anyone can remove them with the call
+
+```solidity
+realtimeL1State.resolveUsingNextAssertion(98)
+```
+
+The sequencer could design their `pauser` contract to call this at the end of Step 4 (so Bob pays for it). Alternatively, they could require Alice to sign this transaction in Step 1 (but only sequence it now) so she pays for both adding and removing the assertions.
+
+In either case, this call will
+- confirm the asserted blockhash of L1 block 98 matches the asserted parent hash of block 99 (which guarantees the block 98 assertions are implied by the block 99 assertions)
+- remove all three block 98 assertions.
+
+### Step 7
+
+The end-of-publication transaction accepts the consistency hash (orange), which is derived from (among other things) the result of `blockhash(99)` executed in the Inbox contract at publication time (block 100). The sequencer can predict this value and pass it to the end-of-publication transaction while finalising the publication.
+
+The sequencer will also specify that the `realtimeL1State` contract has unproven assertions, so the end-of-publication transaction will call `resolve` on that contract with the consistency hash (along with the block hash for L1 block 99 provided by the sequencer). This function will:
+- confirm that the passed block hash corresponds to the consistency hash (so it matches the value that will be retrieved on L1).
+- confirm that this matches the block hash that was asserted for block 99 (in Step 4).
+- remove all three block 99 assertions.
+
+The end-of-publication transaction will confirm that there are no remaining unproven assertions.
+
+<p align="center"><img src="./provable_assertion_images.18.png"/></p>
+
+### Step 8
+
+Lastly, the sequencer finalises the publication and posts it in block 100. That state-transition-function (enforced by the rollup nodes) will guarantee that the consistency hash computed in the Inbox matches the one passed to the end-of-publication transaction and that it did not revert (to ensure all assertions were proven).
+
+<p align="center"><img src="./provable_assertion_images.19.png"/></p>
 
 
