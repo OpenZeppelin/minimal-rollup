@@ -1,0 +1,49 @@
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.28;
+
+import {MockERC20} from "../mocks/MockERC20.sol";
+import {InitialState} from "./InitialState.t.sol";
+import {BaseProverManager} from "src/protocol/BaseProverManager.sol";
+import {ERC20ProverManager} from "src/protocol/ERC20ProverManager.sol";
+import {ETHProverManager} from "src/protocol/ETHProverManager.sol";
+
+abstract contract ETHCurrency is InitialState {
+    function _createProverManager() internal virtual override returns (BaseProverManager) {
+        vm.deal(deployer, initialDeposit);
+        vm.prank(deployer);
+        return new ETHProverManager{value: initialDeposit}(
+            address(inbox), address(checkpointTracker), initialProver, initialFee
+        );
+    }
+}
+
+abstract contract ERC20Currency is InitialState {
+    MockERC20 public token;
+
+    function setUp() public virtual override {
+        token = new MockERC20();
+        super.setUp();
+    }
+
+    function _createProverManager() internal virtual override returns (BaseProverManager) {
+        // We need to approve the ERC20ProverManager to retrieve the initial deposit, which means we need to know its
+        // address beforehand. This could be achieved with CREATE2 but for simplicity, we will just pick and address and
+        // deploy it there.
+        address pmAddress = _randomAddress("ERC20ProverManager");
+
+        token.mint(initialProver, initialDeposit);
+        vm.prank(initialProver);
+        token.approve(pmAddress, initialDeposit);
+
+        vm.prank(deployer);
+        deployCodeTo(
+            "ERC20ProverManager.sol",
+            abi.encode(
+                address(inbox), address(checkpointTracker), initialProver, initialFee, address(token), initialDeposit
+            ),
+            pmAddress
+        );
+
+        return BaseProverManager(pmAddress);
+    }
+}
