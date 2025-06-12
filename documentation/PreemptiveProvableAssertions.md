@@ -369,13 +369,13 @@ The rest of the L2 ecosystem can proceed using this price.
 
 <p align="center"><img src="./provable_assertion_images.14.png"/></p>
 
-### Step 3
+#### Step 3
 
 The price feed updates (dark green) in block 99.
 
 <p align="center"><img src="./provable_assertion_images.15.png"/></p>
 
-### Step 4
+#### Step 4
 
 Bob would like to inform the L2 oracle of that new price, so he retrieves the block header for L1 block 99 and calls 
 
@@ -394,13 +394,13 @@ This creates three more assertions:
 <p align="center"><img src="./provable_assertion_images.16.png"/></p>
 
 
-### Step 5
+#### Step 5
 
 As before, anyone can use the asserted state root to prove the latest price at the end of L1 block 99, and the rest of the L2 ecosystem will proceed using this price.
 
 <p align="center"><img src="./provable_assertion_images.17.png"/></p>
 
-### Step 6
+#### Step 6
 
 Once the block 99 header has been asserted, the block 98 assertions are no longer necessary. At this point, anyone can remove them with the call
 
@@ -414,7 +414,7 @@ In either case, this call will
 - confirm the asserted blockhash of L1 block 98 matches the asserted parent hash of block 99 (which guarantees the block 98 assertions are implied by the block 99 assertions)
 - remove all three block 98 assertions.
 
-### Step 7
+#### Step 7
 
 The end-of-publication transaction accepts the consistency hash (orange), which is derived from (among other things) the result of `blockhash(99)` executed in the Inbox contract at publication time (block 100). The sequencer can predict this value and pass it to the end-of-publication transaction while finalising the publication.
 
@@ -427,7 +427,7 @@ The end-of-publication transaction will confirm that there are no remaining unpr
 
 <p align="center"><img src="./provable_assertion_images.18.png"/></p>
 
-### Step 8
+#### Step 8
 
 Lastly, the sequencer finalises the publication and posts it in block 100. That state-transition-function (enforced by the rollup nodes) will guarantee that the consistency hash computed in the Inbox matches the one passed to the end-of-publication transaction and that it did not revert (to ensure all assertions were proven).
 
