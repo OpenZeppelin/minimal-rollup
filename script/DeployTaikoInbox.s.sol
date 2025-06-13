@@ -3,9 +3,14 @@ pragma solidity ^0.8.28;
 
 import {BlobRefRegistry} from "../src/blobs/BlobRefRegistry.sol";
 import {IBlobRefRegistry} from "../src/blobs/IBlobRefRegistry.sol";
+import {CheckpointTracker} from "../src/protocol/CheckpointTracker.sol";
+
 import {ILookahead} from "../src/protocol/ILookahead.sol";
 import {IProposerFees} from "../src/protocol/IProposerFees.sol";
 import {TaikoInbox} from "../src/protocol/taiko_alethia/TaikoInbox.sol";
+
+import {SignalService} from "src/protocol/SignalService.sol";
+import {NullVerifier} from "test/mocks/NullVerifier.sol";
 
 import {MockProposerFees} from "./MockProposerFee.sol";
 import {Script} from "forge-std/Script.sol";
@@ -37,6 +42,20 @@ contract DeployTaikoInbox is Script {
             lookaheadAddr, address(blobRefRegistry), maxAnchorBlockIdOffset, address(mockProposerFees), inclusionDelay
         );
 
+        NullVerifier verifier = new NullVerifier();
+
+        SignalService signalService = new SignalService();
+
+        address proverManager = address(0);
+
+        CheckpointTracker tracker = new CheckpointTracker(
+            keccak256(abi.encode("genesis")),
+            address(taikoInbox),
+            address(verifier),
+            proverManager,
+            address(signalService)
+        );
+
         // taikoInbox.publish(1, 550);
         // uint256[] memory blobIndices = new uint256[](2);
         // blobIndices[0] = 0;
@@ -48,6 +67,7 @@ contract DeployTaikoInbox is Script {
 
         // Log deployment information
         console.log("TaikoInbox deployed at:", address(taikoInbox));
+        console.log("CheckpointTracker deployed at:", address(tracker));
         console.log("Lookahead address:", lookaheadAddr);
         console.log("BlobRefRegistry address:", address(blobRefRegistry));
         console.log("Max anchor block ID offset:", maxAnchorBlockIdOffset);

@@ -73,19 +73,19 @@ contract TaikoInbox is IInbox, DelayedInclusionStore {
         attributes[BLOB_REFERENCE] = abi.encode(blobRefRegistry.getRef(_buildBlobIndices(nBlobs)));
 
         _publish(attributes, false);
-        //
-        // // Publish each delayed inclusion as a separate publication
-        // IDelayedInclusionStore.Inclusion[] memory inclusions = processDueInclusions();
-        // uint256 nInclusions = inclusions.length;
-        //
-        // // Metadata is the same as the regular publication, so we just set `isDelayedInclusion` to true
-        // metadata.isDelayedInclusion = true;
-        // for (uint256 i; i < nInclusions; ++i) {
-        //     attributes[METADATA] = abi.encode(metadata);
-        //     attributes[BLOB_REFERENCE] = abi.encode(inclusions[i]);
-        //
-        //     _publish(attributes, true);
-        // }
+
+        // Publish each delayed inclusion as a separate publication
+        IDelayedInclusionStore.Inclusion[] memory inclusions = processDueInclusions();
+        uint256 nInclusions = inclusions.length;
+
+        // Metadata is the same as the regular publication, so we just set `isDelayedInclusion` to true
+        metadata.isDelayedInclusion = true;
+        for (uint256 i; i < nInclusions; ++i) {
+            attributes[METADATA] = abi.encode(metadata);
+            attributes[BLOB_REFERENCE] = abi.encode(inclusions[i]);
+
+            _publish(attributes, true);
+        }
     }
 
     /// @dev Internal implementation of publication logic
