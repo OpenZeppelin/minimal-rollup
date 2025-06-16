@@ -17,13 +17,20 @@ contract MockCheckpointTracker is ICheckpointTracker {
 
     /// @notice Do nothing. All checkpoints and proofs are accepted.
     function proveTransition(
-        Checkpoint calldata,
+        Checkpoint calldata start,
         Checkpoint calldata end,
-        uint256 numPublications,
         uint256 numDelayedPublications,
-        bytes calldata proof
-    ) external {
+        bytes calldata
+    ) external returns (uint256) {
         commitmentStore.storeCommitment(end.publicationId, end.commitment);
+
+        // Just return the total number of publications passed
+        uint256 numPublications = end.publicationId - start.publicationId;
+        require(
+            numDelayedPublications <= numPublications,
+            "Number of delayed publications cannot be greater than the total number of publications"
+        );
+        return end.publicationId - provenCheckpoint.publicationId;
     }
 
     /// @notice Helper to set the proven hash for easier testing

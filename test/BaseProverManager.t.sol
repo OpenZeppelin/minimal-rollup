@@ -9,11 +9,14 @@ import {IProposerFees} from "../src/protocol/IProposerFees.sol";
 import {IProverManager} from "../src/protocol/IProverManager.sol";
 import {LibPercentage} from "src/libs/LibPercentage.sol";
 import {ICheckpointTracker} from "src/protocol/ICheckpointTracker.sol";
-import {IPublicationFeed} from "src/protocol/IPublicationFeed.sol";
-import {PublicationFeed} from "src/protocol/PublicationFeed.sol";
+
+import {IInbox} from "src/protocol/IInbox.sol";
 import {SignalService} from "src/protocol/SignalService.sol";
 import {MockCheckpointTracker} from "test/mocks/MockCheckpointTracker.sol";
+import {MockInbox} from "test/mocks/MockInbox.sol";
 import {NullVerifier} from "test/mocks/NullVerifier.sol";
+
+import {LibPercentage} from "src/libs/LibPercentage.sol";
 
 // Configuration parameters.
 uint16 constant MAX_BID_FRACTION = 9500; // 95%
@@ -33,12 +36,11 @@ abstract contract BaseProverManagerTest is Test {
     MockCheckpointTracker checkpointTracker;
     SignalService signalService;
     NullVerifier verifier;
-    PublicationFeed publicationFeed;
+    MockInbox inbox;
     uint256 constant DEPOSIT_AMOUNT = 2 ether;
     uint256 constant ZERO_DELAYED_PUBLICATIONS = 0;
 
     // Addresses used for testing.
-    address inbox = vm.addr(0x100);
     address initialProver = vm.addr(0x101);
     address prover1 = vm.addr(0x200);
     address prover2 = vm.addr(0x201);
@@ -49,7 +51,7 @@ abstract contract BaseProverManagerTest is Test {
     function setUp() public virtual {
         signalService = new SignalService();
         checkpointTracker = new MockCheckpointTracker(address(signalService));
-        publicationFeed = new PublicationFeed();
+        inbox = new MockInbox();
     }
 
     /// --------------------------------------------------------------------------
@@ -62,7 +64,7 @@ abstract contract BaseProverManagerTest is Test {
 
         uint256 balanceBefore = proverManager.balances(proposer);
         // Call payPublicationFee from the inbox.
-        vm.prank(inbox);
+        vm.prank(address(inbox));
         proverManager.payPublicationFee(proposer, false);
 
         uint256 balanceAfter = proverManager.balances(proposer);
@@ -80,7 +82,7 @@ abstract contract BaseProverManagerTest is Test {
         vm.warp(vm.getBlockTimestamp() + EXIT_DELAY + 1);
 
         // Call payPublicationFee from the inbox and check that the period has been advanced.
-        vm.prank(inbox);
+        vm.prank(address(inbox));
         vm.expectEmit();
         emit IProverManager.NewPeriod(2);
         proverManager.payPublicationFee(proposer, false);
@@ -217,7 +219,7 @@ abstract contract BaseProverManagerTest is Test {
     /// evictProver()
     /// --------------------------------------------------------------------------
     function test_evictProver() public {
-        IPublicationFeed.PublicationHeader memory header = _insertPublication();
+        IInbox.PublicationHeader memory header = _insertPublication();
 
         // Capture current period stake before eviction
         LibProvingPeriod.Period memory periodBefore = proverManager.getPeriod(1);
@@ -245,7 +247,7 @@ abstract contract BaseProverManagerTest is Test {
     }
 
     function test_evictProver_RevertWhen_PublicationNotOldEnough() public {
-        IPublicationFeed.PublicationHeader memory header = _insertPublication();
+        IInbox.PublicationHeader memory header = _insertPublication();
 
         // Evict the prover with a publication that is not old enough
         vm.warp(vm.getBlockTimestamp() + LIVENESS_WINDOW);
@@ -258,7 +260,7 @@ abstract contract BaseProverManagerTest is Test {
         uint256 initialTimestamp = vm.getBlockTimestamp();
         vm.warp(initialTimestamp + LIVENESS_WINDOW + 1);
 
-        IPublicationFeed.PublicationHeader memory header = _insertPublication();
+        IInbox.PublicationHeader memory header = _insertPublication();
         // Tamper with the header
         header.timestamp = initialTimestamp;
 
@@ -269,7 +271,7 @@ abstract contract BaseProverManagerTest is Test {
     }
 
     function test_evictProver_RevertWhen_PeriodNotActive() public {
-        IPublicationFeed.PublicationHeader memory header = _insertPublication();
+        IInbox.PublicationHeader memory header = _insertPublication();
 
         // Exit the period, setting and end to the period
         _exit(initialProver);
@@ -282,7 +284,7 @@ abstract contract BaseProverManagerTest is Test {
     }
 
     function test_evictProver_RevertWhen_ProvenCheckpoint() public {
-        IPublicationFeed.PublicationHeader memory header = _insertPublication();
+        IInbox.PublicationHeader memory header = _insertPublication();
 
         // Advance the proven checkpoint on the mock checkpoint tracker
         ICheckpointTracker.Checkpoint memory provenCheckpoint = ICheckpointTracker.Checkpoint({
@@ -345,7 +347,7 @@ abstract contract BaseProverManagerTest is Test {
         vm.warp(vm.getBlockTimestamp() + EXIT_DELAY + 1);
 
         //Submit a publication to advance to the vacant period(period 2)
-        vm.prank(inbox);
+        vm.prank(address(inbox));
         proverManager.payPublicationFee(proposer, false);
 
         // Ensure prover1 has enough funds
@@ -380,7 +382,7 @@ abstract contract BaseProverManagerTest is Test {
         vm.warp(vm.getBlockTimestamp() + EXIT_DELAY + 1);
 
         //Submit a publication to advance to the vacant period(period 2)
-        vm.prank(inbox);
+        vm.prank(address(inbox));
         proverManager.payPublicationFee(proposer, false);
 
         // Ensure prover1 has enough funds
@@ -400,7 +402,7 @@ abstract contract BaseProverManagerTest is Test {
         // Verify that a new publication advances the period
         vm.warp(vm.getBlockTimestamp() + 1);
         _deposit(proposer, INITIAL_FEE);
-        vm.prank(inbox);
+        vm.prank(address(inbox));
         vm.expectEmit();
         emit IProverManager.NewPeriod(periodAfter + 1);
         proverManager.payPublicationFee(proposer, false);
@@ -422,7 +424,7 @@ abstract contract BaseProverManagerTest is Test {
         vm.warp(vm.getBlockTimestamp() + EXIT_DELAY + 1);
 
         //Submit a publication to advance to the vacant period(period 2)
-        vm.prank(inbox);
+        vm.prank(address(inbox));
         proverManager.payPublicationFee(proposer, false);
 
         // Attempt to claim the vacancy without sufficient balance
@@ -437,10 +439,10 @@ abstract contract BaseProverManagerTest is Test {
     function test_prove_OpenPeriod() public {
         uint256 numRelevantPublications = 2;
         // Setup: Create publications and pay for the fees
-        IPublicationFeed.PublicationHeader[] memory headers =
+        IInbox.PublicationHeader[] memory headers =
             _insertPublicationsWithFees(numRelevantPublications, INITIAL_FEE, false);
-        IPublicationFeed.PublicationHeader memory startHeader = headers[0];
-        IPublicationFeed.PublicationHeader memory endHeader = headers[1];
+        IInbox.PublicationHeader memory startHeader = headers[0];
+        IInbox.PublicationHeader memory endHeader = headers[1];
 
         // Create checkpoints for the publications
         ICheckpointTracker.Checkpoint memory startCheckpoint = ICheckpointTracker.Checkpoint({
@@ -460,7 +462,6 @@ abstract contract BaseProverManagerTest is Test {
             endCheckpoint,
             startHeader,
             endHeader,
-            numRelevantPublications,
             ZERO_DELAYED_PUBLICATIONS,
             "0x", // any proof
             INITIAL_PERIOD
@@ -475,12 +476,12 @@ abstract contract BaseProverManagerTest is Test {
         uint256 numDelayedPublications = 1;
 
         // Setup: Create publications and pay for the fees
-        IPublicationFeed.PublicationHeader[] memory headers =
+        IInbox.PublicationHeader[] memory headers =
             _insertPublicationsWithFees(numRegularPublications, INITIAL_FEE, false);
-        IPublicationFeed.PublicationHeader[] memory delayedHeaders =
+        IInbox.PublicationHeader[] memory delayedHeaders =
             _insertPublicationsWithFees(numDelayedPublications, INITIAL_FEE, true);
-        IPublicationFeed.PublicationHeader memory startHeader = headers[0];
-        IPublicationFeed.PublicationHeader memory endHeader = delayedHeaders[0];
+        IInbox.PublicationHeader memory startHeader = headers[0];
+        IInbox.PublicationHeader memory endHeader = delayedHeaders[0];
 
         // Create checkpoints for the publications
         ICheckpointTracker.Checkpoint memory startCheckpoint = ICheckpointTracker.Checkpoint({
@@ -500,7 +501,6 @@ abstract contract BaseProverManagerTest is Test {
             endCheckpoint,
             startHeader,
             endHeader,
-            numRegularPublications + numDelayedPublications,
             numDelayedPublications,
             "0x", // any proof
             INITIAL_PERIOD
@@ -515,10 +515,10 @@ abstract contract BaseProverManagerTest is Test {
     function test_prove_ClosedPeriod() public {
         uint256 numRelevantPublications = 2;
         // Setup: Create publications and pay for the fees
-        IPublicationFeed.PublicationHeader[] memory headers =
+        IInbox.PublicationHeader[] memory headers =
             _insertPublicationsWithFees(numRelevantPublications, INITIAL_FEE, false);
-        IPublicationFeed.PublicationHeader memory startHeader = headers[0];
-        IPublicationFeed.PublicationHeader memory endHeader = headers[1];
+        IInbox.PublicationHeader memory startHeader = headers[0];
+        IInbox.PublicationHeader memory endHeader = headers[1];
 
         // Exit as the current prover to close the period
         _exit(initialProver);
@@ -543,7 +543,6 @@ abstract contract BaseProverManagerTest is Test {
             endCheckpoint,
             startHeader,
             endHeader,
-            numRelevantPublications,
             ZERO_DELAYED_PUBLICATIONS,
             "0x", // any proof
             INITIAL_PERIOD
@@ -562,11 +561,11 @@ abstract contract BaseProverManagerTest is Test {
     function test_prove_ClosedPeriod_MultipleCalls() public {
         // Setup: Create publications and pay for the fees
         uint256 numPublications = 4;
-        IPublicationFeed.PublicationHeader[] memory headers =
-            _insertPublicationsWithFees(numPublications, INITIAL_FEE, false);
-        IPublicationFeed.PublicationHeader memory startHeader1 = headers[0];
-        IPublicationFeed.PublicationHeader memory startHeader2 = headers[2];
-        IPublicationFeed.PublicationHeader memory endHeader2 = headers[3];
+        IInbox.PublicationHeader[] memory headers = _insertPublicationsWithFees(numPublications, INITIAL_FEE, false);
+        IInbox.PublicationHeader memory startHeader1 = headers[0];
+        IInbox.PublicationHeader memory endHeader1 = headers[1];
+        IInbox.PublicationHeader memory startHeader2 = headers[2];
+        IInbox.PublicationHeader memory endHeader2 = headers[3];
 
         // Exit as the current prover to close the period
         _exit(initialProver);
@@ -578,7 +577,7 @@ abstract contract BaseProverManagerTest is Test {
             commitment: keccak256(abi.encode("commitment1"))
         });
         ICheckpointTracker.Checkpoint memory endCheckpoint = ICheckpointTracker.Checkpoint({
-            publicationId: endHeader2.id,
+            publicationId: endHeader1.id,
             commitment: keccak256(abi.encode("commitment2"))
         });
 
@@ -587,8 +586,10 @@ abstract contract BaseProverManagerTest is Test {
         // Prove the publications with prover1
         vm.prank(prover1);
         proverManager.prove(
-            startCheckpoint, endCheckpoint, startHeader1, endHeader2, 2, ZERO_DELAYED_PUBLICATIONS, "0x", INITIAL_PERIOD
+            startCheckpoint, endCheckpoint, startHeader1, endHeader1, ZERO_DELAYED_PUBLICATIONS, "0x", INITIAL_PERIOD
         );
+        // Simulate advancing the checkpoint in the tracker
+        checkpointTracker.setProvenHash(endCheckpoint);
 
         // Prove the other publications with prover2
         startCheckpoint = ICheckpointTracker.Checkpoint({
@@ -601,26 +602,76 @@ abstract contract BaseProverManagerTest is Test {
         });
         vm.prank(prover2);
         proverManager.prove(
-            startCheckpoint, endCheckpoint, startHeader2, endHeader2, 2, ZERO_DELAYED_PUBLICATIONS, "0x", INITIAL_PERIOD
+            startCheckpoint, endCheckpoint, startHeader2, endHeader2, ZERO_DELAYED_PUBLICATIONS, "0x", INITIAL_PERIOD
         );
 
         // Verify prover1 received the fees
         uint256 prover1BalanceAfter = proverManager.balances(prover1);
-        assertEq(prover1BalanceAfter, prover1BalanceBefore + INITIAL_FEE * 2, "Prover1 should receive the fees");
+        assertEq(
+            prover1BalanceAfter,
+            prover1BalanceBefore + INITIAL_FEE * 2,
+            "Prover1 should receive the fees for 2 publications"
+        );
 
         // Verify prover2 received the fees
         uint256 prover2BalanceAfter = proverManager.balances(prover2);
-        assertEq(prover2BalanceAfter, INITIAL_FEE * 2, "Prover2 should receive the fees");
+        assertEq(prover2BalanceAfter, INITIAL_FEE * 2, "Prover2 should receive the fees for 2 publications");
 
         // Verify the period is marked as past deadline
         LibProvingPeriod.Period memory periodAfter = proverManager.getPeriod(1);
         assertTrue(periodAfter.pastDeadline, "Period should be marked as past deadline");
     }
 
+    function test_prove_WithAlreadyProvenStartCheckpoint() public {
+        // Setup: Create publications and pay for the fees
+        uint256 numPublications = 4;
+        IInbox.PublicationHeader[] memory headers = _insertPublicationsWithFees(numPublications, INITIAL_FEE, false);
+
+        IInbox.PublicationHeader memory startHeader1 = headers[0];
+        IInbox.PublicationHeader memory endHeader1 = headers[1];
+
+        ICheckpointTracker.Checkpoint memory startCheckpoint1 = ICheckpointTracker.Checkpoint({
+            publicationId: startHeader1.id - 1,
+            commitment: keccak256(abi.encode("commitment1"))
+        });
+        ICheckpointTracker.Checkpoint memory endCheckpoint1 = ICheckpointTracker.Checkpoint({
+            publicationId: endHeader1.id,
+            commitment: keccak256(abi.encode("commitment2"))
+        });
+
+        // Simulate advancing the checkpoint in the tracker
+        checkpointTracker.setProvenHash(endCheckpoint1);
+
+        IInbox.PublicationHeader memory startHeader2 = startHeader1; // This is already proven
+        IInbox.PublicationHeader memory endHeader2 = headers[3];
+
+        ICheckpointTracker.Checkpoint memory startCheckpoint2 = startCheckpoint1;
+        ICheckpointTracker.Checkpoint memory endCheckpoint2 = ICheckpointTracker.Checkpoint({
+            publicationId: endHeader2.id,
+            commitment: keccak256(abi.encode("commitment4"))
+        });
+
+        uint256 proverBalanceBefore = proverManager.balances(initialProver);
+
+        // Prove the second batch of publications
+        proverManager.prove(
+            startCheckpoint2, endCheckpoint2, startHeader2, endHeader2, ZERO_DELAYED_PUBLICATIONS, "0x", INITIAL_PERIOD
+        );
+
+        uint256 proverBalanceAfter = proverManager.balances(initialProver);
+
+        // Should only receive fees for publications 2 and 3, which have not been proven yet
+        assertEq(
+            proverBalanceAfter,
+            proverBalanceBefore + INITIAL_FEE * 2,
+            "Prover should only receive fees for newly proven publications"
+        );
+    }
+
     function test_prove_RevertWhen_LastPublicationDoesNotMatchEndCheckpoint() public {
         // Setup: Create publications
-        IPublicationFeed.PublicationHeader memory startHeader = _insertPublication();
-        IPublicationFeed.PublicationHeader memory endHeader = _insertPublication();
+        IInbox.PublicationHeader memory startHeader = _insertPublication();
+        IInbox.PublicationHeader memory endHeader = _insertPublication();
 
         // Create checkpoints with mismatched publication ID
         ICheckpointTracker.Checkpoint memory startCheckpoint = ICheckpointTracker.Checkpoint({
@@ -635,20 +686,20 @@ abstract contract BaseProverManagerTest is Test {
         // Attempt to prove with mismatched end checkpoint
         vm.expectRevert(BaseProverManager.LastPublicationMismatch.selector);
         proverManager.prove(
-            startCheckpoint, endCheckpoint, startHeader, endHeader, 2, ZERO_DELAYED_PUBLICATIONS, "0x", INITIAL_PERIOD
+            startCheckpoint, endCheckpoint, startHeader, endHeader, ZERO_DELAYED_PUBLICATIONS, "0x", INITIAL_PERIOD
         );
     }
 
     function test_prove_RevertWhen_LastPublicationAfterPeriodEnd() public {
         // Setup: Create publications
-        IPublicationFeed.PublicationHeader memory startHeader = _insertPublication();
+        IInbox.PublicationHeader memory startHeader = _insertPublication();
 
         // Exit as the current prover to set period end
         _exit(initialProver);
 
         // Create a publication after the period ends
         vm.warp(vm.getBlockTimestamp() + EXIT_DELAY + 1);
-        IPublicationFeed.PublicationHeader memory lateHeader = _insertPublication();
+        IInbox.PublicationHeader memory lateHeader = _insertPublication();
 
         // Create checkpoints
         ICheckpointTracker.Checkpoint memory startCheckpoint = ICheckpointTracker.Checkpoint({
@@ -663,14 +714,14 @@ abstract contract BaseProverManagerTest is Test {
         // Attempt to prove with publication after period end
         vm.expectRevert(BaseProverManager.LastPublicationIsAfterPeriod.selector);
         proverManager.prove(
-            startCheckpoint, endCheckpoint, startHeader, lateHeader, 2, ZERO_DELAYED_PUBLICATIONS, "0x", INITIAL_PERIOD
+            startCheckpoint, endCheckpoint, startHeader, lateHeader, ZERO_DELAYED_PUBLICATIONS, "0x", INITIAL_PERIOD
         );
     }
 
     function test_prove_RevertWhen_FirstPublicationNotAfterStartCheckpoint() public {
         // Setup: Create publications
-        IPublicationFeed.PublicationHeader memory firstHeader = _insertPublication();
-        IPublicationFeed.PublicationHeader memory lastHeader = _insertPublication();
+        IInbox.PublicationHeader memory firstHeader = _insertPublication();
+        IInbox.PublicationHeader memory lastHeader = _insertPublication();
 
         // Create checkpoints with incorrect start checkpoint
         ICheckpointTracker.Checkpoint memory startCheckpoint = ICheckpointTracker.Checkpoint({
@@ -684,20 +735,20 @@ abstract contract BaseProverManagerTest is Test {
 
         vm.expectRevert(BaseProverManager.InvalidStartPublication.selector);
         proverManager.prove(
-            startCheckpoint, endCheckpoint, firstHeader, lastHeader, 2, ZERO_DELAYED_PUBLICATIONS, "0x", INITIAL_PERIOD
+            startCheckpoint, endCheckpoint, firstHeader, lastHeader, ZERO_DELAYED_PUBLICATIONS, "0x", INITIAL_PERIOD
         );
     }
 
     function test_prove_RevertWhen_FirstPublicationBeforePeriod() public {
         // Create a publication in period 1
-        IPublicationFeed.PublicationHeader memory earlyHeader = _insertPublication();
+        IInbox.PublicationHeader memory earlyHeader = _insertPublication();
 
         // Exit as the current prover to set period end
         _exit(initialProver);
         vm.warp(vm.getBlockTimestamp() + EXIT_DELAY + 1);
 
         // Create a publication in period 2
-        IPublicationFeed.PublicationHeader memory lateHeader = _insertPublication();
+        IInbox.PublicationHeader memory lateHeader = _insertPublication();
 
         // Create checkpoints
         ICheckpointTracker.Checkpoint memory startCheckpoint = ICheckpointTracker.Checkpoint({
@@ -712,14 +763,32 @@ abstract contract BaseProverManagerTest is Test {
         // Attempt to prove with first publication before period 2
         vm.expectRevert(BaseProverManager.FirstPublicationIsBeforePeriod.selector);
         proverManager.prove(
-            startCheckpoint,
-            endCheckpoint,
-            earlyHeader,
-            lateHeader,
-            2,
-            ZERO_DELAYED_PUBLICATIONS,
-            "0x",
-            INITIAL_PERIOD + 1
+            startCheckpoint, endCheckpoint, earlyHeader, lateHeader, ZERO_DELAYED_PUBLICATIONS, "0x", INITIAL_PERIOD + 1
+        );
+    }
+
+    function test_prove_RevertWhen_NumDelayedPublicationsGreaterThanNumPublications() public {
+        // Setup: Create publications
+        IInbox.PublicationHeader memory startHeader = _insertPublication();
+        IInbox.PublicationHeader memory endHeader = _insertPublication();
+
+        // Create checkpoints
+        ICheckpointTracker.Checkpoint memory startCheckpoint = ICheckpointTracker.Checkpoint({
+            publicationId: startHeader.id - 1,
+            commitment: keccak256(abi.encode("commitment1"))
+        });
+        ICheckpointTracker.Checkpoint memory endCheckpoint = ICheckpointTracker.Checkpoint({
+            publicationId: endHeader.id,
+            commitment: keccak256(abi.encode("commitment2"))
+        });
+
+        // Set numDelayedPublications greater than numPublications
+        uint256 tooManyDelayedPublications = 3; // More than the 2 publications we've inserted
+
+        // Attempt to prove with invalid number of delayed publications
+        vm.expectRevert("Number of delayed publications cannot be greater than the total number of publications");
+        proverManager.prove(
+            startCheckpoint, endCheckpoint, startHeader, endHeader, tooManyDelayedPublications, "0x", INITIAL_PERIOD
         );
     }
 
@@ -729,10 +798,10 @@ abstract contract BaseProverManagerTest is Test {
     function test_finalizePastPeriod_WithinDeadline() public {
         uint256 numRelevantPublications = 2;
         // Setup: Create publications and pay for the fees
-        IPublicationFeed.PublicationHeader[] memory headers =
+        IInbox.PublicationHeader[] memory headers =
             _insertPublicationsWithFees(numRelevantPublications, INITIAL_FEE, false);
-        IPublicationFeed.PublicationHeader memory startHeader = headers[0];
-        IPublicationFeed.PublicationHeader memory endHeader = headers[1];
+        IInbox.PublicationHeader memory startHeader = headers[0];
+        IInbox.PublicationHeader memory endHeader = headers[1];
 
         // Exit as the current prover to close the period
         _exit(initialProver);
@@ -756,7 +825,6 @@ abstract contract BaseProverManagerTest is Test {
             endCheckpoint,
             startHeader,
             endHeader,
-            numRelevantPublications,
             ZERO_DELAYED_PUBLICATIONS,
             "0x", // any proof
             INITIAL_PERIOD
@@ -764,7 +832,7 @@ abstract contract BaseProverManagerTest is Test {
 
         // Create a publication after the period ends
         vm.warp(block.timestamp + 1);
-        IPublicationFeed.PublicationHeader memory afterPeriodHeader = _insertPublication();
+        IInbox.PublicationHeader memory afterPeriodHeader = _insertPublication();
 
         // Set the proven checkpoint to include the latest publication
         ICheckpointTracker.Checkpoint memory provenCheckpoint = ICheckpointTracker.Checkpoint({
@@ -795,10 +863,10 @@ abstract contract BaseProverManagerTest is Test {
         uint256 numRelevantPublications = 2;
 
         // Setup: Create publications and pay for the fees
-        IPublicationFeed.PublicationHeader[] memory headers =
+        IInbox.PublicationHeader[] memory headers =
             _insertPublicationsWithFees(numRelevantPublications, INITIAL_FEE, false);
-        IPublicationFeed.PublicationHeader memory startHeader = headers[0];
-        IPublicationFeed.PublicationHeader memory endHeader = headers[1];
+        IInbox.PublicationHeader memory startHeader = headers[0];
+        IInbox.PublicationHeader memory endHeader = headers[1];
 
         // Exit as the current prover to close the period
         _exit(initialProver);
@@ -823,14 +891,13 @@ abstract contract BaseProverManagerTest is Test {
             endCheckpoint,
             startHeader,
             endHeader,
-            numRelevantPublications,
             ZERO_DELAYED_PUBLICATIONS,
             "0x", // any proof
             INITIAL_PERIOD
         );
 
         // Create a publication after the period ended
-        IPublicationFeed.PublicationHeader memory afterPeriodHeader = _insertPublication();
+        IInbox.PublicationHeader memory afterPeriodHeader = _insertPublication();
 
         // Set the proven checkpoint to include the latest publication
         ICheckpointTracker.Checkpoint memory provenCheckpoint = ICheckpointTracker.Checkpoint({
@@ -859,13 +926,13 @@ abstract contract BaseProverManagerTest is Test {
 
     function test_finalizePastPeriod_RevertWhen_PublicationNotProven() public {
         // Setup: Create publications and exit the period
-        IPublicationFeed.PublicationHeader memory header = _insertPublication();
+        IInbox.PublicationHeader memory header = _insertPublication();
         _exit(initialProver);
         vm.warp(block.timestamp + EXIT_DELAY + 1);
 
         // Create a publication after the period ends
         vm.warp(block.timestamp + 1);
-        IPublicationFeed.PublicationHeader memory afterPeriodHeader = _insertPublication();
+        IInbox.PublicationHeader memory afterPeriodHeader = _insertPublication();
 
         // Set the proven checkpoint to a lower publication ID
         ICheckpointTracker.Checkpoint memory provenCheckpoint = ICheckpointTracker.Checkpoint({
@@ -886,7 +953,7 @@ abstract contract BaseProverManagerTest is Test {
 
         // Create a publication before the period ends
         vm.warp(block.timestamp + EXIT_DELAY - 1);
-        IPublicationFeed.PublicationHeader memory beforePeriodHeader = _insertPublication();
+        IInbox.PublicationHeader memory beforePeriodHeader = _insertPublication();
 
         // Set the proven checkpoint to a lower publication ID
         ICheckpointTracker.Checkpoint memory provenCheckpoint = ICheckpointTracker.Checkpoint({
@@ -936,25 +1003,25 @@ abstract contract BaseProverManagerTest is Test {
     }
 
     // -- HELPERS --
-    function _insertPublication() internal returns (IPublicationFeed.PublicationHeader memory) {
-        bytes[] memory emptyAttributes = new bytes[](0);
-        IPublicationFeed.PublicationHeader memory header = publicationFeed.publish(emptyAttributes);
-        return header;
+    function _insertPublication() internal returns (IInbox.PublicationHeader memory) {
+        uint256 nextId = inbox.getNextPublicationId();
+        inbox.publish(0, uint64(block.number)); // 0 blobs, current block
+        return inbox.getHeader(nextId);
     }
 
     function _insertPublicationsWithFees(uint256 numPublications, uint256 fee, bool delayed)
         internal
-        returns (IPublicationFeed.PublicationHeader[] memory)
+        returns (IInbox.PublicationHeader[] memory)
     {
         uint256 depositAmount = delayed
             ? LibPercentage.scaleByPercentage(fee, DELAYED_FEE_PERCENTAGE) * numPublications
             : fee * numPublications;
         _deposit(proposer, depositAmount);
 
-        IPublicationFeed.PublicationHeader[] memory headers = new IPublicationFeed.PublicationHeader[](numPublications);
+        IInbox.PublicationHeader[] memory headers = new IInbox.PublicationHeader[](numPublications);
         for (uint256 i = 0; i < numPublications; i++) {
             headers[i] = _insertPublication();
-            vm.prank(inbox);
+            vm.prank(address(inbox));
             proverManager.payPublicationFee(proposer, delayed);
         }
         return headers;
@@ -963,10 +1030,10 @@ abstract contract BaseProverManagerTest is Test {
     function _createPublicationHeader(uint256 id, uint256 timestamp, bytes32 prevHash, uint256 blockNumber)
         internal
         view
-        returns (IPublicationFeed.PublicationHeader memory)
+        returns (IInbox.PublicationHeader memory)
     {
         bytes32 attributesHash = keccak256(abi.encode("dummy"));
-        return IPublicationFeed.PublicationHeader({
+        return IInbox.PublicationHeader({
             id: id,
             publisher: msg.sender,
             timestamp: timestamp,
