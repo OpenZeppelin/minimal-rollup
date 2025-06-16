@@ -13,7 +13,7 @@ abstract contract InitialState is Test {
     address counterpart;
     SampleDepositProof sampleDepositProof;
     // zero address means any relayer is allowed
-    address anyRelayer = address(0);
+    bytes anyRelayer = new bytes(0);
 
     address trustedCommitmentPublisher = _randomAddress("trustedCommitmentPublisher");
 
