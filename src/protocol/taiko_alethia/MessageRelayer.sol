@@ -89,7 +89,7 @@ contract MessageRelayer is ReentrancyGuardTransient, IMessageRelayer {
         } else {
             // EIP-150: Only 63/64 of gas can be forwarded to external calls.
             // Check against actual forwardable gas with buffer for operations before the call.
-            uint256 maxForwardableGas = (gasleft() * 63 / 64) - BUFFER;
+            uint256 maxForwardableGas = (gasleft() - BUFFER) * 63 / 64;
             require(gasLimit <= maxForwardableGas, InsufficientGas());
             (forwardMessageSuccess,) = to.call{value: valueToSend, gas: gasLimit}(data);
         }
