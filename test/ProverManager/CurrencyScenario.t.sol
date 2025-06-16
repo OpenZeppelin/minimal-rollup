@@ -15,6 +15,19 @@ abstract contract ETHCurrency is InitialState {
             address(inbox), address(checkpointTracker), initialProver, initialFee
         );
     }
+
+    function _prefund(address account, uint256 amount) internal override {
+        vm.deal(account, amount);
+    }
+
+    function _executeDeposit(address depositor, uint256 amount) internal override {
+        vm.prank(depositor);
+        ETHProverManager(payable(address(proverManager))).deposit{value: amount}();
+    }
+
+    function _currencyBalance(address account) internal view override returns (uint256) {
+        return account.balance;
+    }
 }
 
 abstract contract ERC20Currency is InitialState {
@@ -22,7 +35,7 @@ abstract contract ERC20Currency is InitialState {
 
     function setUp() public virtual override {
         token = new MockERC20();
-        super.setUp();
+        // do not call super.setUp() because it will be called by the Test contract
     }
 
     function _createProverManager() internal virtual override returns (BaseProverManager) {
@@ -45,5 +58,27 @@ abstract contract ERC20Currency is InitialState {
         );
 
         return BaseProverManager(pmAddress);
+    }
+
+    function _prefund(address account, uint256 amount) internal override {
+        // to match the vm.deal behavior, this should replace the account's balance with the new amount
+        uint256 currentBalance = token.balanceOf(account);
+        // Cannot prefund if current balance is greater than prefund amount
+        assert(currentBalance <= amount);
+        token.mint(account, amount - currentBalance);
+    }
+
+    function _prepareForDeposit(address depositor, uint256 amount) internal virtual override {
+        vm.prank(depositor);
+        token.approve(address(proverManager), amount);
+    }
+
+    function _executeDeposit(address depositor, uint256 amount) internal override {
+        vm.prank(depositor);
+        ERC20ProverManager(address(proverManager)).deposit(amount);
+    }
+
+    function _currencyBalance(address account) internal view override returns (uint256) {
+        return token.balanceOf(account);
     }
 }

@@ -25,6 +25,20 @@ abstract contract InitialState is Test {
 
     function _createProverManager() internal virtual returns (BaseProverManager);
 
+    function _prefund(address account, uint256 amount) internal virtual;
+
+    function _prepareForDeposit(address depositor, uint256 amount) internal virtual {
+        // do nothing by default
+        // this will be overridden in the token scenario to create the approval
+        // note: we cannot include this functionality in _executeDeposit because then it would
+        // execute two calls, and interfere with the vm.expectEmit instrumentation
+    }
+
+    function _executeDeposit(address depositor, uint256 amount) internal virtual;
+
+    function _currencyBalance(address account) internal view virtual returns (uint256);
+
+
     function _randomAddress(string memory name) internal pure returns (address) {
         return address(uint160(uint256(keccak256(abi.encode(_domainSeparator(), name)))));
     }
