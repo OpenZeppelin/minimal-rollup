@@ -15,7 +15,7 @@ abstract contract InitialState is Test {
     address deployer = _randomAddress("deployer");
     address initialProver = _randomAddress("initialProver");
     uint96 initialFee = 0.1 ether;
-    uint256 initialDeposit = 1 ether;
+    uint256 initialDeposit = 1.5 ether; // more than the liveness bond
 
     function setUp() public virtual {
         inbox = new MockInbox();
