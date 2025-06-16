@@ -30,7 +30,7 @@ struct BlockHeader {
 }
 
 contract TaikoAnchor {
-    event Anchor(uint256 publicationId, uint256 anchorBlockId, bytes32 anchorBlockHash, bytes32 parentGasUsed);
+    event Anchor(uint256 publicationId, uint256 anchorBlockId, bytes32 anchorBlockHash, uint32 parentGasUsed);
 
     /// @dev The header provided does not match the block hash
     /// @param headerHash The header hash
@@ -84,7 +84,7 @@ contract TaikoAnchor {
         uint256 _anchorBlockId,
         bytes32 _anchorBlockHash,
         BlockHeader calldata _anchorBlockHeader,
-        bytes32 _parentGasUsed
+        uint32 _parentGasUsed
     ) external onlyFromPermittedSender {
         // Make sure this function can only succeed once per publication
         require(_publicationId > lastPublicationId, "publicationId too small");
@@ -151,7 +151,7 @@ contract TaikoAnchor {
     }
 
     // For now, we simply use a constant base fee
-    function _verifyBaseFee(bytes32 /*_parentGasUsed*/ ) internal view {
+    function _verifyBaseFee(uint32 /*_parentGasUsed*/ ) internal view {
         require(block.basefee == fixedBaseFee, "basefee mismatch");
     }
 }
