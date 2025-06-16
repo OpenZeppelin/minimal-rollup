@@ -3,11 +3,12 @@ pragma solidity ^0.8.28;
 
 import {ERC20Currency, ETHCurrency} from "./CurrencyScenario.t.sol";
 import {InitialState} from "./InitialState.t.sol";
+import {InvariantTest} from "./InvariantTest.t.sol";
 import {LibProvingPeriod} from "src/libs/LibProvingPeriod.sol";
 
 /// Represents the initial state of the ProverManager contract after deployment.
 /// @dev This should be inherited to cover the ETH and ERC20 scenarios.
-abstract contract InitialStateTest is InitialState {
+abstract contract InitialStateTest is InvariantTest {
     function test_DeployerBalanceIsZero() public view {
         assertEq(proverManager.balances(deployer), 0, "Deployer has non-zero balance");
     }
