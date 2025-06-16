@@ -72,7 +72,7 @@ contract MessageRelayer is ReentrancyGuardTransient, IMessageRelayer {
     ) external {
         if (ethDeposit.context.length == 32) {
             address allowedRelayer = abi.decode(ethDeposit.context, (address));
-            require(allowedRelayer == msg.sender, InvalidRelayer());
+            require(allowedRelayer == address(0) || allowedRelayer == msg.sender, InvalidRelayer());
         }
 
         TIP_RECIPIENT_SLOT.asAddress().tstore(tipRecipient);
