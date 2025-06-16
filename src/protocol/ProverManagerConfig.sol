@@ -2,6 +2,42 @@
 pragma solidity ^0.8.28;
 
 abstract contract ProverManagerConfig {
+    function maxBidFraction() external view returns (uint16) {
+        return _maxBidFraction();
+    }
+
+    function livenessWindow() external view returns (uint40) {
+        return _livenessWindow();
+    }
+
+    function successionDelay() external view returns (uint40) {
+        return _successionDelay();
+    }
+
+    function exitDelay() external view returns (uint40) {
+        return _exitDelay();
+    }
+
+    function provingWindow() external view returns (uint40) {
+        return _provingWindow();
+    }
+
+    function livenessBond() external view returns (uint96) {
+        return _livenessBond();
+    }
+
+    function evictorIncentiveFraction() external view returns (uint16) {
+        return _evictorIncentiveFraction();
+    }
+
+    function rewardFraction() external view returns (uint16) {
+        return _rewardFraction();
+    }
+
+    function delayedFeePercentage() external view returns (uint16) {
+        return _delayedFeePercentage();
+    }
+
     /// @dev Returns the maximum fraction (in bps) of the previous bid a prover can offer and still have a successful
     /// bid
     /// @return _ The maximum bid fraction
