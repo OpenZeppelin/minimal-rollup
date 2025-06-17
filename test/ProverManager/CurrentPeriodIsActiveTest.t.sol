@@ -8,13 +8,8 @@ import {LibProvingPeriod} from "src/libs/LibProvingPeriod.sol";
 /// Represents states where the current timestamp is not after the end of the current period
 /// (or the current period is open with no end set).
 abstract contract CurrentPeriodIsActiveTest is UniversalTest {
-    function setUp() public virtual override {
-        super.setUp();
-        _prepareForDeposit(proposer, DEPOSIT_AMOUNT);
-        _executeDeposit(proposer, DEPOSIT_AMOUNT);
-    }
-
     function test_CurrentPeriodIsActive_payPublicationFee_shouldDeductRegularFee() public {
+        _initializeProposerDeposit();
         LibProvingPeriod.Period memory period = proverManager.getPeriod(proverManager.currentPeriodId());
 
         uint256 balanceBefore = proverManager.balances(proposer);
@@ -28,6 +23,7 @@ abstract contract CurrentPeriodIsActiveTest is UniversalTest {
     }
 
     function test_CurrentPeriodIsActive_payPublicationFee_shouldDeductDelayedFee() public {
+        _initializeProposerDeposit();
         LibProvingPeriod.Period memory period = proverManager.getPeriod(proverManager.currentPeriodId());
 
         uint256 balanceBefore = proverManager.balances(proposer);
@@ -42,6 +38,7 @@ abstract contract CurrentPeriodIsActiveTest is UniversalTest {
     }
 
     function test_CurrentPeriodIsActive_payPublicationFee_shouldNotTransferRegularFee() public {
+        _initializeProposerDeposit();
         uint256 escrowedBefore = _currencyBalance(address(proverManager));
 
         vm.prank(address(inbox));
@@ -53,6 +50,7 @@ abstract contract CurrentPeriodIsActiveTest is UniversalTest {
     }
 
     function test_CurrentPeriodIsActive_payPublicationFee_shouldNotTransferDelayedFee() public {
+        _initializeProposerDeposit();
         uint256 escrowedBefore = _currencyBalance(address(proverManager));
 
         vm.prank(address(inbox));
@@ -61,5 +59,10 @@ abstract contract CurrentPeriodIsActiveTest is UniversalTest {
         uint256 escrowedAfter = _currencyBalance(address(proverManager));
 
         assertEq(escrowedBefore, escrowedAfter, "Escrowed balance changed");
+    }
+
+    function _initializeProposerDeposit() internal {
+        _prepareForDeposit(proposer, DEPOSIT_AMOUNT);
+        _executeDeposit(proposer, DEPOSIT_AMOUNT);
     }
 }

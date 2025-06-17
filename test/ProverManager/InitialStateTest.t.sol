@@ -22,11 +22,8 @@ abstract contract InitialStateTest is CurrentPeriodIsActiveTest {
     }
 
     function test_InitialState_ProverManagerHasInitialDeposit() public view {
-        // subtract deposit amount because the CurrentPeriodIsActiveTest performs that deposit
         assertEq(
-            _currencyBalance(address(proverManager)) - DEPOSIT_AMOUNT,
-            initialDeposit,
-            "ProverManager does not have initial deposit"
+            _currencyBalance(address(proverManager)), initialDeposit, "ProverManager does not have initial deposit"
         );
     }
 
@@ -62,16 +59,12 @@ abstract contract InitialStateTest is CurrentPeriodIsActiveTest {
     }
 }
 
-contract InitialStateTest_ETH is InitialStateTest, ETHCurrency {
-    function setUp() public virtual override(CurrentPeriodIsActiveTest, InitialState) {
-        CurrentPeriodIsActiveTest.setUp();
-    }
-}
+contract InitialStateTest_ETH is InitialStateTest, ETHCurrency {}
 
 contract InitialStateTest_ERC20 is InitialStateTest, ERC20Currency {
-    function setUp() public virtual override(CurrentPeriodIsActiveTest, ERC20Currency) {
+    function setUp() public virtual override(InitialState, ERC20Currency) {
         ERC20Currency.setUp();
-        CurrentPeriodIsActiveTest.setUp();
+        InitialState.setUp();
     }
 
     function _prepareForDeposit(address depositor, uint256 amount) internal override(ERC20Currency, InitialState) {

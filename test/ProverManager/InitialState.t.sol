@@ -14,6 +14,8 @@ abstract contract InitialState is Test {
 
     address deployer = _randomAddress("deployer");
     address initialProver = _randomAddress("initialProver");
+    address proposer = _randomAddress("proposer");
+
     uint96 initialFee = 0.1 ether;
     uint256 initialDeposit = 1.5 ether; // more than the liveness bond
 
@@ -21,6 +23,7 @@ abstract contract InitialState is Test {
         inbox = new MockInbox();
         checkpointTracker = new MockCheckpointTracker();
         proverManager = _createProverManager();
+        _prefund(proposer, 10 ether);
     }
 
     function _createProverManager() internal virtual returns (BaseProverManager);
