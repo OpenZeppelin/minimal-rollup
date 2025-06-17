@@ -38,7 +38,6 @@ abstract contract InitialState is Test {
 
     function _currencyBalance(address account) internal view virtual returns (uint256);
 
-
     function _randomAddress(string memory name) internal pure returns (address) {
         return address(uint160(uint256(keccak256(abi.encode(_domainSeparator(), name)))));
     }

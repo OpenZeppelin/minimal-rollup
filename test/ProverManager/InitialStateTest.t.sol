@@ -2,15 +2,16 @@
 pragma solidity ^0.8.28;
 
 import {ERC20Currency, ETHCurrency} from "./CurrencyScenario.t.sol";
+
+import {CurrentPeriodIsActiveTest} from "./CurrentPeriodIsActiveTest.t.sol";
 import {InitialState} from "./InitialState.t.sol";
-import {UniversalTest} from "./UniversalTest.t.sol";
 import {LibProvingPeriod} from "src/libs/LibProvingPeriod.sol";
-import {ETHProverManager} from "src/protocol/ETHProverManager.sol";
 import {ERC20ProverManager} from "src/protocol/ERC20ProverManager.sol";
+import {ETHProverManager} from "src/protocol/ETHProverManager.sol";
 
 /// Represents the initial state of the ProverManager contract after deployment.
 /// @dev This should be inherited to cover the ETH and ERC20 scenarios.
-abstract contract InitialStateTest is UniversalTest {
+abstract contract InitialStateTest is CurrentPeriodIsActiveTest {
     function test_InitialState_DeployerBalanceIsZero() public view {
         assertEq(proverManager.balances(deployer), 0, "Deployer has non-zero balance");
     }
@@ -21,7 +22,12 @@ abstract contract InitialStateTest is UniversalTest {
     }
 
     function test_InitialState_ProverManagerHasInitialDeposit() public view {
-        assertEq(_currencyBalance(address(proverManager)), initialDeposit, "ProverManager does not have initial deposit");
+        // subtract deposit amount because the CurrentPeriodIsActiveTest performs that deposit
+        assertEq(
+            _currencyBalance(address(proverManager)) - DEPOSIT_AMOUNT,
+            initialDeposit,
+            "ProverManager does not have initial deposit"
+        );
     }
 
     function test_InitialState_CurrentPeriodIsZero() public view {
@@ -57,16 +63,15 @@ abstract contract InitialStateTest is UniversalTest {
 }
 
 contract InitialStateTest_ETH is InitialStateTest, ETHCurrency {
-
-    function setUp() public virtual override(UniversalTest, InitialState) {
-        UniversalTest.setUp();
+    function setUp() public virtual override(CurrentPeriodIsActiveTest, InitialState) {
+        CurrentPeriodIsActiveTest.setUp();
     }
 }
 
 contract InitialStateTest_ERC20 is InitialStateTest, ERC20Currency {
-    function setUp() public virtual override(UniversalTest, ERC20Currency) {
+    function setUp() public virtual override(CurrentPeriodIsActiveTest, ERC20Currency) {
         ERC20Currency.setUp();
-        UniversalTest.setUp();
+        CurrentPeriodIsActiveTest.setUp();
     }
 
     function _prepareForDeposit(address depositor, uint256 amount) internal override(ERC20Currency, InitialState) {
