@@ -64,7 +64,7 @@ library LibProvingPeriod {
 
     /// @dev The period fee, scaled by `delayedFeePercentage` if the publication is delayed
     function publicationFee(Period storage period, bool isDelayed) internal view returns (uint96) {
-        return isDelayed ? period.fee.scaleBy(period.delayedFeePercentage, LibPercentage.PERCENT) : period.fee;
+        return isDelayed ? period.fee.scaleByPercentage(period.delayedFeePercentage) : period.fee;
     }
 
     /// @dev The period has no end timestamp
