@@ -259,7 +259,7 @@ abstract contract BaseProverManager is IProposerFees, IProverManager, BalanceAcc
     /// @param offeredFee The new bid
     function _ensureSufficientUnderbid(uint96 fee, uint96 offeredFee) internal view virtual {
         uint96 requiredMaxFee = fee.scaleByBPS(_maxBidFraction());
-        require(offeredFee <= requiredMaxFee, OfferedFeeTooHigh());
+        require(offeredFee <= requiredMaxFee && fee > 0, OfferedFeeTooHigh());
     }
 
     /// @dev implementation of `IProverManager.claimProvingVacancy` with the option to specify a prover
