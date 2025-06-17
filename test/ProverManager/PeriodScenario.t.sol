@@ -4,6 +4,8 @@ pragma solidity ^0.8.28;
 import {ERC20Currency, ETHCurrency} from "./CurrencyScenario.t.sol";
 
 import {CurrentPeriodIsActiveTest} from "./CurrentPeriodIsActiveTest.t.sol";
+
+import {CurrentPeriodIsOpenTest} from "./CurrentPeriodIsOpenTest.t.sol";
 import {CurrentPeriodIsOverTest} from "./CurrentPeriodIsOverTest.t.sol";
 import {InitialState} from "./InitialState.t.sol";
 
@@ -20,8 +22,7 @@ abstract contract PeriodOneIsActive is PeriodZeroIsOver {
     function setUp() public virtual override {
         super.setUp();
 
-        _prepareForDeposit(proposer, initialFee);
-        _executeDeposit(proposer, initialFee);
+        _deposit(proposer, initialFee);
         vm.prank(address(inbox));
         proverManager.payPublicationFee(proposer, false);
     }
@@ -48,13 +49,13 @@ contract PeriodZeroIsOver_ERC20 is PeriodZeroIsOver, CurrentPeriodIsOverTest, ER
     }
 }
 
-contract PeriodOneIsActive_ETH is PeriodOneIsActive, CurrentPeriodIsActiveTest, ETHCurrency {
+contract PeriodOneIsActive_ETH is PeriodOneIsActive, CurrentPeriodIsOpenTest, ETHCurrency {
     function setUp() public virtual override(PeriodOneIsActive, InitialState) {
         PeriodOneIsActive.setUp();
     }
 }
 
-contract PeriodOneIsActive_ERC20 is PeriodOneIsActive, CurrentPeriodIsActiveTest, ERC20Currency {
+contract PeriodOneIsActive_ERC20 is PeriodOneIsActive, CurrentPeriodIsOpenTest, ERC20Currency {
     function setUp() public virtual override(PeriodOneIsActive, InitialState, ERC20Currency) {
         ERC20Currency.setUp();
         PeriodOneIsActive.setUp();

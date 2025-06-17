@@ -15,6 +15,7 @@ abstract contract InitialState is Test {
     address deployer = _randomAddress("deployer");
     address initialProver = _randomAddress("initialProver");
     address proposer = _randomAddress("proposer");
+    address proverA = _randomAddress("proverA");
 
     // Configuration parameters.
     uint96 initialFee = 0.1 ether;
@@ -27,6 +28,8 @@ abstract contract InitialState is Test {
         checkpointTracker = new MockCheckpointTracker();
         proverManager = _createProverManager();
         _prefund(proposer, 10 ether);
+        _prefund(initialProver, 10 ether);
+        _prefund(proverA, 10 ether);
     }
 
     function _createProverManager() internal virtual returns (BaseProverManager);
@@ -36,11 +39,16 @@ abstract contract InitialState is Test {
     function _prepareForDeposit(address depositor, uint256 amount) internal virtual {
         // do nothing by default
         // this will be overridden in the token scenario to create the approval
-        // note: we cannot include this functionality in _executeDeposit because then it would
-        // execute two calls, and interfere with the vm.expectEmit instrumentation
+        // note: we split this functionality from _executeDeposit so we can isolate the
+        // deposit call when using the vm.expectEmit instrumentation
     }
 
     function _executeDeposit(address depositor, uint256 amount) internal virtual;
+
+    function _deposit(address depositor, uint256 amount) internal {
+        _prepareForDeposit(depositor, amount);
+        _executeDeposit(depositor, amount);
+    }
 
     function _currencyBalance(address account) internal view virtual returns (uint256);
 

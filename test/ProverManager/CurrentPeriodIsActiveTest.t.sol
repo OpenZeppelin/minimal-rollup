@@ -9,7 +9,7 @@ import {LibProvingPeriod} from "src/libs/LibProvingPeriod.sol";
 /// (or the current period is open with no end set).
 abstract contract CurrentPeriodIsActiveTest is UniversalTest {
     function test_CurrentPeriodIsActive_payPublicationFee_shouldDeductRegularFee() public {
-        _initializeProposerDeposit();
+        _deposit(proposer, DEPOSIT_AMOUNT);
         LibProvingPeriod.Period memory period = proverManager.getPeriod(proverManager.currentPeriodId());
 
         uint256 balanceBefore = proverManager.balances(proposer);
@@ -23,7 +23,7 @@ abstract contract CurrentPeriodIsActiveTest is UniversalTest {
     }
 
     function test_CurrentPeriodIsActive_payPublicationFee_shouldDeductDelayedFee() public {
-        _initializeProposerDeposit();
+        _deposit(proposer, DEPOSIT_AMOUNT);
         LibProvingPeriod.Period memory period = proverManager.getPeriod(proverManager.currentPeriodId());
 
         uint256 balanceBefore = proverManager.balances(proposer);
@@ -38,7 +38,7 @@ abstract contract CurrentPeriodIsActiveTest is UniversalTest {
     }
 
     function test_CurrentPeriodIsActive_payPublicationFee_shouldNotTransferRegularFee() public {
-        _initializeProposerDeposit();
+        _deposit(proposer, DEPOSIT_AMOUNT);
         uint256 escrowedBefore = _currencyBalance(address(proverManager));
 
         vm.prank(address(inbox));
@@ -50,7 +50,7 @@ abstract contract CurrentPeriodIsActiveTest is UniversalTest {
     }
 
     function test_CurrentPeriodIsActive_payPublicationFee_shouldNotTransferDelayedFee() public {
-        _initializeProposerDeposit();
+        _deposit(proposer, DEPOSIT_AMOUNT);
         uint256 escrowedBefore = _currencyBalance(address(proverManager));
 
         vm.prank(address(inbox));

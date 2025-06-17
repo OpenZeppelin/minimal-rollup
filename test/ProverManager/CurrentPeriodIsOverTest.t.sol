@@ -8,7 +8,7 @@ import {LibProvingPeriod} from "src/libs/LibProvingPeriod.sol";
 /// Represents states where the current timestamp is after the end of the current period
 abstract contract CurrentPeriodIsOverTest is UniversalTest {
     function test_CurrentPeriodIsOver_payPublicationFee_shouldAdvancePeriod() public {
-        _initializeProposerDeposit();
+        _deposit(proposer, DEPOSIT_AMOUNT);
         uint256 initialPeriodId = proverManager.currentPeriodId();
 
         vm.prank(address(inbox));
@@ -18,7 +18,7 @@ abstract contract CurrentPeriodIsOverTest is UniversalTest {
     }
 
     function test_CurrentPeriodIsOver_payPublicationFee_shouldDeductNextPeriodRegularFee() public {
-        _initializeProposerDeposit();
+        _deposit(proposer, DEPOSIT_AMOUNT);
         LibProvingPeriod.Period memory period = proverManager.getPeriod(proverManager.currentPeriodId() + 1);
 
         uint256 balanceBefore = proverManager.balances(proposer);
@@ -32,7 +32,7 @@ abstract contract CurrentPeriodIsOverTest is UniversalTest {
     }
 
     function test_CurrentPeriodIsOver_payPublicationFee_shouldDeductNextPeriodDelayedFee() public {
-        _initializeProposerDeposit();
+        _deposit(proposer, DEPOSIT_AMOUNT);
         LibProvingPeriod.Period memory period = proverManager.getPeriod(proverManager.currentPeriodId() + 1);
 
         uint256 balanceBefore = proverManager.balances(proposer);
@@ -47,7 +47,7 @@ abstract contract CurrentPeriodIsOverTest is UniversalTest {
     }
 
     function test_CurrentPeriodIsOver_payPublicationFee_shouldNotTransferRegularFee() public {
-        _initializeProposerDeposit();
+        _deposit(proposer, DEPOSIT_AMOUNT);
         uint256 escrowedBefore = _currencyBalance(address(proverManager));
 
         vm.prank(address(inbox));
@@ -59,7 +59,7 @@ abstract contract CurrentPeriodIsOverTest is UniversalTest {
     }
 
     function test_CurrentPeriodIsOver_payPublicationFee_shouldNotTransferDelayedFee() public {
-        _initializeProposerDeposit();
+        _deposit(proposer, DEPOSIT_AMOUNT);
         uint256 escrowedBefore = _currencyBalance(address(proverManager));
 
         vm.prank(address(inbox));

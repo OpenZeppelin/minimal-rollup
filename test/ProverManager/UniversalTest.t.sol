@@ -13,7 +13,7 @@ abstract contract UniversalTest is InvariantTest {
         uint256 balanceBefore = proverManager.balances(proposer);
 
         _prepareForDeposit(proposer, DEPOSIT_AMOUNT);
-        vm.expectEmit(address(proverManager));
+        vm.expectEmit();
         emit BalanceAccounting.Deposit(proposer, DEPOSIT_AMOUNT);
         _executeDeposit(proposer, DEPOSIT_AMOUNT);
 
@@ -25,8 +25,7 @@ abstract contract UniversalTest is InvariantTest {
     }
 
     function test_Universal_withdraw() public {
-        _prepareForDeposit(proposer, DEPOSIT_AMOUNT);
-        _executeDeposit(proposer, DEPOSIT_AMOUNT);
+        _deposit(proposer, DEPOSIT_AMOUNT);
 
         uint256 escrowedBefore = _currencyBalance(address(proverManager));
         uint256 balanceBefore = proverManager.balances(proposer);
@@ -46,10 +45,5 @@ abstract contract UniversalTest is InvariantTest {
     function test_Universal_payPublicationFee_RevertWhenNotCalledByInbox() public {
         vm.expectRevert(BaseProverManager.OnlyInbox.selector);
         proverManager.payPublicationFee(proposer, false);
-    }
-
-    function _initializeProposerDeposit() internal {
-        _prepareForDeposit(proposer, DEPOSIT_AMOUNT);
-        _executeDeposit(proposer, DEPOSIT_AMOUNT);
     }
 }
