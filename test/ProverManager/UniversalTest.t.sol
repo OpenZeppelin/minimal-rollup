@@ -8,10 +8,6 @@ import {BaseProverManager} from "src/protocol/BaseProverManager.sol";
 /// This contract describes behaviours that should be valid in every state
 /// It can be inherited by any Test contract to run all tests in that state
 abstract contract UniversalTest is InvariantTest {
-    // Configuration parameters.
-    uint256 constant DEPOSIT_AMOUNT = 2 ether;
-    uint256 constant WITHDRAW_AMOUNT = 0.5 ether;
-
     function test_Universal_deposit() public {
         uint256 escrowedBefore = _currencyBalance(address(proverManager));
         uint256 balanceBefore = proverManager.balances(proposer);
@@ -50,5 +46,10 @@ abstract contract UniversalTest is InvariantTest {
     function test_Universal_payPublicationFee_RevertWhenNotCalledByInbox() public {
         vm.expectRevert(BaseProverManager.OnlyInbox.selector);
         proverManager.payPublicationFee(proposer, false);
+    }
+
+    function _initializeProposerDeposit() internal {
+        _prepareForDeposit(proposer, DEPOSIT_AMOUNT);
+        _executeDeposit(proposer, DEPOSIT_AMOUNT);
     }
 }

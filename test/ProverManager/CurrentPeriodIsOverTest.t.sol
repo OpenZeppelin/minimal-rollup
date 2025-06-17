@@ -5,12 +5,21 @@ import {UniversalTest} from "./UniversalTest.t.sol";
 import {LibPercentage} from "src/libs/LibPercentage.sol";
 import {LibProvingPeriod} from "src/libs/LibProvingPeriod.sol";
 
-/// Represents states where the current timestamp is not after the end of the current period
-/// (or the current period is open with no end set).
-abstract contract CurrentPeriodIsActiveTest is UniversalTest {
-    function test_CurrentPeriodIsActive_payPublicationFee_shouldDeductRegularFee() public {
+/// Represents states where the current timestamp is after the end of the current period
+abstract contract CurrentPeriodIsOverTest is UniversalTest {
+    function test_CurrentPeriodIsOver_payPublicationFee_shouldAdvancePeriod() public {
         _initializeProposerDeposit();
-        LibProvingPeriod.Period memory period = proverManager.getPeriod(proverManager.currentPeriodId());
+        uint256 initialPeriodId = proverManager.currentPeriodId();
+
+        vm.prank(address(inbox));
+        proverManager.payPublicationFee(proposer, false);
+
+        assertEq(proverManager.currentPeriodId(), initialPeriodId + 1, "Period is not advanced");
+    }
+
+    function test_CurrentPeriodIsOver_payPublicationFee_shouldDeductNextPeriodRegularFee() public {
+        _initializeProposerDeposit();
+        LibProvingPeriod.Period memory period = proverManager.getPeriod(proverManager.currentPeriodId() + 1);
 
         uint256 balanceBefore = proverManager.balances(proposer);
 
@@ -22,9 +31,9 @@ abstract contract CurrentPeriodIsActiveTest is UniversalTest {
         assertEq(balanceBefore - balanceAfter, period.fee, "Regular fee was not deducted");
     }
 
-    function test_CurrentPeriodIsActive_payPublicationFee_shouldDeductDelayedFee() public {
+    function test_CurrentPeriodIsOver_payPublicationFee_shouldDeductNextPeriodDelayedFee() public {
         _initializeProposerDeposit();
-        LibProvingPeriod.Period memory period = proverManager.getPeriod(proverManager.currentPeriodId());
+        LibProvingPeriod.Period memory period = proverManager.getPeriod(proverManager.currentPeriodId() + 1);
 
         uint256 balanceBefore = proverManager.balances(proposer);
 
@@ -37,7 +46,7 @@ abstract contract CurrentPeriodIsActiveTest is UniversalTest {
         assertEq(balanceBefore - balanceAfter, delayedFee, "Delayed fee was not deducted");
     }
 
-    function test_CurrentPeriodIsActive_payPublicationFee_shouldNotTransferRegularFee() public {
+    function test_CurrentPeriodIsOver_payPublicationFee_shouldNotTransferRegularFee() public {
         _initializeProposerDeposit();
         uint256 escrowedBefore = _currencyBalance(address(proverManager));
 
@@ -49,7 +58,7 @@ abstract contract CurrentPeriodIsActiveTest is UniversalTest {
         assertEq(escrowedBefore, escrowedAfter, "Escrowed balance changed");
     }
 
-    function test_CurrentPeriodIsActive_payPublicationFee_shouldNotTransferDelayedFee() public {
+    function test_CurrentPeriodIsOver_payPublicationFee_shouldNotTransferDelayedFee() public {
         _initializeProposerDeposit();
         uint256 escrowedBefore = _currencyBalance(address(proverManager));
 
