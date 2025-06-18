@@ -114,7 +114,7 @@ abstract contract UniversalTest is InitialState {
             to: bob,
             amount: 1 ether,
             data: "",
-            relayer: anyRelayer
+            context: anyRelayer
         });
 
         vm.prank(ethDeposit.from);
@@ -130,7 +130,7 @@ abstract contract UniversalTest is InitialState {
             to: bob,
             amount: 1 ether,
             data: "",
-            relayer: anyRelayer
+            context: anyRelayer
         });
         bytes32 id = bridge.getDepositId(ethDeposit);
 

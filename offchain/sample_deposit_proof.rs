@@ -1,6 +1,6 @@
 use alloy::primitives::utils::parse_units;
 use alloy::sol;
-use alloy::sol_types::SolCall;
+use alloy::sol_types::{SolCall, SolValue};
 use eyre::Result;
 
 mod signal_slot;
@@ -35,7 +35,7 @@ fn create_deposit_call(
     recipient: Address,
     amount: U256,
     data: &str,
-    relayer: Address,
+    context: &str,
     id: &FixedBytes<32>,
 ) -> String {
     let mut result = String::new();
@@ -57,7 +57,7 @@ fn create_deposit_call(
     result += format!("\t\tdeposit.to = address({});\n", recipient).as_str();
     result += format!("\t\tdeposit.amount = {};\n", amount).as_str();
     result += format!("\t\tdeposit.data = bytes(hex\"{}\");\n", data).as_str();
-    result += format!("\t\tdeposit.relayer = address({});\n", relayer).as_str();
+    result += format!("\t\tdeposit.context = bytes(hex\"{}\");\n", context).as_str();
     result += format!("\t\t_createDeposit(\n\t\t\taccountProof,\n\t\t\tstorageProof,\n\t\t\tdeposit,\n\t\t\tbytes32({}),\n\t\t\tbytes32({})\n\t\t);\n", proof.slot, id).as_str();
     return result;
 }
@@ -66,7 +66,7 @@ pub struct DepositSpecification {
     pub recipient: Address,
     pub amount: U256,
     pub data: String,
-    pub relayer: Address,
+    pub context: String,
 }
 
 fn deposit_specification() -> Vec<DepositSpecification> {
@@ -101,16 +101,15 @@ fn deposit_specification() -> Vec<DepositSpecification> {
         relayer_calldata.as_str(),
     ];
 
-    let zero_relayer = Address::ZERO;
-
     let mut specifications = vec![];
+
     for amount in &amounts {
         for data in calldata.iter() {
             specifications.push(DepositSpecification {
-                recipient,
+                recipient: relayer_address,
                 amount: U256::from(*amount),
                 data: data.to_string(),
-                relayer: zero_relayer,
+                context: String::from(""),
             });
         }
     }
@@ -118,10 +117,10 @@ fn deposit_specification() -> Vec<DepositSpecification> {
     for amount in &amounts {
         for data in relayer_calldata.iter() {
             specifications.push(DepositSpecification {
-                recipient: relayer_address,
+                recipient,
                 amount: U256::from(*amount),
                 data: data.to_string(),
-                relayer: zero_relayer,
+                context: hex::encode(vec![relayer_address].abi_encode()),
             });
         }
     }
@@ -143,7 +142,7 @@ async fn main() -> Result<()> {
             .deposit(
                 spec.recipient,
                 decode(spec.data.clone())?.into(),
-                spec.relayer,
+                decode(spec.context.clone())?.into(),
             )
             .value(spec.amount)
             .send()
@@ -178,7 +177,7 @@ async fn main() -> Result<()> {
             d.recipient,
             d.amount,
             d.data.as_str(),
-            d.relayer,
+            d.context.as_str(),
             id,
         )
         .as_str();

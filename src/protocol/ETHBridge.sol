@@ -5,8 +5,6 @@ import {IETHBridge} from "./IETHBridge.sol";
 import {ISignalService} from "./ISignalService.sol";
 import {ReentrancyGuardTransient} from "@openzeppelin/contracts/utils/ReentrancyGuardTransient.sol";
 
-import {console} from "forge-std/console.sol";
-
 /// @dev ETH bridging contract to send native ETH between L1 <-> L2 using storage proofs.
 /// @dev In contracts to the `SignalService`, this contract does not expect the bridge to be deployed on the same
 /// address on both chains. This is because it is designed so that each rollup has its own independent bridge contract,
@@ -51,8 +49,8 @@ contract ETHBridge is IETHBridge, ReentrancyGuardTransient {
     }
 
     /// @inheritdoc IETHBridge
-    function deposit(address to, bytes memory data, address relayer) public payable returns (bytes32 id) {
-        ETHDeposit memory ethDeposit = ETHDeposit(_globalDepositNonce, msg.sender, to, msg.value, data, relayer);
+    function deposit(address to, bytes memory data, bytes memory context) public payable returns (bytes32 id) {
+        ETHDeposit memory ethDeposit = ETHDeposit(_globalDepositNonce, msg.sender, to, msg.value, data, context);
         id = _generateId(ethDeposit);
         unchecked {
             ++_globalDepositNonce;
@@ -80,8 +78,6 @@ contract ETHBridge is IETHBridge, ReentrancyGuardTransient {
     /// @param value Amount of ETH to send
     /// @param data Data to send to the receiver
     function _sendETH(address to, uint256 value, bytes memory data) internal {
-        console.log(to);
-        console.logBytes(data);
         (bool success,) = to.call{value: value}(data);
         require(success, FailedClaim());
     }
