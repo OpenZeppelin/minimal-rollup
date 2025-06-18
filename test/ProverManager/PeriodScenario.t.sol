@@ -43,10 +43,6 @@ contract PeriodZeroIsOver_ERC20 is PeriodZeroIsOver, CurrentPeriodIsOverTest, ER
         ERC20Currency.setUp();
         PeriodZeroIsOver.setUp();
     }
-
-    function _prepareForDeposit(address depositor, uint256 amount) internal override(ERC20Currency, InitialState) {
-        ERC20Currency._prepareForDeposit(depositor, amount);
-    }
 }
 
 contract PeriodOneIsActive_ETH is PeriodOneIsActive, CurrentPeriodIsOpenTest, ETHCurrency {
@@ -59,9 +55,5 @@ contract PeriodOneIsActive_ERC20 is PeriodOneIsActive, CurrentPeriodIsOpenTest, 
     function setUp() public virtual override(PeriodOneIsActive, InitialState, ERC20Currency) {
         ERC20Currency.setUp();
         PeriodOneIsActive.setUp();
-    }
-
-    function _prepareForDeposit(address depositor, uint256 amount) internal override(ERC20Currency, InitialState) {
-        ERC20Currency._prepareForDeposit(depositor, amount);
     }
 }

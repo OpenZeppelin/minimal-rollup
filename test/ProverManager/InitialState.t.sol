@@ -36,12 +36,10 @@ abstract contract InitialState is Test {
 
     function _prefund(address account, uint256 amount) internal virtual;
 
-    function _prepareForDeposit(address depositor, uint256 amount) internal virtual {
-        // do nothing by default
-        // this will be overridden in the token scenario to create the approval
-        // note: we split this functionality from _executeDeposit so we can isolate the
-        // deposit call when using the vm.expectEmit instrumentation
-    }
+    // this will be overridden in the token scenario to create the approval
+    // note: we split this functionality from _executeDeposit so we can isolate the
+    // deposit call when using the vm.expectEmit instrumentation
+    function _prepareForDeposit(address depositor, uint256 amount) internal virtual;
 
     function _executeDeposit(address depositor, uint256 amount) internal virtual;
 

@@ -20,6 +20,10 @@ abstract contract ETHCurrency is InitialState {
         vm.deal(account, amount);
     }
 
+    function _prepareForDeposit(address depositor, uint256 amount) internal virtual override {
+        // Do nothing
+    }
+
     function _executeDeposit(address depositor, uint256 amount) internal override {
         vm.prank(depositor);
         ETHProverManager(payable(address(proverManager))).deposit{value: amount}();

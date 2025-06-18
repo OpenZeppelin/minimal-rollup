@@ -66,8 +66,4 @@ contract InitialStateTest_ERC20 is InitialStateTest, ERC20Currency {
         ERC20Currency.setUp();
         InitialState.setUp();
     }
-
-    function _prepareForDeposit(address depositor, uint256 amount) internal override(ERC20Currency, InitialState) {
-        ERC20Currency._prepareForDeposit(depositor, amount);
-    }
 }
