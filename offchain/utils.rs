@@ -1,6 +1,6 @@
 use alloy::{
     node_bindings::{Anvil, AnvilInstance},
-    primitives::{address, Address, B256},
+    primitives::{address, Address, Bytes, B256},
     providers::{Provider, ProviderBuilder},
     signers::local::PrivateKeySigner,
     sol,
@@ -10,7 +10,6 @@ use ETHBridge::ETHBridgeInstance;
 use SignalService::SignalServiceInstance;
 
 use eyre::Result;
-use serde_json::to_string_pretty;
 
 const BLOCK_TIME: u64 = 5;
 
@@ -28,7 +27,16 @@ sol!(
     "./out/ETHBridge.sol/ETHBridge.json"
 );
 
-pub fn get_provider() -> Result<(impl Provider, AnvilInstance)> {
+#[allow(dead_code)]
+pub struct SignalProof {
+    pub block_hash: B256,
+    pub state_root: B256,
+    pub slot: B256,
+    pub account_proof: Vec<Bytes>,
+    pub storage_proof: Vec<Bytes>,
+}
+
+pub fn get_provider() -> Result<(impl Provider, AnvilInstance, PrivateKeySigner)> {
     let anvil = Anvil::new()
         .block_time(BLOCK_TIME)
         .port(8547_u16)
@@ -38,7 +46,7 @@ pub fn get_provider() -> Result<(impl Provider, AnvilInstance)> {
     let provider = ProviderBuilder::new()
         .wallet(signer.clone())
         .on_http(rpc_url);
-    Ok((provider, anvil))
+    Ok((provider, anvil, signer))
 }
 
 pub async fn deploy_signal_service(
@@ -51,16 +59,12 @@ pub async fn deploy_signal_service(
 pub async fn deploy_eth_bridge(
     provider: &impl Provider,
     signal_service: Address,
-    trusted_publisher: Address,
 ) -> Result<ETHBridgeInstance<(), &impl Provider>> {
-    // L2 Eth bridge address
-    let counterpart = address!("0xDC9e4C83bDe3912E9B63A9BF9cE263F3309aB5d4");
-    // WARN: This is a slight hack for now to make sure the contract is deployed on the correct address
-    ETHBridge::deploy(provider, signal_service, trusted_publisher, counterpart).await?;
-
-    let contract =
-        ETHBridge::deploy(provider, signal_service, trusted_publisher, counterpart).await?;
-
+    // The trusted publisher and counterpart are needed to verify signals from the other bridge
+    // In this case, we are only depositing on this bridge
+    // Set both values to an arbitrary dummy address. It is non-zero to pass validation.
+    let unused = address!("0x0000000000000000000000000000000000000001");
+    let contract = ETHBridge::deploy(provider, signal_service, unused, unused).await?;
     Ok(contract)
 }
 
@@ -68,7 +72,7 @@ pub async fn get_proofs(
     provider: &impl Provider,
     slot: B256,
     signal_service: &SignalServiceInstance<(), &impl Provider>,
-) -> Result<()> {
+) -> Result<SignalProof> {
     let block_header = provider
         .get_block_by_number(alloy::eips::BlockNumberOrTag::Latest)
         .await?
@@ -79,13 +83,15 @@ pub async fn get_proofs(
         .get_proof(signal_service.address().to_owned(), vec![slot])
         .await?;
 
-    println!("Block Hash: {}", block_header.hash.to_string());
-    println!("State Root: {}", block_header.state_root.to_string());
-    println!("Storage Root: {}", proof.storage_hash.to_string());
-    println!("Account Proof: {}", to_string_pretty(&proof.account_proof)?);
-    println!("Storage Proof: {}", to_string_pretty(&proof.storage_proof)?);
+    let proof = SignalProof {
+        block_hash: block_header.hash,
+        state_root: block_header.state_root,
+        slot: slot,
+        account_proof: proof.account_proof,
+        storage_proof: proof.storage_proof[0].clone().proof,
+    };
 
-    Ok(())
+    Ok(proof)
 }
 
 #[allow(dead_code)]

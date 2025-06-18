@@ -1,0 +1,87 @@
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.28;
+
+// This file is auto-generated with the command `just get-sample-deposit-proof`.
+// Do not edit manually.
+// See ISampleDepositProof.t.sol for an explanation of its purpose.
+
+import {ISignalService} from "src/protocol/ISignalService.sol";
+import {IETHBridge} from "src/protocol/IETHBridge.sol";
+import {ISampleDepositProof} from "./ISampleDepositProof.t.sol";
+
+contract SampleDepositProof is ISampleDepositProof {
+
+    ISignalService.SignalProof[] private signalProofs;
+    IETHBridge.ETHDeposit[] private deposits;
+    bytes32[] private slots;
+    bytes32[] private ids;
+
+    constructor() {
+        bytes[] memory accountProof;
+        bytes[] memory storageProof;
+        IETHBridge.ETHDeposit memory deposit;
+        {populate_proofs}
+    }
+
+    /// @inheritdoc ISampleDepositProof
+    function getSignalServiceAddress() public pure returns (address) {
+        return address({signal_service_address});
+    }
+
+    /// @inheritdoc ISampleDepositProof
+    function getBridgeAddress() public pure returns (address) {
+        return address({bridge_address});
+    }
+
+    /// @inheritdoc ISampleDepositProof
+    function getStateRoot() public pure returns (bytes32) {
+        return bytes32({state_root});
+    }
+
+    /// @inheritdoc ISampleDepositProof
+    function getBlockHash() public pure returns (bytes32) {
+        return bytes32({block_hash});
+    }
+
+    /// @inheritdoc ISampleDepositProof
+    function getDepositSignalProof(uint256 idx) public view returns (ISignalService.SignalProof memory signalProof) {
+        return signalProofs[idx];
+    }
+
+    /// @inheritdoc ISampleDepositProof
+    function getEthDeposit(uint256 idx) public view returns (IETHBridge.ETHDeposit memory deposit) {
+        return deposits[idx];
+    }
+
+    /// @inheritdoc ISampleDepositProof
+    function getDepositInternals(uint256 idx) public view returns (bytes32 slot, bytes32 id) {
+        return (slots[idx], ids[idx]);
+    }
+
+    function _createDeposit(
+        bytes[] memory accountProof,
+        bytes[] memory storageProof,
+        IETHBridge.ETHDeposit memory deposit,
+        bytes32 slot,
+        bytes32 id
+    ) internal {
+        signalProofs.push(
+            ISignalService.SignalProof({
+                accountProof: accountProof,
+                storageProof: storageProof,
+                stateRoot: getStateRoot(),
+                blockHash: getBlockHash()
+            })
+        );
+        deposits.push(deposit);
+        slots.push(slot);
+        ids.push(id);
+    }
+
+    function getNumberOfProofs() public view returns (uint256 count) {
+        count = signalProofs.length;
+        require(deposits.length == count, "Deposits length mismatch");
+        require(slots.length == count, "Slots length mismatch");
+        require(ids.length == count, "Ids length mismatch");
+    }
+}
