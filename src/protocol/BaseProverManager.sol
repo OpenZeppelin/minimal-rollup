@@ -35,6 +35,9 @@ abstract contract BaseProverManager is IProposerFees, IProverManager, BalanceAcc
     /// @dev Only current prover can call `exit`
     error OnlyCurrentProver();
 
+    /// @dev Publication is before the current period
+    error PublicationBeforeCurrentPeriod();
+
     /// @dev Publication has not passed liveness window
     error PublicationNotOldEnough();
 
@@ -148,10 +151,14 @@ abstract contract BaseProverManager is IProposerFees, IProverManager, BalanceAcc
     /// @dev This can be called by anyone, and they get `evictorIncentiveFraction` of the liveness bond as an
     /// incentive.
     function evictProver(IInbox.PublicationHeader calldata publicationHeader) external {
+        uint256 periodId = _currentPeriodId;
+        uint40 previousPeriodEnd = periodId > 0 ? _periods[periodId - 1].end : 0;
+
         require(inbox.validateHeader(publicationHeader), InvalidPublication());
         require(publicationHeader.timestamp + _livenessWindow() < block.timestamp, PublicationNotOldEnough());
+        require(publicationHeader.timestamp > previousPeriodEnd, PublicationBeforeCurrentPeriod());
 
-        LibProvingPeriod.Period storage period = _periods[_currentPeriodId];
+        LibProvingPeriod.Period storage period = _periods[periodId];
         require(period.isInitialized(), PeriodNotInitialized());
         require(period.isOpen(), ProvingPeriodClosed());
 
