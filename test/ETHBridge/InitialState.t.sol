@@ -15,6 +15,9 @@ abstract contract InitialState is Test {
     // zero address means any relayer is allowed
     bytes anyRelayer = new bytes(0);
 
+    // zero address means deposit is uncancellable
+    address nonCancellableAddress = address(0);
+
     address trustedCommitmentPublisher = _randomAddress("trustedCommitmentPublisher");
 
     function setUp() public virtual {

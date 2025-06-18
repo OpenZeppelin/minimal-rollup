@@ -42,15 +42,14 @@ interface IETHBridge {
     /// @dev Failed to call the receiver with value.
     error FailedClaim();
 
-    /// @dev Deposit has already been claimed or cancelled.
-    error DepositAlreadyProcessed();
+    /// @dev A deposit was already claimed.
+    error AlreadyClaimed();
 
     /// @dev Only canceler can cancel a deposit.
     error OnlyCanceler();
 
-    /// @notice Whether the deposit identified by `id` has been processed (claimed or cancelled).
     /// @param id The deposit id
-    function processed(bytes32 id) external view returns (bool);
+    function claimed(bytes32 id) external view returns (bool);
 
     /// @dev ETH Deposit identifier.
     /// @param ethDeposit The ETH deposit struct
