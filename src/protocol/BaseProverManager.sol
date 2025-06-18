@@ -122,6 +122,8 @@ abstract contract BaseProverManager is IProposerFees, IProverManager, BalanceAcc
     /// @dev The offered fee has to be at most `maxBidFraction` of the current best price.
     /// @dev The current best price may be the current prover's fee or the fee of the next bid, depending on whether the
     /// period is open or closed.
+    /// @dev Note that even if the current period (that has the last publication) is over, the auction will continue
+    /// until the next publication triggers a new period.
     function bid(uint96 offeredFee) external {
         uint256 currentPeriodId_ = _currentPeriodId;
         LibProvingPeriod.Period storage currentPeriod = _periods[currentPeriodId_];
