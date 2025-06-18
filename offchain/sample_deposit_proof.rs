@@ -106,7 +106,7 @@ fn deposit_specification() -> Vec<DepositSpecification> {
     for amount in &amounts {
         for data in calldata.iter() {
             specifications.push(DepositSpecification {
-                recipient: relayer_address,
+                recipient,
                 amount: U256::from(*amount),
                 data: data.to_string(),
                 context: String::from(""),
@@ -117,7 +117,7 @@ fn deposit_specification() -> Vec<DepositSpecification> {
     for amount in &amounts {
         for data in relayer_calldata.iter() {
             specifications.push(DepositSpecification {
-                recipient,
+                recipient: relayer_address,
                 amount: U256::from(*amount),
                 data: data.to_string(),
                 context: hex::encode(vec![relayer_address].abi_encode()),
