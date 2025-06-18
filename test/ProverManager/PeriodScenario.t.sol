@@ -7,7 +7,10 @@ import {CurrentPeriodIsActiveTest} from "./CurrentPeriodIsActiveTest.t.sol";
 
 import {CurrentPeriodIsOpenTest} from "./CurrentPeriodIsOpenTest.t.sol";
 import {CurrentPeriodIsOverTest} from "./CurrentPeriodIsOverTest.t.sol";
+
 import {InitialState} from "./InitialState.t.sol";
+import {NextPeriodHasBidTest} from "./NextPeriodHasBidTest.t.sol";
+import {LibPercentage} from "src/libs/LibPercentage.sol";
 
 /// The timestamp is after the end of Period 0 but the new period has not been triggered
 abstract contract PeriodZeroIsOver is InitialState {
@@ -17,7 +20,7 @@ abstract contract PeriodZeroIsOver is InitialState {
     }
 }
 
-/// There has been a publication in period one to trigger the new period
+/// There has been a publication in period 1 to trigger the new period
 abstract contract PeriodOneIsActive is PeriodZeroIsOver {
     function setUp() public virtual override {
         super.setUp();
@@ -25,6 +28,18 @@ abstract contract PeriodOneIsActive is PeriodZeroIsOver {
         _deposit(proposer, initialFee);
         vm.prank(address(inbox));
         proverManager.payPublicationFee(proposer, false);
+    }
+}
+
+/// Period 1 is active and proverA has bid for the next period
+abstract contract PeriodTwoHasBidder is PeriodOneIsActive {
+    function setUp() public virtual override {
+        super.setUp();
+
+        uint96 offer = LibPercentage.scaleByBPS(initialFee, proverManager.maxBidFraction());
+        _deposit(proverA, proverManager.livenessBond());
+        vm.prank(address(proverA));
+        proverManager.bid(offer);
     }
 }
 
@@ -55,5 +70,23 @@ contract PeriodOneIsActive_ERC20 is PeriodOneIsActive, CurrentPeriodIsOpenTest, 
     function setUp() public virtual override(PeriodOneIsActive, InitialState, ERC20Currency) {
         ERC20Currency.setUp();
         PeriodOneIsActive.setUp();
+    }
+}
+
+contract PeriodTwoHasBidder_ETH is PeriodTwoHasBidder, CurrentPeriodIsActiveTest, NextPeriodHasBidTest, ETHCurrency {
+    function setUp() public virtual override(PeriodTwoHasBidder, InitialState) {
+        PeriodTwoHasBidder.setUp();
+    }
+}
+
+contract PeriodTwoHasBidder_ERC20 is
+    PeriodTwoHasBidder,
+    CurrentPeriodIsActiveTest,
+    NextPeriodHasBidTest,
+    ERC20Currency
+{
+    function setUp() public virtual override(PeriodTwoHasBidder, InitialState, ERC20Currency) {
+        ERC20Currency.setUp();
+        PeriodTwoHasBidder.setUp();
     }
 }
