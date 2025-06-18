@@ -19,6 +19,9 @@ interface IETHBridge {
         bytes data;
         // Application-specific context data (e.g., for relayer selection, tips, etc.)
         bytes context;
+        // Address that is allowed to cancel the deposit on the destination chain (zero address means deposit is
+        // uncancellable)
+        address canceler;
     }
 
     /// @dev Emitted when a deposit is made.
@@ -31,13 +34,20 @@ interface IETHBridge {
     /// @param deposit The claimed ETH deposit
     event DepositClaimed(bytes32 indexed id, ETHDeposit deposit);
 
+    /// @dev Emitted when a deposit is cancelled.
+    /// @param id The deposit id
+    /// @param claimee The address that received the cancelled deposit
+    event DepositCancelled(bytes32 indexed id, address claimee);
+
     /// @dev Failed to call the receiver with value.
     error FailedClaim();
 
     /// @dev A deposit was already claimed.
     error AlreadyClaimed();
 
-    /// @dev Whether the deposit identified by `id` has been claimed.
+    /// @dev Only canceler can cancel a deposit.
+    error OnlyCanceler();
+
     /// @param id The deposit id
     function claimed(bytes32 id) external view returns (bool);
 
@@ -49,7 +59,11 @@ interface IETHBridge {
     /// @param to The receiver of the deposit
     /// @param data Any calldata to be sent to the receiver in case of a contract
     /// @param context Application-specific context data
-    function deposit(address to, bytes memory data, bytes memory context) external payable returns (bytes32 id);
+    /// @param canceler Address that is allowed to cancel the deposit (zero address means deposit is uncancellable)
+    function deposit(address to, bytes memory data, bytes memory context, address canceler)
+        external
+        payable
+        returns (bytes32 id);
 
     /// @dev Claims an ETH deposit created by the sender (`from`) with `nonce`. The `value` ETH claimed  is
     /// sent to the receiver (`to`) after verifying a storage proof.
@@ -57,4 +71,12 @@ interface IETHBridge {
     /// @param height The `height` of the checkpoint on the source chain (i.e. the block number or publicationId)
     /// @param proof Encoded proof of the storage slot where the deposit is stored
     function claimDeposit(ETHDeposit memory ethDeposit, uint256 height, bytes memory proof) external;
+
+    /// @dev Initiates a cancel on the deposit, must be called by the canceler on the destination chain.
+    /// @param ethDeposit The ETH deposit struct
+    /// @param claimee The address that will receive the cancelled deposit
+    /// @param height The `height` of the checkpoint on the source chain (i.e. the block number or publicationId)
+    /// @param proof Encoded proof of the storage slot where the deposit is stored
+    function cancelDeposit(ETHDeposit memory ethDeposit, address claimee, uint256 height, bytes memory proof)
+        external;
 }

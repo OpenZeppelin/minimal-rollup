@@ -5,12 +5,9 @@ import {IETHBridge} from "./IETHBridge.sol";
 import {ISignalService} from "./ISignalService.sol";
 import {ReentrancyGuardTransient} from "@openzeppelin/contracts/utils/ReentrancyGuardTransient.sol";
 
-/// @dev ETH bridging contract to send native ETH between L1 <-> L2 using storage proofs.
-/// @dev In contracts to the `SignalService`, this contract does not expect the bridge to be deployed on the same
+/// @dev In contrast to the `SignalService`, this contract does not expect the bridge to be deployed on the same
 /// address on both chains. This is because it is designed so that each rollup has its own independent bridge contract,
 /// and they may furthermore decide to deploy a new version of the bridge in the future.
-///
-/// IMPORTANT: No recovery mechanism is implemented in case an account creates a deposit that can't be claimed.
 contract ETHBridge is IETHBridge, ReentrancyGuardTransient {
     mapping(bytes32 id => bool claimed) private _claimed;
 
@@ -49,8 +46,13 @@ contract ETHBridge is IETHBridge, ReentrancyGuardTransient {
     }
 
     /// @inheritdoc IETHBridge
-    function deposit(address to, bytes memory data, bytes memory context) public payable returns (bytes32 id) {
-        ETHDeposit memory ethDeposit = ETHDeposit(_globalDepositNonce, msg.sender, to, msg.value, data, context);
+    function deposit(address to, bytes memory data, bytes memory context, address canceler)
+        public
+        payable
+        returns (bytes32 id)
+    {
+        ETHDeposit memory ethDeposit =
+            ETHDeposit(_globalDepositNonce, msg.sender, to, msg.value, data, context, canceler);
         id = _generateId(ethDeposit);
         unchecked {
             ++_globalDepositNonce;
@@ -62,15 +64,35 @@ contract ETHBridge is IETHBridge, ReentrancyGuardTransient {
 
     /// @inheritdoc IETHBridge
     function claimDeposit(ETHDeposit memory ethDeposit, uint256 height, bytes memory proof) external nonReentrant {
-        bytes32 id = _generateId(ethDeposit);
+        bytes32 id = _claimDeposit(ethDeposit, ethDeposit.to, ethDeposit.data, height, proof);
+        emit DepositClaimed(id, ethDeposit);
+    }
+
+    /// @inheritdoc IETHBridge
+    function cancelDeposit(ETHDeposit memory ethDeposit, address claimee, uint256 height, bytes memory proof)
+        external
+    {
+        require(msg.sender == ethDeposit.canceler, OnlyCanceler());
+
+        bytes32 id = _claimDeposit(ethDeposit, claimee, bytes(""), height, proof);
+
+        emit DepositCancelled(id, claimee);
+    }
+
+    function _claimDeposit(
+        ETHDeposit memory ethDeposit,
+        address to,
+        bytes memory data,
+        uint256 height,
+        bytes memory proof
+    ) internal returns (bytes32 id) {
+        id = _generateId(ethDeposit);
         require(!claimed(id), AlreadyClaimed());
 
         signalService.verifySignal(height, trustedCommitmentPublisher, counterpart, id, proof);
 
         _claimed[id] = true;
-        _sendETH(ethDeposit.to, ethDeposit.amount, ethDeposit.data);
-
-        emit DepositClaimed(id, ethDeposit);
+        _sendETH(to, ethDeposit.amount, data);
     }
 
     /// @dev Function to transfer ETH to the receiver but ignoring the returndata.
