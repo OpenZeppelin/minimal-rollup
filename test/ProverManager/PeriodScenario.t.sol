@@ -33,6 +33,9 @@ abstract contract PeriodOneIsActive is PeriodZeroIsOver {
         _deposit(proposer, initialFee);
         vm.prank(address(inbox));
         proverManager.payPublicationFee(proposer, false);
+
+        // extend the period time so there could be expired publications
+        vm.warp(vm.getBlockTimestamp() + 3 * proverManager.livenessWindow());
     }
 }
 
@@ -57,14 +60,10 @@ abstract contract PeriodTwoIsActive is PeriodTwoHasBidder {
         _deposit(proposer, initialFee); // the period 2 fee is less than this
         vm.prank(address(inbox));
         proverManager.payPublicationFee(proposer, false);
-    }
-}
 
-/// Period 2 is active but the proving deadline for Period 1 is over
-abstract contract PeriodOneDeadlineComplete is PeriodTwoIsActive {
-    function setUp() public virtual override {
-        super.setUp();
-        vm.warp(proverManager.getPeriod(1).deadline + 1);
+        // extend the period time so there could be expired publications
+        // this also ensures the proving deadline for Period 1 is over
+        vm.warp(vm.getBlockTimestamp() + 3 * proverManager.livenessWindow());
     }
 }
 
@@ -79,6 +78,9 @@ abstract contract PeriodTwoIsVacant is PeriodOneIsActive {
         // no deposit necessary because there is no fee in vacant periods
         vm.prank(address(inbox));
         proverManager.payPublicationFee(proposer, false);
+
+        // extend the period time so there could be expired publications
+        vm.warp(vm.getBlockTimestamp() + 3 * proverManager.livenessWindow());
     }
 }
 
@@ -137,19 +139,6 @@ contract PeriodTwoIsActive_ERC20 is PeriodTwoIsActive, CurrentPeriodIsOpenTest, 
     function setUp() public virtual override(PeriodTwoIsActive, InitialState, ERC20Currency) {
         ERC20Currency.setUp();
         PeriodTwoIsActive.setUp();
-    }
-}
-
-contract PeriodOneDeadlineComplete_ETH is PeriodOneDeadlineComplete, CurrentPeriodIsOpenTest, ETHCurrency {
-    function setUp() public virtual override(PeriodOneDeadlineComplete, InitialState) {
-        PeriodOneDeadlineComplete.setUp();
-    }
-}
-
-contract PeriodOneDeadlineComplete_ERC20 is PeriodOneDeadlineComplete, CurrentPeriodIsOpenTest, ERC20Currency {
-    function setUp() public virtual override(PeriodOneDeadlineComplete, InitialState, ERC20Currency) {
-        ERC20Currency.setUp();
-        PeriodOneDeadlineComplete.setUp();
     }
 }
 
