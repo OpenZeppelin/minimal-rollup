@@ -58,12 +58,3 @@ abstract contract InitialStateTest is CurrentPeriodIsActiveTest {
         assertEq(period.pastDeadline, false, "Period 0 has missed deadline");
     }
 }
-
-contract InitialStateTest_ETH is InitialStateTest, ETHCurrency {}
-
-contract InitialStateTest_ERC20 is InitialStateTest, ERC20Currency {
-    function setUp() public virtual override(InitialState, ERC20Currency) {
-        ERC20Currency.setUp();
-        InitialState.setUp();
-    }
-}

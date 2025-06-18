@@ -9,6 +9,7 @@ import {CurrentPeriodIsOpenTest} from "./CurrentPeriodIsOpenTest.t.sol";
 import {CurrentPeriodIsOverTest} from "./CurrentPeriodIsOverTest.t.sol";
 
 import {InitialState} from "./InitialState.t.sol";
+import {InitialStateTest} from "./InitialStateTest.t.sol";
 import {NextPeriodHasBidTest} from "./NextPeriodHasBidTest.t.sol";
 import {LibPercentage} from "src/libs/LibPercentage.sol";
 
@@ -18,6 +19,7 @@ import {LibPercentage} from "src/libs/LibPercentage.sol";
 /// - selecting the relevant test suites
 
 /// The timestamp is after the end of Period 0 but the new period has not been triggered
+
 abstract contract PeriodZeroIsOver is InitialState {
     function setUp() public virtual override {
         super.setUp();
@@ -85,6 +87,16 @@ abstract contract PeriodTwoIsVacant is PeriodOneIsActive {
 }
 
 // Instantiations
+
+contract InitialStateTest_ETH is InitialStateTest, ETHCurrency {}
+
+contract InitialStateTest_ERC20 is InitialStateTest, ERC20Currency {
+    function setUp() public virtual override(InitialState, ERC20Currency) {
+        ERC20Currency.setUp();
+        InitialState.setUp();
+    }
+}
+
 contract PeriodZeroIsOver_ETH is PeriodZeroIsOver, CurrentPeriodIsOverTest, ETHCurrency {
     function setUp() public virtual override(PeriodZeroIsOver, InitialState) {
         PeriodZeroIsOver.setUp();
