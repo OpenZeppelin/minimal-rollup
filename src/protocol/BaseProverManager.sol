@@ -152,8 +152,9 @@ abstract contract BaseProverManager is IProposerFees, IProverManager, BalanceAcc
         require(publicationHeader.timestamp + _livenessWindow() < block.timestamp, PublicationNotOldEnough());
 
         LibProvingPeriod.Period storage period = _periods[_currentPeriodId];
+        require(period.isInitialized(), PeriodNotInitialized());
         require(period.isOpen(), ProvingPeriodClosed());
-
+        
         ICheckpointTracker.Checkpoint memory lastProven = checkpointTracker.getProvenCheckpoint();
         require(publicationHeader.id > lastProven.publicationId, PublicationAlreadyProven());
 
