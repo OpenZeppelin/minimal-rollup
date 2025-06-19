@@ -7,7 +7,7 @@ import {CurrentPeriodIsActiveTest} from "./CurrentPeriodIsActiveTest.t.sol";
 
 import {CurrentPeriodIsOpenTest} from "./CurrentPeriodIsOpenTest.t.sol";
 import {CurrentPeriodIsOverTest} from "./CurrentPeriodIsOverTest.t.sol";
-
+import {CurrentPeriodIsVacant} from "./CurrentPeriodIsVacant.t.sol";
 import {InitialState} from "./InitialState.t.sol";
 import {InitialStateTest} from "./InitialStateTest.t.sol";
 import {NextPeriodHasBidTest} from "./NextPeriodHasBidTest.t.sol";
@@ -154,14 +154,14 @@ contract PeriodTwoIsActive_ERC20 is PeriodTwoIsActive, CurrentPeriodIsOpenTest, 
     }
 }
 
-contract PeriodTwoIsVacant_ETH is PeriodTwoIsVacant, ETHCurrency {
+contract PeriodTwoIsVacant_ETH is PeriodTwoIsVacant, CurrentPeriodIsVacant, ETHCurrency {
     function setUp() public virtual override(PeriodTwoIsVacant, InitialState) {
         PeriodTwoIsVacant.setUp();
     }
 }
 
-contract PeriodTwoIsVacant_ERC20 is PeriodTwoIsVacant, ERC20Currency {
-    function setUp() public virtual override(PeriodTwoIsVacant, ERC20Currency) {
+contract PeriodTwoIsVacant_ERC20 is PeriodTwoIsVacant, CurrentPeriodIsVacant, ERC20Currency {
+    function setUp() public virtual override(PeriodTwoIsVacant, InitialState, ERC20Currency) {
         ERC20Currency.setUp();
         PeriodTwoIsVacant.setUp();
     }
