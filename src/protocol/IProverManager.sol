@@ -9,7 +9,7 @@ interface IProverManager {
     /// @param prover The address of the prover that made the bid
     /// @param periodId The period that the prover is bidding to prove
     /// @param fee The fee that the prover is willing to charge for proving each publication
-    /// @param stake The stake that the prover is going to put as stake for the period
+    /// @param stake The value that the prover is going to put as stake for the period
     event ProverOffer(address indexed prover, uint256 periodId, uint256 fee, uint256 stake);
 
     /// @notice Emitted when a prover is evicted from the prover role
@@ -28,6 +28,13 @@ interface IProverManager {
     /// @notice Emitted when a new period starts
     /// @param periodId The id of the new period
     event NewPeriod(uint256 periodId);
+
+    /// @notice Emitted when a prover claims a vacant period
+    /// @param prover The address of the prover that made the claim
+    /// @param periodId The period that the prover will claim (after the vacant period)
+    /// @param fee The fee that the prover is willing to charge for proving each publication
+    /// @param stake The value that the prover is going to put as stake for the period
+    event ProverVacancyClaimed(address indexed prover, uint256 periodId, uint256 fee, uint256 stake);
 
     /// @notice Bid to become the prover for the next period
     /// @param offeredFee The fee you are willing to charge for proving each publication

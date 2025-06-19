@@ -287,6 +287,8 @@ abstract contract BaseProverManager is IProposerFees, IProverManager, BalanceAcc
 
         _decreaseBalance(prover, _livenessBond());
         nextPeriod.init(prover, fee, _delayedFeePercentage(), _livenessBond());
+
+        emit ProverVacancyClaimed(prover, periodId + 1, fee, _livenessBond());
     }
 
     /// @dev mark the next period as active. Future publications will be assigned to the new period
