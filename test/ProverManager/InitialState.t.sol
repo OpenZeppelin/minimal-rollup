@@ -17,6 +17,7 @@ abstract contract InitialState is Test {
     address proposer = _randomAddress("proposer");
     address proverA = _randomAddress("proverA");
     address proverB = _randomAddress("proverB");
+    address evictor = _randomAddress("evictor");
 
     // Configuration parameters.
     uint96 initialFee = 0.1 ether;
@@ -32,6 +33,7 @@ abstract contract InitialState is Test {
         _prefund(initialProver, 10 ether);
         _prefund(proverA, 10 ether);
         _prefund(proverB, 10 ether);
+        _prefund(evictor, 10 ether);
     }
 
     function _createProverManager() internal virtual returns (BaseProverManager);
