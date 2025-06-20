@@ -68,8 +68,6 @@ interface IProverManager {
     /// @param firstPub The first publication header in the transition. Note that since checkpoints refer to the
     /// publication they follow, this should have an id `start.publicationId + 1`
     /// @param lastPub The last publication header in the transition
-    /// @param numDelayedPublications The number of delayed publications from the total number of publications being
-    /// proven
     /// @param proof Arbitrary data passed to the `verifier` contract to confirm the transition validity
     /// @param periodId The id of the period for which the proof is submitted
     function prove(
@@ -77,7 +75,6 @@ interface IProverManager {
         ICheckpointTracker.Checkpoint calldata end,
         IInbox.PublicationHeader calldata firstPub,
         IInbox.PublicationHeader calldata lastPub,
-        uint256 numDelayedPublications,
         bytes calldata proof,
         uint256 periodId
     ) external;

@@ -4,8 +4,9 @@ pragma solidity ^0.8.28;
 import {UniversalTest} from "./UniversalTest.t.sol";
 import {LibProvingPeriod} from "src/libs/LibProvingPeriod.sol";
 import {BaseProverManager} from "src/protocol/BaseProverManager.sol";
-import {IProverManager} from "src/protocol/IProverManager.sol";
+
 import {IInbox} from "src/protocol/IInbox.sol";
+import {IProverManager} from "src/protocol/IProverManager.sol";
 
 /// Represents states where the current period is open and has no prover
 abstract contract CurrentPeriodIsVacant is UniversalTest {

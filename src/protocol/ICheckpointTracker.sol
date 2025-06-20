@@ -8,12 +8,15 @@ interface ICheckpointTracker {
         /// @dev We recommend using the `keccak256(stateRoot, blockHash)` or similar to ensure both uniqueness and being
         /// able to verify messages across chains
         bytes32 commitment;
+        /// @dev The cumulative number of delayed publications up to this checkpoint (since genesis)
+        /// @dev This enables computing the delayed publications between two checkpoints
+        uint256 totalDelayedPublications;
     }
 
-    /// @notice Emitted when the proven checkpoint is updated
+    /// @notice Emitted when the latest commitment is saved
     /// @param publicationId the publication ID of the latest proven checkpoint
     /// @param commitment the commitment of the latest proven checkpoint
-    event CheckpointUpdated(uint256 indexed publicationId, bytes32 commitment);
+    event CommitmentSaved(uint256 indexed publicationId, bytes32 commitment);
 
     /// @return _ The last proven checkpoint
     function getProvenCheckpoint() external view returns (Checkpoint memory);
@@ -21,14 +24,11 @@ interface ICheckpointTracker {
     /// @notice Verifies a transition between two checkpoints. Update the latest `provenCheckpoint` if possible
     /// @param start The initial checkpoint before the transition
     /// @param end The final checkpoint after the transition
-    /// @param numDelayedPublications The number of delayed publications from the total of publications being proven
     /// @param proof Arbitrary data passed to the `verifier` contract to confirm the transition validity
     /// @return _ The number of new publications that were proven. Note this may be lower than end.publicationId -
-    /// start.publicationId
-    function proveTransition(
-        Checkpoint calldata start,
-        Checkpoint calldata end,
-        uint256 numDelayedPublications,
-        bytes calldata proof
-    ) external returns (uint256);
+    /// start.publicationId because this proof may overlap with some proven checkpoints.
+    /// @return _ The number of new delayed publications that were proven.
+    function proveTransition(Checkpoint calldata start, Checkpoint calldata end, bytes calldata proof)
+        external
+        returns (uint256, uint256);
 }

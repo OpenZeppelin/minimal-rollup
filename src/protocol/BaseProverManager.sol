@@ -201,7 +201,6 @@ abstract contract BaseProverManager is IProposerFees, IProverManager, BalanceAcc
         ICheckpointTracker.Checkpoint calldata end,
         IInbox.PublicationHeader calldata firstPub,
         IInbox.PublicationHeader calldata lastPub,
-        uint256 numDelayedPublications,
         bytes calldata proof,
         uint256 periodId
     ) external {
@@ -216,7 +215,7 @@ abstract contract BaseProverManager is IProposerFees, IProverManager, BalanceAcc
         require(start.publicationId + 1 == firstPub.id, InvalidStartPublication());
         require(firstPub.timestamp > previousPeriodEnd, FirstPublicationIsBeforePeriod());
 
-        uint256 numPublications = checkpointTracker.proveTransition(start, end, numDelayedPublications, proof);
+        (uint256 numPublications, uint256 numDelayedPublications) = checkpointTracker.proveTransition(start, end, proof);
 
         if (period.isDeadlinePassed()) {
             period.assignReward(msg.sender);

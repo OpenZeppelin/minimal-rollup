@@ -7,9 +7,10 @@ import {IInbox} from "./IInbox.sol";
 import {IVerifier} from "./IVerifier.sol";
 
 contract CheckpointTracker is ICheckpointTracker {
-    /// @dev The publication id of the current proven checkpoint representing
-    /// the latest verified state of the rollup
+    /// @dev The publication id of the current proven checkpoint representing the latest verified state of the rollup
     uint256 private _provenPublicationId;
+    /// @dev The number of delayed publications up to the proven checkpoint
+    uint256 private _totalDelayedPublications;
 
     IInbox public immutable inbox;
     IVerifier public immutable verifier;
@@ -31,19 +32,17 @@ contract CheckpointTracker is ICheckpointTracker {
         commitmentStore = ICommitmentStore(_commitmentStore);
         proverManager = _proverManager;
 
-        _updateCheckpoint(latestPublicationId, _genesis);
+        _saveCommitment(latestPublicationId, _genesis);
     }
 
     /// @inheritdoc ICheckpointTracker
-    /// @dev Accepts the last proven checkpoint(or an older one) as the start checkpoint. The reason we allow for an
+    /// @dev Accepts the last proven checkpoint (or an older one) as the start checkpoint. The reason we allow for an
     /// older checkpoint is to prevent cases where a prover spends time generating a larger proof and the checkpoint
-    /// changes under his feet.
-    function proveTransition(
-        Checkpoint calldata start,
-        Checkpoint calldata end,
-        uint256 numDelayedPublications,
-        bytes calldata proof
-    ) external returns (uint256) {
+    /// changes in the mean time.
+    function proveTransition(Checkpoint calldata start, Checkpoint calldata end, bytes calldata proof)
+        external
+        returns (uint256 numPublications, uint256 numDelayedPublications)
+    {
         require(
             proverManager == address(0) || msg.sender == proverManager, "Only the prover manager can call this function"
         );
@@ -57,9 +56,9 @@ contract CheckpointTracker is ICheckpointTracker {
             "Start publication must precede latest proven checkpoint"
         );
 
-        // Only count publications that have not been proven yet for `numPublications`
-        // TODO: We should also ensure that `numDelayedPublications` only accounts for unproven publications
-        uint256 numPublications = end.publicationId - latestProvenCheckpoint.publicationId;
+        // Only count publications that have not been proven yet
+        numPublications = end.publicationId - latestProvenCheckpoint.publicationId;
+        numDelayedPublications = end.totalDelayedPublications - latestProvenCheckpoint.totalDelayedPublications;
         require(
             numDelayedPublications <= numPublications,
             "Number of delayed publications cannot be greater than the total number of publications"
@@ -70,27 +69,32 @@ contract CheckpointTracker is ICheckpointTracker {
         require(endPublicationHash != 0, "End publication does not exist");
 
         verifier.verifyProof(
-            startPublicationHash, endPublicationHash, start.commitment, end.commitment, numDelayedPublications, proof
+            startPublicationHash,
+            endPublicationHash,
+            start.commitment,
+            end.commitment,
+            end.totalDelayedPublications - start.totalDelayedPublications,
+            proof
         );
 
-        _updateCheckpoint(end.publicationId, end.commitment);
-
-        return numPublications;
+        _saveCommitment(end.publicationId, end.commitment);
+        _totalDelayedPublications = end.totalDelayedPublications;
     }
 
     /// @inheritdoc ICheckpointTracker
     function getProvenCheckpoint() public view returns (Checkpoint memory provenCheckpoint) {
         provenCheckpoint.publicationId = _provenPublicationId;
         provenCheckpoint.commitment = commitmentStore.commitmentAt(address(this), provenCheckpoint.publicationId);
+        provenCheckpoint.totalDelayedPublications = _totalDelayedPublications;
     }
 
-    /// @dev Updates the proven checkpoint to a new publication ID and commitment
-    /// @dev Stores the commitment in the commitment store and emits an event
+    /// @dev Saves the latest commitment under the publication ID and emit an event
+    /// @dev Disregard the totalDelayedPublications because it has no meaning on layer 2
     /// @param publicationId The ID of the publication to set as the latest proven checkpoint
     /// @param commitment The checkpoint commitment representing the state at the given publication ID
-    function _updateCheckpoint(uint256 publicationId, bytes32 commitment) internal {
+    function _saveCommitment(uint256 publicationId, bytes32 commitment) internal {
         _provenPublicationId = publicationId;
         commitmentStore.storeCommitment(publicationId, commitment);
-        emit CheckpointUpdated(publicationId, commitment);
+        emit CommitmentSaved(publicationId, commitment);
     }
 }
