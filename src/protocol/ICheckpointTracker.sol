@@ -18,8 +18,8 @@ interface ICheckpointTracker {
     /// @param commitment the commitment of the latest proven checkpoint
     event CommitmentSaved(uint256 indexed publicationId, bytes32 commitment);
 
-    /// @return _ The last proven checkpoint
-    function getProvenCheckpoint() external view returns (Checkpoint memory);
+    /// @return _ The last proven publication ID
+    function provenPublicationId() external view returns (uint256);
 
     /// @notice Verifies a transition between two checkpoints. Update the latest `provenCheckpoint` if possible
     /// @param start The initial checkpoint before the transition

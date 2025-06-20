@@ -48,7 +48,7 @@ abstract contract CurrentPeriodIsVacant is UniversalTest {
     function test_CurrentPeriodIsVacant_evictProver_shouldRevert() public {
         IInbox.PublicationHeader memory header;
         header.timestamp = vm.getBlockTimestamp() - proverManager.livenessWindow() - 1;
-        header.id = checkpointTracker.LAST_PROVEN_ID() + 1;
+        header.id = checkpointTracker.provenPublicationId() + 1;
 
         vm.prank(evictor);
         vm.expectRevert(BaseProverManager.PeriodNotInitialized.selector);

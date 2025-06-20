@@ -162,8 +162,7 @@ abstract contract BaseProverManager is IProposerFees, IProverManager, BalanceAcc
         require(period.isInitialized(), PeriodNotInitialized());
         require(period.isOpen(), ProvingPeriodClosed());
 
-        ICheckpointTracker.Checkpoint memory lastProven = checkpointTracker.getProvenCheckpoint();
-        require(publicationHeader.id > lastProven.publicationId, PublicationAlreadyProven());
+        require(publicationHeader.id > checkpointTracker.provenPublicationId(), PublicationAlreadyProven());
 
         // We use this to mark the prover as evicted
         (uint40 end,) = period.close(_exitDelay(), 0);
@@ -227,9 +226,7 @@ abstract contract BaseProverManager is IProposerFees, IProverManager, BalanceAcc
     /// @inheritdoc IProverManager
     function finalizePastPeriod(uint256 periodId, IInbox.PublicationHeader calldata provenPublication) external {
         require(inbox.validateHeader(provenPublication), InvalidPublication());
-
-        ICheckpointTracker.Checkpoint memory lastProven = checkpointTracker.getProvenCheckpoint();
-        require(lastProven.publicationId >= provenPublication.id, PublicationNotProven());
+        require(checkpointTracker.provenPublicationId() >= provenPublication.id, PublicationNotProven());
 
         LibProvingPeriod.Period storage period = _periods[periodId];
         require(period.isInitialized(), PeriodNotInitialized());
