@@ -5,7 +5,7 @@ import {IInbox} from "src/protocol/IInbox.sol";
 
 /// @notice Mock implementation of IInbox for testing
 contract MockInbox is IInbox {
-    bool headerIsValid = true;
+    mapping(bytes32 headerHash => bool) private isInvalid;
 
     error NotImplemented();
 
@@ -21,11 +21,11 @@ contract MockInbox is IInbox {
         revert NotImplemented();
     }
 
-    function validateHeader(PublicationHeader calldata) external view returns (bool) {
-        return headerIsValid;
+    function validateHeader(PublicationHeader calldata header) external view returns (bool) {
+        return !isInvalid[keccak256(abi.encode(header))];
     }
 
-    function setHeaderValidity(bool isValid) external {
-        headerIsValid = isValid;
+    function setInvalidHeader(PublicationHeader calldata header) external {
+        isInvalid[keccak256(abi.encode(header))] = true;
     }
 }
