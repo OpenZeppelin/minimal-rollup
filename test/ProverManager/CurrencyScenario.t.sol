@@ -44,7 +44,7 @@ abstract contract ERC20Currency is InitialState {
 
     function _createProverManager() internal virtual override returns (BaseProverManager) {
         // We need to approve the ERC20ProverManager to retrieve the initial deposit, which means we need to know its
-        // address beforehand. This could be achieved with CREATE2 but for simplicity, we will just pick and address and
+        // address beforehand. This could be achieved with CREATE2 but for simplicity, we will just pick an address and
         // deploy it there.
         address pmAddress = _randomAddress("ERC20ProverManager");
 
