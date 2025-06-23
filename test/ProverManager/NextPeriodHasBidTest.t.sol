@@ -28,9 +28,7 @@ abstract contract NextPeriodHasBidTest is UniversalTest {
 
     function test_NextPeriodHasBid_bid_shouldRevertIfNewOfferInsufficientlyUnderbidCurrentOffer() public {
         (, uint96 currentBid,) = _getCurrentBid();
-        if (currentBid == 0) {
-            // ignore this test if the bid is already zero
-        }
+        if (currentBid == 0) return; // ignore this test if the bid is already zero
         _deposit(proverB, currentBid);
         vm.prank(proverB);
         vm.expectRevert(BaseProverManager.OfferedFeeTooHigh.selector);
