@@ -69,4 +69,12 @@ abstract contract CurrentPeriodIsOverTest is UniversalTest {
 
         assertEq(escrowedBefore, escrowedAfter, "Escrowed balance changed");
     }
+
+    function test_CurrentPeriodIsActive_getCurrentFees_shouldReturnFeesForNextPeriod() public view {
+        uint256 periodId = proverManager.currentPeriodId() + 1;
+        LibProvingPeriod.Period memory period = proverManager.getPeriod(periodId);
+        (uint96 fee, uint96 delayedFee) = proverManager.getCurrentFees();
+        assertEq(fee, period.fee, "Incorrect standard fee");
+        assertEq(delayedFee, LibPercentage.scaleByPercentage(period.fee, period.delayedFeePercentage));
+    }
 }
