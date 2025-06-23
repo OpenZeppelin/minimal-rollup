@@ -18,7 +18,7 @@ abstract contract PreviousPeriodHasPublications is CurrentPeriodHasPublications 
     // This is a sanity check to ensure we're in the expected state
     function test_PreviousPeriodHasPublications_confirmPreconditions() public view {
         uint256 periodId = proverManager.currentPeriodId();
-        assertGe(periodId, 0, "No previous period exists");
+        assertGe(periodId, 1, "No previous period exists");
     }
 
     function test_PreviousPeriodHasPublications_prove_shouldRevertWithUnknownFirstPublication() public {
