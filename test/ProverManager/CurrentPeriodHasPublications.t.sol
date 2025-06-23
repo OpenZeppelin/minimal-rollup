@@ -80,29 +80,31 @@ abstract contract CurrentPeriodHasPublications is UniversalTest {
     function test_CurrentPeriodHasPublications_prove_shouldCreditProver() public {
         uint256 periodId = proverManager.currentPeriodId();
         _proveWholePeriod(periodId);
-        LibProvingPeriod.Period memory period = proverManager.getPeriod(periodId);
+        LibProvingPeriod.Period memory periodBefore = proverManager.getPeriod(periodId);
 
         uint256 standardFee =
-            period.fee * (checkpointTracker.nPublications() - checkpointTracker.nDelayedPublications());
-        uint256 delayedFee = LibPercentage.scaleByPercentage(period.fee, period.delayedFeePercentage)
+            periodBefore.fee * (checkpointTracker.nPublications() - checkpointTracker.nDelayedPublications());
+        uint256 delayedFee = LibPercentage.scaleByPercentage(periodBefore.fee, periodBefore.delayedFeePercentage)
             * checkpointTracker.nDelayedPublications();
         uint256 reward = standardFee + delayedFee;
 
-        bool isDeadlinePassed = period.deadline != 0 && vm.getBlockTimestamp() > period.deadline;
-        address prover = isDeadlinePassed ? proverB : period.prover;
+        bool isDeadlinePassed = periodBefore.deadline != 0 && vm.getBlockTimestamp() > periodBefore.deadline;
+        address newProver = isDeadlinePassed ? proverB : periodBefore.prover;
 
         uint256 escrowedBefore = _currencyBalance(address(proverManager));
-        uint256 balanceBefore = proverManager.balances(prover);
+        uint256 balanceBefore = proverManager.balances(newProver);
 
         vm.prank(proverB);
         proverManager.prove(start, end, firstPub, lastPub, proof, periodId);
 
         uint256 escrowedAfter = _currencyBalance(address(proverManager));
-        uint256 balanceAfter = proverManager.balances(prover);
+        uint256 balanceAfter = proverManager.balances(newProver);
+        LibProvingPeriod.Period memory periodAfter = proverManager.getPeriod(periodId);
 
         assertEq(escrowedAfter, escrowedBefore, "Value held by ProverManager changed");
         assertEq(balanceAfter, balanceBefore + reward, "Balance not updated correctly");
-        assertEq(proverManager.getPeriod(periodId).pastDeadline, isDeadlinePassed, "PastDeadline flag set incorrectly");
+        assertEq(periodAfter.pastDeadline, isDeadlinePassed, "PastDeadline flag set incorrectly");
+        assertEq(periodAfter.prover, newProver, "New prover set incorrectly");
     }
 
     // construct a proof consistent with the MockCheckpointTracker and covers publications that span the whole period

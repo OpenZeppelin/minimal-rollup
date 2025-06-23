@@ -6,13 +6,14 @@ import {ERC20Currency, ETHCurrency} from "./CurrencyScenario.t.sol";
 import {CurrentPeriodIsActiveTest} from "./CurrentPeriodIsActiveTest.t.sol";
 
 import {CurrentPeriodHasPublications} from "./CurrentPeriodHasPublications.t.sol";
-import {PreviousPeriodHasPublications} from "./PreviousPeriodHasPublications.t.sol";
+
 import {CurrentPeriodIsOpenTest} from "./CurrentPeriodIsOpenTest.t.sol";
 import {CurrentPeriodIsOverTest} from "./CurrentPeriodIsOverTest.t.sol";
 import {CurrentPeriodIsVacant} from "./CurrentPeriodIsVacant.t.sol";
 import {InitialState} from "./InitialState.t.sol";
 import {InitialStateTest} from "./InitialStateTest.t.sol";
 import {NextPeriodHasBidTest} from "./NextPeriodHasBidTest.t.sol";
+import {PreviousPeriodHasPublications} from "./PreviousPeriodHasPublications.t.sol";
 import {LibPercentage} from "src/libs/LibPercentage.sol";
 
 /// Set up various scenarios to cover different period states
