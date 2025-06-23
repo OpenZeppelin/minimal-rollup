@@ -6,6 +6,7 @@ import {ERC20Currency, ETHCurrency} from "./CurrencyScenario.t.sol";
 import {CurrentPeriodIsActiveTest} from "./CurrentPeriodIsActiveTest.t.sol";
 
 import {CurrentPeriodHasPublications} from "./CurrentPeriodHasPublications.t.sol";
+import {PreviousPeriodHasPublications} from "./PreviousPeriodHasPublications.t.sol";
 import {CurrentPeriodIsOpenTest} from "./CurrentPeriodIsOpenTest.t.sol";
 import {CurrentPeriodIsOverTest} from "./CurrentPeriodIsOverTest.t.sol";
 import {CurrentPeriodIsVacant} from "./CurrentPeriodIsVacant.t.sol";
@@ -123,7 +124,7 @@ contract PeriodZeroIsOver_ERC20 is
 contract PeriodOneIsActive_ETH is
     PeriodOneIsActive,
     CurrentPeriodIsOpenTest,
-    CurrentPeriodHasPublications,
+    PreviousPeriodHasPublications,
     ETHCurrency
 {
     function setUp() public virtual override(PeriodOneIsActive, InitialState) {
@@ -134,7 +135,7 @@ contract PeriodOneIsActive_ETH is
 contract PeriodOneIsActive_ERC20 is
     PeriodOneIsActive,
     CurrentPeriodIsOpenTest,
-    CurrentPeriodHasPublications,
+    PreviousPeriodHasPublications,
     ERC20Currency
 {
     function setUp() public virtual override(PeriodOneIsActive, InitialState, ERC20Currency) {
@@ -147,7 +148,7 @@ contract PeriodTwoHasBidder_ETH is
     PeriodTwoHasBidder,
     CurrentPeriodIsActiveTest,
     NextPeriodHasBidTest,
-    CurrentPeriodHasPublications,
+    PreviousPeriodHasPublications,
     ETHCurrency
 {
     function setUp() public virtual override(PeriodTwoHasBidder, InitialState) {
@@ -159,7 +160,7 @@ contract PeriodTwoHasBidder_ERC20 is
     PeriodTwoHasBidder,
     CurrentPeriodIsActiveTest,
     NextPeriodHasBidTest,
-    CurrentPeriodHasPublications,
+    PreviousPeriodHasPublications,
     ERC20Currency
 {
     function setUp() public virtual override(PeriodTwoHasBidder, InitialState, ERC20Currency) {
@@ -171,7 +172,7 @@ contract PeriodTwoHasBidder_ERC20 is
 contract PeriodTwoIsActive_ETH is
     PeriodTwoIsActive,
     CurrentPeriodIsOpenTest,
-    CurrentPeriodHasPublications,
+    PreviousPeriodHasPublications,
     ETHCurrency
 {
     function setUp() public virtual override(PeriodTwoIsActive, InitialState) {
@@ -182,7 +183,7 @@ contract PeriodTwoIsActive_ETH is
 contract PeriodTwoIsActive_ERC20 is
     PeriodTwoIsActive,
     CurrentPeriodIsOpenTest,
-    CurrentPeriodHasPublications,
+    PreviousPeriodHasPublications,
     ERC20Currency
 {
     function setUp() public virtual override(PeriodTwoIsActive, InitialState, ERC20Currency) {
@@ -194,7 +195,7 @@ contract PeriodTwoIsActive_ERC20 is
 contract PeriodTwoIsVacant_ETH is
     PeriodTwoIsVacant,
     CurrentPeriodIsVacant,
-    CurrentPeriodHasPublications,
+    PreviousPeriodHasPublications,
     ETHCurrency
 {
     function setUp() public virtual override(PeriodTwoIsVacant, InitialState) {
@@ -205,7 +206,7 @@ contract PeriodTwoIsVacant_ETH is
 contract PeriodTwoIsVacant_ERC20 is
     PeriodTwoIsVacant,
     CurrentPeriodIsVacant,
-    CurrentPeriodHasPublications,
+    PreviousPeriodHasPublications,
     ERC20Currency
 {
     function setUp() public virtual override(PeriodTwoIsVacant, InitialState, ERC20Currency) {
