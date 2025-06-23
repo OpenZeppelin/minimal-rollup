@@ -5,6 +5,9 @@ import {IInbox} from "src/protocol/IInbox.sol";
 
 /// @notice Mock implementation of IInbox for testing
 contract MockInbox is IInbox {
+    // Start at 1 so there is always a previous hash
+    uint256 private numPublications = 1;
+
     mapping(bytes32 headerHash => bool) private isInvalid;
 
     error NotImplemented();
@@ -13,19 +16,26 @@ contract MockInbox is IInbox {
         revert NotImplemented();
     }
 
-    function getPublicationHash(uint256) external pure returns (bytes32) {
-        revert NotImplemented();
+    function getPublicationHash(uint256 id) external view returns (bytes32) {
+        if (id >= numPublications) return 0;
+        return keccak256(abi.encode("MockInbox", id));
     }
 
-    function getNextPublicationId() external pure returns (uint256) {
-        revert NotImplemented();
+    function getNextPublicationId() external view returns (uint256) {
+        return numPublications;
     }
 
     function validateHeader(PublicationHeader calldata header) external view returns (bool) {
         return !isInvalid[keccak256(abi.encode(header))];
     }
 
+    // Mock functionality
+
     function setInvalidHeader(PublicationHeader calldata header) external {
         isInvalid[keccak256(abi.encode(header))] = true;
+    }
+
+    function publishMultiple(uint256 count) external {
+        numPublications += count;
     }
 }
