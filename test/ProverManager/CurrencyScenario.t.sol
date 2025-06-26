@@ -43,25 +43,32 @@ abstract contract ERC20Currency is InitialState {
     }
 
     function _createProverManager() internal virtual override returns (BaseProverManager) {
-        // We need to approve the ERC20ProverManager to retrieve the initial deposit, which means we need to know its
-        // address beforehand. This could be achieved with CREATE2 but for simplicity, we will just pick an address and
-        // deploy it there.
-        address pmAddress = _randomAddress("ERC20ProverManager");
+        bytes32 salt = bytes32(uint256(1));
+        address pmAddress = vm.computeCreate2Address(
+            salt,
+            keccak256(
+                abi.encodePacked(
+                    type(ERC20ProverManager).creationCode,
+                    abi.encode(
+                        address(inbox),
+                        address(checkpointTracker),
+                        initialProver,
+                        initialFee,
+                        address(token),
+                        initialDeposit
+                    )
+                )
+            )
+        );
 
         token.mint(initialProver, initialDeposit);
         vm.prank(initialProver);
         token.approve(pmAddress, initialDeposit);
 
         vm.prank(deployer);
-        deployCodeTo(
-            "ERC20ProverManager.sol",
-            abi.encode(
-                address(inbox), address(checkpointTracker), initialProver, initialFee, address(token), initialDeposit
-            ),
-            pmAddress
+        return new ERC20ProverManager{salt: salt}(
+            address(inbox), address(checkpointTracker), initialProver, initialFee, address(token), initialDeposit
         );
-
-        return BaseProverManager(pmAddress);
     }
 
     function _prefund(address account, uint256 amount) internal override {
