@@ -26,7 +26,7 @@ contract DeployTaikoInbox is Script {
 
     function setUp() public {
         lookaheadAddr = address(0);
-        maxAnchorBlockIdOffset = uint256(50);
+        maxAnchorBlockIdOffset = uint256(100);
         inclusionDelay = uint256(3600); // Default: 1 hour
     }
 
