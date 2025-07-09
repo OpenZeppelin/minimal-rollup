@@ -17,13 +17,38 @@
 
 ## Idea
 
-### Transaction Costs
+### Transaction Costs - Version 1
 
 - The basic idea is to remove the in-protocol fee mechanism (and the implicit gas target), by setting the base fee to zero.
 - I think we still want a gas limit so that anyone running a node can reasonably say "if my node has X resources, I will be able to keep up with the chain", but it doesn't need to target consumer devices. I suspect the L1 costs and proving costs will constrain the practical limit, but data-light compute-heavy transactions (or actual attacks like running an infinite loop) may hit the enforced limit.
 - In this way, the protocol is no longer opinionated about how much to charge for each opcode (except in the sense that some opcodes will consume more of the gas target).
 - Users can incentivize the proposer to include their transaction using any offchain or L2-mechanism they want. The proposer could reproduce the current behaviour by measuring the gas used and charging accordingly, but they could also use arbitrary tokens, or change the metering mechanism, or offer discounts for compressible calldata. From the rollup's point of view, if the proposer is willing to pay the L1 costs, then how they charge users is up to them.
-- If we want to retain the EIP1559-style targetting mechanism to smooth out price volatility, that could be achieved by forcing proposers to pay (or burn) L2 ETH when they exceed the target and adjust the target whenever this happens. The difference is that the penalty is applied directly to the proposer, not the individual transactions.
+- If we want to retain the EIP1559-style targeting mechanism to smooth out price volatility, that could be achieved by forcing proposers to pay (or burn) L2 ETH when they exceed the target and adjust the target whenever this happens. The difference is that the penalty is applied directly to the proposer, not the individual transactions.
+
+### Transaction Costs - Version 2
+
+- Based on feedback for the previous version:
+    - we should retain the EIP1559 mechanism to remain consistent with existing (and battle-tested) infrastructure
+    - we should include a mechanism to direct funds to the rollup's treasury
+- However, I still insist that we should not use the L2 base fee to charge anything other than L2 execution gas. I think incorporating more relevant fees (like the L1 blob costs or proving fees) into the base fee mechanism ends up distorting the market, leading to attacks and complications.
+- Instead, I think we should have a two-step process (except possibly for L2 execution):
+    - users pay the sequencer with the priority fee. If any sequencer wants to set up another L2 or offchain mechanism (eg. to use an ERC20 token), they always have that option.
+    - the sequencer pays the treasury whatever fees are due.
+- In practice, this will have a few components:
+    - the L2 base fee mechanism continues to charge for L2 execution only. It uses the standard EIP1559 mechanism with some possible modifications:
+        - the base fee itself could be set to 0 (because as noted above, I think it's not necessary)
+           - in this case, the sequencer could still optionally have a (per-second) target gas amount, and be charged for it using an EIP1559-style mechanism to maintain the target, and that charge could still be directed to the treasury.
+           - the difference with the regular mechanism is that sequencers have more flexibility in how (or even whether) to charge each individual transaction for their gas usage. Users with no ETH could pay in other tokens, or MEV-rich transactions could be subsidized. The only requirement is the sequencer is willing to pay the protocol for the overall gas usage.
+        - if we keep a non-zero base fee, the formula should [be corrected](https://github.com/taikoxyz/taiko-mono/issues/19160) to account for variable-length blocks.
+    - the inbox should save the number of blobs used, `BLOBBASEFEE` and `BASEFEE` with the publication. This can be used to compute the L1 costs, so a surcharge percentage can be deducted from the sequencer and sent to the treasury.
+        - this could be handled inside the L2 EVM by injecting those values (in the anchor or end-of-publication transaction) and doing a direct transfer
+        - alternatively, it could be computed as part of the state-transition function.
+    - the proving costs could be handled as described below. We could also track the agreed proving cost and apply a surcharge to the sequencer. However, since this value is negotiated between the sequencer and prover, the fee could be bypassed by setting the official proving cost as zero and using some other mechanism to pay the fee.
+- Under this scheme the sequencer is responsible for covering the publication and proving costs, including the treasury fee surcharges. They will need to recover these costs from user transaction priority fees. Therefore, sequencers should only include transactions that cover their costs, but they have complete flexibility to account for all relevant variables (like whether the transactions compress well, or the current L1 blob fees, or whether the transactions incur large proving costs, etc)
+    - unfortunately, priority fees are actually a fee-rate, so the amount paid will depend on the L2 gas actually consumed. Sequencers will need to take this into account when deciding whether a transaction is worth including
+    - this is a consequence of the EIP1559 mechanism only accounting for L2 gas
+    - sequencers may be able to address this by using wrapper transactions, or just deal with the possibility that they may need to discard transactions after simulating them.
+    - ideally, there would be a new transaction type that allows for a direct fee payment from user to sequencer, but we would then need to get support from the ecosystem (eg. wallets) to use it.
 
 ### Proving costs
 
