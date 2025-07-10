@@ -20,7 +20,8 @@ import {MessageRelayer} from "src/protocol/taiko_alethia/MessageRelayer.sol";
 ///    from: msg.sender,
 ///    to: address(MessageRelayer),
 ///    amount: 1.1 eth,
-///    data: encodedData
+///    data: encodedData,
+///    context: abi.encode(address(Bob)) // Where Bob is the allowed relayer. Set to empty bytes to allow any relayer.
 ///    }
 ///
 ///    Where encodedData is roughly:
@@ -35,7 +36,7 @@ import {MessageRelayer} from "src/protocol/taiko_alethia/MessageRelayer.sol";
 ///        )
 ///
 /// To relay the message:
-///    1. Any address on the destination chain can call relayMessage
+///    1. The allowed relayer calls `relayMessage` if set. Otherwise, anyone can call `relayMessage`.
 ///    2. This will call claimDeposit on the ETHBridge
 ///    3. If the original message was specified correctly, this will call receiveMessage on this contract
 ///    4. This will call the message recipient and send the tip to the relayer
@@ -61,16 +62,19 @@ contract MessageRelayer is ReentrancyGuardTransient, IMessageRelayer {
     uint256 private constant BUFFER = 20_000;
 
     /// @inheritdoc IMessageRelayer
-    //TODO: should we provide a way for the user to specify a relayer address if they want in order to avoid raicing
-    // conditions? This could be just who gets the tip, so that it can still be filled by anyone, it just sets the right
-    // incentives.
+    /// @dev For relayer selection, encode the allowed relayer address in the context field of the ETHDeposit.
+    /// Use address(0) or empty context to allow any relayer.
     function relayMessage(
         IETHBridge.ETHDeposit memory ethDeposit,
         uint256 height,
         bytes memory proof,
         address tipRecipient
     ) external {
-        require(msg.sender == ethDeposit.relayer || ethDeposit.relayer == address(0), InvalidRelayer());
+        if (ethDeposit.context.length == 32) {
+            address allowedRelayer = abi.decode(ethDeposit.context, (address));
+            require(allowedRelayer == address(0) || allowedRelayer == msg.sender, InvalidRelayer());
+        }
+
         TIP_RECIPIENT_SLOT.asAddress().tstore(tipRecipient);
 
         ethBridge.claimDeposit(ethDeposit, height, proof);
@@ -92,7 +96,7 @@ contract MessageRelayer is ReentrancyGuardTransient, IMessageRelayer {
         } else {
             // EIP-150: Only 63/64 of gas can be forwarded to external calls.
             // Check against actual forwardable gas with buffer for operations before the call.
-            uint256 maxForwardableGas = (gasleft() * 63 / 64) - BUFFER;
+            uint256 maxForwardableGas = (gasleft() - BUFFER) * 63 / 64;
             require(gasLimit <= maxForwardableGas, InsufficientGas());
             (forwardMessageSuccess,) = to.call{value: valueToSend, gas: gasLimit}(data);
         }

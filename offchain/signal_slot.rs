@@ -27,7 +27,7 @@ pub fn get_signal_slot(signal: &B256, sender: &Address) -> B256 {
 #[allow(dead_code)]
 fn main() -> Result<()> {
     let args: Vec<String> = env::args().collect();
-    if args.len() != 4 {
+    if args.len() != 3 {
         return Err(eyre!(
             "Usage: cargo run --bin signal_slot <signal (0x...)> <sender (0x...)>"
         ));
