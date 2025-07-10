@@ -11,7 +11,7 @@ import {IInbox} from "src/protocol/IInbox.sol";
 
 /// Represents states that have existing publications (that can be proven). Since the BaseProverManager does not track
 /// publications, this can apply to any state (we decide the publications on a per-test basis)
-/// Nevertheless, this contract is used to better encaspulate the proving tests
+/// Nevertheless, this contract is used to better encapsulate the proving tests
 abstract contract CurrentPeriodHasPublications is UniversalTest {
     ICheckpointTracker.Checkpoint start;
     ICheckpointTracker.Checkpoint end;
