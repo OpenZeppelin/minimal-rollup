@@ -17,9 +17,9 @@ abstract contract DepositIsClaimable is CrossChainDepositExists {
         bytes memory proof = abi.encode(sampleDepositProof.getDepositSignalProof(_depositIdx()));
         (, bytes32 id) = sampleDepositProof.getDepositInternals(_depositIdx());
 
-        assertFalse(bridge.claimed(id), "deposit already marked as claimed");
+        assertFalse(bridge.processed(id), "deposit already marked as claimed");
         bridge.claimDeposit(deposit, HEIGHT, proof);
-        assertTrue(bridge.claimed(id), "deposit not marked as claimed");
+        assertTrue(bridge.processed(id), "deposit not marked as claimed");
     }
 
     function test_claimDeposit_shouldEmitEvent() public {

@@ -48,9 +48,9 @@ interface IETHBridge {
     /// @dev Only canceler can cancel a deposit.
     error OnlyCanceler();
 
-    /// @dev Whether the deposit identified by `id` has been claimed.
+    /// @dev Whether the deposit identified by `id` has been claimed or cancelled.
     /// @param id The deposit id
-    function claimed(bytes32 id) external view returns (bool);
+    function processed(bytes32 id) external view returns (bool);
 
     /// @dev ETH Deposit identifier.
     /// @param ethDeposit The ETH deposit struct

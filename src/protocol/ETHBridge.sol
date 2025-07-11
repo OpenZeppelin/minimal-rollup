@@ -9,7 +9,7 @@ import {ReentrancyGuardTransient} from "@openzeppelin/contracts/utils/Reentrancy
 /// address on both chains. This is because it is designed so that each rollup has its own independent bridge contract,
 /// and they may furthermore decide to deploy a new version of the bridge in the future.
 contract ETHBridge is IETHBridge, ReentrancyGuardTransient {
-    mapping(bytes32 id => bool claimed) private _claimed;
+    mapping(bytes32 id => bool processed) private _processed;
 
     /// Incremental nonce to generate unique deposit IDs.
     uint256 private _globalDepositNonce;
@@ -36,8 +36,8 @@ contract ETHBridge is IETHBridge, ReentrancyGuardTransient {
     }
 
     /// @inheritdoc IETHBridge
-    function claimed(bytes32 id) public view returns (bool) {
-        return _claimed[id];
+    function processed(bytes32 id) public view returns (bool) {
+        return _processed[id];
     }
 
     /// @inheritdoc IETHBridge
@@ -88,11 +88,11 @@ contract ETHBridge is IETHBridge, ReentrancyGuardTransient {
         bytes memory proof
     ) internal returns (bytes32 id) {
         id = _generateId(ethDeposit);
-        require(!claimed(id), AlreadyClaimed());
+        require(!processed(id), AlreadyClaimed());
 
         signalService.verifySignal(height, trustedCommitmentPublisher, counterpart, id, proof);
 
-        _claimed[id] = true;
+        _processed[id] = true;
         _sendETH(to, ethDeposit.amount, data);
     }
 
