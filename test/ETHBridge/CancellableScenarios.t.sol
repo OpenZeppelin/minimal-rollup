@@ -56,6 +56,16 @@ abstract contract DepositIsCancellable is CrossChainDepositExists {
         assertEq(address(bridge).balance, initialBridgeBalance - deposit.amount, "bridge balance mismatch");
     }
 
+    function test_claimDeposit_shouldRevertWhen_DepositIsCancelled() public {
+        IETHBridge.ETHDeposit memory deposit = sampleDepositProof.getEthDeposit(_depositIdx());
+        bytes memory proof = abi.encode(sampleDepositProof.getDepositSignalProof(_depositIdx()));
+
+        vm.prank(cancellerAddress);
+        bridge.cancelDeposit(deposit, cancellationRecipient, HEIGHT, proof);
+        vm.expectRevert(IETHBridge.AlreadyProcessed.selector);
+        bridge.claimDeposit(deposit, HEIGHT, proof);
+    }
+
     function test_cancelDeposit_shouldRevertWhen_CancellerIsNotCaller() public {
         IETHBridge.ETHDeposit memory deposit = sampleDepositProof.getEthDeposit(_depositIdx());
         bytes memory proof = abi.encode(sampleDepositProof.getDepositSignalProof(_depositIdx()));

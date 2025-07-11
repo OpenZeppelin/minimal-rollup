@@ -42,8 +42,8 @@ interface IETHBridge {
     /// @dev Failed to call the receiver with value.
     error FailedClaim();
 
-    /// @dev A deposit was already claimed.
-    error AlreadyClaimed();
+    /// @dev A deposit was already claimed or cancelled
+    error AlreadyProcessed();
 
     /// @dev Only canceler can cancel a deposit.
     error OnlyCanceler();
