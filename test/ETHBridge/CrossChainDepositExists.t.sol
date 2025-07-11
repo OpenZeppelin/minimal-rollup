@@ -15,6 +15,9 @@ abstract contract CrossChainDepositExists is UniversalTest {
     // the sample deposit is to this address
     address recipient = _randomAddress("recipient");
 
+    // the recipient that receives the cancelled deposit
+    address cancellationRecipient = _randomAddress("cancellationRecipient");
+
     uint256 HEIGHT = 1;
 
     function setUp() public virtual override {
