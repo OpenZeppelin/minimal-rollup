@@ -7,7 +7,7 @@ mod utils;
 use utils::{deploy_eth_bridge, deploy_signal_service, get_proofs, get_provider, SignalProof};
 
 use alloy::hex::decode;
-use alloy::primitives::{Address, Bytes, FixedBytes, U256};
+use alloy::primitives::{address, Address, Bytes, FixedBytes, U256};
 use std::fs;
 
 fn expand_vector(vec: Vec<Bytes>, name: &str) -> String {
@@ -28,6 +28,7 @@ fn create_deposit_call(
     amount: U256,
     data: &str,
     context: &str,
+    canceler: &str,
     id: &FixedBytes<32>,
 ) -> String {
     let mut result = String::new();
@@ -50,6 +51,7 @@ fn create_deposit_call(
     result += format!("\t\tdeposit.amount = {};\n", amount).as_str();
     result += format!("\t\tdeposit.data = bytes(hex\"{}\");\n", data).as_str();
     result += format!("\t\tdeposit.context = bytes(hex\"{}\");\n", context).as_str();
+    result += format!("\t\tdeposit.canceler = address({});\n", canceler).as_str();
     result += format!("\t\t_createDeposit(\n\t\t\taccountProof,\n\t\t\tstorageProof,\n\t\t\tdeposit,\n\t\t\tbytes32({}),\n\t\t\tbytes32({})\n\t\t);\n", proof.slot, id).as_str();
     return result;
 }
@@ -76,7 +78,8 @@ fn deposit_specification() -> Vec<DepositSpecification> {
         "5932a71200000000000000000000000000000000000000000000000000000000000004d2", // (valid) call to `someNonPayableFunction(1234)`
     ];
 
-    let zero_canceler = Address::ZERO;
+    // _randomAddress("canceler");
+    let canceler = address!("0xf9f5C5411F0bEf1880cE3B051BD14196479764D2");
 
     let mut specifications = vec![];
     for amount in amounts {
@@ -86,7 +89,7 @@ fn deposit_specification() -> Vec<DepositSpecification> {
                 amount: U256::from(amount),
                 data: data.to_string(),
                 context: String::from(""),
-                canceler: zero_canceler,
+                canceler,
             });
         }
     }
@@ -145,6 +148,7 @@ async fn main() -> Result<()> {
             d.amount,
             d.data.as_str(),
             d.context.as_str(),
+            &d.canceler.to_string(),
             id,
         )
         .as_str();

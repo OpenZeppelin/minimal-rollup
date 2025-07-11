@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
+import {DepositIsCancellable} from "./CancellableScenarios.t.sol";
 import {BridgeHasNoEther, BridgeSufficientlyCapitalized} from "./CapitalizationScenarios.t.sol";
 import {DepositIsClaimable, DepositIsNotClaimable} from "./ClaimableScenarios.t.sol";
 import {DepositIsInvalidContractCall, DepositIsValidContractCall} from "./ContractCallValidityScenarios.t.sol";
@@ -35,6 +36,17 @@ contract SimpleDepositToEOA is
     RecipientIsAnEOA,
     BridgeSufficientlyCapitalized,
     DepositIsClaimable
+{
+    function setUp() public override(CrossChainDepositExists, BridgeSufficientlyCapitalized) {
+        super.setUp();
+    }
+}
+
+contract CancelDepositToEOA is
+    NonzeroETH_NoCalldata,
+    RecipientIsAnEOA,
+    BridgeSufficientlyCapitalized,
+    DepositIsCancellable
 {
     function setUp() public override(CrossChainDepositExists, BridgeSufficientlyCapitalized) {
         super.setUp();
