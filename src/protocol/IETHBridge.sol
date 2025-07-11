@@ -60,7 +60,8 @@ interface IETHBridge {
     /// @param to The receiver of the deposit
     /// @param data Any calldata to be sent to the receiver in case of a contract
     /// @param context Application-specific context data
-    /// @param canceler Address that is allowed to cancel the deposit (zero address means deposit is uncancellable)
+    /// @param canceler Address on the destination chain that is allowed to cancel the deposit (zero address means
+    /// deposit is uncancellable)
     function deposit(address to, bytes memory data, bytes memory context, address canceler)
         external
         payable
