@@ -59,6 +59,7 @@ pub struct DepositSpecification {
     pub amount: U256,
     pub data: String,
     pub context: String,
+    pub canceler: Address,
 }
 
 fn deposit_specification() -> Vec<DepositSpecification> {
@@ -75,6 +76,8 @@ fn deposit_specification() -> Vec<DepositSpecification> {
         "5932a71200000000000000000000000000000000000000000000000000000000000004d2", // (valid) call to `someNonPayableFunction(1234)`
     ];
 
+    let zero_canceler = Address::ZERO;
+
     let mut specifications = vec![];
     for amount in amounts {
         for data in calldata.iter() {
@@ -83,6 +86,7 @@ fn deposit_specification() -> Vec<DepositSpecification> {
                 amount: U256::from(amount),
                 data: data.to_string(),
                 context: String::from(""),
+                canceler: zero_canceler,
             });
         }
     }
@@ -105,6 +109,7 @@ async fn main() -> Result<()> {
                 spec.recipient,
                 decode(spec.data.clone())?.into(),
                 decode(spec.context.clone())?.into(),
+                spec.canceler,
             )
             .value(spec.amount)
             .send()
