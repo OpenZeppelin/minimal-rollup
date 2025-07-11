@@ -71,6 +71,7 @@ contract ETHBridge is IETHBridge, ReentrancyGuardTransient {
     /// @inheritdoc IETHBridge
     function cancelDeposit(ETHDeposit memory ethDeposit, address claimee, uint256 height, bytes memory proof)
         external
+        nonReentrant
     {
         require(msg.sender == ethDeposit.canceler, OnlyCanceler());
 
