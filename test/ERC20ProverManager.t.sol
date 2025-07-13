@@ -94,7 +94,7 @@ contract ERC20ProverManagerTest is BaseProverManagerTest {
         super.setUp();
 
         // Create a new mock ERC20 token
-        mockToken = new MockERC20();
+        mockToken = new MockERC20("Mock Token", "MOCK");
 
         // Mint tokens to relevant addresses
         mockToken.mint(initialProver, LIVENESS_BOND + 10 ether);
