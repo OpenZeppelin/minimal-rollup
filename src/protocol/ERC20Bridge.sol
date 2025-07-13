@@ -6,11 +6,13 @@ import {ISignalService} from "./ISignalService.sol";
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {ReentrancyGuardTransient} from "@openzeppelin/contracts/utils/ReentrancyGuardTransient.sol";
+import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 /// @dev In contrast to the `SignalService`, this contract does not expect the bridge to be deployed on the same
 /// address on both chains. This is because it is designed so that each rollup has its own independent bridge contract,
 /// and they may furthermore decide to deploy a new version of the bridge in the future.
 contract ERC20Bridge is IERC20Bridge, ReentrancyGuardTransient {
+    using SafeERC20 for IERC20;
     mapping(bytes32 id => bool processed) private _processed;
 
     /// Incremental nonce to generate unique deposit IDs.
@@ -63,7 +65,7 @@ contract ERC20Bridge is IERC20Bridge, ReentrancyGuardTransient {
             ++_globalDepositNonce;
         }
 
-        IERC20(token).transferFrom(msg.sender, address(this), amount);
+        IERC20(token).safeTransferFrom(msg.sender, address(this), amount);
 
         signalService.sendSignal(id);
         emit DepositMade(id, erc20Deposit);
@@ -109,7 +111,7 @@ contract ERC20Bridge is IERC20Bridge, ReentrancyGuardTransient {
     /// @param amount Amount of tokens to send
     /// @param data Optional data to call the receiver with
     function _sendERC20(address token, address to, uint256 amount, bytes memory data) internal {
-        IERC20(token).transfer(to, amount);
+        IERC20(token).safeTransfer(to, amount);
         if (data.length > 0) {
             (bool success,) = to.call(data);
             require(success, FailedClaim());
