@@ -59,7 +59,7 @@ contract ERC20Bridge is IERC20Bridge, ReentrancyGuardTransient {
         bytes memory data,
         bytes memory context,
         address canceler
-    ) external returns (bytes32 id) {
+    ) external nonReentrant returns (bytes32 id) {
         ERC20Deposit memory erc20Deposit =
             ERC20Deposit(_globalDepositNonce, msg.sender, to, token, amount, data, context, canceler);
         id = _generateId(erc20Deposit);

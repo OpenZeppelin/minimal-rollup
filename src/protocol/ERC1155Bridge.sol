@@ -76,7 +76,7 @@ contract ERC1155Bridge is IERC1155Bridge, ReentrancyGuardTransient, IERC1155Rece
         bytes memory data,
         bytes memory context,
         address canceler
-    ) external returns (bytes32 id) {
+    ) external nonReentrant returns (bytes32 id) {
         ERC1155Deposit memory erc1155Deposit =
             ERC1155Deposit(_globalDepositNonce, msg.sender, to, token, tokenId, amount, data, context, canceler);
         id = _generateId(erc1155Deposit);

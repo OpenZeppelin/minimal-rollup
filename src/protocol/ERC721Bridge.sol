@@ -66,7 +66,7 @@ contract ERC721Bridge is IERC721Bridge, ReentrancyGuardTransient, IERC721Receive
         bytes memory data,
         bytes memory context,
         address canceler
-    ) external returns (bytes32 id) {
+    ) external nonReentrant returns (bytes32 id) {
         ERC721Deposit memory erc721Deposit =
             ERC721Deposit(_globalDepositNonce, msg.sender, to, token, tokenId, data, context, canceler);
         id = _generateId(erc721Deposit);
