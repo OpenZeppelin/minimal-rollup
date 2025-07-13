@@ -5,14 +5,16 @@ import {IERC20Bridge} from "./IERC20Bridge.sol";
 import {ISignalService} from "./ISignalService.sol";
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import {ReentrancyGuardTransient} from "@openzeppelin/contracts/utils/ReentrancyGuardTransient.sol";
+
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import {ReentrancyGuardTransient} from "@openzeppelin/contracts/utils/ReentrancyGuardTransient.sol";
 
 /// @dev In contrast to the `SignalService`, this contract does not expect the bridge to be deployed on the same
 /// address on both chains. This is because it is designed so that each rollup has its own independent bridge contract,
 /// and they may furthermore decide to deploy a new version of the bridge in the future.
 contract ERC20Bridge is IERC20Bridge, ReentrancyGuardTransient {
     using SafeERC20 for IERC20;
+
     mapping(bytes32 id => bool processed) private _processed;
 
     /// Incremental nonce to generate unique deposit IDs.
