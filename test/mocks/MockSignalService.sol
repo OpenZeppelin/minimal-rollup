@@ -10,7 +10,10 @@ contract MockSignalService is ISignalService {
         verifyResult = _result;
     }
 
-    function verifySignal(uint256 height, address publisher, address sender, bytes32 signal, bytes memory proof) external view {
+    function verifySignal(uint256 height, address publisher, address sender, bytes32 signal, bytes memory proof)
+        external
+        view
+    {
         require(verifyResult, "Mock verify failed");
     }
 
@@ -21,4 +24,4 @@ contract MockSignalService is ISignalService {
     function isSignalStored(bytes32 signal, address sender) external view returns (bool) {
         return true;
     }
-} 
+}

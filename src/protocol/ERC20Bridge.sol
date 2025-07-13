@@ -3,8 +3,9 @@ pragma solidity ^0.8.28;
 
 import {IERC20Bridge} from "./IERC20Bridge.sol";
 import {ISignalService} from "./ISignalService.sol";
-import {ReentrancyGuardTransient} from "@openzeppelin/contracts/utils/ReentrancyGuardTransient.sol";
+
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {ReentrancyGuardTransient} from "@openzeppelin/contracts/utils/ReentrancyGuardTransient.sol";
 
 /// @dev In contrast to the `SignalService`, this contract does not expect the bridge to be deployed on the same
 /// address on both chains. This is because it is designed so that each rollup has its own independent bridge contract,
@@ -47,8 +48,14 @@ contract ERC20Bridge is IERC20Bridge, ReentrancyGuardTransient {
     }
 
     /// @inheritdoc IERC20Bridge
-    function deposit(address to, address token, uint256 amount, bytes memory data, bytes memory context, address canceler)
-        external returns (bytes32 id) {
+    function deposit(
+        address to,
+        address token,
+        uint256 amount,
+        bytes memory data,
+        bytes memory context,
+        address canceler
+    ) external returns (bytes32 id) {
         ERC20Deposit memory erc20Deposit =
             ERC20Deposit(_globalDepositNonce, msg.sender, to, token, amount, data, context, canceler);
         id = _generateId(erc20Deposit);
@@ -70,7 +77,9 @@ contract ERC20Bridge is IERC20Bridge, ReentrancyGuardTransient {
 
     /// @inheritdoc IERC20Bridge
     function cancelDeposit(ERC20Deposit memory erc20Deposit, address claimee, uint256 height, bytes memory proof)
-        external nonReentrant {
+        external
+        nonReentrant
+    {
         require(msg.sender == erc20Deposit.canceler, OnlyCanceler());
 
         bytes32 id = _claimDeposit(erc20Deposit, claimee, bytes(""), height, proof);
@@ -112,4 +121,4 @@ contract ERC20Bridge is IERC20Bridge, ReentrancyGuardTransient {
     function _generateId(ERC20Deposit memory erc20Deposit) internal pure returns (bytes32) {
         return keccak256(abi.encode(erc20Deposit));
     }
-} 
+}

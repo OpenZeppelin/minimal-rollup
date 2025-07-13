@@ -86,4 +86,4 @@ contract ERC20BridgeTest is Test {
         assertEq(token.balanceOf(alice), 1000); // back to original
         assertEq(token.balanceOf(address(bridge)), 0);
     }
-} 
+}

@@ -84,4 +84,4 @@ contract ERC721BridgeTest is Test {
         assertTrue(bridge.processed(id));
         assertEq(token.ownerOf(tokenId), alice);
     }
-} 
+}

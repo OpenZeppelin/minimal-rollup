@@ -3,9 +3,10 @@ pragma solidity ^0.8.28;
 
 import {IERC1155Bridge} from "./IERC1155Bridge.sol";
 import {ISignalService} from "./ISignalService.sol";
-import {ReentrancyGuardTransient} from "@openzeppelin/contracts/utils/ReentrancyGuardTransient.sol";
+
 import {IERC1155} from "@openzeppelin/contracts/token/ERC1155/IERC1155.sol";
 import {IERC1155Receiver} from "@openzeppelin/contracts/token/ERC1155/IERC1155Receiver.sol";
+import {ReentrancyGuardTransient} from "@openzeppelin/contracts/utils/ReentrancyGuardTransient.sol";
 
 /// @dev In contrast to the `SignalService`, this contract does not expect the bridge to be deployed on the same
 /// address on both chains. This is because it is designed so that each rollup has its own independent bridge contract,
@@ -43,7 +44,11 @@ contract ERC1155Bridge is IERC1155Bridge, ReentrancyGuardTransient, IERC1155Rece
     }
 
     /// @inheritdoc IERC1155Receiver
-    function onERC1155BatchReceived(address, address, uint256[] calldata, uint256[] calldata, bytes calldata) external pure returns (bytes4) {
+    function onERC1155BatchReceived(address, address, uint256[] calldata, uint256[] calldata, bytes calldata)
+        external
+        pure
+        returns (bytes4)
+    {
         return IERC1155Receiver.onERC1155BatchReceived.selector;
     }
 
@@ -62,8 +67,15 @@ contract ERC1155Bridge is IERC1155Bridge, ReentrancyGuardTransient, IERC1155Rece
     }
 
     /// @inheritdoc IERC1155Bridge
-    function deposit(address to, address token, uint256 tokenId, uint256 amount, bytes memory data, bytes memory context, address canceler)
-        external returns (bytes32 id) {
+    function deposit(
+        address to,
+        address token,
+        uint256 tokenId,
+        uint256 amount,
+        bytes memory data,
+        bytes memory context,
+        address canceler
+    ) external returns (bytes32 id) {
         ERC1155Deposit memory erc1155Deposit =
             ERC1155Deposit(_globalDepositNonce, msg.sender, to, token, tokenId, amount, data, context, canceler);
         id = _generateId(erc1155Deposit);
@@ -78,14 +90,19 @@ contract ERC1155Bridge is IERC1155Bridge, ReentrancyGuardTransient, IERC1155Rece
     }
 
     /// @inheritdoc IERC1155Bridge
-    function claimDeposit(ERC1155Deposit memory erc1155Deposit, uint256 height, bytes memory proof) external nonReentrant {
+    function claimDeposit(ERC1155Deposit memory erc1155Deposit, uint256 height, bytes memory proof)
+        external
+        nonReentrant
+    {
         bytes32 id = _claimDeposit(erc1155Deposit, erc1155Deposit.to, erc1155Deposit.data, height, proof);
         emit DepositClaimed(id, erc1155Deposit);
     }
 
     /// @inheritdoc IERC1155Bridge
     function cancelDeposit(ERC1155Deposit memory erc1155Deposit, address claimee, uint256 height, bytes memory proof)
-        external nonReentrant {
+        external
+        nonReentrant
+    {
         require(msg.sender == erc1155Deposit.canceler, OnlyCanceler());
 
         bytes32 id = _claimDeposit(erc1155Deposit, claimee, bytes(""), height, proof);
@@ -124,4 +141,4 @@ contract ERC1155Bridge is IERC1155Bridge, ReentrancyGuardTransient, IERC1155Rece
     function _generateId(ERC1155Deposit memory erc1155Deposit) internal pure returns (bytes32) {
         return keccak256(abi.encode(erc1155Deposit));
     }
-} 
+}

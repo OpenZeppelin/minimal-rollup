@@ -66,8 +66,14 @@ interface IERC721Bridge {
     /// @param context Application-specific context data
     /// @param canceler Address on the destination chain that is allowed to cancel the deposit (zero address means
     /// deposit is uncancellable)
-    function deposit(address to, address token, uint256 tokenId, bytes memory data, bytes memory context, address canceler)
-        external returns (bytes32 id);
+    function deposit(
+        address to,
+        address token,
+        uint256 tokenId,
+        bytes memory data,
+        bytes memory context,
+        address canceler
+    ) external returns (bytes32 id);
 
     /// @dev Claims an ERC721 deposit created by the sender (`from`) with `nonce`. The deposited token is
     /// sent to the receiver (`to`) after verifying a storage proof.
@@ -83,4 +89,4 @@ interface IERC721Bridge {
     /// @param proof Encoded proof of the storage slot where the deposit is stored
     function cancelDeposit(ERC721Deposit memory erc721Deposit, address claimee, uint256 height, bytes memory proof)
         external;
-} 
+}

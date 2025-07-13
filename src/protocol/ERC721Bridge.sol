@@ -3,9 +3,10 @@ pragma solidity ^0.8.28;
 
 import {IERC721Bridge} from "./IERC721Bridge.sol";
 import {ISignalService} from "./ISignalService.sol";
-import {ReentrancyGuardTransient} from "@openzeppelin/contracts/utils/ReentrancyGuardTransient.sol";
+
 import {IERC721} from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 import {IERC721Receiver} from "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
+import {ReentrancyGuardTransient} from "@openzeppelin/contracts/utils/ReentrancyGuardTransient.sol";
 import {IERC165} from "@openzeppelin/contracts/utils/introspection/IERC165.sol";
 
 /// @dev In contrast to the `SignalService`, this contract does not expect the bridge to be deployed on the same
@@ -58,8 +59,14 @@ contract ERC721Bridge is IERC721Bridge, ReentrancyGuardTransient, IERC721Receive
     }
 
     /// @inheritdoc IERC721Bridge
-    function deposit(address to, address token, uint256 tokenId, bytes memory data, bytes memory context, address canceler)
-        external returns (bytes32 id) {
+    function deposit(
+        address to,
+        address token,
+        uint256 tokenId,
+        bytes memory data,
+        bytes memory context,
+        address canceler
+    ) external returns (bytes32 id) {
         ERC721Deposit memory erc721Deposit =
             ERC721Deposit(_globalDepositNonce, msg.sender, to, token, tokenId, data, context, canceler);
         id = _generateId(erc721Deposit);
@@ -74,14 +81,19 @@ contract ERC721Bridge is IERC721Bridge, ReentrancyGuardTransient, IERC721Receive
     }
 
     /// @inheritdoc IERC721Bridge
-    function claimDeposit(ERC721Deposit memory erc721Deposit, uint256 height, bytes memory proof) external nonReentrant {
+    function claimDeposit(ERC721Deposit memory erc721Deposit, uint256 height, bytes memory proof)
+        external
+        nonReentrant
+    {
         bytes32 id = _claimDeposit(erc721Deposit, erc721Deposit.to, erc721Deposit.data, height, proof);
         emit DepositClaimed(id, erc721Deposit);
     }
 
     /// @inheritdoc IERC721Bridge
     function cancelDeposit(ERC721Deposit memory erc721Deposit, address claimee, uint256 height, bytes memory proof)
-        external nonReentrant {
+        external
+        nonReentrant
+    {
         require(msg.sender == erc721Deposit.canceler, OnlyCanceler());
 
         bytes32 id = _claimDeposit(erc721Deposit, claimee, bytes(""), height, proof);
@@ -119,4 +131,4 @@ contract ERC721Bridge is IERC721Bridge, ReentrancyGuardTransient, IERC721Receive
     function _generateId(ERC721Deposit memory erc721Deposit) internal pure returns (bytes32) {
         return keccak256(abi.encode(erc721Deposit));
     }
-} 
+}

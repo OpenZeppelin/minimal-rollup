@@ -69,8 +69,15 @@ interface IERC1155Bridge {
     /// @param context Application-specific context data
     /// @param canceler Address on the destination chain that is allowed to cancel the deposit (zero address means
     /// deposit is uncancellable)
-    function deposit(address to, address token, uint256 tokenId, uint256 amount, bytes memory data, bytes memory context, address canceler)
-        external returns (bytes32 id);
+    function deposit(
+        address to,
+        address token,
+        uint256 tokenId,
+        uint256 amount,
+        bytes memory data,
+        bytes memory context,
+        address canceler
+    ) external returns (bytes32 id);
 
     /// @dev Claims an ERC1155 deposit created by the sender (`from`) with `nonce`. The deposited tokens are
     /// sent to the receiver (`to`) after verifying a storage proof.
@@ -86,4 +93,4 @@ interface IERC1155Bridge {
     /// @param proof Encoded proof of the storage slot where the deposit is stored
     function cancelDeposit(ERC1155Deposit memory erc1155Deposit, address claimee, uint256 height, bytes memory proof)
         external;
-} 
+}

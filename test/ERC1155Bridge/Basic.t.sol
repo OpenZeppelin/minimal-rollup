@@ -89,4 +89,4 @@ contract ERC1155BridgeTest is Test {
         assertEq(token.balanceOf(alice, tokenId), 100); // back to original
         assertEq(token.balanceOf(address(bridge), tokenId), 0);
     }
-} 
+}
