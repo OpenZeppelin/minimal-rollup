@@ -89,4 +89,109 @@ contract ERC1155BridgeTest is Test {
         assertEq(token.balanceOf(alice, tokenId), 100); // back to original
         assertEq(token.balanceOf(address(bridge), tokenId), 0);
     }
+
+    function testCannotCancelIfNotCanceler() public {
+        address canceler = makeAddr("canceler");
+        vm.prank(alice);
+        bytes32 id = bridge.deposit(bob, address(token), tokenId, 50, "", "", canceler);
+
+        IERC1155Bridge.ERC1155Deposit memory deposit = IERC1155Bridge.ERC1155Deposit({
+            nonce: 0,
+            from: alice,
+            to: bob,
+            token: address(token),
+            tokenId: tokenId,
+            amount: 50,
+            data: "",
+            context: "",
+            canceler: canceler
+        });
+
+        bytes memory proof = "mock_proof";
+        uint256 height = 1;
+        signalService.setVerifyResult(true);
+
+        vm.expectRevert(IERC1155Bridge.OnlyCanceler.selector);
+        vm.prank(address(0xBAD));
+        bridge.cancelDeposit(deposit, alice, height, proof);
+    }
+
+    function testCannotClaimAlreadyClaimed() public {
+        vm.prank(alice);
+        bytes32 id = bridge.deposit(bob, address(token), tokenId, 50, "", "", address(0));
+
+        IERC1155Bridge.ERC1155Deposit memory deposit = IERC1155Bridge.ERC1155Deposit({
+            nonce: 0,
+            from: alice,
+            to: bob,
+            token: address(token),
+            tokenId: tokenId,
+            amount: 50,
+            data: "",
+            context: "",
+            canceler: address(0)
+        });
+
+        bytes memory proof = "mock_proof";
+        uint256 height = 1;
+        signalService.setVerifyResult(true);
+
+        bridge.claimDeposit(deposit, height, proof);
+
+        vm.expectRevert(IERC1155Bridge.AlreadyClaimed.selector);
+        bridge.claimDeposit(deposit, height, proof);
+    }
+
+    function testCannotCancelAlreadyClaimed() public {
+        address canceler = makeAddr("canceler");
+        vm.prank(alice);
+        bytes32 id = bridge.deposit(bob, address(token), tokenId, 50, "", "", canceler);
+
+        IERC1155Bridge.ERC1155Deposit memory deposit = IERC1155Bridge.ERC1155Deposit({
+            nonce: 0,
+            from: alice,
+            to: bob,
+            token: address(token),
+            tokenId: tokenId,
+            amount: 50,
+            data: "",
+            context: "",
+            canceler: canceler
+        });
+
+        bytes memory proof = "mock_proof";
+        uint256 height = 1;
+        signalService.setVerifyResult(true);
+
+        bridge.claimDeposit(deposit, height, proof);
+
+        vm.expectRevert(IERC1155Bridge.AlreadyClaimed.selector);
+        vm.prank(canceler);
+        bridge.cancelDeposit(deposit, alice, height, proof);
+    }
+
+    function testCannotCancelIfNoCanceler() public {
+        vm.prank(alice);
+        bytes32 id = bridge.deposit(bob, address(token), tokenId, 50, "", "", address(0));
+
+        IERC1155Bridge.ERC1155Deposit memory deposit = IERC1155Bridge.ERC1155Deposit({
+            nonce: 0,
+            from: alice,
+            to: bob,
+            token: address(token),
+            tokenId: tokenId,
+            amount: 50,
+            data: "",
+            context: "",
+            canceler: address(0)
+        });
+
+        bytes memory proof = "mock_proof";
+        uint256 height = 1;
+        signalService.setVerifyResult(true);
+
+        vm.expectRevert(IERC1155Bridge.OnlyCanceler.selector);
+        vm.prank(makeAddr("random"));
+        bridge.cancelDeposit(deposit, alice, height, proof);
+    }
 }

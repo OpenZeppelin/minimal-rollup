@@ -84,4 +84,105 @@ contract ERC721BridgeTest is Test {
         assertTrue(bridge.processed(id));
         assertEq(token.ownerOf(tokenId), alice);
     }
+
+    function testCannotCancelIfNotCanceler() public {
+        address canceler = makeAddr("canceler");
+        vm.prank(alice);
+        bytes32 id = bridge.deposit(bob, address(token), tokenId, "", "", canceler);
+
+        IERC721Bridge.ERC721Deposit memory deposit = IERC721Bridge.ERC721Deposit({
+            nonce: 0,
+            from: alice,
+            to: bob,
+            token: address(token),
+            tokenId: tokenId,
+            data: "",
+            context: "",
+            canceler: canceler
+        });
+
+        bytes memory proof = "mock_proof";
+        uint256 height = 1;
+        signalService.setVerifyResult(true);
+
+        vm.expectRevert(IERC721Bridge.OnlyCanceler.selector);
+        vm.prank(address(0xBAD));
+        bridge.cancelDeposit(deposit, alice, height, proof);
+    }
+
+    function testCannotClaimAlreadyClaimed() public {
+        vm.prank(alice);
+        bytes32 id = bridge.deposit(bob, address(token), tokenId, "", "", address(0));
+
+        IERC721Bridge.ERC721Deposit memory deposit = IERC721Bridge.ERC721Deposit({
+            nonce: 0,
+            from: alice,
+            to: bob,
+            token: address(token),
+            tokenId: tokenId,
+            data: "",
+            context: "",
+            canceler: address(0)
+        });
+
+        bytes memory proof = "mock_proof";
+        uint256 height = 1;
+        signalService.setVerifyResult(true);
+
+        bridge.claimDeposit(deposit, height, proof);
+
+        vm.expectRevert(IERC721Bridge.AlreadyClaimed.selector);
+        bridge.claimDeposit(deposit, height, proof);
+    }
+
+    function testCannotCancelAlreadyClaimed() public {
+        address canceler = makeAddr("canceler");
+        vm.prank(alice);
+        bytes32 id = bridge.deposit(bob, address(token), tokenId, "", "", canceler);
+
+        IERC721Bridge.ERC721Deposit memory deposit = IERC721Bridge.ERC721Deposit({
+            nonce: 0,
+            from: alice,
+            to: bob,
+            token: address(token),
+            tokenId: tokenId,
+            data: "",
+            context: "",
+            canceler: canceler
+        });
+
+        bytes memory proof = "mock_proof";
+        uint256 height = 1;
+        signalService.setVerifyResult(true);
+
+        bridge.claimDeposit(deposit, height, proof);
+
+        vm.expectRevert(IERC721Bridge.AlreadyClaimed.selector);
+        vm.prank(canceler);
+        bridge.cancelDeposit(deposit, alice, height, proof);
+    }
+
+    function testCannotCancelIfNoCanceler() public {
+        vm.prank(alice);
+        bytes32 id = bridge.deposit(bob, address(token), tokenId, "", "", address(0));
+
+        IERC721Bridge.ERC721Deposit memory deposit = IERC721Bridge.ERC721Deposit({
+            nonce: 0,
+            from: alice,
+            to: bob,
+            token: address(token),
+            tokenId: tokenId,
+            data: "",
+            context: "",
+            canceler: address(0)
+        });
+
+        bytes memory proof = "mock_proof";
+        uint256 height = 1;
+        signalService.setVerifyResult(true);
+
+        vm.expectRevert(IERC721Bridge.OnlyCanceler.selector);
+        vm.prank(makeAddr("random"));
+        bridge.cancelDeposit(deposit, alice, height, proof);
+    }
 }
