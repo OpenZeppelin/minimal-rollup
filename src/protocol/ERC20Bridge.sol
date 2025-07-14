@@ -80,7 +80,7 @@ contract ERC20Bridge is IERC20Bridge, ReentrancyGuardTransient, AccessControl {
         require(remoteToken != address(0), "Unsupported token");
 
         ERC20Deposit memory erc20Deposit =
-            ERC20Deposit(_globalDepositNonce, msg.sender, to, remoteToken, amount, data, context, canceler);
+            ERC20Deposit(_globalDepositNonce, msg.sender, to, localToken, remoteToken, amount, data, context, canceler);
         id = _generateId(erc20Deposit);
         unchecked {
             ++_globalDepositNonce;
@@ -126,7 +126,7 @@ contract ERC20Bridge is IERC20Bridge, ReentrancyGuardTransient, AccessControl {
         signalService.verifySignal(height, trustedCommitmentPublisher, counterpart, id, proof);
 
         _processed[id] = true;
-        _sendERC20(erc20Deposit.token, to, erc20Deposit.amount, data);
+        _sendERC20(erc20Deposit.remoteToken, to, erc20Deposit.amount, data);
     }
 
     /// @dev Function to transfer ERC20 to the receiver and optionally call with data.

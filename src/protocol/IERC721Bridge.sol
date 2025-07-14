@@ -14,7 +14,9 @@ interface IERC721Bridge {
         // The receiver of the deposit
         address to;
         // The ERC721 token address
-        address token; // destination token
+        address localToken;
+        // The ERC721 token address in the destination network
+        address remoteToken;
         // The token ID
         uint256 tokenId;
         // Any calldata to be sent to the receiver in case of a contract

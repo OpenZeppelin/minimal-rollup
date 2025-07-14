@@ -13,8 +13,10 @@ interface IERC20Bridge {
         address from;
         // The receiver of the deposit
         address to;
-        // The ERC20 token address
-        address token; // destination token
+        // The ERC20 token address in this network
+        address localToken;
+        // The ERC20 token address in the destination network
+        address remoteToken;
         // The amount of the deposit
         uint256 amount;
         // Any calldata to be sent to the receiver in case of a contract
@@ -56,7 +58,7 @@ interface IERC20Bridge {
 
     /// @dev ERC20 Deposit identifier.
     /// @param erc20Deposit The ERC20 deposit struct
-    function getDepositId(ERC20Deposit memory erc20Deposit) external view returns (bytes32 id);
+    function getDepositId(ERC20Deposit memory erc20Deposit) external pure returns (bytes32 id);
 
     /// @dev Creates an ERC20 deposit
     /// @param to The receiver of the deposit

@@ -88,8 +88,9 @@ contract ERC721Bridge is IERC721Bridge, ReentrancyGuardTransient, IERC721Receive
         address remoteToken = localToRemoteToken[localToken];
         require(remoteToken != address(0), "Unsupported token");
 
-        ERC721Deposit memory erc721Deposit =
-            ERC721Deposit(_globalDepositNonce, msg.sender, to, remoteToken, tokenId, data, context, canceler);
+        ERC721Deposit memory erc721Deposit = ERC721Deposit(
+            _globalDepositNonce, msg.sender, to, localToken, remoteToken, tokenId, data, context, canceler
+        );
         id = _generateId(erc721Deposit);
         unchecked {
             ++_globalDepositNonce;
@@ -138,7 +139,7 @@ contract ERC721Bridge is IERC721Bridge, ReentrancyGuardTransient, IERC721Receive
         signalService.verifySignal(height, trustedCommitmentPublisher, counterpart, id, proof);
 
         _processed[id] = true;
-        _sendERC721(erc721Deposit.token, to, erc721Deposit.tokenId, data);
+        _sendERC721(erc721Deposit.remoteToken, to, erc721Deposit.tokenId, data);
     }
 
     /// @dev Function to safe transfer ERC721 to the receiver with data.

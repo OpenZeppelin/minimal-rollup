@@ -14,7 +14,9 @@ interface IERC1155Bridge {
         // The receiver of the deposit
         address to;
         // The ERC1155 token address
-        address token; // destination token
+        address localToken;
+        // The ERC1155 token address in the destination network
+        address remoteToken;
         // The token ID
         uint256 tokenId;
         // The amount of the deposit

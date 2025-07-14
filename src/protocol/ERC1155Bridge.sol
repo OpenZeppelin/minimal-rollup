@@ -94,8 +94,9 @@ contract ERC1155Bridge is IERC1155Bridge, ReentrancyGuardTransient, IERC1155Rece
         address remoteToken = localToRemoteToken[localToken];
         require(remoteToken != address(0), "Unsupported token");
 
-        ERC1155Deposit memory erc1155Deposit =
-            ERC1155Deposit(_globalDepositNonce, msg.sender, to, remoteToken, tokenId, amount, data, context, canceler);
+        ERC1155Deposit memory erc1155Deposit = ERC1155Deposit(
+            _globalDepositNonce, msg.sender, to, localToken, remoteToken, tokenId, amount, data, context, canceler
+        );
         id = _generateId(erc1155Deposit);
         unchecked {
             ++_globalDepositNonce;
@@ -144,7 +145,7 @@ contract ERC1155Bridge is IERC1155Bridge, ReentrancyGuardTransient, IERC1155Rece
         signalService.verifySignal(height, trustedCommitmentPublisher, counterpart, id, proof);
 
         _processed[id] = true;
-        _sendERC1155(erc1155Deposit.token, to, erc1155Deposit.tokenId, erc1155Deposit.amount, data);
+        _sendERC1155(erc1155Deposit.remoteToken, to, erc1155Deposit.tokenId, erc1155Deposit.amount, data);
     }
 
     /// @dev Function to safe transfer ERC1155 to the receiver with data.
