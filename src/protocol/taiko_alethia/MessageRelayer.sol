@@ -73,9 +73,7 @@ contract MessageRelayer is ReentrancyGuardTransient, IMessageRelayer {
         bytes memory proof,
         address tipRecipient
     ) external {
-        if (tipRecipient != address(0)) {
-            TIP_RECIPIENT_SLOT.asAddress().tstore(tipRecipient);
-        }
+        TIP_RECIPIENT_SLOT.asAddress().tstore(tipRecipient);
 
         ethBridge.claimDeposit(ethDeposit, height, proof);
     }
