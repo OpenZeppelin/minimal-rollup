@@ -4,15 +4,19 @@ pragma solidity ^0.8.28;
 import {IERC1155Bridge} from "./IERC1155Bridge.sol";
 import {ISignalService} from "./ISignalService.sol";
 
+import {IMintableERC1155} from "./IMintable.sol";
+import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
 import {IERC1155} from "@openzeppelin/contracts/token/ERC1155/IERC1155.sol";
 import {IERC1155Receiver} from "@openzeppelin/contracts/token/ERC1155/IERC1155Receiver.sol";
 import {ReentrancyGuardTransient} from "@openzeppelin/contracts/utils/ReentrancyGuardTransient.sol";
+
+import {ERC165} from "@openzeppelin/contracts/utils/introspection/ERC165.sol";
 import {IERC165} from "@openzeppelin/contracts/utils/introspection/IERC165.sol";
 
 /// @dev In contrast to the `SignalService`, this contract does not expect the bridge to be deployed on the same
 /// address on both chains. This is because it is designed so that each rollup has its own independent bridge contract,
 /// and they may furthermore decide to deploy a new version of the bridge in the future.
-contract ERC1155Bridge is IERC1155Bridge, ReentrancyGuardTransient, IERC1155Receiver {
+contract ERC1155Bridge is IERC1155Bridge, ReentrancyGuardTransient, IERC1155Receiver, AccessControl {
     mapping(bytes32 id => bool processed) private _processed;
 
     /// Incremental nonce to generate unique deposit IDs.
@@ -29,6 +33,9 @@ contract ERC1155Bridge is IERC1155Bridge, ReentrancyGuardTransient, IERC1155Rece
     /// WARN: This address has no significance (and may be untrustworthy) on this chain.
     address public immutable counterpart;
 
+    mapping(address => address) public localToRemoteToken;
+    mapping(address => bool) public isMintable;
+
     constructor(address _signalService, address _trustedCommitmentPublisher, address _counterpart) {
         require(_signalService != address(0), "Empty signal service");
         require(_trustedCommitmentPublisher != address(0), "Empty trusted publisher");
@@ -37,6 +44,7 @@ contract ERC1155Bridge is IERC1155Bridge, ReentrancyGuardTransient, IERC1155Rece
         signalService = ISignalService(_signalService);
         trustedCommitmentPublisher = _trustedCommitmentPublisher;
         counterpart = _counterpart;
+        _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
     }
 
     /// @inheritdoc IERC1155Receiver
@@ -53,8 +61,14 @@ contract ERC1155Bridge is IERC1155Bridge, ReentrancyGuardTransient, IERC1155Rece
         return IERC1155Receiver.onERC1155BatchReceived.selector;
     }
 
-    function supportsInterface(bytes4 interfaceId) external pure returns (bool) {
-        return interfaceId == type(IERC1155Receiver).interfaceId || interfaceId == type(IERC165).interfaceId;
+    function supportsInterface(bytes4 interfaceId)
+        public
+        view
+        virtual
+        override(AccessControl, IERC165)
+        returns (bool)
+    {
+        return interfaceId == type(IERC1155Receiver).interfaceId || super.supportsInterface(interfaceId);
     }
 
     /// @inheritdoc IERC1155Bridge
@@ -70,21 +84,27 @@ contract ERC1155Bridge is IERC1155Bridge, ReentrancyGuardTransient, IERC1155Rece
     /// @inheritdoc IERC1155Bridge
     function deposit(
         address to,
-        address token,
+        address localToken,
         uint256 tokenId,
         uint256 amount,
         bytes memory data,
         bytes memory context,
         address canceler
     ) external nonReentrant returns (bytes32 id) {
+        address remoteToken = localToRemoteToken[localToken];
+        require(remoteToken != address(0), "Unsupported token");
+
         ERC1155Deposit memory erc1155Deposit =
-            ERC1155Deposit(_globalDepositNonce, msg.sender, to, token, tokenId, amount, data, context, canceler);
+            ERC1155Deposit(_globalDepositNonce, msg.sender, to, remoteToken, tokenId, amount, data, context, canceler);
         id = _generateId(erc1155Deposit);
         unchecked {
             ++_globalDepositNonce;
         }
 
-        IERC1155(token).safeTransferFrom(msg.sender, address(this), tokenId, amount, "");
+        IERC1155(localToken).safeTransferFrom(msg.sender, address(this), tokenId, amount, "");
+        if (isMintable[localToken]) {
+            IMintableERC1155(localToken).burn(address(this), tokenId, amount);
+        }
 
         signalService.sendSignal(id);
         emit DepositMade(id, erc1155Deposit);
@@ -134,12 +154,26 @@ contract ERC1155Bridge is IERC1155Bridge, ReentrancyGuardTransient, IERC1155Rece
     /// @param amount Amount of tokens to send
     /// @param data Data to send to the receiver
     function _sendERC1155(address token, address to, uint256 tokenId, uint256 amount, bytes memory data) internal {
-        IERC1155(token).safeTransferFrom(address(this), to, tokenId, amount, data);
+        if (isMintable[token]) {
+            IMintableERC1155(token).mint(to, tokenId, amount, data);
+        } else {
+            IERC1155(token).safeTransferFrom(address(this), to, tokenId, amount, data);
+        }
     }
 
     /// @dev Generates a unique ID for a deposit.
     /// @param erc1155Deposit Deposit to generate an ID for
     function _generateId(ERC1155Deposit memory erc1155Deposit) internal pure returns (bytes32) {
         return keccak256(abi.encode(erc1155Deposit));
+    }
+
+    function setTokenMapping(address local, address remote, bool mintable) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        localToRemoteToken[local] = remote;
+        isMintable[local] = mintable;
+    }
+
+    function removeTokenMapping(address local) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        delete localToRemoteToken[local];
+        delete isMintable[local];
     }
 }

@@ -14,7 +14,7 @@ interface IERC1155Bridge {
         // The receiver of the deposit
         address to;
         // The ERC1155 token address
-        address token;
+        address token; // destination token
         // The token ID
         uint256 tokenId;
         // The amount of the deposit
@@ -62,7 +62,7 @@ interface IERC1155Bridge {
 
     /// @dev Creates an ERC1155 deposit
     /// @param to The receiver of the deposit
-    /// @param token The ERC1155 token address
+    /// @param localToken The ERC1155 token address
     /// @param tokenId The token ID
     /// @param amount The amount to deposit
     /// @param data Any calldata to be sent to the receiver in case of a contract
@@ -71,7 +71,7 @@ interface IERC1155Bridge {
     /// deposit is uncancellable)
     function deposit(
         address to,
-        address token,
+        address localToken,
         uint256 tokenId,
         uint256 amount,
         bytes memory data,

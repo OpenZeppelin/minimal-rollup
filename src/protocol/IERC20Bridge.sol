@@ -14,7 +14,7 @@ interface IERC20Bridge {
         // The receiver of the deposit
         address to;
         // The ERC20 token address
-        address token;
+        address token; // destination token
         // The amount of the deposit
         uint256 amount;
         // Any calldata to be sent to the receiver in case of a contract
@@ -60,7 +60,7 @@ interface IERC20Bridge {
 
     /// @dev Creates an ERC20 deposit
     /// @param to The receiver of the deposit
-    /// @param token The ERC20 token address
+    /// @param localToken The ERC20 token address
     /// @param amount The amount to deposit
     /// @param data Any calldata to be sent to the receiver in case of a contract
     /// @param context Application-specific context data
@@ -68,7 +68,7 @@ interface IERC20Bridge {
     /// deposit is uncancellable)
     function deposit(
         address to,
-        address token,
+        address localToken,
         uint256 amount,
         bytes memory data,
         bytes memory context,

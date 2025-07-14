@@ -14,7 +14,7 @@ interface IERC721Bridge {
         // The receiver of the deposit
         address to;
         // The ERC721 token address
-        address token;
+        address token; // destination token
         // The token ID
         uint256 tokenId;
         // Any calldata to be sent to the receiver in case of a contract
@@ -60,7 +60,7 @@ interface IERC721Bridge {
 
     /// @dev Creates an ERC721 deposit
     /// @param to The receiver of the deposit
-    /// @param token The ERC721 token address
+    /// @param localToken The ERC721 token address
     /// @param tokenId The token ID to deposit
     /// @param data Any calldata to be sent to the receiver in case of a contract
     /// @param context Application-specific context data
@@ -68,7 +68,7 @@ interface IERC721Bridge {
     /// deposit is uncancellable)
     function deposit(
         address to,
-        address token,
+        address localToken,
         uint256 tokenId,
         bytes memory data,
         bytes memory context,

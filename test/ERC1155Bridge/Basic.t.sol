@@ -22,14 +22,17 @@ contract ERC1155BridgeTest is Test {
         signalService = new MockSignalService();
         bridge = new ERC1155Bridge(address(signalService), trustedPublisher, counterpart);
         token = new MockERC1155();
-        token.mint(alice, tokenId, 100);
+        token.mint(alice, tokenId, 100, "");
         vm.prank(alice);
         token.setApprovalForAll(address(bridge), true);
+        bridge.setTokenMapping(address(token), address(token), false);
     }
 
+    // solhint-disable no-unused-vars
     function testDeposit() public {
         vm.prank(alice);
         bytes32 id = bridge.deposit(bob, address(token), tokenId, 50, "", "", address(0));
+        assertFalse(bridge.processed(id));
         assertEq(token.balanceOf(address(bridge), tokenId), 50);
         assertEq(token.balanceOf(alice, tokenId), 50);
     }
@@ -93,7 +96,7 @@ contract ERC1155BridgeTest is Test {
     function testCannotCancelIfNotCanceler() public {
         address canceler = makeAddr("canceler");
         vm.prank(alice);
-        bytes32 id = bridge.deposit(bob, address(token), tokenId, 50, "", "", canceler);
+        bridge.deposit(bob, address(token), tokenId, 50, "", "", canceler);
 
         IERC1155Bridge.ERC1155Deposit memory deposit = IERC1155Bridge.ERC1155Deposit({
             nonce: 0,
@@ -118,7 +121,7 @@ contract ERC1155BridgeTest is Test {
 
     function testCannotClaimAlreadyClaimed() public {
         vm.prank(alice);
-        bytes32 id = bridge.deposit(bob, address(token), tokenId, 50, "", "", address(0));
+        bridge.deposit(bob, address(token), tokenId, 50, "", "", address(0));
 
         IERC1155Bridge.ERC1155Deposit memory deposit = IERC1155Bridge.ERC1155Deposit({
             nonce: 0,
@@ -145,7 +148,7 @@ contract ERC1155BridgeTest is Test {
     function testCannotCancelAlreadyClaimed() public {
         address canceler = makeAddr("canceler");
         vm.prank(alice);
-        bytes32 id = bridge.deposit(bob, address(token), tokenId, 50, "", "", canceler);
+        bridge.deposit(bob, address(token), tokenId, 50, "", "", canceler);
 
         IERC1155Bridge.ERC1155Deposit memory deposit = IERC1155Bridge.ERC1155Deposit({
             nonce: 0,
@@ -172,7 +175,7 @@ contract ERC1155BridgeTest is Test {
 
     function testCannotCancelIfNoCanceler() public {
         vm.prank(alice);
-        bytes32 id = bridge.deposit(bob, address(token), tokenId, 50, "", "", address(0));
+        bridge.deposit(bob, address(token), tokenId, 50, "", "", address(0));
 
         IERC1155Bridge.ERC1155Deposit memory deposit = IERC1155Bridge.ERC1155Deposit({
             nonce: 0,

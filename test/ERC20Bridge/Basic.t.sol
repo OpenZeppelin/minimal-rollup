@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
+import {IMintableERC20} from "../../src/protocol/IMintable.sol";
 import "forge-std/Test.sol";
 import {ERC20Bridge} from "src/protocol/ERC20Bridge.sol";
 import {IERC20Bridge} from "src/protocol/IERC20Bridge.sol";
@@ -24,12 +25,22 @@ contract ERC20BridgeTest is Test {
         token.mint(alice, 1000);
         vm.prank(alice);
         token.approve(address(bridge), type(uint256).max);
+        bridge.setTokenMapping(address(token), address(token), false);
     }
 
+    // solhint-disable no-unused-vars
     function testDeposit() public {
         vm.prank(alice);
-        bytes32 id = bridge.deposit(bob, address(token), 100, "", "", address(0));
+        bridge.deposit(bob, address(token), 100, "", "", address(0));
         assertEq(token.balanceOf(address(bridge)), 100);
+        assertEq(token.balanceOf(alice), 900);
+    }
+
+    function testDepositMintable() public {
+        bridge.setTokenMapping(address(token), address(token), true);
+        vm.prank(alice);
+        vm.expectCall(address(token), abi.encodeCall(IMintableERC20.burn, (address(bridge), 100)));
+        bridge.deposit(bob, address(token), 100, "", "", address(0));
         assertEq(token.balanceOf(alice), 900);
     }
 
@@ -57,6 +68,33 @@ contract ERC20BridgeTest is Test {
         assertTrue(bridge.processed(id));
         assertEq(token.balanceOf(bob), 100);
         assertEq(token.balanceOf(address(bridge)), 0);
+    }
+
+    function testClaimMintable() public {
+        bridge.setTokenMapping(address(token), address(token), true);
+        vm.prank(alice);
+        bytes32 id = bridge.deposit(bob, address(token), 100, "", "", address(0));
+
+        IERC20Bridge.ERC20Deposit memory deposit = IERC20Bridge.ERC20Deposit({
+            nonce: 0,
+            from: alice,
+            to: bob,
+            token: address(token),
+            amount: 100,
+            data: "",
+            context: "",
+            canceler: address(0)
+        });
+
+        bytes memory proof = "mock_proof";
+        uint256 height = 1;
+        signalService.setVerifyResult(true);
+
+        vm.expectCall(address(token), abi.encodeCall(IMintableERC20.mint, (bob, 100)));
+        bridge.claimDeposit(deposit, height, proof);
+
+        assertTrue(bridge.processed(id));
+        assertEq(token.balanceOf(bob), 100);
     }
 
     function testCancelDeposit() public {
@@ -90,7 +128,7 @@ contract ERC20BridgeTest is Test {
     function testCannotCancelIfNotCanceler() public {
         address canceler = makeAddr("canceler");
         vm.prank(alice);
-        bytes32 id = bridge.deposit(bob, address(token), 100, "", "", canceler);
+        bridge.deposit(bob, address(token), 100, "", "", canceler);
 
         IERC20Bridge.ERC20Deposit memory deposit = IERC20Bridge.ERC20Deposit({
             nonce: 0,
@@ -114,7 +152,7 @@ contract ERC20BridgeTest is Test {
 
     function testCannotClaimAlreadyClaimed() public {
         vm.prank(alice);
-        bytes32 id = bridge.deposit(bob, address(token), 100, "", "", address(0));
+        bridge.deposit(bob, address(token), 100, "", "", address(0));
 
         IERC20Bridge.ERC20Deposit memory deposit = IERC20Bridge.ERC20Deposit({
             nonce: 0,
@@ -140,7 +178,7 @@ contract ERC20BridgeTest is Test {
     function testCannotCancelAlreadyClaimed() public {
         address canceler = makeAddr("canceler");
         vm.prank(alice);
-        bytes32 id = bridge.deposit(bob, address(token), 100, "", "", canceler);
+        bridge.deposit(bob, address(token), 100, "", "", canceler);
 
         IERC20Bridge.ERC20Deposit memory deposit = IERC20Bridge.ERC20Deposit({
             nonce: 0,
@@ -166,7 +204,7 @@ contract ERC20BridgeTest is Test {
 
     function testCannotCancelIfNoCanceler() public {
         vm.prank(alice);
-        bytes32 id = bridge.deposit(bob, address(token), 100, "", "", address(0));
+        bridge.deposit(bob, address(token), 100, "", "", address(0));
 
         IERC20Bridge.ERC20Deposit memory deposit = IERC20Bridge.ERC20Deposit({
             nonce: 0,
@@ -186,5 +224,11 @@ contract ERC20BridgeTest is Test {
         vm.expectRevert(IERC20Bridge.OnlyCanceler.selector);
         vm.prank(makeAddr("random"));
         bridge.cancelDeposit(deposit, alice, height, proof);
+    }
+
+    function testUnsupportedToken() public {
+        vm.expectRevert("Unsupported token");
+        vm.prank(alice);
+        bridge.deposit(bob, address(0xBAD), 100, "", "", address(0));
     }
 }

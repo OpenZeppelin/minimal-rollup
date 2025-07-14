@@ -4,6 +4,8 @@ pragma solidity ^0.8.28;
 import {IERC20Bridge} from "./IERC20Bridge.sol";
 import {ISignalService} from "./ISignalService.sol";
 
+import {IMintableERC20} from "./IMintable.sol";
+import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
@@ -12,7 +14,7 @@ import {ReentrancyGuardTransient} from "@openzeppelin/contracts/utils/Reentrancy
 /// @dev In contrast to the `SignalService`, this contract does not expect the bridge to be deployed on the same
 /// address on both chains. This is because it is designed so that each rollup has its own independent bridge contract,
 /// and they may furthermore decide to deploy a new version of the bridge in the future.
-contract ERC20Bridge is IERC20Bridge, ReentrancyGuardTransient {
+contract ERC20Bridge is IERC20Bridge, ReentrancyGuardTransient, AccessControl {
     using SafeERC20 for IERC20;
 
     mapping(bytes32 id => bool processed) private _processed;
@@ -31,6 +33,9 @@ contract ERC20Bridge is IERC20Bridge, ReentrancyGuardTransient {
     /// WARN: This address has no significance (and may be untrustworthy) on this chain.
     address public immutable counterpart;
 
+    mapping(address => address) public localToRemoteToken;
+    mapping(address => bool) public isMintable;
+
     constructor(address _signalService, address _trustedCommitmentPublisher, address _counterpart) {
         require(_signalService != address(0), "Empty signal service");
         require(_trustedCommitmentPublisher != address(0), "Empty trusted publisher");
@@ -39,6 +44,17 @@ contract ERC20Bridge is IERC20Bridge, ReentrancyGuardTransient {
         signalService = ISignalService(_signalService);
         trustedCommitmentPublisher = _trustedCommitmentPublisher;
         counterpart = _counterpart;
+        _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
+    }
+
+    function setTokenMapping(address local, address remote, bool mintable) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        localToRemoteToken[local] = remote;
+        isMintable[local] = mintable;
+    }
+
+    function removeTokenMapping(address local) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        delete localToRemoteToken[local];
+        delete isMintable[local];
     }
 
     /// @inheritdoc IERC20Bridge
@@ -54,20 +70,26 @@ contract ERC20Bridge is IERC20Bridge, ReentrancyGuardTransient {
     /// @inheritdoc IERC20Bridge
     function deposit(
         address to,
-        address token,
+        address localToken,
         uint256 amount,
         bytes memory data,
         bytes memory context,
         address canceler
     ) external nonReentrant returns (bytes32 id) {
+        address remoteToken = localToRemoteToken[localToken];
+        require(remoteToken != address(0), "Unsupported token");
+
         ERC20Deposit memory erc20Deposit =
-            ERC20Deposit(_globalDepositNonce, msg.sender, to, token, amount, data, context, canceler);
+            ERC20Deposit(_globalDepositNonce, msg.sender, to, remoteToken, amount, data, context, canceler);
         id = _generateId(erc20Deposit);
         unchecked {
             ++_globalDepositNonce;
         }
 
-        IERC20(token).safeTransferFrom(msg.sender, address(this), amount);
+        IERC20(localToken).safeTransferFrom(msg.sender, address(this), amount);
+        if (isMintable[localToken]) {
+            IMintableERC20(localToken).burn(address(this), amount);
+        }
 
         signalService.sendSignal(id);
         emit DepositMade(id, erc20Deposit);
@@ -113,7 +135,11 @@ contract ERC20Bridge is IERC20Bridge, ReentrancyGuardTransient {
     /// @param amount Amount of tokens to send
     /// @param data Optional data to call the receiver with
     function _sendERC20(address token, address to, uint256 amount, bytes memory data) internal {
-        IERC20(token).safeTransfer(to, amount);
+        if (isMintable[token]) {
+            IMintableERC20(token).mint(to, amount);
+        } else {
+            IERC20(token).safeTransfer(to, amount);
+        }
         if (data.length > 0) {
             (bool success,) = to.call(data);
             require(success, FailedClaim());

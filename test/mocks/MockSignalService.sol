@@ -10,18 +10,18 @@ contract MockSignalService is ISignalService {
         verifyResult = _result;
     }
 
-    function verifySignal(uint256 height, address publisher, address sender, bytes32 signal, bytes memory proof)
+    function verifySignal(uint256 _height, address _publisher, address _sender, bytes32 _signal, bytes memory _proof)
         external
         view
     {
         require(verifyResult, "Mock verify failed");
     }
 
-    function sendSignal(bytes32 signal) external returns (bytes32 slot) {
-        slot = keccak256(abi.encodePacked(signal));
+    function sendSignal(bytes32 _signal) external pure returns (bytes32 slot) {
+        slot = keccak256(abi.encodePacked(_signal));
     }
 
-    function isSignalStored(bytes32 signal, address sender) external view returns (bool) {
+    function isSignalStored(bytes32 _signal, address _sender) external pure returns (bool) {
         return true;
     }
 }

@@ -25,11 +25,13 @@ contract ERC721BridgeTest is Test {
         token.mint(alice, tokenId);
         vm.prank(alice);
         token.approve(address(bridge), tokenId);
+        bridge.setTokenMapping(address(token), address(token), false);
     }
 
+    // solhint-disable no-unused-vars
     function testDeposit() public {
         vm.prank(alice);
-        bytes32 id = bridge.deposit(bob, address(token), tokenId, "", "", address(0));
+        bridge.deposit(bob, address(token), tokenId, "", "", address(0));
         assertEq(token.ownerOf(tokenId), address(bridge));
     }
 
@@ -88,7 +90,7 @@ contract ERC721BridgeTest is Test {
     function testCannotCancelIfNotCanceler() public {
         address canceler = makeAddr("canceler");
         vm.prank(alice);
-        bytes32 id = bridge.deposit(bob, address(token), tokenId, "", "", canceler);
+        bridge.deposit(bob, address(token), tokenId, "", "", canceler);
 
         IERC721Bridge.ERC721Deposit memory deposit = IERC721Bridge.ERC721Deposit({
             nonce: 0,
@@ -112,7 +114,7 @@ contract ERC721BridgeTest is Test {
 
     function testCannotClaimAlreadyClaimed() public {
         vm.prank(alice);
-        bytes32 id = bridge.deposit(bob, address(token), tokenId, "", "", address(0));
+        bridge.deposit(bob, address(token), tokenId, "", "", address(0));
 
         IERC721Bridge.ERC721Deposit memory deposit = IERC721Bridge.ERC721Deposit({
             nonce: 0,
@@ -138,7 +140,7 @@ contract ERC721BridgeTest is Test {
     function testCannotCancelAlreadyClaimed() public {
         address canceler = makeAddr("canceler");
         vm.prank(alice);
-        bytes32 id = bridge.deposit(bob, address(token), tokenId, "", "", canceler);
+        bridge.deposit(bob, address(token), tokenId, "", "", canceler);
 
         IERC721Bridge.ERC721Deposit memory deposit = IERC721Bridge.ERC721Deposit({
             nonce: 0,
@@ -164,7 +166,7 @@ contract ERC721BridgeTest is Test {
 
     function testCannotCancelIfNoCanceler() public {
         vm.prank(alice);
-        bytes32 id = bridge.deposit(bob, address(token), tokenId, "", "", address(0));
+        bridge.deposit(bob, address(token), tokenId, "", "", address(0));
 
         IERC721Bridge.ERC721Deposit memory deposit = IERC721Bridge.ERC721Deposit({
             nonce: 0,
