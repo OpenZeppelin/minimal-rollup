@@ -21,7 +21,7 @@ import {MessageRelayer} from "src/protocol/taiko_alethia/MessageRelayer.sol";
 ///    to: address(MessageRelayer),
 ///    amount: 1.1 eth,
 ///    data: encodedData,
-///    context: abi.encode(address(Bob)) // Where Bob is the allowed relayer. Set to empty bytes to allow any relayer.
+///    context: bytes(0) // this relayer does not use this field
 ///    }
 ///
 ///    Where encodedData is roughly:
@@ -29,6 +29,7 @@ import {MessageRelayer} from "src/protocol/taiko_alethia/MessageRelayer.sol";
 ///            IMessageRelayer.receiveMessage,
 ///            (
 ///                address(Alice),    // to
+///                address(tipRecipient) // specified tip recipient
 ///                0.1 ether,        // tip for the relayer
 ///                0,                // gas limit
 ///                ""                // data (in this case empty)
@@ -36,17 +37,19 @@ import {MessageRelayer} from "src/protocol/taiko_alethia/MessageRelayer.sol";
 ///        )
 ///
 /// To relay the message:
-///    1. The allowed relayer calls `relayMessage` if set. Otherwise, anyone can call `relayMessage`.
+//     1. Anyone is allowed to call relayMessage however the tip recipient is determined the two following cases:
+//     a) If no tip recipient is specified in the ETHDeposit message the one in temporary storage will be used
+//     b) If a tip recipient is specified in the ETHDeposit message it will be used
+// It is up to the relayer to decide whether it is worth to relay this message or not (decided if they control the
+// tipRecipient address or not)
 ///    2. This will call claimDeposit on the ETHBridge
 ///    3. If the original message was specified correctly, this will call receiveMessage on this contract
-///    4. This will call the message recipient and send the tip to the relayer
+///    4. This will call the message recipient and send the tip to the tip recipient
 ///
-/// The relayer will net any tip minus the gas spent on the call to relayMessage.
+/// The tip recipient will net any tip minus the gas spent on the call to relayMessage.
 ///
 /// WARN: There is no relayer protection. In particular:
-///    - if the ETHDeposit does not invoke receiveMessage, the relayer will not be paid.
-///    - if receiveMessage is called directly, the tip will be sent to whichever address exists in the
-/// TIP_RECIPIENT_SLOT (typically address(0)).
+///    - if the ETHDeposit does not invoke receiveMessage, the tip recipient will not be paid.
 contract MessageRelayer is ReentrancyGuardTransient, IMessageRelayer {
     using TransientSlot for *;
 
@@ -62,31 +65,31 @@ contract MessageRelayer is ReentrancyGuardTransient, IMessageRelayer {
     uint256 private constant BUFFER = 20_000;
 
     /// @inheritdoc IMessageRelayer
-    /// @dev For relayer selection, encode the allowed relayer address in the context field of the ETHDeposit.
-    /// Use address(0) or empty context to allow any relayer.
+    /// @dev Only specify a tip recipient if one is not set in the ETHDeposit data field otherwise
+    /// that one will be used instead
     function relayMessage(
         IETHBridge.ETHDeposit memory ethDeposit,
         uint256 height,
         bytes memory proof,
         address tipRecipient
     ) external {
-        if (ethDeposit.context.length == 32) {
-            address allowedRelayer = abi.decode(ethDeposit.context, (address));
-            require(allowedRelayer == address(0) || allowedRelayer == msg.sender, InvalidRelayer());
+        if (tipRecipient != address(0)) {
+            TIP_RECIPIENT_SLOT.asAddress().tstore(tipRecipient);
         }
-
-        TIP_RECIPIENT_SLOT.asAddress().tstore(tipRecipient);
 
         ethBridge.claimDeposit(ethDeposit, height, proof);
     }
 
     /// @inheritdoc IMessageRelayer
-    function receiveMessage(address to, uint256 tip, uint256 gasLimit, bytes memory data)
+    function receiveMessage(address to, uint256 tip, address tipRecipient, uint256 gasLimit, bytes memory data)
         external
         payable
         nonReentrant
     {
-        address tipRecipient = TIP_RECIPIENT_SLOT.asAddress().tload();
+        // If none specified use the one in temporary storage
+        if (tipRecipient == address(0)) {
+            tipRecipient = TIP_RECIPIENT_SLOT.asAddress().tload();
+        }
 
         uint256 valueToSend = msg.value - tip;
         bool forwardMessageSuccess;
