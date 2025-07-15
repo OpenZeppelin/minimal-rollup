@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
-import {
-    CancelableDepositIsValidContractCall,
-    DepositIsCancelable,
-    DepositIsNotCancelable
-} from "./CancelableScenarios.t.sol";
+import {DepositIsCancelable, DepositIsNotCancelable} from "./CancelableScenarios.t.sol";
 import {BridgeHasNoEther, BridgeSufficientlyCapitalized} from "./CapitalizationScenarios.t.sol";
 import {DepositIsClaimable, DepositIsNotClaimable} from "./ClaimableScenarios.t.sol";
-import {DepositIsInvalidContractCall, DepositIsValidContractCall} from "./ContractCallValidityScenarios.t.sol";
+import {
+    CancelableDepositIsValidContractCall,
+    DepositIsInvalidContractCall,
+    DepositIsValidContractCall
+} from "./ContractCallValidityScenarios.t.sol";
 import {CrossChainDepositExists} from "./CrossChainDepositExists.t.sol";
 import {RecipientIsAContract, RecipientIsAnEOA} from "./RecipientScenarios.t.sol";
 import {
