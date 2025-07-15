@@ -6,7 +6,6 @@ import {TransientSlot} from "@openzeppelin/contracts/utils/TransientSlot.sol";
 import {IETHBridge} from "src/protocol/IETHBridge.sol";
 
 import {IMessageRelayer} from "src/protocol/IMessageRelayer.sol";
-import {MessageRelayer} from "src/protocol/taiko_alethia/MessageRelayer.sol";
 
 /// @dev Simple implementation of a message relayer.
 ///
@@ -21,7 +20,7 @@ import {MessageRelayer} from "src/protocol/taiko_alethia/MessageRelayer.sol";
 ///    to: address(MessageRelayer),
 ///    amount: 1.1 eth,
 ///    data: encodedData,
-///    context: abi.encode(address(Bob)) // Where Bob is the allowed relayer. Set to empty bytes to allow any relayer.
+///    context: bytes(0) // this relayer does not use this field
 ///    }
 ///
 ///    Where encodedData is roughly:
@@ -30,23 +29,25 @@ import {MessageRelayer} from "src/protocol/taiko_alethia/MessageRelayer.sol";
 ///            (
 ///                address(Alice),    // to
 ///                0.1 ether,        // tip for the relayer
+///                address(tipRecipient) // specified tip recipient
 ///                0,                // gas limit
 ///                ""                // data (in this case empty)
 ///            )
 ///        )
 ///
 /// To relay the message:
-///    1. The allowed relayer calls `relayMessage` if set. Otherwise, anyone can call `relayMessage`.
-///    2. This will call claimDeposit on the ETHBridge
-///    3. If the original message was specified correctly, this will call receiveMessage on this contract
-///    4. This will call the message recipient and send the tip to the relayer
+///    1. Trigger the relay:
+///      a) If the tip recipient is specified in the ETHDeposit, the relayer can call `ETHBridge.claimDeposit` directly.
+///      b) Otherwise, anyone can pass a tip recipient to `relayMessage`, which will then call `ETHBridge.claimDeposit`.
+///         Note that the provided recipient will be ignored if it already specified.
+///      Relayers should ensure the tip they receive is sufficient compensation for the gas spent on this call.
+///    2. If the original message was specified correctly, `claimDeposit` will invoke `receiveMessage` on this contract.
+///    3. This will call the message recipient and send the tip to the tip recipient.
 ///
-/// The relayer will net any tip minus the gas spent on the call to relayMessage.
-///
-/// WARN: There is no relayer protection. In particular:
-///    - if the ETHDeposit does not invoke receiveMessage, the relayer will not be paid.
-///    - if receiveMessage is called directly, the tip will be sent to whichever address exists in the
-/// TIP_RECIPIENT_SLOT (typically address(0)).
+/// WARN: There is no relayer protection. In particular
+/// - if the ETHDeposit does not invoke `receiveMessage`, the tip recipient will not be paid.
+/// - if a relayer calls `claimDeposit` directly (case 1a above) but no recipient is specified, the tip will be sent
+///   to whichever address happens to be stored in the `TIP_RECIPIENT_SLOT` (including address(0)).
 contract MessageRelayer is ReentrancyGuardTransient, IMessageRelayer {
     using TransientSlot for *;
 
@@ -62,34 +63,35 @@ contract MessageRelayer is ReentrancyGuardTransient, IMessageRelayer {
     uint256 private constant BUFFER = 20_000;
 
     /// @inheritdoc IMessageRelayer
-    /// @dev For relayer selection, encode the allowed relayer address in the context field of the ETHDeposit.
-    /// Use address(0) or empty context to allow any relayer.
+    /// @dev `ETHBridge.claimDeposit` should be called instead if the tip recipient is specified in the `ethDeposit`.
     function relayMessage(
         IETHBridge.ETHDeposit memory ethDeposit,
         uint256 height,
         bytes memory proof,
         address tipRecipient
     ) external {
-        if (ethDeposit.context.length == 32) {
-            address allowedRelayer = abi.decode(ethDeposit.context, (address));
-            require(allowedRelayer == address(0) || allowedRelayer == msg.sender, InvalidRelayer());
-        }
-
         TIP_RECIPIENT_SLOT.asAddress().tstore(tipRecipient);
 
         ethBridge.claimDeposit(ethDeposit, height, proof);
     }
 
     /// @inheritdoc IMessageRelayer
-    function receiveMessage(address to, uint256 tip, uint256 gasLimit, bytes memory data)
-        external
-        payable
-        nonReentrant
-    {
+    function receiveMessage(
+        address to,
+        uint256 tip,
+        address userSelectedTipRecipient,
+        uint256 gasLimit,
+        bytes memory data
+    ) external payable nonReentrant {
+        address tipRecipient = userSelectedTipRecipient;
+
+        // If none specified use the one in temporary storage
+        if (userSelectedTipRecipient == address(0)) {
+            tipRecipient = TIP_RECIPIENT_SLOT.asAddress().tload();
+        }
+
         require(msg.value >= tip, InsufficientValue());
         uint256 valueToSend = msg.value - tip;
-
-        address tipRecipient = TIP_RECIPIENT_SLOT.asAddress().tload();
 
         bool forwardMessageSuccess;
 
@@ -98,7 +100,7 @@ contract MessageRelayer is ReentrancyGuardTransient, IMessageRelayer {
         } else {
             // EIP-150: Only 63/64 of gas can be forwarded to external calls.
             // Check against actual forwardable gas with buffer for operations before the call.
-            uint256 maxForwardableGas = (gasleft() * 63 / 64) - BUFFER;
+            uint256 maxForwardableGas = (gasleft() - BUFFER) * 63 / 64;
             require(gasLimit <= maxForwardableGas, InsufficientGas());
             (forwardMessageSuccess,) = to.call{value: valueToSend, gas: gasLimit}(data);
         }

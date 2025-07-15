@@ -67,6 +67,7 @@ pub struct DepositSpecification {
     pub amount: U256,
     pub data: String,
     pub context: String,
+    pub canceler: Address,
 }
 
 fn deposit_specification() -> Vec<DepositSpecification> {
@@ -100,6 +101,7 @@ fn deposit_specification() -> Vec<DepositSpecification> {
         // (valid) call to `relayMessage(recipient, tip, forward amount, data)`
         relayer_calldata.as_str(),
     ];
+    let zero_canceler = Address::ZERO;
 
     let mut specifications = vec![];
 
@@ -110,6 +112,7 @@ fn deposit_specification() -> Vec<DepositSpecification> {
                 amount: U256::from(*amount),
                 data: data.to_string(),
                 context: String::from(""),
+                canceler: zero_canceler,
             });
         }
     }
@@ -121,6 +124,7 @@ fn deposit_specification() -> Vec<DepositSpecification> {
                 amount: U256::from(*amount),
                 data: data.to_string(),
                 context: hex::encode(vec![relayer_address].abi_encode()),
+                canceler: zero_canceler,
             });
         }
     }
@@ -143,6 +147,7 @@ async fn main() -> Result<()> {
                 spec.recipient,
                 decode(spec.data.clone())?.into(),
                 decode(spec.context.clone())?.into(),
+                spec.canceler,
             )
             .value(spec.amount)
             .send()

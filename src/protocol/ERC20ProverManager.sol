@@ -10,7 +10,7 @@ import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol
 /// contract for bids, stake and paying for publication fees.
 /// @dev This contract expects the `_initialProver` to have already approved this address to spend at least the initial
 /// liveness bond. This amount of tokens will be transferred from the `_initialProver` on the constructor at deployment.
-abstract contract ERC20ProverManager is BaseProverManager, IERC20Depositor {
+contract ERC20ProverManager is BaseProverManager, IERC20Depositor {
     using SafeERC20 for IERC20;
 
     IERC20 public immutable token;

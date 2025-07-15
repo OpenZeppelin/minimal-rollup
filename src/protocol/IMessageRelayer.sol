@@ -25,15 +25,13 @@ interface IMessageRelayer {
     /// @dev Tip transfer failed
     error TipTransferFailed();
 
-    /// @dev Invalid relayer address
-    error InvalidRelayer();
-
     /// @notice Executes the claimDeposit function on the ETHBridge.
     /// @dev Implements any intermediary step to claim the deposit (i.e. stores tipRecipient address)
     /// @param ethDeposit The deposit to claim
     /// @param height The `height` of the checkpoint on the source chain (i.e. the block number or publicationId)
     /// @param proof Proof of the deposit
-    /// @param tipRecipient Address the relayer will send the tip to (chosen by the relayer)
+    /// @param tipRecipient Address the relayer will send the tip to (chosen by the relayer) if not specified as part of
+    /// the ethDeposit
     function relayMessage(
         IETHBridge.ETHDeposit memory ethDeposit,
         uint256 height,
@@ -46,7 +44,14 @@ interface IMessageRelayer {
     /// needed).
     /// @param to Address to send the ETH to
     /// @param tip Tip to send to the tip recipient
+    /// @param userSelectedTipRecipient User selected address that will receive the tip
     /// @param gasLimit Gas limit to use when forwarding the message
     /// @param data Data to send to the recipient
-    function receiveMessage(address to, uint256 tip, uint256 gasLimit, bytes memory data) external payable;
+    function receiveMessage(
+        address to,
+        uint256 tip,
+        address userSelectedTipRecipient,
+        uint256 gasLimit,
+        bytes memory data
+    ) external payable;
 }
