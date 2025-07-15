@@ -69,7 +69,7 @@ contract CancelDeposit_WithNoCalldata_ToEOACancelRecipient is
 }
 
 // A cancelable deposit is made to an contract with calldata, cancel recipient is an EOA
-contract CancelDeposit_withCalldata_ToEOACancelRecipient is
+contract CancelDeposit_WithCalldata_ToEOACancelRecipient is
     NonzeroETH_ValidCallToPayableFn_IsCancelable,
     RecipientIsAnEOA,
     BridgeSufficientlyCapitalized,
@@ -80,7 +80,7 @@ contract CancelDeposit_withCalldata_ToEOACancelRecipient is
     }
 }
 
-// Same transfer as above, but the bridge does not have ETH. It should fail.
+// Same transfer as above, but no canceler is set. Cancellation attempts should fail.
 contract SimpleDepositToEOA_NoCancelerIsSet is
     NonzeroETH_NoCalldata,
     RecipientIsAnEOA,
@@ -113,7 +113,7 @@ contract DepositToPayableFunction is NonzeroETH_ValidCallToPayableFn, DepositIsV
     }
 }
 
-// Not be able to claim a deposit if the recipient to a cancelable deposit is a contract
+// Should not be able to claim a deposit if the recipient of a cancelable deposit is a contract
 contract CancelDeposit_WithCalldata_ToContractCancelRecipient is
     NonzeroETH_ValidCallToPayableFn_IsCancelable,
     CancelableDepositIsValidContractCall
