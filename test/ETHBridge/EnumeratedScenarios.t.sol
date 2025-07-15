@@ -56,8 +56,21 @@ contract SimpleDepositToEOA_BridgeUndercollateralized is
     DepositIsNotClaimable
 {}
 
-contract CancelDepositToEOA is
+// A cancelable deposit is made to an EOA with no calldata
+contract CancelDeposit_WithNoCalldata_ToEOACancelRecipient is
     NonzeroETH_NoCalldata_IsCancellable,
+    RecipientIsAnEOA,
+    BridgeSufficientlyCapitalized,
+    DepositIsCancelable
+{
+    function setUp() public override(CrossChainDepositExists, BridgeSufficientlyCapitalized) {
+        super.setUp();
+    }
+}
+
+// A cancelable deposit is made to an contract with calldata, cancel recipient is an EOA
+contract CancelDeposit_withCalldata_ToEOACancelRecipient is
+    NonzeroETH_ValidCallToPayableFn_IsCancelable,
     RecipientIsAnEOA,
     BridgeSufficientlyCapitalized,
     DepositIsCancelable
@@ -100,8 +113,8 @@ contract DepositToPayableFunction is NonzeroETH_ValidCallToPayableFn, DepositIsV
     }
 }
 
-// We should be able to send ETH to a payable function on a contract. This is a standard use case.
-contract CancelableDepositToPayableFunction is
+// Not be able to claim a deposit if the recipient to a cancelable deposit is a contract
+contract CancelDeposit_WithCalldata_ToContractCancelRecipient is
     NonzeroETH_ValidCallToPayableFn_IsCancelable,
     CancelableDepositIsValidContractCall
 {

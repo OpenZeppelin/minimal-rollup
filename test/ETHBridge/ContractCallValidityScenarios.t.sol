@@ -50,8 +50,8 @@ abstract contract DepositIsInvalidContractCall is
     }
 }
 
-// This contract describes behaviours that should be valid when the deposit is a valid call
-// to a recipient contract, and all other validity conditions are met.
+// This contract describes the secnario where a cancelable deposit is made but the canceler
+// specifies a contract as the recipient.
 abstract contract CancelableDepositIsValidContractCall is
     RecipientIsAContract,
     BridgeSufficientlyCapitalized,
