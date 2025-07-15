@@ -80,19 +80,40 @@ fn deposit_specification() -> Vec<DepositSpecification> {
 
     // _randomAddress("canceler");
     let canceler = address!("0xf9f5C5411F0bEf1880cE3B051BD14196479764D2");
+    let zero_canceler = Address::ZERO;
 
     let mut specifications = vec![];
-    for amount in amounts {
-        for data in calldata.iter() {
+    for &amount in &amounts {
+        for &data in &calldata {
             specifications.push(DepositSpecification {
                 recipient: recipient.parse().unwrap(),
                 amount: U256::from(amount),
                 data: data.to_string(),
                 context: String::from(""),
-                canceler,
+                canceler: zero_canceler,
             });
         }
     }
+
+    // Special canceler cases
+
+    // Case 1: Empty calldata with non-zero canceler
+    specifications.push(DepositSpecification {
+        recipient: recipient.parse().unwrap(),
+        amount: U256::from(amounts[1]),
+        data: calldata[0].to_string(),
+        context: String::from(""),
+        canceler,
+    });
+
+    // Case 2: Valid calldata with non-zero canceler
+    specifications.push(DepositSpecification {
+        recipient: recipient.parse().unwrap(),
+        amount: U256::from(amounts[1]),
+        data: calldata[1].to_string(),
+        context: String::from(""),
+        canceler,
+    });
     return specifications;
 }
 

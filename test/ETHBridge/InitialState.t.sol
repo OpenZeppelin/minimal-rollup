@@ -7,8 +7,6 @@ import {SampleDepositProof} from "./SampleDepositProof.t.sol";
 import {ETHBridge} from "src/protocol/ETHBridge.sol";
 import {SignalService} from "src/protocol/SignalService.sol";
 
-import {console} from "forge-std/console.sol";
-
 abstract contract InitialState is Test {
     ETHBridge bridge;
     SignalService signalService;
@@ -17,8 +15,10 @@ abstract contract InitialState is Test {
     // zero address means any relayer is allowed
     bytes anyRelayer = new bytes(0);
 
-    // means deposit is cancellable
-    address cancellerAddress = _randomAddress("canceler");
+    // address that can cancel deposits (if specified in the ETHDeposit)
+    address cancelerAddress = _randomAddress("canceler");
+
+    address zeroCanceler = address(0);
 
     address trustedCommitmentPublisher = _randomAddress("trustedCommitmentPublisher");
 

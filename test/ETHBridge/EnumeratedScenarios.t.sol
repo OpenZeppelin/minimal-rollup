@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
-import {DepositIsCancellable} from "./CancellableScenarios.t.sol";
+import {DepositIsCancelable, DepositIsNotCancelable} from "./CancelableScenarios.t.sol";
 import {BridgeHasNoEther, BridgeSufficientlyCapitalized} from "./CapitalizationScenarios.t.sol";
 import {DepositIsClaimable, DepositIsNotClaimable} from "./ClaimableScenarios.t.sol";
 import {DepositIsInvalidContractCall, DepositIsValidContractCall} from "./ContractCallValidityScenarios.t.sol";
@@ -10,8 +10,10 @@ import {RecipientIsAContract, RecipientIsAnEOA} from "./RecipientScenarios.t.sol
 import {
     NonzeroETH_InvalidCallToPayableFn,
     NonzeroETH_NoCalldata,
+    NonzeroETH_NoCalldata_IsCancellable,
     NonzeroETH_ValidCallToNonpayableFn,
     NonzeroETH_ValidCallToPayableFn,
+    NonzeroETH_ValidCallToPayableFn_IsCancellable,
     ZeroETH_InvalidCallToPayableFn,
     ZeroETH_NoCalldata,
     ZeroETH_ValidCallToNonpayableFn,
@@ -42,17 +44,6 @@ contract SimpleDepositToEOA is
     }
 }
 
-contract CancelDepositToEOA is
-    NonzeroETH_NoCalldata,
-    RecipientIsAnEOA,
-    BridgeSufficientlyCapitalized,
-    DepositIsCancellable
-{
-    function setUp() public override(CrossChainDepositExists, BridgeSufficientlyCapitalized) {
-        super.setUp();
-    }
-}
-
 // Same transfer as above, but the bridge does not have ETH. It should fail.
 contract SimpleDepositToEOA_BridgeUndercollateralized is
     NonzeroETH_NoCalldata,
@@ -60,6 +51,29 @@ contract SimpleDepositToEOA_BridgeUndercollateralized is
     BridgeHasNoEther,
     DepositIsNotClaimable
 {}
+
+contract CancelDepositToEOA is
+    NonzeroETH_NoCalldata_IsCancellable,
+    RecipientIsAnEOA,
+    BridgeSufficientlyCapitalized,
+    DepositIsCancelable
+{
+    function setUp() public override(CrossChainDepositExists, BridgeSufficientlyCapitalized) {
+        super.setUp();
+    }
+}
+
+// Same transfer as above, but the bridge does not have ETH. It should fail.
+contract SimpleDepositToEOA_NoCancelerIsSet is
+    NonzeroETH_NoCalldata,
+    RecipientIsAnEOA,
+    BridgeSufficientlyCapitalized,
+    DepositIsNotCancelable
+{
+    function setUp() public override(CrossChainDepositExists, BridgeSufficientlyCapitalized) {
+        super.setUp();
+    }
+}
 
 // The bridge does a direct call (without the standard function invocation syntax). This means calldata passed to an EOA
 // is ignored

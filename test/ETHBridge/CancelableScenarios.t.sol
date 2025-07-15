@@ -4,12 +4,12 @@ pragma solidity ^0.8.28;
 import {CrossChainDepositExists} from "./CrossChainDepositExists.t.sol";
 import {IETHBridge} from "src/protocol/IETHBridge.sol";
 
-/// This contract describes behaviours that should be valid when the deposit is cancellable.
-abstract contract DepositIsCancellable is CrossChainDepositExists {
+/// This contract describes behaviours that should be valid when the deposit is cancelable.
+abstract contract DepositIsCancelable is CrossChainDepositExists {
     function test_cancelDeposit_shouldSucceed() public {
         IETHBridge.ETHDeposit memory deposit = sampleDepositProof.getEthDeposit(_depositIdx());
         bytes memory proof = abi.encode(sampleDepositProof.getDepositSignalProof(_depositIdx()));
-        vm.prank(cancellerAddress);
+        vm.prank(cancelerAddress);
         bridge.cancelDeposit(deposit, cancellationRecipient, HEIGHT, proof);
     }
 
@@ -20,7 +20,7 @@ abstract contract DepositIsCancellable is CrossChainDepositExists {
 
         assertFalse(bridge.processed(id), "deposit already marked as claimed");
 
-        vm.prank(cancellerAddress);
+        vm.prank(cancelerAddress);
         bridge.cancelDeposit(deposit, cancellationRecipient, HEIGHT, proof);
         assertTrue(bridge.processed(id), "deposit not marked as claimed");
     }
@@ -33,7 +33,7 @@ abstract contract DepositIsCancellable is CrossChainDepositExists {
         vm.expectEmit();
         emit IETHBridge.DepositCancelled(id, cancellationRecipient);
 
-        vm.prank(cancellerAddress);
+        vm.prank(cancelerAddress);
         bridge.cancelDeposit(deposit, cancellationRecipient, HEIGHT, proof);
     }
 
@@ -45,7 +45,7 @@ abstract contract DepositIsCancellable is CrossChainDepositExists {
         uint256 initialRecipientBalance = recipient.balance;
         uint256 initialBridgeBalance = address(bridge).balance;
 
-        vm.prank(cancellerAddress);
+        vm.prank(cancelerAddress);
         bridge.cancelDeposit(deposit, cancellationRecipient, HEIGHT, proof);
         assertEq(recipient.balance, initialRecipientBalance, "recipient balance mismatch");
         assertEq(
@@ -60,7 +60,7 @@ abstract contract DepositIsCancellable is CrossChainDepositExists {
         IETHBridge.ETHDeposit memory deposit = sampleDepositProof.getEthDeposit(_depositIdx());
         bytes memory proof = abi.encode(sampleDepositProof.getDepositSignalProof(_depositIdx()));
 
-        vm.prank(cancellerAddress);
+        vm.prank(cancelerAddress);
         bridge.cancelDeposit(deposit, cancellationRecipient, HEIGHT, proof);
         vm.expectRevert(IETHBridge.AlreadyProcessed.selector);
         bridge.claimDeposit(deposit, HEIGHT, proof);
@@ -75,3 +75,39 @@ abstract contract DepositIsCancellable is CrossChainDepositExists {
         bridge.cancelDeposit(deposit, cancellationRecipient, HEIGHT, proof);
     }
 }
+
+abstract contract DepositIsNotCancelable is CrossChainDepositExists {
+    function test_cancelDeposit_shouldRevertWhen_NoCancelerIsSet() public {
+        IETHBridge.ETHDeposit memory deposit = sampleDepositProof.getEthDeposit(_depositIdx());
+        bytes memory proof = abi.encode(sampleDepositProof.getDepositSignalProof(_depositIdx()));
+
+        vm.expectRevert(IETHBridge.OnlyCanceler.selector);
+        vm.prank(cancelerAddress);
+        bridge.cancelDeposit(deposit, cancellationRecipient, HEIGHT, proof);
+    }
+}
+
+// // This contract describes behaviours that should be valid when the deposit is a valid call
+// // to a recipient contract, and all other validity conditions are met.
+// abstract contract DepositIsValidContractCall is
+//     RecipientIsAContract,
+//     BridgeSufficientlyCapitalized,
+//     DepositIsClaimable
+// {
+//     function setUp()
+//         public
+//         virtual
+//         override(CrossChainDepositExists, RecipientIsAContract, BridgeSufficientlyCapitalized)
+//     {
+//         super.setUp();
+//     }
+//
+//     function test_claimDeposit_shouldInvokeRecipientContract() public {
+//         IETHBridge.ETHDeposit memory deposit = sampleDepositProof.getEthDeposit(_depositIdx());
+//         bytes memory proof = abi.encode(sampleDepositProof.getDepositSignalProof(_depositIdx()));
+//
+//         vm.expectEmit();
+//         emit TransferRecipient.FunctionCalled();
+//         bridge.claimDeposit(deposit, HEIGHT, proof);
+//     }
+// }
