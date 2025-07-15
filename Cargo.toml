@@ -9,14 +9,6 @@ name = "signal_slot"
 path = "offchain/signal_slot.rs"
 
 [[bin]]
-name = "generic_signal_proof"
-path = "offchain/generic_signal_proof.rs"
-
-[[bin]]
-name = "deposit_signal_proof"
-path = "offchain/deposit_signal_proof.rs"
-
-[[bin]]
 name = "utils"
 path = "offchain/utils.rs"
 
