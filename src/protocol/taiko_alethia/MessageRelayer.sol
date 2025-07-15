@@ -37,11 +37,12 @@ import {MessageRelayer} from "src/protocol/taiko_alethia/MessageRelayer.sol";
 ///        )
 ///
 /// To relay the message:
-//     1. Anyone is allowed to call relayMessage however the tip recipient is determined the two following cases:
-//     a) If no tip recipient is specified in the ETHDeposit message the one in temporary storage will be used
-//     b) If a tip recipient is specified in the ETHDeposit message it will be used
-// It is up to the relayer to decide whether it is worth to relay this message or not (decided if they control the
-// tipRecipient address or not)
+/// 1. Anyone is allowed to call `relayMessage` however the tip recipient is determined by one of the two following
+/// cases:
+///     a) If no tip recipient is specified in the ETHDeposit message the one in temporary storage will be used
+///     b) If a tip recipient is specified in the ETHDeposit message it will be used
+/// It is up to the relayer to decide whether it is worth to relay this message or not (decided if they control the
+/// tipRecipient address or not)
 ///    2. This will call claimDeposit on the ETHBridge
 ///    3. If the original message was specified correctly, this will call receiveMessage on this contract
 ///    4. This will call the message recipient and send the tip to the tip recipient
@@ -79,11 +80,15 @@ contract MessageRelayer is ReentrancyGuardTransient, IMessageRelayer {
     }
 
     /// @inheritdoc IMessageRelayer
-    function receiveMessage(address to, uint256 tip, address tipRecipient, uint256 gasLimit, bytes memory data)
-        external
-        payable
-        nonReentrant
-    {
+    function receiveMessage(
+        address to,
+        uint256 tip,
+        address userSelectedTipRecipient,
+        uint256 gasLimit,
+        bytes memory data
+    ) external payable nonReentrant {
+        address tipRecipient = userSelectedTipRecipient;
+
         // If none specified use the one in temporary storage
         if (tipRecipient == address(0)) {
             tipRecipient = TIP_RECIPIENT_SLOT.asAddress().tload();

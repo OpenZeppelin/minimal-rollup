@@ -40,10 +40,14 @@ interface IMessageRelayer {
     /// needed).
     /// @param to Address to send the ETH to
     /// @param tip Tip to send to the tip recipient
-    /// @param tipRecipient Address that will receive the tip
+    /// @param userSelectedTipRecipient User selected address that will receive the tip
     /// @param gasLimit Gas limit to use when forwarding the message
     /// @param data Data to send to the recipient
-    function receiveMessage(address to, uint256 tip, address tipRecipient, uint256 gasLimit, bytes memory data)
-        external
-        payable;
+    function receiveMessage(
+        address to,
+        uint256 tip,
+        address userSelectedTipRecipient,
+        uint256 gasLimit,
+        bytes memory data
+    ) external payable;
 }
