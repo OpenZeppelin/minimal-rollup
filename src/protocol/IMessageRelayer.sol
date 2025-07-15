@@ -27,7 +27,8 @@ interface IMessageRelayer {
     /// @param ethDeposit The deposit to claim
     /// @param height The `height` of the checkpoint on the source chain (i.e. the block number or publicationId)
     /// @param proof Proof of the deposit
-    /// @param tipRecipient Address the relayer will send the tip to (chosen by the relayer)
+    /// @param tipRecipient Address the relayer will send the tip to (chosen by the relayer) if not specified as part of
+    /// the ethDeposit
     function relayMessage(
         IETHBridge.ETHDeposit memory ethDeposit,
         uint256 height,
