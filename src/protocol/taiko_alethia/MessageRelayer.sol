@@ -6,7 +6,6 @@ import {TransientSlot} from "@openzeppelin/contracts/utils/TransientSlot.sol";
 import {IETHBridge} from "src/protocol/IETHBridge.sol";
 
 import {IMessageRelayer} from "src/protocol/IMessageRelayer.sol";
-import {MessageRelayer} from "src/protocol/taiko_alethia/MessageRelayer.sol";
 
 /// @dev Simple implementation of a message relayer.
 ///
