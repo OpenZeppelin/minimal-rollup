@@ -35,6 +35,9 @@ abstract contract BaseProverManager is IProposerFees, IProverManager, BalanceAcc
     /// @dev Only current prover can call `exit`
     error OnlyCurrentProver();
 
+    /// @dev Publication is before the current period
+    error PublicationBeforeCurrentPeriod();
+
     /// @dev Publication has not passed liveness window
     error PublicationNotOldEnough();
 
@@ -122,6 +125,8 @@ abstract contract BaseProverManager is IProposerFees, IProverManager, BalanceAcc
     /// @dev The offered fee has to be at most `maxBidFraction` of the current best price.
     /// @dev The current best price may be the current prover's fee or the fee of the next bid, depending on whether the
     /// period is open or closed.
+    /// @dev Note that even if the current period (that has the last publication) is over, the auction will continue
+    /// until the next publication triggers a new period.
     function bid(uint96 offeredFee) external {
         uint256 currentPeriodId_ = _currentPeriodId;
         LibProvingPeriod.Period storage currentPeriod = _periods[currentPeriodId_];
@@ -146,24 +151,29 @@ abstract contract BaseProverManager is IProposerFees, IProverManager, BalanceAcc
     /// @dev This can be called by anyone, and they get `evictorIncentiveFraction` of the liveness bond as an
     /// incentive.
     function evictProver(IInbox.PublicationHeader calldata publicationHeader) external {
+        uint256 periodId = _currentPeriodId;
+        uint40 previousPeriodEnd = periodId > 0 ? _periods[periodId - 1].end : 0;
+
         require(inbox.validateHeader(publicationHeader), InvalidPublication());
         require(publicationHeader.timestamp + _livenessWindow() < block.timestamp, PublicationNotOldEnough());
+        require(publicationHeader.timestamp > previousPeriodEnd, PublicationBeforeCurrentPeriod());
 
-        LibProvingPeriod.Period storage period = _periods[_currentPeriodId];
+        LibProvingPeriod.Period storage period = _periods[periodId];
+        require(period.isInitialized(), PeriodNotInitialized());
         require(period.isOpen(), ProvingPeriodClosed());
 
-        ICheckpointTracker.Checkpoint memory lastProven = checkpointTracker.getProvenCheckpoint();
-        require(publicationHeader.id > lastProven.publicationId, PublicationAlreadyProven());
+        require(publicationHeader.id > checkpointTracker.provenPublicationId(), PublicationAlreadyProven());
 
         // We use this to mark the prover as evicted
         (uint40 end,) = period.close(_exitDelay(), 0);
 
         // Reward the evictor and slash the prover
-        uint96 evictorIncentive = period.stake.scaleByBPS(_evictorIncentiveFraction());
+        uint96 bond = period.stake;
+        uint96 evictorIncentive = bond.scaleByBPS(_evictorIncentiveFraction());
         _increaseBalance(msg.sender, evictorIncentive);
         period.slash(evictorIncentive);
 
-        emit ProverEvicted(period.prover, msg.sender, end, period.stake);
+        emit ProverEvicted(period.prover, msg.sender, end, bond);
     }
 
     /// @inheritdoc IProverManager
@@ -190,7 +200,6 @@ abstract contract BaseProverManager is IProposerFees, IProverManager, BalanceAcc
         ICheckpointTracker.Checkpoint calldata end,
         IInbox.PublicationHeader calldata firstPub,
         IInbox.PublicationHeader calldata lastPub,
-        uint256 numDelayedPublications,
         bytes calldata proof,
         uint256 periodId
     ) external {
@@ -205,7 +214,7 @@ abstract contract BaseProverManager is IProposerFees, IProverManager, BalanceAcc
         require(start.publicationId + 1 == firstPub.id, InvalidStartPublication());
         require(firstPub.timestamp > previousPeriodEnd, FirstPublicationIsBeforePeriod());
 
-        uint256 numPublications = checkpointTracker.proveTransition(start, end, numDelayedPublications, proof);
+        (uint256 numPublications, uint256 numDelayedPublications) = checkpointTracker.proveTransition(start, end, proof);
 
         if (period.isDeadlinePassed()) {
             period.assignReward(msg.sender);
@@ -217,9 +226,7 @@ abstract contract BaseProverManager is IProposerFees, IProverManager, BalanceAcc
     /// @inheritdoc IProverManager
     function finalizePastPeriod(uint256 periodId, IInbox.PublicationHeader calldata provenPublication) external {
         require(inbox.validateHeader(provenPublication), InvalidPublication());
-
-        ICheckpointTracker.Checkpoint memory lastProven = checkpointTracker.getProvenCheckpoint();
-        require(lastProven.publicationId >= provenPublication.id, PublicationNotProven());
+        require(checkpointTracker.provenPublicationId() >= provenPublication.id, PublicationNotProven());
 
         LibProvingPeriod.Period storage period = _periods[periodId];
         require(period.isInitialized(), PeriodNotInitialized());
@@ -259,7 +266,7 @@ abstract contract BaseProverManager is IProposerFees, IProverManager, BalanceAcc
     /// @param offeredFee The new bid
     function _ensureSufficientUnderbid(uint96 fee, uint96 offeredFee) internal view virtual {
         uint96 requiredMaxFee = fee.scaleByBPS(_maxBidFraction());
-        require(offeredFee <= requiredMaxFee, OfferedFeeTooHigh());
+        require(offeredFee <= requiredMaxFee && fee > 0, OfferedFeeTooHigh());
     }
 
     /// @dev implementation of `IProverManager.claimProvingVacancy` with the option to specify a prover
@@ -276,6 +283,8 @@ abstract contract BaseProverManager is IProposerFees, IProverManager, BalanceAcc
 
         _decreaseBalance(prover, _livenessBond());
         nextPeriod.init(prover, fee, _delayedFeePercentage(), _livenessBond());
+
+        emit ProverVacancyClaimed(prover, periodId + 1, fee, _livenessBond());
     }
 
     /// @dev mark the next period as active. Future publications will be assigned to the new period
