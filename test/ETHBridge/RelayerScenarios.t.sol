@@ -18,9 +18,9 @@ abstract contract DepositIsClaimableByRelayer is CrossChainDepositExists {
         bytes memory proof = abi.encode(sampleDepositProof.getDepositSignalProof(_depositIdx()));
         (, bytes32 id) = sampleDepositProof.getDepositInternals(_depositIdx());
 
-        assertFalse(bridge.claimed(id), "deposit already marked as claimed");
+        assertFalse(bridge.processed(id), "deposit already marked as processed");
         messageRelayer.relayMessage(deposit, HEIGHT, proof, tipRecipient);
-        assertTrue(bridge.claimed(id), "deposit not marked as claimed");
+        assertTrue(bridge.processed(id), "deposit not marked as processed");
     }
 
     function test_relayMessage_shouldEmitEvent() public {
