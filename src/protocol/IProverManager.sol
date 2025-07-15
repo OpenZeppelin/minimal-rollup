@@ -9,7 +9,7 @@ interface IProverManager {
     /// @param prover The address of the prover that made the bid
     /// @param periodId The period that the prover is bidding to prove
     /// @param fee The fee that the prover is willing to charge for proving each publication
-    /// @param stake The stake that the prover is going to put as stake for the period
+    /// @param stake The value that the prover is going to put as stake for the period
     event ProverOffer(address indexed prover, uint256 periodId, uint256 fee, uint256 stake);
 
     /// @notice Emitted when a prover is evicted from the prover role
@@ -28,6 +28,13 @@ interface IProverManager {
     /// @notice Emitted when a new period starts
     /// @param periodId The id of the new period
     event NewPeriod(uint256 periodId);
+
+    /// @notice Emitted when a prover claims a vacant period
+    /// @param prover The address of the prover that made the claim
+    /// @param periodId The period that the prover will claim (after the vacant period)
+    /// @param fee The fee that the prover is willing to charge for proving each publication
+    /// @param stake The value that the prover is going to put as stake for the period
+    event ProverVacancyClaimed(address indexed prover, uint256 periodId, uint256 fee, uint256 stake);
 
     /// @notice Bid to become the prover for the next period
     /// @param offeredFee The fee you are willing to charge for proving each publication
@@ -61,8 +68,6 @@ interface IProverManager {
     /// @param firstPub The first publication header in the transition. Note that since checkpoints refer to the
     /// publication they follow, this should have an id `start.publicationId + 1`
     /// @param lastPub The last publication header in the transition
-    /// @param numDelayedPublications The number of delayed publications from the total number of publications being
-    /// proven
     /// @param proof Arbitrary data passed to the `verifier` contract to confirm the transition validity
     /// @param periodId The id of the period for which the proof is submitted
     function prove(
@@ -70,7 +75,6 @@ interface IProverManager {
         ICheckpointTracker.Checkpoint calldata end,
         IInbox.PublicationHeader calldata firstPub,
         IInbox.PublicationHeader calldata lastPub,
-        uint256 numDelayedPublications,
         bytes calldata proof,
         uint256 periodId
     ) external;

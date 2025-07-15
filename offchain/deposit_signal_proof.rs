@@ -1,4 +1,4 @@
-use alloy::primitives::{address, bytes, Address, U256};
+use alloy::primitives::{address, bytes, U256};
 use eyre::Result;
 
 mod utils;

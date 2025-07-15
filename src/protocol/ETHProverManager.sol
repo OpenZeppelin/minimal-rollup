@@ -7,7 +7,7 @@ import {IETHDepositor} from "./IProverManager.sol";
 /// @title ETHProverManager
 /// @notice Implementation of the `BaseProverManager` contract that uses ETH for bids, stake and paying for publication
 /// fees.
-abstract contract ETHProverManager is BaseProverManager, IETHDepositor {
+contract ETHProverManager is BaseProverManager, IETHDepositor {
     constructor(address _inbox, address _checkpointTracker, address _initialProver, uint96 _initialFee)
         payable
         BaseProverManager(_inbox, _checkpointTracker, _initialProver, _initialFee, msg.value)
