@@ -29,8 +29,8 @@ import {MessageRelayer} from "src/protocol/taiko_alethia/MessageRelayer.sol";
 ///            IMessageRelayer.receiveMessage,
 ///            (
 ///                address(Alice),    // to
-///                address(tipRecipient) // specified tip recipient
 ///                0.1 ether,        // tip for the relayer
+///                address(tipRecipient) // specified tip recipient
 ///                0,                // gas limit
 ///                ""                // data (in this case empty)
 ///            )
