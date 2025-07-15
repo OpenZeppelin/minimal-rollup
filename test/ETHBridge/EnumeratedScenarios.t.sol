@@ -5,12 +5,15 @@ import {BridgeHasNoEther, BridgeSufficientlyCapitalized} from "./CapitalizationS
 import {DepositIsClaimable, DepositIsNotClaimable} from "./ClaimableScenarios.t.sol";
 import {DepositIsInvalidContractCall, DepositIsValidContractCall} from "./ContractCallValidityScenarios.t.sol";
 import {CrossChainDepositExists} from "./CrossChainDepositExists.t.sol";
-import {RecipientIsAContract, RecipientIsAnEOA} from "./RecipientScenarios.t.sol";
+import {RecipientIsAContract, RecipientIsAnEOA, RecipientIsRelayer} from "./RecipientScenarios.t.sol";
+
+import {DepositIsClaimableByRelayer} from "./RelayerScenarios.t.sol";
 import {
     NonzeroETH_InvalidCallToPayableFn,
     NonzeroETH_NoCalldata,
     NonzeroETH_ValidCallToNonpayableFn,
     NonzeroETH_ValidCallToPayableFn,
+    NonzeroETH_ValidCallToRelayer,
     ZeroETH_InvalidCallToPayableFn,
     ZeroETH_NoCalldata,
     ZeroETH_ValidCallToNonpayableFn,
@@ -37,6 +40,17 @@ contract SimpleDepositToEOA is
     DepositIsClaimable
 {
     function setUp() public override(CrossChainDepositExists, BridgeSufficientlyCapitalized) {
+        super.setUp();
+    }
+}
+
+contract RelayedDepositToEOA is
+    NonzeroETH_ValidCallToRelayer,
+    RecipientIsRelayer,
+    BridgeSufficientlyCapitalized,
+    DepositIsClaimableByRelayer
+{
+    function setUp() public override(CrossChainDepositExists, BridgeSufficientlyCapitalized, RecipientIsRelayer) {
         super.setUp();
     }
 }
