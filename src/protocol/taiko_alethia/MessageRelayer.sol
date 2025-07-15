@@ -36,19 +36,18 @@ import {IMessageRelayer} from "src/protocol/IMessageRelayer.sol";
 ///        )
 ///
 /// To relay the message:
-//     1. Anyone is allowed to call relayMessage however the tip recipient is determined the two following cases:
-//     a) If no tip recipient is specified in the ETHDeposit message the one in temporary storage will be used
-//     b) If a tip recipient is specified in the ETHDeposit message it will be used
-// It is up to the relayer to decide whether it is worth to relay this message or not (decided if they control the
-// tipRecipient address or not)
-///    2. This will call claimDeposit on the ETHBridge
-///    3. If the original message was specified correctly, this will call receiveMessage on this contract
-///    4. This will call the message recipient and send the tip to the tip recipient
+///    1. Trigger the relay:
+///      a) If the tip recipient is specified in the ETHDeposit, the relayer can call `ETHBridge.claimDeposit` directly.
+///      b) Otherwise, anyone can pass a tip recipient to `relayMessage`, which will then call `ETHBridge.claimDeposit`.
+///         Note that the provided recipient will be ignored if it already specified.
+///      Relayers should ensure the tip they receive is sufficient compensation for the gas spent on this call.
+///    2. If the original message was specified correctly, `claimDeposit` will invoke `receiveMessage` on this contract.
+///    3. This will call the message recipient and send the tip to the tip recipient.
 ///
-/// The tip recipient will net any tip minus the gas spent on the call to relayMessage.
-///
-/// WARN: There is no relayer protection. In particular:
-///    - if the ETHDeposit does not invoke receiveMessage, the tip recipient will not be paid.
+/// WARN: There is no relayer protection. In particular
+/// - if the ETHDeposit does not invoke `receiveMessage`, the tip recipient will not be paid.
+/// - if a relayer calls `claimDeposit` directly (case 1a above) but no recipient is specified, the tip will be sent
+///   to whichever address happens to be stored in the `TIP_RECIPIENT_SLOT` (including address(0)).
 contract MessageRelayer is ReentrancyGuardTransient, IMessageRelayer {
     using TransientSlot for *;
 
@@ -64,8 +63,7 @@ contract MessageRelayer is ReentrancyGuardTransient, IMessageRelayer {
     uint256 private constant BUFFER = 20_000;
 
     /// @inheritdoc IMessageRelayer
-    /// @dev Only specify a tip recipient if one is not set in the ETHDeposit data field otherwise
-    /// that one will be used instead
+    /// @dev `ETHBridge.claimDeposit` should be called instead if the tip recipient is specified in the `ethDeposit`.
     function relayMessage(
         IETHBridge.ETHDeposit memory ethDeposit,
         uint256 height,
