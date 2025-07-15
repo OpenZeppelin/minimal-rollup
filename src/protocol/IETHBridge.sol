@@ -42,6 +42,9 @@ interface IETHBridge {
     /// @dev Failed to call the receiver with value.
     error FailedClaim();
 
+    /// @dev To address is set to zero
+    error ZeroReceiver();
+
     /// @dev A deposit was already claimed or cancelled
     error AlreadyProcessed();
 
