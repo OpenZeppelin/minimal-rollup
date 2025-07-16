@@ -92,7 +92,7 @@ My recommended assertion mechanism just instantiates this pattern generically.
 
 ## Same Slot Message Passing
 
-This idea was [introduced by Nethermind](https://ethresear.ch/t/same-slot-l1-l2-message-passing/21186) and as noted in that post, it can be combined with their fast-withdrawal mechanism to perform a same-slot round-trip operation. Here I will just focus on the assert-and-prove structure of the L1-to-L2 message.
+This idea was [introduced by Nethermind](https://ethresear.ch/t/same-slot-l1-l2-message-passing/21186) and as explained in that post, it can be combined with their fast-withdrawal mechanism to perform a same-slot round-trip operation. Here I will just focus on the assert-and-prove structure of the L1-to-L2 message.
 
 As noted, the anchor block mechanism requires the Inbox contract to query the block hash of the relevant L1 block, which implies it does not support reacting to transactions included in the current L1 block. However, an L2 sequencer that can predict that a particular L1 transaction will be included in the publication block (orange in this example) can assert that claim immediately in the L2.
 
