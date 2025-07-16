@@ -343,7 +343,7 @@ The sequencer is still responsible for ensuring all assertions are proven (so th
 
 ## Example walkthrough
 
-Let's walkthrough a possible price-feed example in detail using the [sample `PreemptiveAssertions` and `RealtimeL1State` contracts](https://github.com/OpenZeppelin/minimal-rollup/pull/78) deployed on L2.
+Let's walkthrough a possible price-feed example in detail using the [sample `PreemptiveAssertions` and `RealtimeL1State` contracts](https://github.com/OpenZeppelin/minimal-rollup/pull/78) deployed on L2. This may be overkill if the publications are only a few L1 blocks long (since we're only saving a few L1 `blockhash` calls) but this example is detailed enough to elucidate the mechanism.
 
 #### Context
 
