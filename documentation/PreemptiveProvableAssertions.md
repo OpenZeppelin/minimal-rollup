@@ -37,7 +37,7 @@ We are focussed on potential functionality that can be offered by an L2 sequence
 
 <p align="center"><img src="./provable_assertion_images.2.png"/></p>
 
-Such a sequencer would be partially limited in their flexibility to reorganise L2 transactions over several slots, because they may offer preconfirmations or liveness guarantees to users. Whenever we discuss a transaction occurring on L2 before it is actually published to L1, we really just mean that it can influence later transactions and the sequencer is unlikely to remove or delay it. For simplicity, this article will default to describing L2 blocks as if they are continuously created and finalized in real time.
+Such a sequencer would be partially limited in their flexibility to reorganise L2 transactions over several slots, because they may offer preconfirmations or liveness guarantees to users. Whenever we discuss a transaction occurring on L2 before it is actually published to L1, we really just mean that it can influence later transactions and the sequencer is unlikely to remove or delay it. For simplicity, this article will default to describing L2 blocks as if they are continuously created and finalised in real time.
 
 ## Anchor blocks
 
@@ -86,6 +86,8 @@ As we have seen, the sequencer's claim when constructing the anchor transaction 
 - the sequencer knows something that they want to assert inside the L2 EVM, so that L2 users and contracts can build on it.
 - any L1 information needed to prove the claim will eventually be available in the L1 EVM at publication time. Note that this does not mean the claim itself needs to be verified on L1, just that the final publication can contain a mixture of sequencer-provided data and L1-validated data.
 - the rollup's state transition function requires the claim to be proven for the publication to be valid.
+
+My recommended assertion mechanism just instantiates this pattern generically.
 
 
 ## Same Slot Message Passing
