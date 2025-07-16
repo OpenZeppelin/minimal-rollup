@@ -268,7 +268,7 @@ It's worth noting that proving any blocks in a publication implies ensuring the 
 
 ## Implementation Framework
 
-I believe rollup designs should support the general pattern of making assertions, but they should not be opinionated about which particular assertions are valid or how they should be resolved. Instead, individual sequencers should decide which assertions (if any) they support, and L2 users and contracts should decide which ones to rely on. This implicitly means L2 users are responsible for ensuring the proving mechanism chosen by the sequencer will reliably confirm the assertion.
+As explained already, I believe rollup designs should support the general pattern of making assertions, but they should not be opinionated about which particular assertions are valid or how they should be resolved. Instead, individual sequencers should decide which assertions (if any) they support, and L2 users and contracts should decide which ones to rely on. This implicitly means L2 users are responsible for ensuring the proving mechanism chosen by the sequencer will reliably confirm the assertion.
 
 The basic structure is a mapping (in an L2 contract) of unproven assertions that must be empty at the start and end of every publication. The `assertionId` is a hash of anything necessary to describe the assertion type as well as the `msg.sender` that created it, and it can only be cleared by the same address. The `value` would be any instance-specific data (or possibly a hash of it).
 
