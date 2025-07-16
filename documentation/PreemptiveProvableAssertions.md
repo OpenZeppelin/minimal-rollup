@@ -240,7 +240,9 @@ Unfortunately, realtime proving is currently only possible for simple app chains
 
 An intermediate mechanism would be to require all sequencers to post the final rollup state with each publication. This would be part of the rollup specification, so an incorrect state root would invalidate the whole publication. By default, sequencers would be incentivised to post the correct value to ensure they receive the publication fees, to retain any staked deposit, and to remain part of the rollup's sequencer set.
 
-With this mechanism, cross-rollup assertions could be proven against the _claimed state_, whether or not it is eventually proven correct. Using the cross-chain swap example (focussing on one side for simplicity, but the other side is symmetrical):
+Note that this would be useful in the shared sequencer (eg. AggLayer) approach as well, since the posted state would function like a strong preconfirmation. It would be stronger than a regular preconfirmation because it limits the rollup to only two possible states (either the posted state is valid or the state has not changed) and any penalties would be automatically executed when the proof is eventually resolved.
+
+In our case, cross-rollup assertions could be proven against the _claimed state_, whether or not it is eventually proven correct. Using the cross-chain swap example (focussing on one side for simplicity, but the other side is symmetrical):
 
 - the sequencer would decide to include both interdependent transactions.
 - on rollup A, they assert that Bob will send 10 ETH to Alice on rollup B.
