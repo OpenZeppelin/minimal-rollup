@@ -256,7 +256,7 @@ Note that there is an extra level of indirection, which introduces a new risk. A
 - Alice's transaction would be included in rollup A, but the whole rollup B publication would be discarded (so Alice would end up sending a one-sided transfer).
 - The sequencer would lose all transaction fees associated with the discarded rollup B publication, along with any deposited stake.
 
-This mechanism should only be considered if the cost to the sequencer is large enough to deter defecting in this way.
+This mechanism should only be considered if a user believes the cost to the sequencer is large enough to deter defecting in this way, or the stakes are low enough. It could also be used in any situation where the user only wants to ensure the absence of a transaction on the other rollup (since either the claimed state is correct or the other rollup's state is unchanged). However, the rollup protocol itself should not rely on a staked claim for enshrined operations (such as the native bridge) because this would spread the risk to users who had not opted in.
 
 ### Sub-publication proving
 
