@@ -201,7 +201,7 @@ Assume both participants (let's call them Alice and Bob) create and publish such
 - include Bob's transaction to set his choice to `COOPERATE` as well.
 - at this point the game is complete but the sequencer still needs to prove the two outstanding assertions (explained below).
 
-This mechanism allows users to simply state their desired outcome, offloading the coordination and complexity to the block builders. It could be simplfiied further if the participants make the assertions themselves (possibly using the `pauser` mechanism described below) with the following snippet:
+This mechanism allows users to simply state their desired outcome, offloading the coordination and complexity to the block builders. It could be simplified further if the participants make the assertions themselves (possibly using the `pauser` mechanism described below) with the following snippet:
 
 ```solidity
 // directly assert that my partner will cooperate. This transaction will not be sequenced if the sequencer disagrees.
