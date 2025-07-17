@@ -1,5 +1,7 @@
 # Preemptive Provable Assertions
 
+_Thanks to [Gustavo Gonzalez](https://x.com/gusgonzalezs) (Taiko), [Jason Vranek](https://x.com/jasnoodle) (Fabric) and [Lin Oshitani](https://x.com/linoscope) (Nethermind) for their review and feedback._
+
 ## Overview
 
 I'd like to describe a mechanism to extend the flexibility of rollups. I learned the core insight through Taiko's anchor transaction mechanism and Nethermind's [Same Slot L1->L2 Message Passing](https://ethresear.ch/t/same-slot-l1-l2-message-passing/21186) design, and I would generalise it to the statement:
