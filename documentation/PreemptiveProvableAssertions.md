@@ -166,7 +166,7 @@ This example is typically used to explain game theory but in the context of bloc
 
 The standard way to solve this is for both participants to delegate their voting rights to an external coordination contract. Note that a 7702-enhanced EOA is insufficient because it is not binding: delegating to code that selects `COOPERATE` will not convince your partner because you can always change the code later. This adds complexity because both participants need to validate that there are no loopholes in the coordination contract, and adds timing overhead to account for delegating the rights and recovering from the possibility of a non-responsive partner.
 
-Using assertions, each participant can declare their conditional choice unilaterally by executing (either through a contract or 7702-enhanced EOA) the following snippet.
+Using assertions, each participant can declare their conditional choice unilaterally by executing (either through a contract or 7702-enhanced EOA) the following snippet:
 
 ```solidity
 // retrieve my partner's choice recorded in the next block
@@ -183,25 +183,38 @@ prisonersDilemma.choose(COOPERATE);
 
 Assume both participants (let's call them Alice and Bob) create and publish such a transaction. The sequencer can recognise that both transactions can succeed together. They can then sequence the following transcript:
 
-- assert that the `choices` call in the next block will return `COOPERATE` for both participants with the following snippet.
+- assert that the `choices` call in the next block will return `COOPERATE` for both participants with the following snippet:
 
-```solidity
-assertFutureState(
-	block.number + 1,
-	prisonersDilemma,
-	abi.encodeCall(IPrisonersDilemma.choices, alice), COOPERATE
-)
-assertFutureState(
-	block.number + 1,
-	prisonersDilemma,
-	abi.encodeCall(IPrisonersDilemma.choices, bob), COOPERATE
-)
-```
+	```solidity
+	assertFutureState(
+		block.number + 1,
+		prisonersDilemma,
+		abi.encodeCall(IPrisonersDilemma.choices, alice), COOPERATE
+	)
+	assertFutureState(
+		block.number + 1,
+		prisonersDilemma,
+		abi.encodeCall(IPrisonersDilemma.choices, bob), COOPERATE
+	)
+	```
 - include Alice's transaction in the current block to set her choice to `COOPERATE`. Recall that this would revert if the sequencer did not already assert that Bob will choose `COOPERATE`.
 - include Bob's transaction to set his choice to `COOPERATE` as well.
 - at this point the game is complete but the sequencer still needs to prove the two outstanding assertions (explained below).
 
-This mechanism allows users to simply state their desired outcome, offloading the coordination and complexity to the block builders.
+This mechanism allows users to simply state their desired outcome, offloading the coordination and complexity to the block builders. It could be simplfiied further if the participants make the assertions themselves (possibly using the `pauser` mechanism described below) with the following snippet:
+
+```solidity
+// directly assert that my partner will cooperate. This transaction will not be sequenced if the sequencer disagrees.
+assertFutureState(
+	block.number + 1,
+	prisonersDilemma,
+	abi.encodeCall(IPrisonersDilemma.choices, partner), COOPERATE
+)
+// now that I am convinced my partner will choose COOPERATE, I can as well.
+prisonersDilemma.choose(COOPERATE);
+```
+
+This allows Alice to pay directly for the assertion she wants rather than compensating the sequencer independendently, and removes the possibility that she would pay for a reverting transaction (if hers was sequenced in isolation).
 
 It also allows complex transactions to progressively resolve over time. For example, consider a user who offers to withdraw funds from their DeFi investment and provide an unsecured loan to anyone as long as the funds are returned with some minimum interest payment, potentially shared with the builder to justify the effort. This is like offering a flash loan in the sense that no collateral is required and the loan must be repaid or it never occurred, but it could span several L1 slots (as long as it's still within the sequencer's publication window).
 
