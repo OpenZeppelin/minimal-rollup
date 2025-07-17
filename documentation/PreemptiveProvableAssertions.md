@@ -22,7 +22,7 @@ This article will unpack that statement and provide some example use cases. We w
 To forestall a possible misunderstanding, it's worth emphasising that my preference is for protocols to strictly define and enforce simple, secure and flexible abstractions. For convenience (or as a Schelling point), the developer team may enshrine some particular use cases, but they should always be implemented at a higher layer. Therefore, this article attempts to improve flexibility in two directions:
 
 1. the mechanism (explained below) is generalised to allow arbitrarily complex assertions.
-2. the [sample implementation](https://github.com/OpenZeppelin/minimal-rollup/pull/78) exposes the "assertion" primitive to users, developers and sequencers, allowing them to build whatever systems they choose with whatever risks they accept. The protocol's job is to provide the framework and ensure risks are contained, so they only effect participants who choose to opt in.
+2. the [sample implementation](https://github.com/OpenZeppelin/minimal-rollup/pull/78) exposes the "assertion" primitive to users, developers and sequencers, allowing them to build whatever systems they choose with whatever risks they accept. The protocol's job is to provide the framework and ensure risks are contained, so they only affect participants who choose to opt in.
 
 
 ## Background
