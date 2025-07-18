@@ -23,12 +23,12 @@ abstract contract UniversalTest is InitialState {
         uint256 snapshotId = vm.snapshot();
 
         vm.prank(alice);
-        bytes32 id0 = bridge.deposit(charlie, "", anyRelayer, nonCancellableAddress);
+        bytes32 id0 = bridge.deposit(charlie, "", anyRelayer, zeroCanceler);
 
         vm.revertTo(snapshotId);
 
         vm.prank(alice);
-        bytes32 id1 = bridge.deposit(charlie, "", anyRelayer, nonCancellableAddress);
+        bytes32 id1 = bridge.deposit(charlie, "", anyRelayer, zeroCanceler);
 
         assertEq(id0, id1, "identical deposits produce different ids");
     }
@@ -37,12 +37,12 @@ abstract contract UniversalTest is InitialState {
         uint256 snapshotId = vm.snapshot();
 
         vm.prank(alice);
-        bytes32 id0 = bridge.deposit(charlie, "", anyRelayer, nonCancellableAddress);
+        bytes32 id0 = bridge.deposit(charlie, "", anyRelayer, zeroCanceler);
 
         vm.revertTo(snapshotId);
 
         vm.prank(bob);
-        bytes32 id1 = bridge.deposit(charlie, "", anyRelayer, nonCancellableAddress);
+        bytes32 id1 = bridge.deposit(charlie, "", anyRelayer, zeroCanceler);
 
         assertNotEq(id0, id1, "different caller produces same id");
     }
@@ -52,11 +52,11 @@ abstract contract UniversalTest is InitialState {
 
         uint256 snapshotId = vm.snapshot();
 
-        bytes32 id0 = bridge.deposit(bob, "", anyRelayer, nonCancellableAddress);
+        bytes32 id0 = bridge.deposit(bob, "", anyRelayer, zeroCanceler);
 
         vm.revertTo(snapshotId);
 
-        bytes32 id1 = bridge.deposit(charlie, "", anyRelayer, nonCancellableAddress);
+        bytes32 id1 = bridge.deposit(charlie, "", anyRelayer, zeroCanceler);
 
         assertNotEq(id0, id1, "different recipient produces same id");
     }
@@ -66,11 +66,11 @@ abstract contract UniversalTest is InitialState {
 
         uint256 snapshotId = vm.snapshot();
 
-        bytes32 id0 = bridge.deposit{value: 0.5 ether}(bob, "", anyRelayer, nonCancellableAddress);
+        bytes32 id0 = bridge.deposit{value: 0.5 ether}(bob, "", anyRelayer, zeroCanceler);
 
         vm.revertTo(snapshotId);
 
-        bytes32 id1 = bridge.deposit{value: 1 ether}(bob, "", anyRelayer, nonCancellableAddress);
+        bytes32 id1 = bridge.deposit{value: 1 ether}(bob, "", anyRelayer, zeroCanceler);
 
         assertNotEq(id0, id1, "different value produces same id");
     }
@@ -80,11 +80,11 @@ abstract contract UniversalTest is InitialState {
 
         uint256 snapshotId = vm.snapshot();
 
-        bytes32 id0 = bridge.deposit(bob, "", anyRelayer, nonCancellableAddress);
+        bytes32 id0 = bridge.deposit(bob, "", anyRelayer, zeroCanceler);
 
         vm.revertTo(snapshotId);
 
-        bytes32 id1 = bridge.deposit(bob, "somedata", anyRelayer, nonCancellableAddress);
+        bytes32 id1 = bridge.deposit(bob, "somedata", anyRelayer, zeroCanceler);
 
         assertNotEq(id0, id1, "different value produces same id");
     }
@@ -93,7 +93,7 @@ abstract contract UniversalTest is InitialState {
         uint256 initialNonce = getNonce();
 
         vm.startPrank(alice);
-        bridge.deposit(bob, "", anyRelayer, nonCancellableAddress);
+        bridge.deposit(bob, "", anyRelayer, zeroCanceler);
 
         assertEq(getNonce(), initialNonce + 1, "nonce not incremented");
     }
@@ -101,8 +101,8 @@ abstract contract UniversalTest is InitialState {
     function test_deposit_duplicateDepositsProduceDifferentIds() public {
         vm.startPrank(alice);
 
-        bytes32 id0 = bridge.deposit(bob, "", anyRelayer, nonCancellableAddress);
-        bytes32 id1 = bridge.deposit(bob, "", anyRelayer, nonCancellableAddress);
+        bytes32 id0 = bridge.deposit(bob, "", anyRelayer, zeroCanceler);
+        bytes32 id1 = bridge.deposit(bob, "", anyRelayer, zeroCanceler);
 
         assertNotEq(id0, id1, "duplicate deposits produce same id");
     }
@@ -115,12 +115,11 @@ abstract contract UniversalTest is InitialState {
             amount: 1 ether,
             data: "",
             context: anyRelayer,
-            canceler: nonCancellableAddress
+            canceler: zeroCanceler
         });
 
         vm.prank(ethDeposit.from);
-        bytes32 id =
-            bridge.deposit{value: ethDeposit.amount}(ethDeposit.to, ethDeposit.data, anyRelayer, nonCancellableAddress);
+        bytes32 id = bridge.deposit{value: ethDeposit.amount}(ethDeposit.to, ethDeposit.data, anyRelayer, zeroCanceler);
 
         assertEq(id, bridge.getDepositId(ethDeposit), "id does not match getter");
     }
@@ -133,33 +132,33 @@ abstract contract UniversalTest is InitialState {
             amount: 1 ether,
             data: "",
             context: anyRelayer,
-            canceler: nonCancellableAddress
+            canceler: zeroCanceler
         });
         bytes32 id = bridge.getDepositId(ethDeposit);
 
         vm.prank(ethDeposit.from);
         vm.expectEmit();
         emit IETHBridge.DepositMade(id, ethDeposit);
-        bridge.deposit{value: ethDeposit.amount}(ethDeposit.to, ethDeposit.data, anyRelayer, nonCancellableAddress);
+        bridge.deposit{value: ethDeposit.amount}(ethDeposit.to, ethDeposit.data, anyRelayer, zeroCanceler);
     }
 
     function test_deposit_signalNotSavedUnderCaller() public {
         vm.prank(alice);
-        bytes32 id = bridge.deposit(bob, "", anyRelayer, nonCancellableAddress);
+        bytes32 id = bridge.deposit(bob, "", anyRelayer, zeroCanceler);
 
         assertFalse(signalService.isSignalStored(id, alice), "signal saved under caller");
     }
 
     function test_deposit_signalNotSavedUnderRecipient() public {
         vm.prank(alice);
-        bytes32 id = bridge.deposit(bob, "", anyRelayer, nonCancellableAddress);
+        bytes32 id = bridge.deposit(bob, "", anyRelayer, zeroCanceler);
 
         assertFalse(signalService.isSignalStored(id, bob), "signal saved under recipient");
     }
 
     function test_deposit_signalSavedUnderBridge() public {
         vm.prank(alice);
-        bytes32 id = bridge.deposit(bob, "", anyRelayer, nonCancellableAddress);
+        bytes32 id = bridge.deposit(bob, "", anyRelayer, zeroCanceler);
 
         assertTrue(signalService.isSignalStored(id, address(bridge)), "signal not saved");
     }
@@ -171,7 +170,7 @@ abstract contract UniversalTest is InitialState {
         uint256 amount = 1 ether;
 
         vm.prank(alice);
-        bridge.deposit{value: amount}(bob, "", anyRelayer, nonCancellableAddress);
+        bridge.deposit{value: amount}(bob, "", anyRelayer, zeroCanceler);
 
         assertEq(alice.balance, initialAliceBalance - amount, "source balance mismatch");
         assertEq(bob.balance, initialBobBalance, "recipient balance changed");

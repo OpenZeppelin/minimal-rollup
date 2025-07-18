@@ -52,3 +52,15 @@ abstract contract NonzeroETH_ValidCallToNonpayableFn is CrossChainDepositExists 
         return 7;
     }
 }
+
+abstract contract NonzeroETH_NoCalldata_IsCancellable is CrossChainDepositExists {
+    function _depositIdx() internal pure override returns (uint256) {
+        return 8;
+    }
+}
+
+abstract contract NonzeroETH_ValidCallToPayableFn_IsCancelable is CrossChainDepositExists {
+    function _depositIdx() internal pure override returns (uint256) {
+        return 9;
+    }
+}

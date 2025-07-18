@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
+import {DepositIsCancelable} from "./CancelableScenarios.t.sol";
 import {BridgeSufficientlyCapitalized} from "./CapitalizationScenarios.t.sol";
 import {DepositIsClaimable, DepositIsNotClaimable} from "./ClaimableScenarios.t.sol";
 import {CrossChainDepositExists} from "./CrossChainDepositExists.t.sol";
@@ -46,5 +47,30 @@ abstract contract DepositIsInvalidContractCall is
         override(CrossChainDepositExists, RecipientIsAContract, BridgeSufficientlyCapitalized)
     {
         super.setUp();
+    }
+}
+
+// This contract describes the secnario where a cancelable deposit is made but the canceler
+// specifies a contract as the recipient.
+abstract contract CancelableDepositIsValidContractCall is
+    RecipientIsAContract,
+    BridgeSufficientlyCapitalized,
+    DepositIsCancelable
+{
+    function setUp()
+        public
+        virtual
+        override(CrossChainDepositExists, RecipientIsAContract, BridgeSufficientlyCapitalized)
+    {
+        super.setUp();
+    }
+
+    function test_cancelDeposit_shouldNotInvokeRecipientContract() public {
+        IETHBridge.ETHDeposit memory deposit = sampleDepositProof.getEthDeposit(_depositIdx());
+        bytes memory proof = abi.encode(sampleDepositProof.getDepositSignalProof(_depositIdx()));
+
+        vm.prank(cancelerAddress);
+        vm.expectRevert(IETHBridge.FailedClaim.selector);
+        bridge.cancelDeposit(deposit, recipient, HEIGHT, proof);
     }
 }
