@@ -83,7 +83,7 @@ Note that under this design, the costs for a publication are self-contained, so 
 ### Publication Costs
 - Since sequencers must pay the publication costs, it seems natural for users to compensate them directly.
 - Morever, sequencers are incentivised to optimise the publication costs, and can pass on those optimisations to the user (for example, they can offer discounts for transactions that compress well with other transactions in the publication).
-- When discussing this idea, one concern was that if the publication fee was not incoporated into the base fee, it would not be subject to the EIP1559 mechanism to smooth volatility. I suspect that's incorrect, because the fee should be the sequencer's best estimate at what the L1 publication costs will be, which are already governed by the L1 fee-smoothing mechanism.
+- When discussing this idea, one concern was that if the publication fee was not incorporated into the base fee, it would not be subject to the EIP1559 mechanism to smooth volatility. I suspect that's incorrect, because the fee should be the sequencer's best estimate at what the L1 publication costs will be, which are already governed by the L1 fee-smoothing mechanism.
 - With this mechanism, Taiko does not have to model the L1 changes, but can still direct a fraction of the actual (not estimated) publication costs to the treasury.
     - this doesn't remove the need for sequencers to be able to estimate L1 costs when deciding whether to preconfirm a transaction. However, they can respond to the market conditions in realtime with whatever level of sophistication they have.
     - If standardisation is preferred, Taiko could still create a suggested fee formula that sequencers can use.
