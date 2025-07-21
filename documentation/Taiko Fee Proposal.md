@@ -41,7 +41,7 @@ I will first describe my suggested proposal, and then explain the rationale.
             - the refund address on L1 
             - a hash of the transactions in the publication
             - an arbitrary buffer containing any relevant additional information
-        - the state transition function will guarantee (similar to the "consistency hash" mechanism described in the generic assertions post linked above) that these values are set correctly (or the publication defaults to an empty block).
+        - the state transition function will guarantee (similar to the "consistency hash" mechanism described in the generic assertions post) that these values are set correctly (or the publication defaults to an empty block).
         - note that other than these guarantees, this behaves like a regular transaction that can change L2 state in any way including transferring tokens or ETH and consumes L2 gas (which may be free for the proposer in the scenario where the base fee is zero).
     - The L2 address represents a prover, and the `validatePublication` function will ensure the prover is willing to prove that publication. It could be designed (but this is not enforced) so that:
         - it sends the liveness bond minus its chosen fee to the proposer
