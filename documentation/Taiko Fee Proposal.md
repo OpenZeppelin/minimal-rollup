@@ -1,0 +1,118 @@
+# Taiko Fee Proposal
+
+## Overview
+- I have an intuition that some of the L2 fee-pricing challenges are downstream of reusing and modifying the L1 pricing model, which may not be aligned with the economics of L2s.
+- In particular, it seems to me that L1 protocol-enforced-fees are useful to:
+    - apply a "negative externality fee" to account for costs to the network. This accounts for the cost of running the consensus mechanism.
+    - limit the total resource consumption to a level where other network participants can keep up.
+        - technically, the actual resource limits (block gas limit and blob number limit) achieve this function, but the fee makes it possible to have a target that it less than the actual limit, to smooth out volatility.
+- In the L2 case:
+    - there are no relevant _staking_ validators. We don't actually care how many people run L2 nodes so there are no actual "costs to the network".
+    - L2 sequencers have to pay L1 publication costs out of their own account.
+    - L2 provers have to pay L1 proving costs out of their own account, and may incur significant offchain proving costs.
+    - We want a mechanism to direct funds towards the treasury.
+- I believe attempting to combine the relevant fees into an L2 base fee is unnecessarily complicated and distorts the market, which leads to attacks and complications.
+- Instead, we should analyse the dynamics of each resource independently.
+
+## Proposal
+
+I will first describe my suggested proposal, and then explain the rationale.
+
+
+1. L2 gas should only cover L2 execution. There are two options:
+    - use the existing EIP1559 mechanism, [corrected](https://github.com/taikoxyz/taiko-mono/issues/19160) to account for variable-length blocks.
+    - charge for publications (not transactions):
+        - set the base fee to zero
+        - use an EIP1559-style mechanism to charge the sequencer for the total gas used in their publication and to maintain a per-second gas target.
+        - sequencers can decided for themselves how (or even whether) to charge each user for their gas consumption. In the simplest case they would use the L2 priority fee, but users with no ETH could also pay in other tokens or MEV-rich transactions could be subsidized. The protocol remains completely unopinionated about how sequencers charge users as long as the sequencer pays the protocol.
+    - some or all of the protocol fee can be directed to the treasury or burned.
+2. The protocol does not compute or enforce any L1 data fee requirements.
+    - Sequencers pay the L1 publishing costs to the L1 network.
+    - They decide for themselves how to charge users for L1 costs.
+    - The inbox should save the number of blobs used, `BLOBBASEFEE` and `BASEFEE` with the publication. This can be used to compute the L1 costs, so a surcharge percentage can be deducted from the sequencer (on L2) and sent to the treasury.
+        - this could be handled inside the L2 EVM by injecting those values (in the anchor or end-of-publication transaction) and doing a direct transfer.
+        - alternatively, it could be computed as part of the state-transition function.
+3. Similar to the existing protocol, proposers must post a liveness bond with each publication.
+    - The protocol will guarantee:
+        - if the publication is proven in time, the liveness bond is sent to a proposer-specified refund address.
+        - otherwise, whoever proves it gets the liveness bond.
+    - To facilitate enforceable prover/proposer commitments (like an [auction mechanism](https://github.com/OpenZeppelin/minimal-rollup/blob/main/src/protocol/BaseProverManager.sol)), the protocol could:
+        - allow an optional special transaction (at the start or end of the publication) that calls `validatePublication` on an arbitrary L2 address chosen by the proposer and passes:
+            - the refund address on L1 
+            - a hash of the transactions in the publication
+            - an arbitrary buffer containing any relevant additional information
+        - the state transition function will guarantee (similar to the "consistency hash" mechanism described in the generic assertions post linked above) that these values are set correctly (or the publication defaults to an empty block).
+        - note that other than these guarantees, this behaves like a regular transaction that can change L2 state in any way including transferring tokens or ETH and consumes L2 gas (which may be free for the proposer in the scenario where the base fee is zero).
+    - The L2 address represents a prover, and the `validatePublication` function will ensure the prover is willing to prove that publication. It could be designed (but this is not enforced) so that:
+        - it sends the liveness bond minus its chosen fee to the proposer
+        - it ensures the L1 refund address belongs to the prover
+        - In this way
+            - the prover contract can decide how much to charge for the particular publication using whatever rules it wants
+            - any proposer can accept the deal by constructing a publication that invokes this prover contract
+        - in the happy case
+            - the proposer paid the L1 liveness bond, which will be sent to the prover
+            - the prover paid a slightly smaller amount to the proposer on L2. The difference is the proving fee.
+        - in the unhappy case
+            - the proposer still pays the proving fee (in effect)
+            - the specified prover pays the rest of the liveness bond as a penalty
+            - both amounts are given to the actual prover
+    - We could avoid actually transferring funds between L1 / L2 (or requiring the proposer to have L1 funds) by using a slightly more complicated refund address that both provides and receives the bond (like a flash loan), and the prover contract on L2 would retrieve the fee rather than refund the bond amount.
+    - If the `validatePublication` function fails (so the specified prover contract did not actually agree to prove the publication), the actual prover will need to show the publication has empty blocks. The liveness bond (paid by the proposer) should be enough to cover this proof.
+    - We could track the agreed proving costs (as part of the `validatPublication` interface) and apply a surcharge to sequencer, directed to the treasury (just like the L1 publication costs). However, since this value is negotiated between the sequencer and prover, the fee could be bypassed by setting the official proving cost as zero and using some other mechanism to pay the fee.
+
+Note that under this design, the costs for a publication are self-contained, so delayed publications can be treated like regular publications.
+
+## Rationale
+
+### Overall Intuition
+
+- The goal is to reflect the real-world costs as faithfully as possible.
+- Any opinionated pricing formulas enforced by the protocol, particularly ones that rely on empirically-derived parameters (like average transaction sizes), can get out of sync with the market conditions.
+- Moreover, attempting to charge for the wrong resource (eg. L1 costs being included the L2 base fee) can let users craft transactions that exploit the discrepancy.
+
+### L2 Gas
+- As I understand it (although this should be validated), since there is no security reason to encourage users to run L2 nodes, we do not need to charge for "costs to the L2 network". This means the L2 gas fee can be set to zero.
+- The sequencer may still want to charge for the offchain processing costs, but this can be incorporated in the priority fee. When combined with the other recommendations, it also means that users and sequencers just need to negotiate a single priority fee to account for all the resources (L2 gas, publication costs and proving costs) associated with the transaction.
+- However, we probably do want to include an overall gas limit to ensure that other users can keep up with the chain. I suspect it can be large enough that it is never reached in practice (because the publication and proving cost limits will likely be reached first), but it is still necessary to prevent malicious compute-only transactions (like running an infinite loop).
+- Once we've decided to include a limit, I think it also makes sense to have a smaller target, so that unexpected volatility does not create immediate scarcity (and correspondingly very high prices). The EIP1559 mechanism seems like a good way to regulate this.
+- However, applying the mechanism to the sequencer (instead of the transactions) has some benefits:
+    - it is simpler. We only need to do one update calculation per publication (rather than for every block)
+    - We can charge the sequencer at the new rate after accounting for any excess they personally introduced (rather than allowing their publication to increase the costs for the next sequencer)
+    - users and sequencers have more flexibility around when and how payments are made.
+
+### Publication Costs
+- Since sequencers must pay the publication costs, it seems natural for users to compensate them directly.
+- Morever, sequencers are incentivised to optimise the publication costs, and can pass on those optimisations to the user (for example, they can offer discounts for transactions that compress well with other transactions in the publication).
+- When discussing this idea, one concern was that if the publication fee was not incoporated into the base fee, it would not be subject to the EIP1559 mechanism to smooth volatility. I suspect that's incorrect, because the fee should be the sequencer's best estimate at what the L1 publication costs will be, which are already governed by the L1 fee-smoothing mechanism.
+- With this mechanism, Taiko does not have to model the L1 changes, but can still direct a fraction of the actual (not estimated) publication costs to the treasury.
+    - this doesn't remove the need for sequencers to be able to estimate L1 costs when deciding whether to preconfirm a transaction. However, they can respond to the market conditions in realtime with whatever level of sophistication they have.
+    - If standardisation is preferred, Taiko could still create a suggested fee formula that sequencers can use.
+
+
+
+### Proving Costs
+- Following the same intuitions, if sequencers compensate provers at whatever rate they agree, then sequencers and users are incentivised to optimise the proving costs.
+- For example, sequencers can offer discounts for transactions that are easy to prove.
+- This also lets Taiko be maximally flexible about the best way to estimate proving costs. Anyone is free to:
+    - use a "zk-opcode" method
+    - use L2 gas as a proxy for proving costs
+    - invent a new method specialised for their proving hardware.
+
+## Wallet compatibility
+
+There are two challenges that I think will need to be addressed, and may depend on the cooperation of wallet developers:
+
+- Fee discovery
+    - Sequencers will need a way to signal to wallets how much they would charge for a given transaction
+    - I'm not sure how this works in practice, and whether wallets can change which endpoint they query based on who the next sequencer is, or if sequencers can register their fee calculation with some shared provider.
+- Using total fees
+    - As I've described the mechanism, the transactions will pay some base fee (possibly zero) associated with the L2 gas execution, and should also specify a priority fee to account for the other charges
+    - However, current transaction types require them to specify a _priority fee rate_ (not absolute fee) against L2 gas.
+    - As noted, I don't think they should charge per unit of L2 gas execution, so they will need to compute the total fee and then divide it by the actual gas consumed.
+    - Unfortunately, users do not necessarily know exactly how much gas will be consumed when constructing the transaction because that might depend on if any other transactions change the state before this transaction is sequenced.
+    - Ideally, this would be solved with a new transaction type, allowing users to specify the total priority fee.
+    - Until then, sequencers will need to simulate the transaction to determine the actual gas consumed, and only then can they figure out whether the priority fee will be sufficient.
+    - They could also use a wrapper smart contract that first executes the transaction and then consumes the remaining gas so that the transaction gas limit would be equivalent to the actual gas consumed, but this seems pretty hacky.
+
+
+
