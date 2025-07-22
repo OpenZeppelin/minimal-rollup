@@ -45,10 +45,12 @@ interface IERC1155Bridge {
     event TokenInitialized(bytes32 indexed id, TokenInitialization initialization);
 
     /// @dev Emitted when a token initialization is proven on the destination chain.
-    /// @param id The initialization id  
+    /// @param id The initialization id
     /// @param initialization The token initialization data
     /// @param deployedToken The address of the deployed bridged token
-    event TokenInitializationProven(bytes32 indexed id, TokenInitialization initialization, address indexed deployedToken);
+    event TokenInitializationProven(
+        bytes32 indexed id, TokenInitialization initialization, address indexed deployedToken
+    );
 
     /// @dev Emitted when a deposit is made.
     /// @param id The deposit id
@@ -113,11 +115,9 @@ interface IERC1155Bridge {
     /// @param tokenInit The token initialization data
     /// @param height The height of the checkpoint on the source chain
     /// @param proof Encoded proof of the initialization signal
-    function proveTokenInitialization(
-        TokenInitialization memory tokenInit,
-        uint256 height,
-        bytes memory proof
-    ) external returns (address deployedToken);
+    function proveTokenInitialization(TokenInitialization memory tokenInit, uint256 height, bytes memory proof)
+        external
+        returns (address deployedToken);
 
     /// @dev Creates an ERC1155 deposit
     /// @param to The receiver of the deposit
@@ -126,13 +126,9 @@ interface IERC1155Bridge {
     /// @param amount The amount to deposit
     /// @param canceler Address on the destination chain that is allowed to cancel the deposit (zero address means
     /// deposit is uncancellable)
-    function deposit(
-        address to,
-        address localToken,
-        uint256 tokenId,
-        uint256 amount,
-        address canceler
-    ) external returns (bytes32 id);
+    function deposit(address to, address localToken, uint256 tokenId, uint256 amount, address canceler)
+        external
+        returns (bytes32 id);
 
     /// @dev Claims an ERC1155 deposit created by the sender (`from`) with `nonce`. The deposited tokens are
     /// sent to the receiver (`to`) after verifying a storage proof.

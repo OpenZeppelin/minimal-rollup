@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
+import {BridgedERC20} from "./BridgedERC20.sol";
 import {IERC20Bridge} from "./IERC20Bridge.sol";
 import {ISignalService} from "./ISignalService.sol";
-import {BridgedERC20} from "./BridgedERC20.sol";
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
@@ -23,7 +23,7 @@ contract ERC20Bridge is IERC20Bridge, ReentrancyGuardTransient {
 
     /// Incremental nonce to generate unique deposit IDs.
     uint256 private _globalDepositNonce;
-    
+
     /// Incremental nonce to generate unique initialization IDs.
     uint256 private _globalInitializationNonce;
 
@@ -37,7 +37,7 @@ contract ERC20Bridge is IERC20Bridge, ReentrancyGuardTransient {
     /// This is used to locate deposit signals inside the other chain's state root.
     /// WARN: This address has no significance (and may be untrustworthy) on this chain.
     address public immutable counterpart;
-    
+
     /// @dev The chain identifier for this chain
     uint256 public immutable chainId;
 
@@ -101,7 +101,7 @@ contract ERC20Bridge is IERC20Bridge, ReentrancyGuardTransient {
             decimals: decimals,
             sourceChain: chainId
         });
-        
+
         id = _generateInitializationId(tokenInit);
         unchecked {
             ++_globalInitializationNonce;
@@ -112,16 +112,15 @@ contract ERC20Bridge is IERC20Bridge, ReentrancyGuardTransient {
 
         // Send signal for cross-chain initialization
         signalService.sendSignal(id);
-        
+
         emit TokenInitialized(id, tokenInit);
     }
 
     /// @inheritdoc IERC20Bridge
-    function proveTokenInitialization(
-        TokenInitialization memory tokenInit,
-        uint256 height,
-        bytes memory proof
-    ) external returns (address deployedToken) {
+    function proveTokenInitialization(TokenInitialization memory tokenInit, uint256 height, bytes memory proof)
+        external
+        returns (address deployedToken)
+    {
         bytes32 id = _generateInitializationId(tokenInit);
         require(!_provenInitializations[id], InitializationAlreadyProven());
 
@@ -132,14 +131,16 @@ contract ERC20Bridge is IERC20Bridge, ReentrancyGuardTransient {
         _provenInitializations[id] = true;
 
         // Deploy the bridged token
-        deployedToken = address(new BridgedERC20(
-            tokenInit.name,
-            tokenInit.symbol,
-            tokenInit.decimals,
-            address(this),
-            tokenInit.originalToken,
-            tokenInit.sourceChain
-        ));
+        deployedToken = address(
+            new BridgedERC20(
+                tokenInit.name,
+                tokenInit.symbol,
+                tokenInit.decimals,
+                address(this),
+                tokenInit.originalToken,
+                tokenInit.sourceChain
+            )
+        );
 
         // Store the mapping
         bytes32 key = keccak256(abi.encode(tokenInit.originalToken, tokenInit.sourceChain));
@@ -149,12 +150,11 @@ contract ERC20Bridge is IERC20Bridge, ReentrancyGuardTransient {
     }
 
     /// @inheritdoc IERC20Bridge
-    function deposit(
-        address to,
-        address localToken,
-        uint256 amount,
-        address canceler
-    ) external nonReentrant returns (bytes32 id) {
+    function deposit(address to, address localToken, uint256 amount, address canceler)
+        external
+        nonReentrant
+        returns (bytes32 id)
+    {
         // Check if token is initialized (for original tokens) or is a bridged token deployed by this bridge
         require(_initializedTokens[localToken] || _isBridgedToken(localToken), TokenNotInitialized());
 
@@ -167,7 +167,7 @@ contract ERC20Bridge is IERC20Bridge, ReentrancyGuardTransient {
             amount: amount,
             canceler: canceler
         });
-        
+
         id = _generateDepositId(erc20Deposit);
         unchecked {
             ++_globalDepositNonce;
@@ -206,12 +206,10 @@ contract ERC20Bridge is IERC20Bridge, ReentrancyGuardTransient {
         emit DepositCancelled(id, claimee);
     }
 
-    function _claimDeposit(
-        ERC20Deposit memory erc20Deposit,
-        address to,
-        uint256 height,
-        bytes memory proof
-    ) internal returns (bytes32 id) {
+    function _claimDeposit(ERC20Deposit memory erc20Deposit, address to, uint256 height, bytes memory proof)
+        internal
+        returns (bytes32 id)
+    {
         id = _generateDepositId(erc20Deposit);
         require(!processed(id), AlreadyClaimed());
 
@@ -229,7 +227,7 @@ contract ERC20Bridge is IERC20Bridge, ReentrancyGuardTransient {
             // This is a deposit from another chain, check if we have the bridged token deployed
             bytes32 key = keccak256(abi.encode(erc20Deposit.localToken, erc20Deposit.sourceChain));
             address deployedToken = _deployedTokens[key];
-            
+
             if (deployedToken != address(0)) {
                 // Mint the bridged token
                 BridgedERC20(deployedToken).mint(to, erc20Deposit.amount);

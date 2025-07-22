@@ -31,7 +31,7 @@ contract ERC721BridgeTest is Test {
     function testInitializeToken() public {
         vm.prank(alice);
         bytes32 id = bridge.initializeToken(address(token));
-        
+
         assertTrue(bridge.isTokenInitialized(address(token)));
         assertEq(signalService.lastSignalId(), id);
     }
@@ -39,7 +39,7 @@ contract ERC721BridgeTest is Test {
     function testCannotInitializeTokenTwice() public {
         vm.prank(alice);
         bridge.initializeToken(address(token));
-        
+
         vm.expectRevert("Token already initialized");
         vm.prank(bob);
         bridge.initializeToken(address(token));
@@ -49,7 +49,7 @@ contract ERC721BridgeTest is Test {
         // First initialize on source chain
         vm.prank(alice);
         bytes32 id = bridge.initializeToken(address(token));
-        
+
         // Prepare initialization data for destination chain
         IERC721Bridge.TokenInitialization memory tokenInit = IERC721Bridge.TokenInitialization({
             nonce: 0,
@@ -58,17 +58,17 @@ contract ERC721BridgeTest is Test {
             symbol: "TNFT",
             sourceChain: 31337
         });
-        
+
         bytes memory proof = "mock_proof";
         uint256 height = 1;
         signalService.setVerifyResult(true);
-        
+
         // Prove initialization and deploy bridged token
         address deployedToken = bridge.proveTokenInitialization(tokenInit, height, proof);
-        
+
         assertTrue(bridge.isInitializationProven(id));
         assertEq(bridge.getDeployedToken(address(token), 31337), deployedToken);
-        
+
         // Check that the deployed token has correct metadata
         BridgedERC721 bridgedToken = BridgedERC721(deployedToken);
         assertEq(bridgedToken.name(), "Test NFT");
@@ -82,7 +82,7 @@ contract ERC721BridgeTest is Test {
         // First initialize
         vm.prank(alice);
         bridge.initializeToken(address(token));
-        
+
         IERC721Bridge.TokenInitialization memory tokenInit = IERC721Bridge.TokenInitialization({
             nonce: 0,
             originalToken: address(token),
@@ -90,13 +90,13 @@ contract ERC721BridgeTest is Test {
             symbol: "TNFT",
             sourceChain: 31337
         });
-        
+
         bytes memory proof = "mock_proof";
         uint256 height = 1;
         signalService.setVerifyResult(true);
-        
+
         bridge.proveTokenInitialization(tokenInit, height, proof);
-        
+
         vm.expectRevert(IERC721Bridge.InitializationAlreadyProven.selector);
         bridge.proveTokenInitialization(tokenInit, height, proof);
     }
@@ -105,7 +105,7 @@ contract ERC721BridgeTest is Test {
         // Initialize token first
         vm.prank(alice);
         bridge.initializeToken(address(token));
-        
+
         vm.prank(alice);
         bridge.deposit(bob, address(token), tokenId, address(0));
         assertEq(token.ownerOf(tokenId), address(bridge));
@@ -121,7 +121,7 @@ contract ERC721BridgeTest is Test {
         // Initialize token
         vm.prank(alice);
         bridge.initializeToken(address(token));
-        
+
         vm.prank(alice);
         bytes32 id = bridge.deposit(bob, address(token), tokenId, address(0));
 
@@ -150,7 +150,7 @@ contract ERC721BridgeTest is Test {
         // Initialize token
         vm.prank(alice);
         bridge.initializeToken(address(token));
-        
+
         address canceler = makeAddr("canceler");
         vm.prank(alice);
         bytes32 id = bridge.deposit(bob, address(token), tokenId, canceler);
@@ -181,7 +181,7 @@ contract ERC721BridgeTest is Test {
         // Initialize token
         vm.prank(alice);
         bridge.initializeToken(address(token));
-        
+
         address canceler = makeAddr("canceler");
         vm.prank(alice);
         bridge.deposit(bob, address(token), tokenId, canceler);
@@ -210,7 +210,7 @@ contract ERC721BridgeTest is Test {
         // Initialize token
         vm.prank(alice);
         bridge.initializeToken(address(token));
-        
+
         vm.prank(alice);
         bridge.deposit(bob, address(token), tokenId, address(0));
 
@@ -239,7 +239,7 @@ contract ERC721BridgeTest is Test {
         // Initialize token
         vm.prank(alice);
         bridge.initializeToken(address(token));
-        
+
         address canceler = makeAddr("canceler");
         vm.prank(alice);
         bridge.deposit(bob, address(token), tokenId, canceler);
@@ -270,7 +270,7 @@ contract ERC721BridgeTest is Test {
         // Initialize token
         vm.prank(alice);
         bridge.initializeToken(address(token));
-        
+
         vm.prank(alice);
         bridge.deposit(bob, address(token), tokenId, address(0));
 
@@ -297,55 +297,55 @@ contract ERC721BridgeTest is Test {
     function testBridgedTokenDeposit() public {
         // Create two separate bridge instances to simulate different chains
         ERC721Bridge bridge2 = new ERC721Bridge(address(signalService), trustedPublisher, counterpart);
-        
+
         // Initialize token on chain 1
         vm.prank(alice);
         bridge.initializeToken(address(token));
-        
+
         // Prove initialization on chain 2 (simulating it came from chain 1)
         IERC721Bridge.TokenInitialization memory tokenInit = IERC721Bridge.TokenInitialization({
             nonce: 0,
             originalToken: address(token),
             name: "Test NFT",
             symbol: "TNFT",
-            sourceChain: 1  // Simulate this came from chain 1
+            sourceChain: 1 // Simulate this came from chain 1
         });
-        
+
         bytes memory proof = "mock_proof";
         uint256 height = 1;
         signalService.setVerifyResult(true);
-        
+
         address bridgedToken = bridge2.proveTokenInitialization(tokenInit, height, proof);
-        
+
         // Simulate bridging: deposit on chain 1, claim on chain 2
         vm.prank(alice);
         bytes32 depositId = bridge.deposit(alice, address(token), tokenId, address(0));
-        
+
         // For the claim, simulate that this deposit came from chain 1
         IERC721Bridge.ERC721Deposit memory deposit = IERC721Bridge.ERC721Deposit({
             nonce: 0,
             from: alice,
             to: alice,
             localToken: address(token),
-            sourceChain: 1,  // Simulate this deposit came from chain 1
+            sourceChain: 1, // Simulate this deposit came from chain 1
             tokenId: tokenId,
             tokenURI: "https://example.com/metadata/1",
             canceler: address(0)
         });
-        
+
         // Claim on chain 2 (mints bridged token)
         bridge2.claimDeposit(deposit, height, proof);
-        
+
         // Now alice has bridged token on chain 2
         assertEq(BridgedERC721(bridgedToken).ownerOf(tokenId), alice);
-        
+
         // Alice deposits bridged token back to chain 1
         vm.prank(alice);
         BridgedERC721(bridgedToken).approve(address(bridge2), tokenId);
-        
+
         vm.prank(alice);
         bridge2.deposit(bob, bridgedToken, tokenId, address(0));
-        
+
         // Bridged token should be burned (no longer exists)
         vm.expectRevert();
         BridgedERC721(bridgedToken).ownerOf(tokenId);
@@ -354,50 +354,50 @@ contract ERC721BridgeTest is Test {
     function testMetadataPropagation() public {
         // Create two separate bridge instances to simulate different chains
         ERC721Bridge bridge2 = new ERC721Bridge(address(signalService), trustedPublisher, counterpart);
-        
+
         // Initialize token on chain 1
         vm.prank(alice);
         bridge.initializeToken(address(token));
-        
+
         // Prove initialization on chain 2 (simulating it came from chain 1)
         IERC721Bridge.TokenInitialization memory tokenInit = IERC721Bridge.TokenInitialization({
             nonce: 0,
             originalToken: address(token),
             name: "Test NFT",
             symbol: "TNFT",
-            sourceChain: 1  // Simulate this came from chain 1
+            sourceChain: 1 // Simulate this came from chain 1
         });
-        
+
         bytes memory proof = "mock_proof";
         uint256 height = 1;
         signalService.setVerifyResult(true);
-        
+
         address bridgedToken = bridge2.proveTokenInitialization(tokenInit, height, proof);
-        
+
         // Simulate bridging: deposit on chain 1, claim on chain 2
         vm.prank(alice);
         bridge.deposit(alice, address(token), tokenId, address(0));
-        
+
         // For the claim, simulate that this deposit came from chain 1
         IERC721Bridge.ERC721Deposit memory deposit = IERC721Bridge.ERC721Deposit({
             nonce: 0,
             from: alice,
             to: alice,
             localToken: address(token),
-            sourceChain: 1,  // Simulate this deposit came from chain 1
+            sourceChain: 1, // Simulate this deposit came from chain 1
             tokenId: tokenId,
             tokenURI: "https://example.com/metadata/1",
             canceler: address(0)
         });
-        
+
         // Claim on chain 2 (mints bridged token with metadata)
         bridge2.claimDeposit(deposit, height, proof);
-        
+
         // Verify that the bridged token has the correct metadata
         BridgedERC721 bridgedNFT = BridgedERC721(bridgedToken);
         assertEq(bridgedNFT.ownerOf(tokenId), alice);
         assertEq(bridgedNFT.tokenURI(tokenId), "https://example.com/metadata/1");
-        
+
         // Verify collection metadata is also correct
         assertEq(bridgedNFT.name(), "Test NFT");
         assertEq(bridgedNFT.symbol(), "TNFT");

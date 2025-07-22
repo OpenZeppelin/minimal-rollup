@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
-import {ERC1155} from "@openzeppelin/contracts/token/ERC1155/ERC1155.sol";
 import {IMintableERC1155} from "./IMintable.sol";
+import {ERC1155} from "@openzeppelin/contracts/token/ERC1155/ERC1155.sol";
 
 /// @title BridgedERC1155
 /// @notice An ERC1155 token that represents a bridged token from another chain
@@ -10,13 +10,13 @@ import {IMintableERC1155} from "./IMintable.sol";
 contract BridgedERC1155 is ERC1155, IMintableERC1155 {
     /// @dev Mapping from token ID to custom token URI
     mapping(uint256 => string) private _tokenURIs;
-    
+
     /// @notice The bridge contract that can mint and burn tokens
     address public immutable bridge;
-    
+
     /// @notice The original token address on the source chain
     address public immutable originalToken;
-    
+
     /// @notice The source chain identifier (could be chain ID or other identifier)
     uint256 public immutable sourceChain;
 
@@ -27,12 +27,7 @@ contract BridgedERC1155 is ERC1155, IMintableERC1155 {
         _;
     }
 
-    constructor(
-        string memory uri_,
-        address _bridge,
-        address _originalToken,
-        uint256 _sourceChain
-    ) ERC1155(uri_) {
+    constructor(string memory uri_, address _bridge, address _originalToken, uint256 _sourceChain) ERC1155(uri_) {
         bridge = _bridge;
         originalToken = _originalToken;
         sourceChain = _sourceChain;
@@ -49,7 +44,10 @@ contract BridgedERC1155 is ERC1155, IMintableERC1155 {
     /// @param amount Amount to mint
     /// @param tokenURI_ Custom URI for this token
     /// @param data Additional data
-    function mintWithURI(address to, uint256 id, uint256 amount, string memory tokenURI_, bytes memory data) external onlyBridge {
+    function mintWithURI(address to, uint256 id, uint256 amount, string memory tokenURI_, bytes memory data)
+        external
+        onlyBridge
+    {
         _mint(to, id, amount, data);
         _setTokenURI(id, tokenURI_);
     }
@@ -66,7 +64,7 @@ contract BridgedERC1155 is ERC1155, IMintableERC1155 {
     /// @dev See {IERC1155MetadataURI-uri}.
     function uri(uint256 tokenId) public view virtual override returns (string memory) {
         string memory _tokenURI = _tokenURIs[tokenId];
-        
+
         // If there is a custom URI for this token, return it
         if (bytes(_tokenURI).length > 0) {
             return _tokenURI;
@@ -82,4 +80,4 @@ contract BridgedERC1155 is ERC1155, IMintableERC1155 {
     function _setTokenURI(uint256 tokenId, string memory tokenURI_) internal {
         _tokenURIs[tokenId] = tokenURI_;
     }
-} 
+}

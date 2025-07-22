@@ -1,13 +1,14 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
+import {BridgedERC1155} from "./BridgedERC1155.sol";
 import {IERC1155Bridge} from "./IERC1155Bridge.sol";
 import {ISignalService} from "./ISignalService.sol";
-import {BridgedERC1155} from "./BridgedERC1155.sol";
 
 import {IERC1155} from "@openzeppelin/contracts/token/ERC1155/IERC1155.sol";
-import {IERC1155MetadataURI} from "@openzeppelin/contracts/token/ERC1155/extensions/IERC1155MetadataURI.sol";
+
 import {IERC1155Receiver} from "@openzeppelin/contracts/token/ERC1155/IERC1155Receiver.sol";
+import {IERC1155MetadataURI} from "@openzeppelin/contracts/token/ERC1155/extensions/IERC1155MetadataURI.sol";
 import {ReentrancyGuardTransient} from "@openzeppelin/contracts/utils/ReentrancyGuardTransient.sol";
 
 /// @title ERC1155Bridge
@@ -21,7 +22,7 @@ contract ERC1155Bridge is IERC1155Bridge, ReentrancyGuardTransient, IERC1155Rece
 
     /// Incremental nonce to generate unique deposit IDs.
     uint256 private _globalDepositNonce;
-    
+
     /// Incremental nonce to generate unique initialization IDs.
     uint256 private _globalInitializationNonce;
 
@@ -35,7 +36,7 @@ contract ERC1155Bridge is IERC1155Bridge, ReentrancyGuardTransient, IERC1155Rece
     /// This is used to locate deposit signals inside the other chain's state root.
     /// WARN: This address has no significance (and may be untrustworthy) on this chain.
     address public immutable counterpart;
-    
+
     /// @dev The chain identifier for this chain
     uint256 public immutable chainId;
 
@@ -119,7 +120,7 @@ contract ERC1155Bridge is IERC1155Bridge, ReentrancyGuardTransient, IERC1155Rece
             uri: uri,
             sourceChain: chainId
         });
-        
+
         id = _generateInitializationId(tokenInit);
         unchecked {
             ++_globalInitializationNonce;
@@ -130,16 +131,15 @@ contract ERC1155Bridge is IERC1155Bridge, ReentrancyGuardTransient, IERC1155Rece
 
         // Send signal for cross-chain initialization
         signalService.sendSignal(id);
-        
+
         emit TokenInitialized(id, tokenInit);
     }
 
     /// @inheritdoc IERC1155Bridge
-    function proveTokenInitialization(
-        TokenInitialization memory tokenInit,
-        uint256 height,
-        bytes memory proof
-    ) external returns (address deployedToken) {
+    function proveTokenInitialization(TokenInitialization memory tokenInit, uint256 height, bytes memory proof)
+        external
+        returns (address deployedToken)
+    {
         bytes32 id = _generateInitializationId(tokenInit);
         require(!_provenInitializations[id], InitializationAlreadyProven());
 
@@ -150,12 +150,8 @@ contract ERC1155Bridge is IERC1155Bridge, ReentrancyGuardTransient, IERC1155Rece
         _provenInitializations[id] = true;
 
         // Deploy the bridged token
-        deployedToken = address(new BridgedERC1155(
-            tokenInit.uri,
-            address(this),
-            tokenInit.originalToken,
-            tokenInit.sourceChain
-        ));
+        deployedToken =
+            address(new BridgedERC1155(tokenInit.uri, address(this), tokenInit.originalToken, tokenInit.sourceChain));
 
         // Store the mapping
         bytes32 key = keccak256(abi.encode(tokenInit.originalToken, tokenInit.sourceChain));
@@ -165,13 +161,11 @@ contract ERC1155Bridge is IERC1155Bridge, ReentrancyGuardTransient, IERC1155Rece
     }
 
     /// @inheritdoc IERC1155Bridge
-    function deposit(
-        address to,
-        address localToken,
-        uint256 tokenId,
-        uint256 amount,
-        address canceler
-    ) external nonReentrant returns (bytes32 id) {
+    function deposit(address to, address localToken, uint256 tokenId, uint256 amount, address canceler)
+        external
+        nonReentrant
+        returns (bytes32 id)
+    {
         // Check if token is initialized (for original tokens) or is a bridged token deployed by this bridge
         require(_initializedTokens[localToken] || _isBridgedToken(localToken), TokenNotInitialized());
 
@@ -195,7 +189,7 @@ contract ERC1155Bridge is IERC1155Bridge, ReentrancyGuardTransient, IERC1155Rece
             tokenURI: tokenURI_,
             canceler: canceler
         });
-        
+
         id = _generateDepositId(erc1155Deposit);
         unchecked {
             ++_globalDepositNonce;
@@ -217,7 +211,10 @@ contract ERC1155Bridge is IERC1155Bridge, ReentrancyGuardTransient, IERC1155Rece
     }
 
     /// @inheritdoc IERC1155Bridge
-    function claimDeposit(ERC1155Deposit memory erc1155Deposit, uint256 height, bytes memory proof) external nonReentrant {
+    function claimDeposit(ERC1155Deposit memory erc1155Deposit, uint256 height, bytes memory proof)
+        external
+        nonReentrant
+    {
         bytes32 id = _claimDeposit(erc1155Deposit, erc1155Deposit.to, height, proof);
         emit DepositClaimed(id, erc1155Deposit);
     }
@@ -234,12 +231,10 @@ contract ERC1155Bridge is IERC1155Bridge, ReentrancyGuardTransient, IERC1155Rece
         emit DepositCancelled(id, claimee);
     }
 
-    function _claimDeposit(
-        ERC1155Deposit memory erc1155Deposit,
-        address to,
-        uint256 height,
-        bytes memory proof
-    ) internal returns (bytes32 id) {
+    function _claimDeposit(ERC1155Deposit memory erc1155Deposit, address to, uint256 height, bytes memory proof)
+        internal
+        returns (bytes32 id)
+    {
         id = _generateDepositId(erc1155Deposit);
         require(!processed(id), AlreadyClaimed());
 
@@ -257,11 +252,13 @@ contract ERC1155Bridge is IERC1155Bridge, ReentrancyGuardTransient, IERC1155Rece
             // This is a deposit from another chain, check if we have the bridged token deployed
             bytes32 key = keccak256(abi.encode(erc1155Deposit.localToken, erc1155Deposit.sourceChain));
             address deployedToken = _deployedTokens[key];
-            
+
             if (deployedToken != address(0)) {
                 // Mint the bridged token with its original metadata
                 if (bytes(erc1155Deposit.tokenURI).length > 0) {
-                    BridgedERC1155(deployedToken).mintWithURI(to, erc1155Deposit.tokenId, erc1155Deposit.amount, erc1155Deposit.tokenURI, "");
+                    BridgedERC1155(deployedToken).mintWithURI(
+                        to, erc1155Deposit.tokenId, erc1155Deposit.amount, erc1155Deposit.tokenURI, ""
+                    );
                 } else {
                     BridgedERC1155(deployedToken).mint(to, erc1155Deposit.tokenId, erc1155Deposit.amount, "");
                 }
@@ -272,7 +269,9 @@ contract ERC1155Bridge is IERC1155Bridge, ReentrancyGuardTransient, IERC1155Rece
         } else {
             // This is a deposit from the same chain (bridged token going back to origin)
             // Transfer the original token that we hold
-            IERC1155(erc1155Deposit.localToken).safeTransferFrom(address(this), to, erc1155Deposit.tokenId, erc1155Deposit.amount, "");
+            IERC1155(erc1155Deposit.localToken).safeTransferFrom(
+                address(this), to, erc1155Deposit.tokenId, erc1155Deposit.amount, ""
+            );
         }
     }
 

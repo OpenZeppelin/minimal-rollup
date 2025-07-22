@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
-import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import {IMintableERC20} from "./IMintable.sol";
+import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
 /// @title BridgedERC20
 /// @notice An ERC20 token that represents a bridged token from another chain
@@ -10,10 +10,10 @@ import {IMintableERC20} from "./IMintable.sol";
 contract BridgedERC20 is ERC20, IMintableERC20 {
     /// @notice The bridge contract that can mint and burn tokens
     address public immutable bridge;
-    
+
     /// @notice The original token address on the source chain
     address public immutable originalToken;
-    
+
     /// @notice The source chain identifier (could be chain ID or other identifier)
     uint256 public immutable sourceChain;
 
@@ -49,8 +49,8 @@ contract BridgedERC20 is ERC20, IMintableERC20 {
     function burn(address from, uint256 amount) external onlyBridge {
         _burn(from, amount);
     }
-    
+
     function decimals() public view virtual override returns (uint8) {
         return _decimals;
     }
-} 
+}

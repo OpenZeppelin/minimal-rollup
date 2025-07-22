@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
-import {ERC721} from "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import {IMintableERC721} from "./IMintable.sol";
+import {ERC721} from "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 
 /// @title BridgedERC721
 /// @notice An ERC721 token that represents a bridged token from another chain
@@ -12,10 +12,10 @@ contract BridgedERC721 is ERC721, IMintableERC721 {
     mapping(uint256 => string) private _tokenURIs;
     /// @notice The bridge contract that can mint and burn tokens
     address public immutable bridge;
-    
+
     /// @notice The original token address on the source chain
     address public immutable originalToken;
-    
+
     /// @notice The source chain identifier (could be chain ID or other identifier)
     uint256 public immutable sourceChain;
 
@@ -26,13 +26,9 @@ contract BridgedERC721 is ERC721, IMintableERC721 {
         _;
     }
 
-    constructor(
-        string memory name,
-        string memory symbol,
-        address _bridge,
-        address _originalToken,
-        uint256 _sourceChain
-    ) ERC721(name, symbol) {
+    constructor(string memory name, string memory symbol, address _bridge, address _originalToken, uint256 _sourceChain)
+        ERC721(name, symbol)
+    {
         bridge = _bridge;
         originalToken = _originalToken;
         sourceChain = _sourceChain;
@@ -66,7 +62,7 @@ contract BridgedERC721 is ERC721, IMintableERC721 {
         _requireOwned(tokenId);
 
         string memory _tokenURI = _tokenURIs[tokenId];
-        
+
         // If there is a custom URI for this token, return it
         if (bytes(_tokenURI).length > 0) {
             return _tokenURI;
@@ -82,4 +78,4 @@ contract BridgedERC721 is ERC721, IMintableERC721 {
     function _setTokenURI(uint256 tokenId, string memory tokenURI_) internal {
         _tokenURIs[tokenId] = tokenURI_;
     }
-} 
+}
