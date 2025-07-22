@@ -58,7 +58,7 @@ I will first describe my suggested proposal, and then explain the rationale.
             - both amounts are given to the actual prover
     - We could avoid actually transferring funds between L1 / L2 (or requiring the proposer to have L1 funds) by using a slightly more complicated refund address that both provides and receives the bond (like a flash loan), and the prover contract on L2 would retrieve the fee rather than refund the bond amount.
     - If the `validatePublication` function fails (so the specified prover contract did not actually agree to prove the publication), the actual prover will need to show the publication has empty blocks. The liveness bond (paid by the proposer) should be enough to cover this proof.
-    - We could track the agreed proving costs (as part of the `validatPublication` interface) and apply a surcharge to sequencer, directed to the treasury (just like the L1 publication costs). However, since this value is negotiated between the sequencer and prover, the fee could be bypassed by setting the official proving cost as zero and using some other mechanism to pay the fee.
+    - We could track the agreed proving costs (as part of the `validatePublication` interface) and apply a surcharge to sequencer, directed to the treasury (just like the L1 publication costs). However, since this value is negotiated between the sequencer and prover, the fee could be bypassed by setting the official proving cost as zero and using some other mechanism to pay the fee.
 
 Note that under this design, the costs for a publication are self-contained, so delayed publications can be treated like regular publications.
 
@@ -82,7 +82,7 @@ Note that under this design, the costs for a publication are self-contained, so 
 
 ### Publication Costs
 - Since sequencers must pay the publication costs, it seems natural for users to compensate them directly.
-- Morever, sequencers are incentivised to optimise the publication costs, and can pass on those optimisations to the user (for example, they can offer discounts for transactions that compress well with other transactions in the publication).
+- Moreover, sequencers are incentivised to optimise the publication costs, and can pass on those optimisations to the user (for example, they can offer discounts for transactions that compress well with other transactions in the publication).
 - When discussing this idea, one concern was that if the publication fee was not incorporated into the base fee, it would not be subject to the EIP1559 mechanism to smooth volatility. I suspect that's incorrect, because the fee should be the sequencer's best estimate at what the L1 publication costs will be, which are already governed by the L1 fee-smoothing mechanism.
 - With this mechanism, Taiko does not have to model the L1 changes, but can still direct a fraction of the actual (not estimated) publication costs to the treasury.
     - this doesn't remove the need for sequencers to be able to estimate L1 costs when deciding whether to preconfirm a transaction. However, they can respond to the market conditions in realtime with whatever level of sophistication they have.
