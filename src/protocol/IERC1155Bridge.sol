@@ -6,6 +6,17 @@ pragma solidity ^0.8.28;
 /// These can be created by calling the deposit function. Later, the receiver can
 /// claim the deposit on the destination chain by using a storage proof.
 interface IERC1155Bridge {
+    struct TokenInitialization {
+        // The nonce of the initialization
+        uint256 nonce;
+        // The original token address on the source chain
+        address originalToken;
+        // The base URI for the token collection
+        string uri;
+        // The source chain identifier
+        uint256 sourceChain;
+    }
+
     struct ERC1155Deposit {
         // The nonce of the deposit
         uint256 nonce;
@@ -15,20 +26,29 @@ interface IERC1155Bridge {
         address to;
         // The ERC1155 token address
         address localToken;
-        // The ERC1155 token address in the destination network
-        address remoteToken;
+        // The source chain identifier where this deposit originated
+        uint256 sourceChain;
         // The token ID
         uint256 tokenId;
         // The amount of the deposit
         uint256 amount;
-        // Any calldata to be sent to the receiver in case of a contract
-        bytes data;
-        // Application-specific context data (e.g., for relayer selection, tips, etc.)
-        bytes context;
+        // The token URI (metadata) for this specific token
+        string tokenURI;
         // Address that is allowed to cancel the deposit on the destination chain (zero address means deposit is
         // uncancellable)
         address canceler;
     }
+
+    /// @dev Emitted when a token is initialized on the source chain.
+    /// @param id The initialization id
+    /// @param initialization The token initialization data
+    event TokenInitialized(bytes32 indexed id, TokenInitialization initialization);
+
+    /// @dev Emitted when a token initialization is proven on the destination chain.
+    /// @param id The initialization id  
+    /// @param initialization The token initialization data
+    /// @param deployedToken The address of the deployed bridged token
+    event TokenInitializationProven(bytes32 indexed id, TokenInitialization initialization, address indexed deployedToken);
 
     /// @dev Emitted when a deposit is made.
     /// @param id The deposit id
@@ -54,21 +74,56 @@ interface IERC1155Bridge {
     /// @dev Only canceler can cancel a deposit.
     error OnlyCanceler();
 
+    /// @dev Token has not been initialized for bridging.
+    error TokenNotInitialized();
+
+    /// @dev Token initialization has already been proven.
+    error InitializationAlreadyProven();
+
     /// @dev Whether the deposit identified by `id` has been claimed or cancelled.
     /// @param id The deposit id
     function processed(bytes32 id) external view returns (bool);
 
+    /// @dev Whether a token has been initialized for bridging.
+    /// @param token The token address
+    function isTokenInitialized(address token) external view returns (bool);
+
+    /// @dev Whether a token initialization has been proven (on destination chain).
+    /// @param id The initialization id
+    function isInitializationProven(bytes32 id) external view returns (bool);
+
+    /// @dev Get the deployed token address for an original token (on destination chain).
+    /// @param originalToken The original token address
+    /// @param sourceChain The source chain identifier
+    function getDeployedToken(address originalToken, uint256 sourceChain) external view returns (address);
+
+    /// @dev Token initialization identifier.
+    /// @param tokenInit The token initialization struct
+    function getInitializationId(TokenInitialization memory tokenInit) external pure returns (bytes32 id);
+
     /// @dev ERC1155 Deposit identifier.
     /// @param erc1155Deposit The ERC1155 deposit struct
     function getDepositId(ERC1155Deposit memory erc1155Deposit) external view returns (bytes32 id);
+
+    /// @dev Initializes a token for bridging by reading its metadata and sending a signal.
+    /// @param token The ERC1155 token address to initialize
+    function initializeToken(address token) external returns (bytes32 id);
+
+    /// @dev Proves a token initialization from the source chain and deploys the bridged token.
+    /// @param tokenInit The token initialization data
+    /// @param height The height of the checkpoint on the source chain
+    /// @param proof Encoded proof of the initialization signal
+    function proveTokenInitialization(
+        TokenInitialization memory tokenInit,
+        uint256 height,
+        bytes memory proof
+    ) external returns (address deployedToken);
 
     /// @dev Creates an ERC1155 deposit
     /// @param to The receiver of the deposit
     /// @param localToken The ERC1155 token address
     /// @param tokenId The token ID
     /// @param amount The amount to deposit
-    /// @param data Any calldata to be sent to the receiver in case of a contract
-    /// @param context Application-specific context data
     /// @param canceler Address on the destination chain that is allowed to cancel the deposit (zero address means
     /// deposit is uncancellable)
     function deposit(
@@ -76,8 +131,6 @@ interface IERC1155Bridge {
         address localToken,
         uint256 tokenId,
         uint256 amount,
-        bytes memory data,
-        bytes memory context,
         address canceler
     ) external returns (bytes32 id);
 

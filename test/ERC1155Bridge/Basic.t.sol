@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
+import {BridgedERC1155} from "../../src/protocol/BridgedERC1155.sol";
 import "forge-std/Test.sol";
 import {ERC1155Bridge} from "src/protocol/ERC1155Bridge.sol";
 import {IERC1155Bridge} from "src/protocol/IERC1155Bridge.sol";
@@ -14,43 +15,124 @@ contract ERC1155BridgeTest is Test {
     MockERC1155 token;
     address trustedPublisher = address(0x123);
     address counterpart = address(0x456);
+    uint256 constant CHAIN_ID = 1;
     address alice = address(0xA11CE);
     address bob = address(0xB0B);
     uint256 tokenId = 1;
 
     function setUp() public {
         signalService = new MockSignalService();
-        bridge = new ERC1155Bridge(address(signalService), trustedPublisher, counterpart);
+        bridge = new ERC1155Bridge(address(signalService), trustedPublisher, counterpart, CHAIN_ID);
         token = new MockERC1155();
         token.mint(alice, tokenId, 100, "");
         vm.prank(alice);
         token.setApprovalForAll(address(bridge), true);
-        bridge.setTokenMapping(address(token), address(token), false);
     }
 
-    // solhint-disable no-unused-vars
-    function testDeposit() public {
+    function testInitializeToken() public {
         vm.prank(alice);
-        bytes32 id = bridge.deposit(bob, address(token), tokenId, 50, "", "", address(0));
+        bytes32 id = bridge.initializeToken(address(token));
+        
+        assertTrue(bridge.isTokenInitialized(address(token)));
+        assertEq(signalService.lastSignalId(), id);
+    }
+
+    function testCannotInitializeTokenTwice() public {
+        vm.prank(alice);
+        bridge.initializeToken(address(token));
+        
+        vm.expectRevert("Token already initialized");
+        vm.prank(bob);
+        bridge.initializeToken(address(token));
+    }
+
+    function testProveTokenInitialization() public {
+        // First initialize on source chain
+        vm.prank(alice);
+        bytes32 id = bridge.initializeToken(address(token));
+        
+        // Prepare initialization data for destination chain
+        IERC1155Bridge.TokenInitialization memory tokenInit = IERC1155Bridge.TokenInitialization({
+            nonce: 0,
+            originalToken: address(token),
+            uri: "https://example.com/metadata/0.json",
+            sourceChain: CHAIN_ID
+        });
+        
+        bytes memory proof = "mock_proof";
+        uint256 height = 1;
+        signalService.setVerifyResult(true);
+        
+        // Prove initialization and deploy bridged token
+        address deployedToken = bridge.proveTokenInitialization(tokenInit, height, proof);
+        
+        assertTrue(bridge.isInitializationProven(id));
+        assertEq(bridge.getDeployedToken(address(token), CHAIN_ID), deployedToken);
+        
+        // Check that the deployed token has correct metadata
+        BridgedERC1155 bridgedToken = BridgedERC1155(deployedToken);
+        assertEq(bridgedToken.bridge(), address(bridge));
+        assertEq(bridgedToken.originalToken(), address(token));
+        assertEq(bridgedToken.sourceChain(), CHAIN_ID);
+    }
+
+    function testCannotProveInitializationTwice() public {
+        // First initialize
+        vm.prank(alice);
+        bridge.initializeToken(address(token));
+        
+        IERC1155Bridge.TokenInitialization memory tokenInit = IERC1155Bridge.TokenInitialization({
+            nonce: 0,
+            originalToken: address(token),
+            uri: "https://example.com/metadata/0.json",
+            sourceChain: CHAIN_ID
+        });
+        
+        bytes memory proof = "mock_proof";
+        uint256 height = 1;
+        signalService.setVerifyResult(true);
+        
+        bridge.proveTokenInitialization(tokenInit, height, proof);
+        
+        vm.expectRevert(IERC1155Bridge.InitializationAlreadyProven.selector);
+        bridge.proveTokenInitialization(tokenInit, height, proof);
+    }
+
+    function testDeposit() public {
+        // Initialize token first
+        vm.prank(alice);
+        bridge.initializeToken(address(token));
+        
+        vm.prank(alice);
+        bytes32 id = bridge.deposit(bob, address(token), tokenId, 50, address(0));
         assertFalse(bridge.processed(id));
         assertEq(token.balanceOf(address(bridge), tokenId), 50);
         assertEq(token.balanceOf(alice, tokenId), 50);
     }
 
-    function testClaimDeposit() public {
+    function testCannotDepositUninitializedToken() public {
+        vm.expectRevert(IERC1155Bridge.TokenNotInitialized.selector);
         vm.prank(alice);
-        bytes32 id = bridge.deposit(bob, address(token), tokenId, 50, "", "", address(0));
+        bridge.deposit(bob, address(token), tokenId, 50, address(0));
+    }
+
+    function testClaimDeposit() public {
+        // Initialize token
+        vm.prank(alice);
+        bridge.initializeToken(address(token));
+        
+        vm.prank(alice);
+        bytes32 id = bridge.deposit(bob, address(token), tokenId, 50, address(0));
 
         IERC1155Bridge.ERC1155Deposit memory deposit = IERC1155Bridge.ERC1155Deposit({
             nonce: 0,
             from: alice,
             to: bob,
             localToken: address(token),
-            remoteToken: address(token),
+            sourceChain: CHAIN_ID,
             tokenId: tokenId,
             amount: 50,
-            data: "",
-            context: "",
+            tokenURI: "https://example.com/metadata/1.json",
             canceler: address(0)
         });
 
@@ -66,20 +148,23 @@ contract ERC1155BridgeTest is Test {
     }
 
     function testCancelDeposit() public {
+        // Initialize token
+        vm.prank(alice);
+        bridge.initializeToken(address(token));
+        
         address canceler = makeAddr("canceler");
         vm.prank(alice);
-        bytes32 id = bridge.deposit(bob, address(token), tokenId, 50, "", "", canceler);
+        bytes32 id = bridge.deposit(bob, address(token), tokenId, 50, canceler);
 
         IERC1155Bridge.ERC1155Deposit memory deposit = IERC1155Bridge.ERC1155Deposit({
             nonce: 0,
             from: alice,
             to: bob,
             localToken: address(token),
-            remoteToken: address(token),
+            sourceChain: CHAIN_ID,
             tokenId: tokenId,
             amount: 50,
-            data: "",
-            context: "",
+            tokenURI: "https://example.com/metadata/1.json",
             canceler: canceler
         });
 
@@ -96,20 +181,23 @@ contract ERC1155BridgeTest is Test {
     }
 
     function testCannotCancelIfNotCanceler() public {
+        // Initialize token
+        vm.prank(alice);
+        bridge.initializeToken(address(token));
+        
         address canceler = makeAddr("canceler");
         vm.prank(alice);
-        bridge.deposit(bob, address(token), tokenId, 50, "", "", canceler);
+        bridge.deposit(bob, address(token), tokenId, 50, canceler);
 
         IERC1155Bridge.ERC1155Deposit memory deposit = IERC1155Bridge.ERC1155Deposit({
             nonce: 0,
             from: alice,
             to: bob,
             localToken: address(token),
-            remoteToken: address(token),
+            sourceChain: CHAIN_ID,
             tokenId: tokenId,
             amount: 50,
-            data: "",
-            context: "",
+            tokenURI: "https://example.com/metadata/1.json",
             canceler: canceler
         });
 
@@ -123,19 +211,22 @@ contract ERC1155BridgeTest is Test {
     }
 
     function testCannotClaimAlreadyClaimed() public {
+        // Initialize token
         vm.prank(alice);
-        bridge.deposit(bob, address(token), tokenId, 50, "", "", address(0));
+        bridge.initializeToken(address(token));
+        
+        vm.prank(alice);
+        bridge.deposit(bob, address(token), tokenId, 50, address(0));
 
         IERC1155Bridge.ERC1155Deposit memory deposit = IERC1155Bridge.ERC1155Deposit({
             nonce: 0,
             from: alice,
             to: bob,
             localToken: address(token),
-            remoteToken: address(token),
+            sourceChain: CHAIN_ID,
             tokenId: tokenId,
             amount: 50,
-            data: "",
-            context: "",
+            tokenURI: "https://example.com/metadata/1.json",
             canceler: address(0)
         });
 
@@ -150,20 +241,23 @@ contract ERC1155BridgeTest is Test {
     }
 
     function testCannotCancelAlreadyClaimed() public {
+        // Initialize token
+        vm.prank(alice);
+        bridge.initializeToken(address(token));
+        
         address canceler = makeAddr("canceler");
         vm.prank(alice);
-        bridge.deposit(bob, address(token), tokenId, 50, "", "", canceler);
+        bridge.deposit(bob, address(token), tokenId, 50, canceler);
 
         IERC1155Bridge.ERC1155Deposit memory deposit = IERC1155Bridge.ERC1155Deposit({
             nonce: 0,
             from: alice,
             to: bob,
             localToken: address(token),
-            remoteToken: address(token),
+            sourceChain: CHAIN_ID,
             tokenId: tokenId,
             amount: 50,
-            data: "",
-            context: "",
+            tokenURI: "https://example.com/metadata/1.json",
             canceler: canceler
         });
 
@@ -179,19 +273,22 @@ contract ERC1155BridgeTest is Test {
     }
 
     function testCannotCancelIfNoCanceler() public {
+        // Initialize token
         vm.prank(alice);
-        bridge.deposit(bob, address(token), tokenId, 50, "", "", address(0));
+        bridge.initializeToken(address(token));
+        
+        vm.prank(alice);
+        bridge.deposit(bob, address(token), tokenId, 50, address(0));
 
         IERC1155Bridge.ERC1155Deposit memory deposit = IERC1155Bridge.ERC1155Deposit({
             nonce: 0,
             from: alice,
             to: bob,
             localToken: address(token),
-            remoteToken: address(token),
+            sourceChain: CHAIN_ID,
             tokenId: tokenId,
             amount: 50,
-            data: "",
-            context: "",
+            tokenURI: "https://example.com/metadata/1.json",
             canceler: address(0)
         });
 
@@ -202,5 +299,57 @@ contract ERC1155BridgeTest is Test {
         vm.expectRevert(IERC1155Bridge.OnlyCanceler.selector);
         vm.prank(makeAddr("random"));
         bridge.cancelDeposit(deposit, alice, height, proof);
+    }
+
+    function testMetadataPropagation() public {
+        // Create two separate bridge instances to simulate different chains
+        ERC1155Bridge bridge2 = new ERC1155Bridge(address(signalService), trustedPublisher, counterpart, 2);
+        
+        // Initialize token on chain 1
+        vm.prank(alice);
+        bridge.initializeToken(address(token));
+        
+        // Prove initialization on chain 2 (destination)
+        IERC1155Bridge.TokenInitialization memory tokenInit = IERC1155Bridge.TokenInitialization({
+            nonce: 0,
+            originalToken: address(token),
+            uri: "https://example.com/metadata/0.json",
+            sourceChain: CHAIN_ID
+        });
+        
+        bytes memory proof = "mock_proof";
+        uint256 height = 1;
+        signalService.setVerifyResult(true);
+        
+        address bridgedToken = bridge2.proveTokenInitialization(tokenInit, height, proof);
+        
+        // Simulate bridging: deposit on chain 1, claim on chain 2
+        vm.prank(alice);
+        bridge.deposit(alice, address(token), tokenId, 25, address(0));
+        
+        IERC1155Bridge.ERC1155Deposit memory deposit = IERC1155Bridge.ERC1155Deposit({
+            nonce: 0,
+            from: alice,
+            to: alice,
+            localToken: address(token),
+            sourceChain: CHAIN_ID,
+            tokenId: tokenId,
+            amount: 25,
+            tokenURI: "https://example.com/metadata/1.json",
+            canceler: address(0)
+        });
+        
+        // Claim on chain 2 (mints bridged token with metadata)
+        bridge2.claimDeposit(deposit, height, proof);
+        
+        // Verify that the bridged token has the correct metadata
+        BridgedERC1155 bridgedNFT = BridgedERC1155(bridgedToken);
+        assertEq(bridgedNFT.balanceOf(alice, tokenId), 25);
+        assertEq(bridgedNFT.uri(tokenId), "https://example.com/metadata/1.json");
+        
+        // Verify collection info is also correct
+        assertEq(bridgedNFT.bridge(), address(bridge2));
+        assertEq(bridgedNFT.originalToken(), address(token));
+        assertEq(bridgedNFT.sourceChain(), CHAIN_ID);
     }
 }
