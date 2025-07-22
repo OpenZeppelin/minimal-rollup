@@ -33,4 +33,9 @@ abstract contract DepositRecipientIsMessageRelayer is InitialState {
         vm.expectCall(address(messageRelayer), ethDeposit.data);
         _relayMessage();
     }
+
+    function test_DepositRecipientIsMessageRelayer_claimDeposit_shouldInvokeReceiveMessage() public {
+        vm.expectCall(address(messageRelayer), ethDeposit.data);
+        messageRelayer.ethBridge().claimDeposit(ethDeposit, height, proof);
+    }
 }

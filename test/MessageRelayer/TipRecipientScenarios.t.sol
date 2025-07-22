@@ -3,8 +3,9 @@ pragma solidity ^0.8.28;
 
 import {DepositRecipientIsMessageRelayer} from "./DepositRecipientScenarios.t.sol";
 import {GenericRecipient} from "./GenericRecipient.t.sol";
-import {IETHBridge} from "src/protocol/IETHBridge.sol";
+
 import {InitialState} from "./InitialState.t.sol";
+import {IETHBridge} from "src/protocol/IETHBridge.sol";
 
 contract UserSetValidTipRecipient is DepositRecipientIsMessageRelayer {
     function test_UserSetValidTipRecipient_relayMessage_shouldTipUserSelectedRecipient() public {
