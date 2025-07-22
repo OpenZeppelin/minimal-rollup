@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
-contract MessageRecipient {
+contract GenericRecipient {
     bool private callWillSucceed = true;
 
     error CallFailed();

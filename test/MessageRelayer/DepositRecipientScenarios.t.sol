@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
+import {GenericRecipient} from "./GenericRecipient.t.sol";
 import {InitialState} from "./InitialState.t.sol";
-import {MessageRecipient} from "./MessageRecipient.t.sol";
 import {IMessageRelayer} from "src/protocol/IMessageRelayer.sol";
 
 // This is a concrete class because if we are not using the MessageRelayer,
@@ -18,19 +18,19 @@ contract DepositRecipientIsNotMessageRelayer is InitialState {
 
     function test_DepositRecipientIsNotMessageRelayer_relayMessage_shouldInvokeRecipient() public {
         vm.expectEmit();
-        emit MessageRecipient.FunctionCalled();
-        messageRelayer.relayMessage(ethDeposit, height, proof, relayerSelectedTipRecipient);
+        emit GenericRecipient.FunctionCalled();
+        _relayMessage();
     }
 
     function test_DepositRecipientIsNotMessageRelayer_relayMessage_shouldNotInvokeReceiveMessage() public {
         vm.expectCall(address(messageRelayer), ethDeposit.data, 0);
-        messageRelayer.relayMessage(ethDeposit, height, proof, relayerSelectedTipRecipient);
+        _relayMessage();
     }
 }
 
 abstract contract DepositRecipientIsMessageRelayer is InitialState {
     function test_DepositRecipientIsMessageRelayer_relayMessage_shouldInvokeReceiveMessage() public {
         vm.expectCall(address(messageRelayer), ethDeposit.data);
-        messageRelayer.relayMessage(ethDeposit, height, proof, relayerSelectedTipRecipient);
+        _relayMessage();
     }
 }
