@@ -3,24 +3,27 @@ pragma solidity ^0.8.28;
 
 import {IERC721Bridge} from "./IERC721Bridge.sol";
 import {ISignalService} from "./ISignalService.sol";
+import {BridgedERC721} from "./BridgedERC721.sol";
 
-import {IMintableERC721} from "./IMintable.sol";
-import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
 import {IERC721} from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
+import {IERC721Metadata} from "@openzeppelin/contracts/token/ERC721/extensions/IERC721Metadata.sol";
 import {IERC721Receiver} from "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
 import {ReentrancyGuardTransient} from "@openzeppelin/contracts/utils/ReentrancyGuardTransient.sol";
 
-import {ERC165} from "@openzeppelin/contracts/utils/introspection/ERC165.sol";
-import {IERC165} from "@openzeppelin/contracts/utils/introspection/IERC165.sol";
-
-/// @dev In contrast to the `SignalService`, this contract does not expect the bridge to be deployed on the same
-/// address on both chains. This is because it is designed so that each rollup has its own independent bridge contract,
-/// and they may furthermore decide to deploy a new version of the bridge in the future.
-contract ERC721Bridge is IERC721Bridge, ReentrancyGuardTransient, IERC721Receiver, AccessControl {
+/// @title ERC721Bridge
+/// @notice A decentralized bridge for ERC721 tokens that allows anyone to initialize tokens
+/// @dev Uses a permissionless token initialization flow
+contract ERC721Bridge is IERC721Bridge, ReentrancyGuardTransient, IERC721Receiver {
     mapping(bytes32 id => bool processed) private _processed;
+    mapping(bytes32 id => bool provenInitializations) private _provenInitializations;
+    mapping(address token => bool initialized) private _initializedTokens;
+    mapping(bytes32 key => address deployedToken) private _deployedTokens;
 
     /// Incremental nonce to generate unique deposit IDs.
     uint256 private _globalDepositNonce;
+    
+    /// Incremental nonce to generate unique initialization IDs.
+    uint256 private _globalInitializationNonce;
 
     ISignalService public immutable signalService;
 
@@ -32,38 +35,25 @@ contract ERC721Bridge is IERC721Bridge, ReentrancyGuardTransient, IERC721Receive
     /// This is used to locate deposit signals inside the other chain's state root.
     /// WARN: This address has no significance (and may be untrustworthy) on this chain.
     address public immutable counterpart;
+    
+    /// @dev The chain identifier for this chain
+    uint256 public immutable chainId;
 
-    mapping(address => address) public localToRemoteToken;
-    mapping(address => bool) public isMintable;
-
-    constructor(address _signalService, address _trustedCommitmentPublisher, address _counterpart) {
+    constructor(address _signalService, address _trustedCommitmentPublisher, address _counterpart, uint256 _chainId) {
         require(_signalService != address(0), "Empty signal service");
         require(_trustedCommitmentPublisher != address(0), "Empty trusted publisher");
         require(_counterpart != address(0), "Empty counterpart");
+        require(_chainId != 0, "Invalid chain ID");
 
         signalService = ISignalService(_signalService);
         trustedCommitmentPublisher = _trustedCommitmentPublisher;
         counterpart = _counterpart;
-        _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
-    }
-
-    function setTokenMapping(address local, address remote, bool mintable) external onlyRole(DEFAULT_ADMIN_ROLE) {
-        localToRemoteToken[local] = remote;
-        isMintable[local] = mintable;
-    }
-
-    function removeTokenMapping(address local) external onlyRole(DEFAULT_ADMIN_ROLE) {
-        delete localToRemoteToken[local];
-        delete isMintable[local];
+        chainId = _chainId;
     }
 
     /// @inheritdoc IERC721Receiver
     function onERC721Received(address, address, uint256, bytes calldata) external pure returns (bytes4) {
         return IERC721Receiver.onERC721Received.selector;
-    }
-
-    function supportsInterface(bytes4 interfaceId) public view virtual override(AccessControl) returns (bool) {
-        return interfaceId == type(IERC721Receiver).interfaceId || super.supportsInterface(interfaceId);
     }
 
     /// @inheritdoc IERC721Bridge
@@ -72,8 +62,91 @@ contract ERC721Bridge is IERC721Bridge, ReentrancyGuardTransient, IERC721Receive
     }
 
     /// @inheritdoc IERC721Bridge
+    function isTokenInitialized(address token) public view returns (bool) {
+        return _initializedTokens[token];
+    }
+
+    /// @inheritdoc IERC721Bridge
+    function isInitializationProven(bytes32 id) public view returns (bool) {
+        return _provenInitializations[id];
+    }
+
+    /// @inheritdoc IERC721Bridge
+    function getDeployedToken(address originalToken, uint256 sourceChain) public view returns (address) {
+        bytes32 key = keccak256(abi.encode(originalToken, sourceChain));
+        return _deployedTokens[key];
+    }
+
+    /// @inheritdoc IERC721Bridge
+    function getInitializationId(TokenInitialization memory tokenInit) public pure returns (bytes32 id) {
+        return _generateInitializationId(tokenInit);
+    }
+
+    /// @inheritdoc IERC721Bridge
     function getDepositId(ERC721Deposit memory erc721Deposit) public pure returns (bytes32 id) {
-        return _generateId(erc721Deposit);
+        return _generateDepositId(erc721Deposit);
+    }
+
+    /// @inheritdoc IERC721Bridge
+    function initializeToken(address token) external returns (bytes32 id) {
+        require(token != address(0), "Invalid token address");
+        require(!_initializedTokens[token], "Token already initialized");
+
+        // Read token metadata
+        string memory name = IERC721Metadata(token).name();
+        string memory symbol = IERC721Metadata(token).symbol();
+
+        TokenInitialization memory tokenInit = TokenInitialization({
+            nonce: _globalInitializationNonce,
+            originalToken: token,
+            name: name,
+            symbol: symbol,
+            sourceChain: chainId
+        });
+        
+        id = _generateInitializationId(tokenInit);
+        unchecked {
+            ++_globalInitializationNonce;
+        }
+
+        // Mark token as initialized locally
+        _initializedTokens[token] = true;
+
+        // Send signal for cross-chain initialization
+        signalService.sendSignal(id);
+        
+        emit TokenInitialized(id, tokenInit);
+    }
+
+    /// @inheritdoc IERC721Bridge
+    function proveTokenInitialization(
+        TokenInitialization memory tokenInit,
+        uint256 height,
+        bytes memory proof
+    ) external returns (address deployedToken) {
+        bytes32 id = _generateInitializationId(tokenInit);
+        require(!_provenInitializations[id], InitializationAlreadyProven());
+
+        // Verify the initialization signal from the source chain
+        signalService.verifySignal(height, trustedCommitmentPublisher, counterpart, id, proof);
+
+        // Mark initialization as proven
+        _provenInitializations[id] = true;
+
+        // Deploy the bridged token
+        deployedToken = address(new BridgedERC721(
+            tokenInit.name,
+            tokenInit.symbol,
+            address(this),
+            tokenInit.originalToken,
+            tokenInit.sourceChain
+        ));
+
+        // Store the mapping
+        bytes32 key = keccak256(abi.encode(tokenInit.originalToken, tokenInit.sourceChain));
+        _deployedTokens[key] = deployedToken;
+
+        emit TokenInitializationProven(id, tokenInit, deployedToken);
     }
 
     /// @inheritdoc IERC721Bridge
@@ -81,36 +154,54 @@ contract ERC721Bridge is IERC721Bridge, ReentrancyGuardTransient, IERC721Receive
         address to,
         address localToken,
         uint256 tokenId,
-        bytes memory data,
-        bytes memory context,
         address canceler
     ) external nonReentrant returns (bytes32 id) {
-        address remoteToken = localToRemoteToken[localToken];
-        require(remoteToken != address(0), "Unsupported token");
+        // Check if token is initialized (for original tokens) or is a bridged token deployed by this bridge
+        require(_initializedTokens[localToken] || _isBridgedToken(localToken), TokenNotInitialized());
 
-        ERC721Deposit memory erc721Deposit = ERC721Deposit(
-            _globalDepositNonce, msg.sender, to, localToken, remoteToken, tokenId, data, context, canceler
-        );
-        id = _generateId(erc721Deposit);
+        // Fetch the token URI for this specific token
+        string memory tokenURI_;
+        try IERC721Metadata(localToken).tokenURI(tokenId) returns (string memory uri) {
+            tokenURI_ = uri;
+        } catch {
+            // If tokenURI call fails, use empty string
+            tokenURI_ = "";
+        }
+
+        ERC721Deposit memory erc721Deposit = ERC721Deposit({
+            nonce: _globalDepositNonce,
+            from: msg.sender,
+            to: to,
+            localToken: localToken,
+            sourceChain: chainId,
+            tokenId: tokenId,
+            tokenURI: tokenURI_,
+            canceler: canceler
+        });
+        
+        id = _generateDepositId(erc721Deposit);
         unchecked {
             ++_globalDepositNonce;
         }
 
-        IERC721(localToken).safeTransferFrom(msg.sender, address(this), tokenId);
-        if (isMintable[localToken]) {
-            IMintableERC721(localToken).burn(address(this), tokenId);
+        // Handle token transfer based on whether it's a bridged token or original token
+        if (_isBridgedToken(localToken)) {
+            // This is a bridged token being sent back to its origin, burn it
+            IERC721(localToken).safeTransferFrom(msg.sender, address(this), tokenId);
+            BridgedERC721(localToken).burn(address(this), tokenId);
+        } else {
+            // This is an original token, hold it
+            IERC721(localToken).safeTransferFrom(msg.sender, address(this), tokenId);
         }
 
+        // Send signal
         signalService.sendSignal(id);
         emit DepositMade(id, erc721Deposit);
     }
 
     /// @inheritdoc IERC721Bridge
-    function claimDeposit(ERC721Deposit memory erc721Deposit, uint256 height, bytes memory proof)
-        external
-        nonReentrant
-    {
-        bytes32 id = _claimDeposit(erc721Deposit, erc721Deposit.to, erc721Deposit.data, height, proof);
+    function claimDeposit(ERC721Deposit memory erc721Deposit, uint256 height, bytes memory proof) external nonReentrant {
+        bytes32 id = _claimDeposit(erc721Deposit, erc721Deposit.to, height, proof);
         emit DepositClaimed(id, erc721Deposit);
     }
 
@@ -121,7 +212,7 @@ contract ERC721Bridge is IERC721Bridge, ReentrancyGuardTransient, IERC721Receive
     {
         require(msg.sender == erc721Deposit.canceler, OnlyCanceler());
 
-        bytes32 id = _claimDeposit(erc721Deposit, claimee, bytes(""), height, proof);
+        bytes32 id = _claimDeposit(erc721Deposit, claimee, height, proof);
 
         emit DepositCancelled(id, claimee);
     }
@@ -129,35 +220,65 @@ contract ERC721Bridge is IERC721Bridge, ReentrancyGuardTransient, IERC721Receive
     function _claimDeposit(
         ERC721Deposit memory erc721Deposit,
         address to,
-        bytes memory data,
         uint256 height,
         bytes memory proof
     ) internal returns (bytes32 id) {
-        id = _generateId(erc721Deposit);
+        id = _generateDepositId(erc721Deposit);
         require(!processed(id), AlreadyClaimed());
 
         signalService.verifySignal(height, trustedCommitmentPublisher, counterpart, id, proof);
 
         _processed[id] = true;
-        _sendERC721(erc721Deposit.remoteToken, to, erc721Deposit.tokenId, data);
+        _sendERC721(erc721Deposit, to);
     }
 
-    /// @dev Function to safe transfer ERC721 to the receiver with data.
-    /// @param token ERC721 token address
+    /// @dev Function to transfer ERC721 to the receiver.
+    /// @param erc721Deposit The deposit information containing the token and tokenId
     /// @param to Address to send the token to
-    /// @param tokenId Token ID to send
-    /// @param data Data to send to the receiver
-    function _sendERC721(address token, address to, uint256 tokenId, bytes memory data) internal {
-        if (isMintable[token]) {
-            IMintableERC721(token).mint(to, tokenId);
+    function _sendERC721(ERC721Deposit memory erc721Deposit, address to) internal {
+        if (erc721Deposit.sourceChain != chainId) {
+            // This is a deposit from another chain, check if we have the bridged token deployed
+            bytes32 key = keccak256(abi.encode(erc721Deposit.localToken, erc721Deposit.sourceChain));
+            address deployedToken = _deployedTokens[key];
+            
+            if (deployedToken != address(0)) {
+                // Mint the bridged token with its original metadata
+                if (bytes(erc721Deposit.tokenURI).length > 0) {
+                    BridgedERC721(deployedToken).mintWithURI(to, erc721Deposit.tokenId, erc721Deposit.tokenURI);
+                } else {
+                    BridgedERC721(deployedToken).mint(to, erc721Deposit.tokenId);
+                }
+            } else {
+                // This should not happen if token was properly initialized
+                revert("Bridged token not found");
+            }
         } else {
-            IERC721(token).safeTransferFrom(address(this), to, tokenId, data);
+            // This is a deposit from the same chain (bridged token going back to origin)
+            // Transfer the original token that we hold
+            IERC721(erc721Deposit.localToken).safeTransferFrom(address(this), to, erc721Deposit.tokenId);
         }
+    }
+
+    /// @dev Checks if a token is a bridged token deployed by this bridge.
+    /// @param token The token address to check
+    /// @return true if the token is a bridged token deployed by this bridge
+    function _isBridgedToken(address token) internal view returns (bool) {
+        try BridgedERC721(token).bridge() returns (address bridge) {
+            return bridge == address(this);
+        } catch {
+            return false;
+        }
+    }
+
+    /// @dev Generates a unique ID for a token initialization.
+    /// @param tokenInit Token initialization to generate an ID for
+    function _generateInitializationId(TokenInitialization memory tokenInit) internal pure returns (bytes32) {
+        return keccak256(abi.encode(tokenInit));
     }
 
     /// @dev Generates a unique ID for a deposit.
     /// @param erc721Deposit Deposit to generate an ID for
-    function _generateId(ERC721Deposit memory erc721Deposit) internal pure returns (bytes32) {
+    function _generateDepositId(ERC721Deposit memory erc721Deposit) internal pure returns (bytes32) {
         return keccak256(abi.encode(erc721Deposit));
     }
 }
