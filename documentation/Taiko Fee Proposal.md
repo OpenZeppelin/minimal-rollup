@@ -68,7 +68,7 @@ Note that under this design, the costs for a publication are self-contained, so 
 
 - The goal is to reflect the real-world costs as faithfully as possible.
 - Any opinionated pricing formulas enforced by the protocol, particularly ones that rely on empirically-derived parameters (like average transaction sizes), can get out of sync with the market conditions.
-- Moreover, attempting to charge for the wrong resource (eg. L1 costs being included the L2 base fee) can let users craft transactions that exploit the discrepancy.
+- Moreover, attempting to charge for the wrong resource (eg. L1 costs being included in the L2 base fee) can let users craft transactions that exploit the discrepancy.
 
 ### L2 Gas
 - As I understand it (although this should be validated), since there is no security reason to encourage users to run L2 nodes, we do not need to charge for "costs to the L2 network". This means the L2 gas fee can be set to zero.
