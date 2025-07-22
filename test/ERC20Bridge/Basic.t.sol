@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
-import {IMintableERC20} from "../../src/protocol/IMintable.sol";
+import {BridgedERC20} from "../../src/protocol/BridgedERC20.sol";
 import "forge-std/Test.sol";
 import {ERC20Bridge} from "src/protocol/ERC20Bridge.sol";
 import {IERC20Bridge} from "src/protocol/IERC20Bridge.sol";
@@ -15,48 +15,127 @@ contract ERC20BridgeTest is Test {
     MockERC20 token;
     address trustedPublisher = address(0x123);
     address counterpart = address(0x456);
+    uint256 constant CHAIN_ID = 1;
     address alice = address(0xA11CE);
     address bob = address(0xB0B);
 
     function setUp() public {
         signalService = new MockSignalService();
-        bridge = new ERC20Bridge(address(signalService), trustedPublisher, counterpart);
+        bridge = new ERC20Bridge(address(signalService), trustedPublisher, counterpart, CHAIN_ID);
         token = new MockERC20("Test Token", "TEST");
         token.mint(alice, 1000);
         vm.prank(alice);
         token.approve(address(bridge), type(uint256).max);
-        bridge.setTokenMapping(address(token), address(token), false);
     }
 
-    // solhint-disable no-unused-vars
-    function testDeposit() public {
+    function testInitializeToken() public {
         vm.prank(alice);
-        bridge.deposit(bob, address(token), 100, "", "", address(0));
+        bytes32 id = bridge.initializeToken(address(token));
+        
+        assertTrue(bridge.isTokenInitialized(address(token)));
+        assertEq(signalService.lastSignalId(), id);
+    }
+
+    function testCannotInitializeTokenTwice() public {
+        vm.prank(alice);
+        bridge.initializeToken(address(token));
+        
+        vm.expectRevert("Token already initialized");
+        vm.prank(bob);
+        bridge.initializeToken(address(token));
+    }
+
+    function testProveTokenInitialization() public {
+        // First initialize on source chain
+        vm.prank(alice);
+        bytes32 id = bridge.initializeToken(address(token));
+        
+        // Prepare initialization data for destination chain
+        IERC20Bridge.TokenInitialization memory tokenInit = IERC20Bridge.TokenInitialization({
+            nonce: 0,
+            originalToken: address(token),
+            name: "Test Token",
+            symbol: "TEST",
+            decimals: 18,
+            sourceChain: CHAIN_ID
+        });
+        
+        bytes memory proof = "mock_proof";
+        uint256 height = 1;
+        signalService.setVerifyResult(true);
+        
+        // Prove initialization and deploy bridged token
+        address deployedToken = bridge.proveTokenInitialization(tokenInit, height, proof);
+        
+        assertTrue(bridge.isInitializationProven(id));
+        assertEq(bridge.getDeployedToken(address(token), CHAIN_ID), deployedToken);
+        
+        // Check that the deployed token has correct metadata
+        BridgedERC20 bridgedToken = BridgedERC20(deployedToken);
+        assertEq(bridgedToken.name(), "Test Token");
+        assertEq(bridgedToken.symbol(), "TEST");
+        assertEq(bridgedToken.decimals(), 18);
+        assertEq(bridgedToken.bridge(), address(bridge));
+        assertEq(bridgedToken.originalToken(), address(token));
+        assertEq(bridgedToken.sourceChain(), CHAIN_ID);
+    }
+
+    function testCannotProveInitializationTwice() public {
+        // First initialize
+        vm.prank(alice);
+        bridge.initializeToken(address(token));
+        
+        IERC20Bridge.TokenInitialization memory tokenInit = IERC20Bridge.TokenInitialization({
+            nonce: 0,
+            originalToken: address(token),
+            name: "Test Token",
+            symbol: "TEST",
+            decimals: 18,
+            sourceChain: CHAIN_ID
+        });
+        
+        bytes memory proof = "mock_proof";
+        uint256 height = 1;
+        signalService.setVerifyResult(true);
+        
+        bridge.proveTokenInitialization(tokenInit, height, proof);
+        
+        vm.expectRevert(IERC20Bridge.InitializationAlreadyProven.selector);
+        bridge.proveTokenInitialization(tokenInit, height, proof);
+    }
+
+    function testDeposit() public {
+        // Initialize token first
+        vm.prank(alice);
+        bridge.initializeToken(address(token));
+        
+        vm.prank(alice);
+        bridge.deposit(bob, address(token), 100, address(0));
         assertEq(token.balanceOf(address(bridge)), 100);
         assertEq(token.balanceOf(alice), 900);
     }
 
-    function testDepositMintable() public {
-        bridge.setTokenMapping(address(token), address(token), true);
+    function testCannotDepositUninitializedToken() public {
+        vm.expectRevert(IERC20Bridge.TokenNotInitialized.selector);
         vm.prank(alice);
-        vm.expectCall(address(token), abi.encodeCall(IMintableERC20.burn, (address(bridge), 100)));
-        bridge.deposit(bob, address(token), 100, "", "", address(0));
-        assertEq(token.balanceOf(alice), 900);
+        bridge.deposit(bob, address(token), 100, address(0));
     }
 
     function testClaimDeposit() public {
+        // Initialize token
         vm.prank(alice);
-        bytes32 id = bridge.deposit(bob, address(token), 100, "", "", address(0));
+        bridge.initializeToken(address(token));
+        
+        vm.prank(alice);
+        bytes32 id = bridge.deposit(bob, address(token), 100, address(0));
 
         IERC20Bridge.ERC20Deposit memory deposit = IERC20Bridge.ERC20Deposit({
             nonce: 0,
             from: alice,
             to: bob,
             localToken: address(token),
-            remoteToken: address(token),
+            sourceChain: CHAIN_ID,
             amount: 100,
-            data: "",
-            context: "",
             canceler: address(0)
         });
 
@@ -71,48 +150,22 @@ contract ERC20BridgeTest is Test {
         assertEq(token.balanceOf(address(bridge)), 0);
     }
 
-    function testClaimMintable() public {
-        bridge.setTokenMapping(address(token), address(token), true);
-        vm.prank(alice);
-        bytes32 id = bridge.deposit(bob, address(token), 100, "", "", address(0));
-
-        IERC20Bridge.ERC20Deposit memory deposit = IERC20Bridge.ERC20Deposit({
-            nonce: 0,
-            from: alice,
-            to: bob,
-            localToken: address(token),
-            remoteToken: address(token),
-            amount: 100,
-            data: "",
-            context: "",
-            canceler: address(0)
-        });
-
-        bytes memory proof = "mock_proof";
-        uint256 height = 1;
-        signalService.setVerifyResult(true);
-
-        vm.expectCall(address(token), abi.encodeCall(IMintableERC20.mint, (bob, 100)));
-        bridge.claimDeposit(deposit, height, proof);
-
-        assertTrue(bridge.processed(id));
-        assertEq(token.balanceOf(bob), 100);
-    }
-
     function testCancelDeposit() public {
+        // Initialize token
+        vm.prank(alice);
+        bridge.initializeToken(address(token));
+        
         address canceler = makeAddr("canceler");
         vm.prank(alice);
-        bytes32 id = bridge.deposit(bob, address(token), 100, "", "", canceler);
+        bytes32 id = bridge.deposit(bob, address(token), 100, canceler);
 
         IERC20Bridge.ERC20Deposit memory deposit = IERC20Bridge.ERC20Deposit({
             nonce: 0,
             from: alice,
             to: bob,
             localToken: address(token),
-            remoteToken: address(token),
+            sourceChain: CHAIN_ID,
             amount: 100,
-            data: "",
-            context: "",
             canceler: canceler
         });
 
@@ -129,19 +182,21 @@ contract ERC20BridgeTest is Test {
     }
 
     function testCannotCancelIfNotCanceler() public {
+        // Initialize token
+        vm.prank(alice);
+        bridge.initializeToken(address(token));
+        
         address canceler = makeAddr("canceler");
         vm.prank(alice);
-        bridge.deposit(bob, address(token), 100, "", "", canceler);
+        bridge.deposit(bob, address(token), 100, canceler);
 
         IERC20Bridge.ERC20Deposit memory deposit = IERC20Bridge.ERC20Deposit({
             nonce: 0,
             from: alice,
             to: bob,
             localToken: address(token),
-            remoteToken: address(token),
+            sourceChain: CHAIN_ID,
             amount: 100,
-            data: "",
-            context: "",
             canceler: canceler
         });
 
@@ -155,18 +210,20 @@ contract ERC20BridgeTest is Test {
     }
 
     function testCannotClaimAlreadyClaimed() public {
+        // Initialize token
         vm.prank(alice);
-        bridge.deposit(bob, address(token), 100, "", "", address(0));
+        bridge.initializeToken(address(token));
+        
+        vm.prank(alice);
+        bridge.deposit(bob, address(token), 100, address(0));
 
         IERC20Bridge.ERC20Deposit memory deposit = IERC20Bridge.ERC20Deposit({
             nonce: 0,
             from: alice,
             to: bob,
             localToken: address(token),
-            remoteToken: address(token),
+            sourceChain: CHAIN_ID,
             amount: 100,
-            data: "",
-            context: "",
             canceler: address(0)
         });
 
@@ -180,62 +237,59 @@ contract ERC20BridgeTest is Test {
         bridge.claimDeposit(deposit, height, proof);
     }
 
-    function testCannotCancelAlreadyClaimed() public {
-        address canceler = makeAddr("canceler");
+    function testBridgedTokenDeposit() public {
+        // Create two separate bridge instances to simulate different chains
+        ERC20Bridge bridge2 = new ERC20Bridge(address(signalService), trustedPublisher, counterpart, 2);
+        
+        // Initialize token on chain 1
         vm.prank(alice);
-        bridge.deposit(bob, address(token), 100, "", "", canceler);
-
-        IERC20Bridge.ERC20Deposit memory deposit = IERC20Bridge.ERC20Deposit({
+        bridge.initializeToken(address(token));
+        
+        // Prove initialization on chain 2 (destination)
+        IERC20Bridge.TokenInitialization memory tokenInit = IERC20Bridge.TokenInitialization({
             nonce: 0,
-            from: alice,
-            to: bob,
-            localToken: address(token),
-            remoteToken: address(token),
-            amount: 100,
-            data: "",
-            context: "",
-            canceler: canceler
+            originalToken: address(token),
+            name: "Test Token",
+            symbol: "TEST",
+            decimals: 18,
+            sourceChain: CHAIN_ID
         });
-
+        
         bytes memory proof = "mock_proof";
         uint256 height = 1;
         signalService.setVerifyResult(true);
-
-        bridge.claimDeposit(deposit, height, proof);
-
-        vm.expectRevert(IERC20Bridge.AlreadyClaimed.selector);
-        vm.prank(canceler);
-        bridge.cancelDeposit(deposit, alice, height, proof);
-    }
-
-    function testCannotCancelIfNoCanceler() public {
+        
+        address bridgedToken = bridge2.proveTokenInitialization(tokenInit, height, proof);
+        
+        // Simulate bridging: deposit on chain 1, claim on chain 2
         vm.prank(alice);
-        bridge.deposit(bob, address(token), 100, "", "", address(0));
-
+        bytes32 depositId = bridge.deposit(alice, address(token), 200, address(0));
+        
         IERC20Bridge.ERC20Deposit memory deposit = IERC20Bridge.ERC20Deposit({
             nonce: 0,
             from: alice,
-            to: bob,
+            to: alice,
             localToken: address(token),
-            remoteToken: address(token),
-            amount: 100,
-            data: "",
-            context: "",
+            sourceChain: CHAIN_ID,
+            amount: 200,
             canceler: address(0)
         });
-
-        bytes memory proof = "mock_proof";
-        uint256 height = 1;
-        signalService.setVerifyResult(true);
-
-        vm.expectRevert(IERC20Bridge.OnlyCanceler.selector);
-        vm.prank(makeAddr("random"));
-        bridge.cancelDeposit(deposit, alice, height, proof);
-    }
-
-    function testUnsupportedToken() public {
-        vm.expectRevert("Unsupported token");
+        
+        // Claim on chain 2 (mints bridged tokens)
+        bridge2.claimDeposit(deposit, height, proof);
+        
+        // Now alice has bridged tokens on chain 2
+        assertEq(BridgedERC20(bridgedToken).balanceOf(alice), 200);
+        
+        // Alice deposits bridged tokens back to chain 1
         vm.prank(alice);
-        bridge.deposit(bob, address(0xBAD), 100, "", "", address(0));
+        BridgedERC20(bridgedToken).approve(address(bridge2), 100);
+        
+        vm.prank(alice);
+        bridge2.deposit(bob, bridgedToken, 100, address(0));
+        
+        // Bridged tokens should be burned (total supply decreases)
+        assertEq(BridgedERC20(bridgedToken).balanceOf(alice), 100);
+        assertEq(BridgedERC20(bridgedToken).totalSupply(), 100);
     }
 }

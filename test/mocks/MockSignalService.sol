@@ -5,6 +5,7 @@ import {ISignalService} from "src/protocol/ISignalService.sol";
 
 contract MockSignalService is ISignalService {
     bool verifyResult;
+    bytes32 public lastSignalId;
 
     function setVerifyResult(bool _result) external {
         verifyResult = _result;
@@ -17,7 +18,8 @@ contract MockSignalService is ISignalService {
         require(verifyResult, "Mock verify failed");
     }
 
-    function sendSignal(bytes32 _signal) external pure returns (bytes32 slot) {
+    function sendSignal(bytes32 _signal) external returns (bytes32 slot) {
+        lastSignalId = _signal;
         slot = keccak256(abi.encodePacked(_signal));
     }
 
