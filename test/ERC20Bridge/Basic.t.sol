@@ -15,13 +15,12 @@ contract ERC20BridgeTest is Test {
     MockERC20 token;
     address trustedPublisher = address(0x123);
     address counterpart = address(0x456);
-    uint256 constant CHAIN_ID = 1;
     address alice = address(0xA11CE);
     address bob = address(0xB0B);
 
     function setUp() public {
         signalService = new MockSignalService();
-        bridge = new ERC20Bridge(address(signalService), trustedPublisher, counterpart, CHAIN_ID);
+        bridge = new ERC20Bridge(address(signalService), trustedPublisher, counterpart);
         token = new MockERC20("Test Token", "TEST");
         token.mint(alice, 1000);
         vm.prank(alice);
@@ -57,7 +56,7 @@ contract ERC20BridgeTest is Test {
             name: "Test Token",
             symbol: "TEST",
             decimals: 18,
-            sourceChain: CHAIN_ID
+            sourceChain: 31337
         });
         
         bytes memory proof = "mock_proof";
@@ -68,7 +67,7 @@ contract ERC20BridgeTest is Test {
         address deployedToken = bridge.proveTokenInitialization(tokenInit, height, proof);
         
         assertTrue(bridge.isInitializationProven(id));
-        assertEq(bridge.getDeployedToken(address(token), CHAIN_ID), deployedToken);
+        assertEq(bridge.getDeployedToken(address(token), 31337), deployedToken);
         
         // Check that the deployed token has correct metadata
         BridgedERC20 bridgedToken = BridgedERC20(deployedToken);
@@ -77,7 +76,7 @@ contract ERC20BridgeTest is Test {
         assertEq(bridgedToken.decimals(), 18);
         assertEq(bridgedToken.bridge(), address(bridge));
         assertEq(bridgedToken.originalToken(), address(token));
-        assertEq(bridgedToken.sourceChain(), CHAIN_ID);
+        assertEq(bridgedToken.sourceChain(), 31337);
     }
 
     function testCannotProveInitializationTwice() public {
@@ -91,7 +90,7 @@ contract ERC20BridgeTest is Test {
             name: "Test Token",
             symbol: "TEST",
             decimals: 18,
-            sourceChain: CHAIN_ID
+            sourceChain: 31337
         });
         
         bytes memory proof = "mock_proof";
@@ -134,7 +133,7 @@ contract ERC20BridgeTest is Test {
             from: alice,
             to: bob,
             localToken: address(token),
-            sourceChain: CHAIN_ID,
+            sourceChain: 31337,
             amount: 100,
             canceler: address(0)
         });
@@ -164,7 +163,7 @@ contract ERC20BridgeTest is Test {
             from: alice,
             to: bob,
             localToken: address(token),
-            sourceChain: CHAIN_ID,
+            sourceChain: 31337,
             amount: 100,
             canceler: canceler
         });
@@ -195,7 +194,7 @@ contract ERC20BridgeTest is Test {
             from: alice,
             to: bob,
             localToken: address(token),
-            sourceChain: CHAIN_ID,
+            sourceChain: 31337,
             amount: 100,
             canceler: canceler
         });
@@ -222,7 +221,7 @@ contract ERC20BridgeTest is Test {
             from: alice,
             to: bob,
             localToken: address(token),
-            sourceChain: CHAIN_ID,
+            sourceChain: 31337,
             amount: 100,
             canceler: address(0)
         });
@@ -239,7 +238,7 @@ contract ERC20BridgeTest is Test {
 
     function testBridgedTokenDeposit() public {
         // Create two separate bridge instances to simulate different chains
-        ERC20Bridge bridge2 = new ERC20Bridge(address(signalService), trustedPublisher, counterpart, 2);
+        ERC20Bridge bridge2 = new ERC20Bridge(address(signalService), trustedPublisher, counterpart);
         
         // Initialize token on chain 1
         vm.prank(alice);
@@ -252,7 +251,7 @@ contract ERC20BridgeTest is Test {
             name: "Test Token",
             symbol: "TEST",
             decimals: 18,
-            sourceChain: CHAIN_ID
+            sourceChain: 31337
         });
         
         bytes memory proof = "mock_proof";
@@ -270,7 +269,7 @@ contract ERC20BridgeTest is Test {
             from: alice,
             to: alice,
             localToken: address(token),
-            sourceChain: CHAIN_ID,
+            sourceChain: 31337,
             amount: 200,
             canceler: address(0)
         });

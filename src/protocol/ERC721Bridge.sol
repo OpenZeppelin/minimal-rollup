@@ -39,16 +39,15 @@ contract ERC721Bridge is IERC721Bridge, ReentrancyGuardTransient, IERC721Receive
     /// @dev The chain identifier for this chain
     uint256 public immutable chainId;
 
-    constructor(address _signalService, address _trustedCommitmentPublisher, address _counterpart, uint256 _chainId) {
+    constructor(address _signalService, address _trustedCommitmentPublisher, address _counterpart) {
         require(_signalService != address(0), "Empty signal service");
         require(_trustedCommitmentPublisher != address(0), "Empty trusted publisher");
         require(_counterpart != address(0), "Empty counterpart");
-        require(_chainId != 0, "Invalid chain ID");
 
         signalService = ISignalService(_signalService);
         trustedCommitmentPublisher = _trustedCommitmentPublisher;
         counterpart = _counterpart;
-        chainId = _chainId;
+        chainId = block.chainid;
     }
 
     /// @inheritdoc IERC721Receiver

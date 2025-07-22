@@ -15,14 +15,13 @@ contract ERC1155BridgeTest is Test {
     MockERC1155 token;
     address trustedPublisher = address(0x123);
     address counterpart = address(0x456);
-    uint256 constant CHAIN_ID = 1;
     address alice = address(0xA11CE);
     address bob = address(0xB0B);
     uint256 tokenId = 1;
 
     function setUp() public {
         signalService = new MockSignalService();
-        bridge = new ERC1155Bridge(address(signalService), trustedPublisher, counterpart, CHAIN_ID);
+        bridge = new ERC1155Bridge(address(signalService), trustedPublisher, counterpart);
         token = new MockERC1155();
         token.mint(alice, tokenId, 100, "");
         vm.prank(alice);
@@ -56,7 +55,7 @@ contract ERC1155BridgeTest is Test {
             nonce: 0,
             originalToken: address(token),
             uri: "https://example.com/metadata/0.json",
-            sourceChain: CHAIN_ID
+            sourceChain: 31337
         });
         
         bytes memory proof = "mock_proof";
@@ -67,13 +66,13 @@ contract ERC1155BridgeTest is Test {
         address deployedToken = bridge.proveTokenInitialization(tokenInit, height, proof);
         
         assertTrue(bridge.isInitializationProven(id));
-        assertEq(bridge.getDeployedToken(address(token), CHAIN_ID), deployedToken);
+        assertEq(bridge.getDeployedToken(address(token), 31337), deployedToken);
         
         // Check that the deployed token has correct metadata
         BridgedERC1155 bridgedToken = BridgedERC1155(deployedToken);
         assertEq(bridgedToken.bridge(), address(bridge));
         assertEq(bridgedToken.originalToken(), address(token));
-        assertEq(bridgedToken.sourceChain(), CHAIN_ID);
+        assertEq(bridgedToken.sourceChain(), 31337);
     }
 
     function testCannotProveInitializationTwice() public {
@@ -85,7 +84,7 @@ contract ERC1155BridgeTest is Test {
             nonce: 0,
             originalToken: address(token),
             uri: "https://example.com/metadata/0.json",
-            sourceChain: CHAIN_ID
+            sourceChain: 31337
         });
         
         bytes memory proof = "mock_proof";
@@ -129,7 +128,7 @@ contract ERC1155BridgeTest is Test {
             from: alice,
             to: bob,
             localToken: address(token),
-            sourceChain: CHAIN_ID,
+            sourceChain: 31337,
             tokenId: tokenId,
             amount: 50,
             tokenURI: "https://example.com/metadata/1.json",
@@ -161,7 +160,7 @@ contract ERC1155BridgeTest is Test {
             from: alice,
             to: bob,
             localToken: address(token),
-            sourceChain: CHAIN_ID,
+            sourceChain: 31337,
             tokenId: tokenId,
             amount: 50,
             tokenURI: "https://example.com/metadata/1.json",
@@ -194,7 +193,7 @@ contract ERC1155BridgeTest is Test {
             from: alice,
             to: bob,
             localToken: address(token),
-            sourceChain: CHAIN_ID,
+            sourceChain: 31337,
             tokenId: tokenId,
             amount: 50,
             tokenURI: "https://example.com/metadata/1.json",
@@ -223,7 +222,7 @@ contract ERC1155BridgeTest is Test {
             from: alice,
             to: bob,
             localToken: address(token),
-            sourceChain: CHAIN_ID,
+            sourceChain: 31337,
             tokenId: tokenId,
             amount: 50,
             tokenURI: "https://example.com/metadata/1.json",
@@ -254,7 +253,7 @@ contract ERC1155BridgeTest is Test {
             from: alice,
             to: bob,
             localToken: address(token),
-            sourceChain: CHAIN_ID,
+            sourceChain: 31337,
             tokenId: tokenId,
             amount: 50,
             tokenURI: "https://example.com/metadata/1.json",
@@ -285,7 +284,7 @@ contract ERC1155BridgeTest is Test {
             from: alice,
             to: bob,
             localToken: address(token),
-            sourceChain: CHAIN_ID,
+            sourceChain: 31337,
             tokenId: tokenId,
             amount: 50,
             tokenURI: "https://example.com/metadata/1.json",
@@ -303,7 +302,7 @@ contract ERC1155BridgeTest is Test {
 
     function testMetadataPropagation() public {
         // Create two separate bridge instances to simulate different chains
-        ERC1155Bridge bridge2 = new ERC1155Bridge(address(signalService), trustedPublisher, counterpart, 2);
+        ERC1155Bridge bridge2 = new ERC1155Bridge(address(signalService), trustedPublisher, counterpart);
         
         // Initialize token on chain 1
         vm.prank(alice);
@@ -314,7 +313,7 @@ contract ERC1155BridgeTest is Test {
             nonce: 0,
             originalToken: address(token),
             uri: "https://example.com/metadata/0.json",
-            sourceChain: CHAIN_ID
+            sourceChain: 31337
         });
         
         bytes memory proof = "mock_proof";
@@ -332,7 +331,7 @@ contract ERC1155BridgeTest is Test {
             from: alice,
             to: alice,
             localToken: address(token),
-            sourceChain: CHAIN_ID,
+            sourceChain: 31337,
             tokenId: tokenId,
             amount: 25,
             tokenURI: "https://example.com/metadata/1.json",
@@ -350,6 +349,6 @@ contract ERC1155BridgeTest is Test {
         // Verify collection info is also correct
         assertEq(bridgedNFT.bridge(), address(bridge2));
         assertEq(bridgedNFT.originalToken(), address(token));
-        assertEq(bridgedNFT.sourceChain(), CHAIN_ID);
+        assertEq(bridgedNFT.sourceChain(), 1);
     }
 }

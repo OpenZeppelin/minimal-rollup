@@ -15,14 +15,13 @@ contract ERC721BridgeTest is Test {
     MockERC721 token;
     address trustedPublisher = address(0x123);
     address counterpart = address(0x456);
-    uint256 constant CHAIN_ID = 1;
     address alice = address(0xA11CE);
     address bob = address(0xB0B);
     uint256 tokenId = 1;
 
     function setUp() public {
         signalService = new MockSignalService();
-        bridge = new ERC721Bridge(address(signalService), trustedPublisher, counterpart, CHAIN_ID);
+        bridge = new ERC721Bridge(address(signalService), trustedPublisher, counterpart);
         token = new MockERC721("Test NFT", "TNFT");
         token.mint(alice, tokenId);
         vm.prank(alice);
@@ -57,7 +56,7 @@ contract ERC721BridgeTest is Test {
             originalToken: address(token),
             name: "Test NFT",
             symbol: "TNFT",
-            sourceChain: CHAIN_ID
+            sourceChain: 31337
         });
         
         bytes memory proof = "mock_proof";
@@ -68,7 +67,7 @@ contract ERC721BridgeTest is Test {
         address deployedToken = bridge.proveTokenInitialization(tokenInit, height, proof);
         
         assertTrue(bridge.isInitializationProven(id));
-        assertEq(bridge.getDeployedToken(address(token), CHAIN_ID), deployedToken);
+        assertEq(bridge.getDeployedToken(address(token), 31337), deployedToken);
         
         // Check that the deployed token has correct metadata
         BridgedERC721 bridgedToken = BridgedERC721(deployedToken);
@@ -76,7 +75,7 @@ contract ERC721BridgeTest is Test {
         assertEq(bridgedToken.symbol(), "TNFT");
         assertEq(bridgedToken.bridge(), address(bridge));
         assertEq(bridgedToken.originalToken(), address(token));
-        assertEq(bridgedToken.sourceChain(), CHAIN_ID);
+        assertEq(bridgedToken.sourceChain(), 31337);
     }
 
     function testCannotProveInitializationTwice() public {
@@ -89,7 +88,7 @@ contract ERC721BridgeTest is Test {
             originalToken: address(token),
             name: "Test NFT",
             symbol: "TNFT",
-            sourceChain: CHAIN_ID
+            sourceChain: 31337
         });
         
         bytes memory proof = "mock_proof";
@@ -131,7 +130,7 @@ contract ERC721BridgeTest is Test {
             from: alice,
             to: bob,
             localToken: address(token),
-            sourceChain: CHAIN_ID,
+            sourceChain: 31337,
             tokenId: tokenId,
             tokenURI: "https://example.com/metadata/1",
             canceler: address(0)
@@ -161,7 +160,7 @@ contract ERC721BridgeTest is Test {
             from: alice,
             to: bob,
             localToken: address(token),
-            sourceChain: CHAIN_ID,
+            sourceChain: 31337,
             tokenId: tokenId,
             tokenURI: "https://example.com/metadata/1",
             canceler: canceler
@@ -192,7 +191,7 @@ contract ERC721BridgeTest is Test {
             from: alice,
             to: bob,
             localToken: address(token),
-            sourceChain: CHAIN_ID,
+            sourceChain: 31337,
             tokenId: tokenId,
             tokenURI: "https://example.com/metadata/1",
             canceler: canceler
@@ -220,7 +219,7 @@ contract ERC721BridgeTest is Test {
             from: alice,
             to: bob,
             localToken: address(token),
-            sourceChain: CHAIN_ID,
+            sourceChain: 31337,
             tokenId: tokenId,
             tokenURI: "https://example.com/metadata/1",
             canceler: address(0)
@@ -250,7 +249,7 @@ contract ERC721BridgeTest is Test {
             from: alice,
             to: bob,
             localToken: address(token),
-            sourceChain: CHAIN_ID,
+            sourceChain: 31337,
             tokenId: tokenId,
             tokenURI: "https://example.com/metadata/1",
             canceler: canceler
@@ -280,7 +279,7 @@ contract ERC721BridgeTest is Test {
             from: alice,
             to: bob,
             localToken: address(token),
-            sourceChain: CHAIN_ID,
+            sourceChain: 31337,
             tokenId: tokenId,
             tokenURI: "https://example.com/metadata/1",
             canceler: address(0)
@@ -297,7 +296,7 @@ contract ERC721BridgeTest is Test {
 
     function testBridgedTokenDeposit() public {
         // Create two separate bridge instances to simulate different chains
-        ERC721Bridge bridge2 = new ERC721Bridge(address(signalService), trustedPublisher, counterpart, 2);
+        ERC721Bridge bridge2 = new ERC721Bridge(address(signalService), trustedPublisher, counterpart);
         
         // Initialize token on chain 1
         vm.prank(alice);
@@ -309,7 +308,7 @@ contract ERC721BridgeTest is Test {
             originalToken: address(token),
             name: "Test NFT",
             symbol: "TNFT",
-            sourceChain: CHAIN_ID
+            sourceChain: 31337
         });
         
         bytes memory proof = "mock_proof";
@@ -327,7 +326,7 @@ contract ERC721BridgeTest is Test {
             from: alice,
             to: alice,
             localToken: address(token),
-            sourceChain: CHAIN_ID,
+            sourceChain: 31337,
             tokenId: tokenId,
             tokenURI: "https://example.com/metadata/1",
             canceler: address(0)
@@ -353,7 +352,7 @@ contract ERC721BridgeTest is Test {
 
     function testMetadataPropagation() public {
         // Create two separate bridge instances to simulate different chains
-        ERC721Bridge bridge2 = new ERC721Bridge(address(signalService), trustedPublisher, counterpart, 2);
+        ERC721Bridge bridge2 = new ERC721Bridge(address(signalService), trustedPublisher, counterpart);
         
         // Initialize token on chain 1
         vm.prank(alice);
@@ -365,7 +364,7 @@ contract ERC721BridgeTest is Test {
             originalToken: address(token),
             name: "Test NFT",
             symbol: "TNFT",
-            sourceChain: CHAIN_ID
+            sourceChain: 31337
         });
         
         bytes memory proof = "mock_proof";
@@ -383,7 +382,7 @@ contract ERC721BridgeTest is Test {
             from: alice,
             to: alice,
             localToken: address(token),
-            sourceChain: CHAIN_ID,
+            sourceChain: 31337,
             tokenId: tokenId,
             tokenURI: "https://example.com/metadata/1",
             canceler: address(0)
