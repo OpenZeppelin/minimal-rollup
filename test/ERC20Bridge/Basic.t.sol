@@ -244,14 +244,14 @@ contract ERC20BridgeTest is Test {
         vm.prank(alice);
         bridge.initializeToken(address(token));
         
-        // Prove initialization on chain 2 (destination)
+        // Prove initialization on chain 2 (simulating it came from chain 1)
         IERC20Bridge.TokenInitialization memory tokenInit = IERC20Bridge.TokenInitialization({
             nonce: 0,
             originalToken: address(token),
             name: "Test Token",
             symbol: "TEST",
             decimals: 18,
-            sourceChain: 31337
+            sourceChain: 1  // Simulate this came from chain 1
         });
         
         bytes memory proof = "mock_proof";
@@ -264,12 +264,13 @@ contract ERC20BridgeTest is Test {
         vm.prank(alice);
         bytes32 depositId = bridge.deposit(alice, address(token), 200, address(0));
         
+        // For the claim, simulate that this deposit came from chain 1
         IERC20Bridge.ERC20Deposit memory deposit = IERC20Bridge.ERC20Deposit({
             nonce: 0,
             from: alice,
             to: alice,
             localToken: address(token),
-            sourceChain: 31337,
+            sourceChain: 1,  // Simulate this deposit came from chain 1
             amount: 200,
             canceler: address(0)
         });

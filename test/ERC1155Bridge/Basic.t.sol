@@ -308,12 +308,12 @@ contract ERC1155BridgeTest is Test {
         vm.prank(alice);
         bridge.initializeToken(address(token));
         
-        // Prove initialization on chain 2 (destination)
+        // Prove initialization on chain 2 (simulating it came from chain 1)
         IERC1155Bridge.TokenInitialization memory tokenInit = IERC1155Bridge.TokenInitialization({
             nonce: 0,
             originalToken: address(token),
             uri: "https://example.com/metadata/0.json",
-            sourceChain: 31337
+            sourceChain: 1  // Simulate this came from chain 1
         });
         
         bytes memory proof = "mock_proof";
@@ -326,12 +326,13 @@ contract ERC1155BridgeTest is Test {
         vm.prank(alice);
         bridge.deposit(alice, address(token), tokenId, 25, address(0));
         
+        // For the claim, simulate that this deposit came from chain 1
         IERC1155Bridge.ERC1155Deposit memory deposit = IERC1155Bridge.ERC1155Deposit({
             nonce: 0,
             from: alice,
             to: alice,
             localToken: address(token),
-            sourceChain: 31337,
+            sourceChain: 1,  // Simulate this deposit came from chain 1
             tokenId: tokenId,
             amount: 25,
             tokenURI: "https://example.com/metadata/1.json",
