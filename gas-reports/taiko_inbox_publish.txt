@@ -1,4 +1,3 @@
 See `test_gas_TaikoPublishFunction` in Inbox.t.sol
 
 Gas for publication: 62614
-Total: 

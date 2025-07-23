@@ -14,8 +14,7 @@ import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
 
 import "forge-std/Test.sol";
 
-/// @title DeployTaikoInbox
-/// @notice Script to deploy the TaikoInbox contract
+///@dev script to test gas consumption of TaikoInbox.publish
 contract TaikoInboxTest is Test {
     TaikoInbox taikoInbox;
     BlobRefRegistry blobRefRegistry;
@@ -45,7 +44,7 @@ contract TaikoInboxTest is Test {
         vm.roll(20);
         vm.startSnapshotGas("publish");
         taikoInbox.publish(1, 16);
-        uint256 gas = vm.stopSnapshotGas("proposeBatch");
+        uint256 gas = vm.stopSnapshotGas("publish");
         string memory str = string(
             abi.encodePacked(
                 "See `test_gas_TaikoPublishFunction` in Inbox.t.sol\n", "\nGas for publication: ", Strings.toString(gas)
