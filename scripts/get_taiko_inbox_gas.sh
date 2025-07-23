@@ -7,7 +7,7 @@ set -e
 REPO_URL="https://github.com/taikoxyz/taiko-mono.git"
 TEMP_DIR="taiko-mono-temp"
 GAS_REPORT_PATH="packages/protocol/gas-reports/inbox_without_provermarket.txt"
-OUTPUT_DIR="output"
+OUTPUT_DIR="gas-reports"
 
 echo "Starting gas report extraction..."
 

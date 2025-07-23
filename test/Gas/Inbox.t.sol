@@ -3,57 +3,56 @@ pragma solidity ^0.8.28;
 
 import {BlobRefRegistry} from "../../src/blobs/BlobRefRegistry.sol";
 import {IBlobRefRegistry} from "../../src/blobs/IBlobRefRegistry.sol";
-import {CheckpointTracker} from "../../src/protocol/CheckpointTracker.sol";
 
 import {ILookahead} from "../../src/protocol/ILookahead.sol";
 import {IProposerFees} from "../../src/protocol/IProposerFees.sol";
 import {TaikoInbox} from "../../src/protocol/taiko_alethia/TaikoInbox.sol";
 
-import {MockVerifier} from "../mocks/MockVerifier.sol";
-import {SignalService} from "src/protocol/SignalService.sol";
+import {MockProposerFees} from "../mocks/MockProposerFee.sol";
 
-import {MockProposerFees} from "./MockProposerFee.sol";
-import {Script} from "forge-std/Test.sol";
+import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
+
+import "forge-std/Test.sol";
 
 /// @title DeployTaikoInbox
 /// @notice Script to deploy the TaikoInbox contract
-contract DeployTaikoInbox is Test {
-    // Default values that can be overridden via environment variables
-    address private lookaheadAddr;
-    uint256 private maxAnchorBlockIdOffset;
-    uint256 private inclusionDelay;
+contract TaikoInboxTest is Test {
+    TaikoInbox taikoInbox;
+    BlobRefRegistry blobRefRegistry;
+
+    address lookaheadAddr = address(0);
+    uint256 maxAnchorBlockIdOffset = uint256(10);
+    uint256 inclusionDelay = uint256(10000000);
 
     function setUp() public {
-        lookaheadAddr = address(0);
-        maxAnchorBlockIdOffset = uint256(100);
-        inclusionDelay = uint256(3600);
-    }
-
-    function setup() public returns (TaikoInbox) {
         MockProposerFees mockProposerFees = new MockProposerFees();
-        BlobRefRegistry blobRefRegistry = new BlobRefRegistry();
-        TaikoInbox taikoInbox = new TaikoInbox(
+        blobRefRegistry = new BlobRefRegistry();
+        taikoInbox = new TaikoInbox(
             lookaheadAddr, address(blobRefRegistry), maxAnchorBlockIdOffset, address(mockProposerFees), inclusionDelay
         );
+    }
 
-        MockVerifier verifier = new MockVerifier();
+    function test_gas_TaikoPublishFunction() public {
+        uint256[] memory blobIndices = new uint256[](1);
+        blobIndices[0] = 0;
 
-        SignalService signalService = new SignalService();
+        bytes32[] memory blobHashes = new bytes32[](1);
+        blobHashes[0] = keccak256(abi.encode(0));
 
-        address proverManager = address(0);
+        vm.blobhashes(blobHashes);
+        blobRefRegistry.registerRef(blobIndices);
 
-        CheckpointTracker tracker = new CheckpointTracker(
-            keccak256(abi.encode("genesis")),
-            address(taikoInbox),
-            address(verifier),
-            proverManager,
-            address(signalService)
+        vm.roll(20);
+        vm.startSnapshotGas("publish");
+        taikoInbox.publish(1, 16);
+        uint256 gas = vm.stopSnapshotGas("proposeBatch");
+        string memory str = string(
+            abi.encodePacked(
+                "See `test_gas_TaikoPublishFunction` in Inbox.t.sol\n", "\nGas for publication: ", Strings.toString(gas)
+            )
         );
 
-        taikoInbox.publish(1, 550);
-        uint256[] memory blobIndices = new uint256[](2);
-        blobIndices[0] = 0;
-        blobIndices[1] = 1;
-        blobRefRegistry.registerRef(blobIndices);
+        console2.log(str);
+        vm.writeFile("./gas-reports/taiko_inbox_publish.txt", str);
     }
 }
