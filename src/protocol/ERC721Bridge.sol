@@ -27,8 +27,6 @@ contract ERC721Bridge is IERC721Bridge, ReentrancyGuardTransient, IERC721Receive
     /// Incremental nonce to generate unique deposit IDs.
     uint256 private _globalDepositNonce;
 
-
-
     ISignalService public immutable signalService;
 
     /// @dev Trusted source of commitments in the `CommitmentStore` that the bridge will use to validate withdrawals
@@ -39,8 +37,6 @@ contract ERC721Bridge is IERC721Bridge, ReentrancyGuardTransient, IERC721Receive
     /// This is used to locate deposit signals inside the other chain's state root.
     /// WARN: This address has no significance (and may be untrustworthy) on this chain.
     address public immutable counterpart;
-
-
 
     constructor(address _signalService, address _trustedCommitmentPublisher, address _counterpart) {
         require(_signalService != address(0), "Empty signal service");
@@ -96,25 +92,21 @@ contract ERC721Bridge is IERC721Bridge, ReentrancyGuardTransient, IERC721Receive
         // Read token metadata with fallbacks for non-compliant tokens
         string memory name;
         string memory symbol;
-        
+
         try IERC721Metadata(token).name() returns (string memory _name) {
             name = _name;
         } catch {
             name = "Unknown NFT Name";
         }
-        
+
         try IERC721Metadata(token).symbol() returns (string memory _symbol) {
             symbol = _symbol;
         } catch {
             symbol = "UNKNOWN";
         }
 
-                TokenInitialization memory tokenInit = TokenInitialization({
-            originalToken: token,
-            name: name,
-            symbol: symbol
-        });
-        
+        TokenInitialization memory tokenInit = TokenInitialization({originalToken: token, name: name, symbol: symbol});
+
         id = _generateInitializationId(tokenInit);
 
         // Mark token as initialized locally
@@ -127,11 +119,10 @@ contract ERC721Bridge is IERC721Bridge, ReentrancyGuardTransient, IERC721Receive
     }
 
     /// @inheritdoc IERC721Bridge
-    function proveTokenInitialization(
-        TokenInitialization memory tokenInit,
-        uint256 height,
-        bytes memory proof
-    ) external returns (address deployedToken) {
+    function proveTokenInitialization(TokenInitialization memory tokenInit, uint256 height, bytes memory proof)
+        external
+        returns (address deployedToken)
+    {
         bytes32 id = _generateInitializationId(tokenInit);
         require(!_provenInitializations[id], InitializationAlreadyProven());
 
@@ -142,11 +133,8 @@ contract ERC721Bridge is IERC721Bridge, ReentrancyGuardTransient, IERC721Receive
         _provenInitializations[id] = true;
 
         // Deploy the bridged token
-        deployedToken = address(
-            new BridgedERC721(
-                tokenInit.name, tokenInit.symbol, address(this), tokenInit.originalToken
-            )
-        );
+        deployedToken =
+            address(new BridgedERC721(tokenInit.name, tokenInit.symbol, address(this), tokenInit.originalToken));
 
         // Store the mapping
         bytes32 key = keccak256(abi.encode(tokenInit.originalToken));

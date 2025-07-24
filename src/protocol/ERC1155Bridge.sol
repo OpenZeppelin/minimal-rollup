@@ -27,8 +27,6 @@ contract ERC1155Bridge is IERC1155Bridge, ReentrancyGuardTransient, IERC1155Rece
     /// Incremental nonce to generate unique deposit IDs.
     uint256 private _globalDepositNonce;
 
-
-
     ISignalService public immutable signalService;
 
     /// @dev Trusted source of commitments in the `CommitmentStore` that the bridge will use to validate withdrawals
@@ -39,8 +37,6 @@ contract ERC1155Bridge is IERC1155Bridge, ReentrancyGuardTransient, IERC1155Rece
     /// This is used to locate deposit signals inside the other chain's state root.
     /// WARN: This address has no significance (and may be untrustworthy) on this chain.
     address public immutable counterpart;
-
-
 
     constructor(address _signalService, address _trustedCommitmentPublisher, address _counterpart) {
         require(_signalService != address(0), "Empty signal service");
@@ -115,11 +111,8 @@ contract ERC1155Bridge is IERC1155Bridge, ReentrancyGuardTransient, IERC1155Rece
             uri = "";
         }
 
-                TokenInitialization memory tokenInit = TokenInitialization({
-            originalToken: token,
-            uri: uri
-        });
-        
+        TokenInitialization memory tokenInit = TokenInitialization({originalToken: token, uri: uri});
+
         id = _generateInitializationId(tokenInit);
 
         // Mark token as initialized locally
@@ -132,11 +125,10 @@ contract ERC1155Bridge is IERC1155Bridge, ReentrancyGuardTransient, IERC1155Rece
     }
 
     /// @inheritdoc IERC1155Bridge
-    function proveTokenInitialization(
-        TokenInitialization memory tokenInit,
-        uint256 height,
-        bytes memory proof
-    ) external returns (address deployedToken) {
+    function proveTokenInitialization(TokenInitialization memory tokenInit, uint256 height, bytes memory proof)
+        external
+        returns (address deployedToken)
+    {
         bytes32 id = _generateInitializationId(tokenInit);
         require(!_provenInitializations[id], InitializationAlreadyProven());
 
@@ -147,8 +139,7 @@ contract ERC1155Bridge is IERC1155Bridge, ReentrancyGuardTransient, IERC1155Rece
         _provenInitializations[id] = true;
 
         // Deploy the bridged token
-        deployedToken =
-            address(new BridgedERC1155(tokenInit.uri, address(this), tokenInit.originalToken));
+        deployedToken = address(new BridgedERC1155(tokenInit.uri, address(this), tokenInit.originalToken));
 
         // Store the mapping
         bytes32 key = keccak256(abi.encode(tokenInit.originalToken));

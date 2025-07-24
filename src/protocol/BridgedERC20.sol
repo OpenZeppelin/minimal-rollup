@@ -23,13 +23,9 @@ contract BridgedERC20 is ERC20, IMintableERC20 {
 
     uint8 private immutable _decimals;
 
-    constructor(
-        string memory name,
-        string memory symbol,
-        uint8 decimals_,
-        address _bridge,
-        address _originalToken
-    ) ERC20(name, symbol) {
+    constructor(string memory name, string memory symbol, uint8 decimals_, address _bridge, address _originalToken)
+        ERC20(name, symbol)
+    {
         bridge = _bridge;
         originalToken = _originalToken;
         _decimals = decimals_;

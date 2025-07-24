@@ -28,8 +28,6 @@ contract ERC20Bridge is IERC20Bridge, ReentrancyGuardTransient {
     /// Incremental nonce to generate unique deposit IDs.
     uint256 private _globalDepositNonce;
 
-
-
     ISignalService public immutable signalService;
 
     /// @dev Trusted source of commitments in the `CommitmentStore` that the bridge will use to validate withdrawals
@@ -40,8 +38,6 @@ contract ERC20Bridge is IERC20Bridge, ReentrancyGuardTransient {
     /// This is used to locate deposit signals inside the other chain's state root.
     /// WARN: This address has no significance (and may be untrustworthy) on this chain.
     address public immutable counterpart;
-
-
 
     constructor(address _signalService, address _trustedCommitmentPublisher, address _counterpart) {
         require(_signalService != address(0), "Empty signal service");
@@ -93,32 +89,28 @@ contract ERC20Bridge is IERC20Bridge, ReentrancyGuardTransient {
         string memory name;
         string memory symbol;
         uint8 decimals;
-        
+
         try IERC20Metadata(token).name() returns (string memory _name) {
             name = _name;
         } catch {
             name = "Unknown Token Name";
         }
-        
+
         try IERC20Metadata(token).symbol() returns (string memory _symbol) {
             symbol = _symbol;
         } catch {
             symbol = "UNKNOWN";
         }
-        
+
         try IERC20Metadata(token).decimals() returns (uint8 _decimals) {
             decimals = _decimals;
         } catch {
             decimals = 18; // Standard default
         }
 
-                TokenInitialization memory tokenInit = TokenInitialization({
-            originalToken: token,
-            name: name,
-            symbol: symbol,
-            decimals: decimals
-        });
-        
+        TokenInitialization memory tokenInit =
+            TokenInitialization({originalToken: token, name: name, symbol: symbol, decimals: decimals});
+
         id = _generateInitializationId(tokenInit);
 
         // Mark token as initialized locally
@@ -131,11 +123,10 @@ contract ERC20Bridge is IERC20Bridge, ReentrancyGuardTransient {
     }
 
     /// @inheritdoc IERC20Bridge
-    function proveTokenInitialization(
-        TokenInitialization memory tokenInit,
-        uint256 height,
-        bytes memory proof
-    ) external returns (address deployedToken) {
+    function proveTokenInitialization(TokenInitialization memory tokenInit, uint256 height, bytes memory proof)
+        external
+        returns (address deployedToken)
+    {
         bytes32 id = _generateInitializationId(tokenInit);
         require(!_provenInitializations[id], InitializationAlreadyProven());
 
@@ -148,11 +139,7 @@ contract ERC20Bridge is IERC20Bridge, ReentrancyGuardTransient {
         // Deploy the bridged token
         deployedToken = address(
             new BridgedERC20(
-                tokenInit.name,
-                tokenInit.symbol,
-                tokenInit.decimals,
-                address(this),
-                tokenInit.originalToken
+                tokenInit.name, tokenInit.symbol, tokenInit.decimals, address(this), tokenInit.originalToken
             )
         );
 

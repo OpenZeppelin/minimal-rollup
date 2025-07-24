@@ -108,11 +108,9 @@ interface IERC721Bridge {
     /// @param tokenInit The token initialization data
     /// @param height The height of the checkpoint on the source chain
     /// @param proof Encoded proof of the initialization signal
-    function proveTokenInitialization(
-        TokenInitialization memory tokenInit,
-        uint256 height,
-        bytes memory proof
-    ) external returns (address deployedToken);
+    function proveTokenInitialization(TokenInitialization memory tokenInit, uint256 height, bytes memory proof)
+        external
+        returns (address deployedToken);
 
     /// @dev Creates an ERC721 deposit
     /// @param to The receiver of the deposit

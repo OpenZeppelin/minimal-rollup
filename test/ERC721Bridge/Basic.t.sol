@@ -51,11 +51,8 @@ contract ERC721BridgeTest is Test {
         bytes32 id = bridge.initializeToken(address(token));
 
         // Prepare initialization data for destination chain
-        IERC721Bridge.TokenInitialization memory tokenInit = IERC721Bridge.TokenInitialization({
-            originalToken: address(token),
-            name: "Test NFT",
-            symbol: "TNFT"
-        });
+        IERC721Bridge.TokenInitialization memory tokenInit =
+            IERC721Bridge.TokenInitialization({originalToken: address(token), name: "Test NFT", symbol: "TNFT"});
 
         bytes memory proof = "mock_proof";
         uint256 height = 1;
@@ -80,11 +77,8 @@ contract ERC721BridgeTest is Test {
         vm.prank(alice);
         bridge.initializeToken(address(token));
 
-        IERC721Bridge.TokenInitialization memory tokenInit = IERC721Bridge.TokenInitialization({
-            originalToken: address(token),
-            name: "Test NFT",
-            symbol: "TNFT"
-        });
+        IERC721Bridge.TokenInitialization memory tokenInit =
+            IERC721Bridge.TokenInitialization({originalToken: address(token), name: "Test NFT", symbol: "TNFT"});
 
         bytes memory proof = "mock_proof";
         uint256 height = 1;
@@ -292,11 +286,8 @@ contract ERC721BridgeTest is Test {
         bridge.initializeToken(address(token));
 
         // Prove initialization on chain 2 (simulating it came from chain 1)
-        IERC721Bridge.TokenInitialization memory tokenInit = IERC721Bridge.TokenInitialization({
-            originalToken: address(token),
-            name: "Test NFT",
-            symbol: "TNFT"
-        });
+        IERC721Bridge.TokenInitialization memory tokenInit =
+            IERC721Bridge.TokenInitialization({originalToken: address(token), name: "Test NFT", symbol: "TNFT"});
 
         bytes memory proof = "mock_proof";
         uint256 height = 1;
@@ -346,11 +337,8 @@ contract ERC721BridgeTest is Test {
         bridge.initializeToken(address(token));
 
         // Prove initialization on chain 2 (simulating it came from chain 1)
-        IERC721Bridge.TokenInitialization memory tokenInit = IERC721Bridge.TokenInitialization({
-            originalToken: address(token),
-            name: "Test NFT",
-            symbol: "TNFT"
-        });
+        IERC721Bridge.TokenInitialization memory tokenInit =
+            IERC721Bridge.TokenInitialization({originalToken: address(token), name: "Test NFT", symbol: "TNFT"});
 
         bytes memory proof = "mock_proof";
         uint256 height = 1;
