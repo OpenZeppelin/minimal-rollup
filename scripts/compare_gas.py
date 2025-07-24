@@ -4,7 +4,7 @@ import re
 import sys
 
 TAIKO_GAS_REPORT = "gas-reports/test_inbox_measure_gas_used.txt"
-MINIMAL_GAS_REPORT = "gas-reports/taiko_inbox_publish.txt"
+MINIMAL_GAS_REPORT = "gas-reports/minimal_inbox_publish.txt"
 
 def extract_gas_value(file_path, pattern):
     try:
@@ -18,7 +18,7 @@ def extract_gas_value(file_path, pattern):
         raise ValueError(f"Pattern not found in {file_path}: {pattern}")
     try:
         return int(match.group(1))
-    except (IndexError, ValueError) as e:
+    except (IndexError, ValueError):
         raise ValueError(f"Failed to parse gas value from match: {match.group(0)}")
 
 
@@ -40,7 +40,7 @@ def main():
         
         print("Gas Report Comparison")
         print("=" * 50)
-        print(f"Gas per proposing (alethia_inbox_proposeV4): {gas_proposing:,}")
+        print(f"Gas per proposing (alethia_inbox_propose): {gas_proposing:,}")
         print(f"Gas for publication (minimal_rollup_inbox_publish):       {gas_publication:,}")
         print("=" * 50)
         print(f"Absolute difference: {abs_diff:,}")

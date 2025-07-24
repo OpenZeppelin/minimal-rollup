@@ -35,8 +35,8 @@ contract TaikoInboxTest is Test {
         uint256 numPublications = 10;
         vm.startSnapshotGas("publish");
         _publishMultiplePublications(numPublications);
-        uint256 gas = vm.stopSnapshotGas("publish");
-        uint256 gasPerPublication = gas / numPublications;
+        uint256 publishGas = vm.stopSnapshotGas("publish");
+        uint256 gasPerPublication = publishGas / numPublications;
         string memory str = string(
             abi.encodePacked(
                 "See `test_gas_TaikoPublishFunction` in Inbox.t.sol\n",
@@ -46,7 +46,7 @@ contract TaikoInboxTest is Test {
         );
 
         console2.log(str);
-        vm.writeFile("./gas-reports/taiko_inbox_publish.txt", str);
+        vm.writeFile("./gas-reports/minimal_inbox_publish.txt", str);
     }
 
     ///@dev Ensure same state as tiako tests where multiple publications are made before testing gas usage
