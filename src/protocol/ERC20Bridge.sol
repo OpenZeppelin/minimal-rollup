@@ -123,7 +123,7 @@ contract ERC20Bridge is IERC20Bridge, ReentrancyGuardTransient {
     }
 
     /// @inheritdoc IERC20Bridge
-    function proveTokenInitialization(TokenInitialization memory tokenInit, uint256 height, bytes memory proof)
+    function deployCounterpartToken(TokenInitialization memory tokenInit, uint256 height, bytes memory proof)
         external
         returns (address deployedToken)
     {

@@ -125,7 +125,7 @@ contract ERC1155Bridge is IERC1155Bridge, ReentrancyGuardTransient, IERC1155Rece
     }
 
     /// @inheritdoc IERC1155Bridge
-    function proveTokenInitialization(TokenInitialization memory tokenInit, uint256 height, bytes memory proof)
+    function deployCounterpartToken(TokenInitialization memory tokenInit, uint256 height, bytes memory proof)
         external
         returns (address deployedToken)
     {

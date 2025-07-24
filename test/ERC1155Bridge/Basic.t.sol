@@ -45,7 +45,7 @@ contract ERC1155BridgeTest is Test {
         bridge.initializeToken(address(token));
     }
 
-    function testProveTokenInitialization() public {
+    function testDeployCounterpartToken() public {
         // First initialize on source chain
         vm.prank(alice);
         bytes32 id = bridge.initializeToken(address(token));
@@ -61,7 +61,7 @@ contract ERC1155BridgeTest is Test {
         signalService.setVerifyResult(true);
 
         // Prove initialization and deploy bridged token
-        address deployedToken = bridge.proveTokenInitialization(tokenInit, height, proof);
+        address deployedToken = bridge.deployCounterpartToken(tokenInit, height, proof);
 
         assertTrue(bridge.isInitializationProven(id));
         assertEq(bridge.getDeployedToken(address(token)), deployedToken);
@@ -86,10 +86,10 @@ contract ERC1155BridgeTest is Test {
         uint256 height = 1;
         signalService.setVerifyResult(true);
 
-        bridge.proveTokenInitialization(tokenInit, height, proof);
+        bridge.deployCounterpartToken(tokenInit, height, proof);
 
         vm.expectRevert(IERC1155Bridge.InitializationAlreadyProven.selector);
-        bridge.proveTokenInitialization(tokenInit, height, proof);
+        bridge.deployCounterpartToken(tokenInit, height, proof);
     }
 
     function testDeposit() public {
@@ -307,7 +307,7 @@ contract ERC1155BridgeTest is Test {
         uint256 height = 1;
         signalService.setVerifyResult(true);
 
-        address bridgedToken = bridge2.proveTokenInitialization(tokenInit, height, proof);
+        address bridgedToken = bridge2.deployCounterpartToken(tokenInit, height, proof);
 
         // Simulate bridging: deposit on chain 1, claim on chain 2
         vm.prank(alice);

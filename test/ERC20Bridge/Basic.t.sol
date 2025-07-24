@@ -47,7 +47,7 @@ contract ERC20BridgeTest is Test {
         bridge.initializeToken(address(token));
     }
 
-    function testProveTokenInitialization() public {
+    function testDeployCounterpartToken() public {
         // First initialize on source chain
         vm.prank(alice);
         bytes32 id = bridge.initializeToken(address(token));
@@ -65,7 +65,7 @@ contract ERC20BridgeTest is Test {
         signalService.setVerifyResult(true);
 
         // Prove initialization and deploy bridged token
-        address deployedToken = bridge.proveTokenInitialization(tokenInit, height, proof);
+        address deployedToken = bridge.deployCounterpartToken(tokenInit, height, proof);
 
         assertTrue(bridge.isInitializationProven(id));
         assertEq(bridge.getDeployedToken(address(token)), deployedToken);
@@ -95,10 +95,10 @@ contract ERC20BridgeTest is Test {
         uint256 height = 1;
         signalService.setVerifyResult(true);
 
-        bridge.proveTokenInitialization(tokenInit, height, proof);
+        bridge.deployCounterpartToken(tokenInit, height, proof);
 
         vm.expectRevert(IERC20Bridge.InitializationAlreadyProven.selector);
-        bridge.proveTokenInitialization(tokenInit, height, proof);
+        bridge.deployCounterpartToken(tokenInit, height, proof);
     }
 
     function testDeposit() public {
@@ -181,7 +181,7 @@ contract ERC20BridgeTest is Test {
         uint256 height = 1;
         signalService.setVerifyResult(true);
 
-        address bridgedToken = bridge2.proveTokenInitialization(tokenInit, height, proof);
+        address bridgedToken = bridge2.deployCounterpartToken(tokenInit, height, proof);
 
         // Simulate bridging: deposit on chain 1, claim on chain 2
         vm.prank(alice);
@@ -236,7 +236,7 @@ contract ERC20BridgeTest is Test {
         uint256 height = 1;
         signalService.setVerifyResult(true);
 
-        address deployedToken = bridge.proveTokenInitialization(tokenInit, height, proof);
+        address deployedToken = bridge.deployCounterpartToken(tokenInit, height, proof);
 
         // Verify the bridged token was deployed with fallback metadata
         assertEq(BridgedERC20(deployedToken).name(), "Unknown Token Name");
@@ -305,7 +305,7 @@ contract ERC20BridgeTest is Test {
         });
 
         signalService.setVerifyResult(true);
-        address bridgedTokenAddr = bridge.proveTokenInitialization(tokenInit, 1, new bytes(0));
+        address bridgedTokenAddr = bridge.deployCounterpartToken(tokenInit, 1, new bytes(0));
         BridgedERC20 bridgedToken = BridgedERC20(bridgedTokenAddr);
 
         // Test originalToken tracking

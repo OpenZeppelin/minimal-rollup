@@ -119,7 +119,7 @@ contract ERC721Bridge is IERC721Bridge, ReentrancyGuardTransient, IERC721Receive
     }
 
     /// @inheritdoc IERC721Bridge
-    function proveTokenInitialization(TokenInitialization memory tokenInit, uint256 height, bytes memory proof)
+    function deployCounterpartToken(TokenInitialization memory tokenInit, uint256 height, bytes memory proof)
         external
         returns (address deployedToken)
     {
