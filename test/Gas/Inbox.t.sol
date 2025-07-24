@@ -31,19 +31,12 @@ contract TaikoInboxTest is Test {
         );
     }
 
-    function test_gas_TaikoPublishFunction() public {
+    function test_gas_TaikoPublishFunction() public ProposeMultiplePublications(9) {
         uint256[] memory blobIndices = new uint256[](1);
         blobIndices[0] = 0;
 
-        bytes32[] memory blobHashes = new bytes32[](1);
-        blobHashes[0] = keccak256(abi.encode(0));
-
-        vm.blobhashes(blobHashes);
-        blobRefRegistry.registerRef(blobIndices);
-
-        vm.roll(20);
         vm.startSnapshotGas("publish");
-        taikoInbox.publish(1, 16);
+        taikoInbox.publish(1, uint64(block.number - 1));
         uint256 gas = vm.stopSnapshotGas("publish");
         string memory str = string(
             abi.encodePacked(
@@ -53,5 +46,26 @@ contract TaikoInboxTest is Test {
 
         console2.log(str);
         vm.writeFile("./gas-reports/taiko_inbox_publish.txt", str);
+    }
+
+    ///@dev Ensure same state as tiako tests where multiple publications are made before testing gas usage
+    modifier ProposeMultiplePublications(uint256 numPublications) {
+        _publishMultiplePublications(numPublications);
+        _;
+    }
+
+    function _publishMultiplePublications(uint256 numPublicationsToPublish) internal {
+        vm.roll(maxAnchorBlockIdOffset);
+        uint256 nBlobs = 1;
+        uint64 baseAnchorBlockId = uint64(block.number - 1);
+
+        bytes32[] memory blobHashes = new bytes32[](1);
+        blobHashes[0] = keccak256(abi.encodePacked("txList"));
+
+        vm.blobhashes(blobHashes);
+
+        for (uint256 i = 0; i < numPublicationsToPublish; i++) {
+            taikoInbox.publish(nBlobs, baseAnchorBlockId);
+        }
     }
 }
