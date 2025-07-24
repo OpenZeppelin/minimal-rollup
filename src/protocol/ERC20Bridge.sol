@@ -152,7 +152,7 @@ contract ERC20Bridge is IERC20Bridge, ReentrancyGuardTransient {
     }
 
     /// @inheritdoc IERC20Bridge
-    function deposit(address to, address localToken, uint256 amount, address canceler)
+    function deposit(address to, address localToken, uint256 amount)
         external
         nonReentrant
         returns (bytes32 id)
@@ -175,8 +175,7 @@ contract ERC20Bridge is IERC20Bridge, ReentrancyGuardTransient {
             from: msg.sender,
             to: to,
             localToken: originalToken,
-            amount: amount,
-            canceler: canceler
+            amount: amount
         });
 
         id = _generateDepositId(erc20Deposit);
@@ -205,17 +204,7 @@ contract ERC20Bridge is IERC20Bridge, ReentrancyGuardTransient {
         emit DepositClaimed(id, erc20Deposit);
     }
 
-    /// @inheritdoc IERC20Bridge
-    function cancelDeposit(ERC20Deposit memory erc20Deposit, address claimee, uint256 height, bytes memory proof)
-        external
-        nonReentrant
-    {
-        require(msg.sender == erc20Deposit.canceler, OnlyCanceler());
 
-        bytes32 id = _claimDeposit(erc20Deposit, claimee, height, proof);
-
-        emit DepositCancelled(id, claimee);
-    }
 
     function _claimDeposit(ERC20Deposit memory erc20Deposit, address to, uint256 height, bytes memory proof)
         internal

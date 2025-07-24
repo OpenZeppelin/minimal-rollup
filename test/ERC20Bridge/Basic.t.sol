@@ -107,7 +107,7 @@ contract ERC20BridgeTest is Test {
         bridge.initializeToken(address(token));
 
         vm.prank(alice);
-        bridge.deposit(bob, address(token), 100, address(0));
+        bridge.deposit(bob, address(token), 100);
         assertEq(token.balanceOf(address(bridge)), 100);
         assertEq(token.balanceOf(alice), 900);
     }
@@ -115,7 +115,7 @@ contract ERC20BridgeTest is Test {
     function testCannotDepositUninitializedToken() public {
         vm.expectRevert(IERC20Bridge.TokenNotInitialized.selector);
         vm.prank(alice);
-        bridge.deposit(bob, address(token), 100, address(0));
+        bridge.deposit(bob, address(token), 100);
     }
 
     function testClaimDeposit() public {
@@ -124,15 +124,14 @@ contract ERC20BridgeTest is Test {
         bridge.initializeToken(address(token));
 
         vm.prank(alice);
-        bytes32 id = bridge.deposit(bob, address(token), 100, address(0));
+        bytes32 id = bridge.deposit(bob, address(token), 100);
 
         IERC20Bridge.ERC20Deposit memory deposit = IERC20Bridge.ERC20Deposit({
             nonce: 0,
             from: alice,
             to: bob,
             localToken: address(token),
-            amount: 100,
-            canceler: address(0)
+            amount: 100
         });
 
         bytes memory proof = "mock_proof";
@@ -146,62 +145,9 @@ contract ERC20BridgeTest is Test {
         assertEq(token.balanceOf(address(bridge)), 0);
     }
 
-    function testCancelDeposit() public {
-        // Initialize token
-        vm.prank(alice);
-        bridge.initializeToken(address(token));
 
-        address canceler = makeAddr("canceler");
-        vm.prank(alice);
-        bytes32 id = bridge.deposit(bob, address(token), 100, canceler);
 
-        IERC20Bridge.ERC20Deposit memory deposit = IERC20Bridge.ERC20Deposit({
-            nonce: 0,
-            from: alice,
-            to: bob,
-            localToken: address(token),
-            amount: 100,
-            canceler: canceler
-        });
 
-        bytes memory proof = "mock_proof";
-        uint256 height = 1;
-        signalService.setVerifyResult(true);
-
-        vm.prank(canceler);
-        bridge.cancelDeposit(deposit, alice, height, proof);
-
-        assertTrue(bridge.processed(id));
-        assertEq(token.balanceOf(alice), 1000); // back to original
-        assertEq(token.balanceOf(address(bridge)), 0);
-    }
-
-    function testCannotCancelIfNotCanceler() public {
-        // Initialize token
-        vm.prank(alice);
-        bridge.initializeToken(address(token));
-
-        address canceler = makeAddr("canceler");
-        vm.prank(alice);
-        bridge.deposit(bob, address(token), 100, canceler);
-
-        IERC20Bridge.ERC20Deposit memory deposit = IERC20Bridge.ERC20Deposit({
-            nonce: 0,
-            from: alice,
-            to: bob,
-            localToken: address(token),
-            amount: 100,
-            canceler: canceler
-        });
-
-        bytes memory proof = "mock_proof";
-        uint256 height = 1;
-        signalService.setVerifyResult(true);
-
-        vm.expectRevert(IERC20Bridge.OnlyCanceler.selector);
-        vm.prank(address(0xBAD));
-        bridge.cancelDeposit(deposit, alice, height, proof);
-    }
 
     function testCannotClaimAlreadyClaimed() public {
         // Initialize token
@@ -209,15 +155,14 @@ contract ERC20BridgeTest is Test {
         bridge.initializeToken(address(token));
 
         vm.prank(alice);
-        bridge.deposit(bob, address(token), 100, address(0));
+        bridge.deposit(bob, address(token), 100);
 
         IERC20Bridge.ERC20Deposit memory deposit = IERC20Bridge.ERC20Deposit({
             nonce: 0,
             from: alice,
             to: bob,
             localToken: address(token),
-            amount: 100,
-            canceler: address(0)
+            amount: 100
         });
 
         bytes memory proof = "mock_proof";
@@ -254,7 +199,7 @@ contract ERC20BridgeTest is Test {
 
         // Simulate bridging: deposit on chain 1, claim on chain 2
         vm.prank(alice);
-        bytes32 depositId = bridge.deposit(alice, address(token), 200, address(0));
+        bytes32 depositId = bridge.deposit(alice, address(token), 200);
 
         // For the claim, simulate that this deposit came from chain 1
         IERC20Bridge.ERC20Deposit memory deposit = IERC20Bridge.ERC20Deposit({
@@ -262,8 +207,7 @@ contract ERC20BridgeTest is Test {
             from: alice,
             to: alice,
             localToken: address(token),
-            amount: 200,
-            canceler: address(0)
+            amount: 200
         });
 
         // Claim on chain 2 (mints bridged tokens)
@@ -277,7 +221,7 @@ contract ERC20BridgeTest is Test {
         BridgedERC20(bridgedToken).approve(address(bridge2), 100);
 
         vm.prank(alice);
-        bridge2.deposit(bob, bridgedToken, 100, address(0));
+        bridge2.deposit(bob, bridgedToken, 100);
 
         // Bridged tokens should be burned (total supply decreases)
         assertEq(BridgedERC20(bridgedToken).balanceOf(alice), 100);
@@ -326,7 +270,7 @@ contract ERC20BridgeTest is Test {
 
         // Create a deposit (alice already has tokens and approval from setUp)
         vm.prank(alice);
-        bytes32 depositId = bridge.deposit(alice, address(token), 100, address(0));
+        bytes32 depositId = bridge.deposit(alice, address(token), 100);
 
         // Verify the signal IDs are different
         assertNotEq(initId, depositId, "Initialization and deposit IDs should be different");
@@ -359,7 +303,7 @@ contract ERC20BridgeTest is Test {
 
         // This should revert because the malicious token is not in the _isBridgedTokens mapping
         vm.expectRevert(); // TokenNotInitialized()
-        bridge.deposit(alice, address(maliciousToken), 100, address(0));
+        bridge.deposit(alice, address(maliciousToken), 100);
 
         vm.stopPrank();
 

@@ -28,9 +28,6 @@ interface IERC20Bridge {
         address localToken;
         // The amount of the deposit
         uint256 amount;
-        // Address that is allowed to cancel the deposit on the destination chain (zero address means deposit is
-        // uncancellable)
-        address canceler;
     }
 
     /// @dev Emitted when a token is initialized on the source chain.
@@ -56,19 +53,11 @@ interface IERC20Bridge {
     /// @param deposit The claimed ERC20 deposit
     event DepositClaimed(bytes32 indexed id, ERC20Deposit deposit);
 
-    /// @dev Emitted when a deposit is cancelled.
-    /// @param id The deposit id
-    /// @param claimee The address that received the cancelled deposit
-    event DepositCancelled(bytes32 indexed id, address claimee);
-
     /// @dev Failed to claim the deposit.
     error FailedClaim();
 
     /// @dev A deposit was already claimed.
     error AlreadyClaimed();
-
-    /// @dev Only canceler can cancel a deposit.
-    error OnlyCanceler();
 
     /// @dev Token has not been initialized for bridging.
     error TokenNotInitialized();
@@ -116,9 +105,7 @@ interface IERC20Bridge {
     /// @param to The receiver of the deposit
     /// @param localToken The ERC20 token address
     /// @param amount The amount to deposit
-    /// @param canceler Address on the destination chain that is allowed to cancel the deposit (zero address means
-    /// deposit is uncancellable)
-    function deposit(address to, address localToken, uint256 amount, address canceler) external returns (bytes32 id);
+    function deposit(address to, address localToken, uint256 amount) external returns (bytes32 id);
 
     /// @dev Claims an ERC20 deposit created by the sender (`from`) with `nonce`. The deposited tokens are
     /// sent to the receiver (`to`) after verifying a storage proof.
@@ -126,12 +113,4 @@ interface IERC20Bridge {
     /// @param height The `height` of the checkpoint on the source chain (i.e. the block number or publicationId)
     /// @param proof Encoded proof of the storage slot where the deposit is stored
     function claimDeposit(ERC20Deposit memory erc20Deposit, uint256 height, bytes memory proof) external;
-
-    /// @dev Initiates a cancel on the deposit, must be called by the canceler on the destination chain.
-    /// @param erc20Deposit The ERC20 deposit struct
-    /// @param claimee The address that will receive the cancelled deposit
-    /// @param height The `height` of the checkpoint on the source chain (i.e. the block number or publicationId)
-    /// @param proof Encoded proof of the storage slot where the deposit is stored
-    function cancelDeposit(ERC20Deposit memory erc20Deposit, address claimee, uint256 height, bytes memory proof)
-        external;
 }
