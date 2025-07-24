@@ -36,10 +36,6 @@ contract BridgedERC1155 is ERC1155, BridgedTokenBase, IMintableERC1155 {
     /// @inheritdoc IMintableERC1155
     function burn(address from, uint256 id, uint256 amount) external onlyOwner {
         _burn(from, id, amount);
-        // Clear the token URI when burning all tokens
-        if (balanceOf(from, id) == 0 && bytes(_tokenURIs[id]).length != 0) {
-            delete _tokenURIs[id];
-        }
     }
 
     /// @dev See {IERC1155MetadataURI-uri}.
