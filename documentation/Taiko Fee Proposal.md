@@ -114,5 +114,32 @@ There are two challenges that I think will need to be addressed, and may depend 
     - Until then, sequencers will need to simulate the transaction to determine the actual gas consumed, and only then can they figure out whether the priority fee will be sufficient.
     - They could also use a wrapper smart contract that first executes the transaction and then consumes the remaining gas so that the transaction gas limit would be equivalent to the actual gas consumed, but this seems pretty hacky.
 
+## Alternatives
 
+- To address the question of wallet compatibility, I should get familiar with how wallets choose fees and display them to users. At this point I do not have enough background to understand claims about whether it is or is not possible.
+- I will be offline for a few days, but in the mean time, I think it might be worthwhile to consider alternatives, to provoke a discussion and better pinpoint exactly what the constraints are.
 
+### Independent L2 charges
+
+- If we cannot use priority fees (or it is too difficult to use the priority fee rate), my preference is to use an external L2 mechanism to charge the fee.
+- For example:
+    - sequencers could require all transactions to go to a wrapper contract that extracts fees (potentially in tokens) as part of the user operation
+    - sequencers could require users to create independent transactions that pay the fees directly
+- This is a minor preference because the annoyance of having an external mechanism may be worse than poorly specified fees.
+- If we do go down this path, we should create a standard default mechanism (eg. a standard wrapper contract) to minimize inconsistencies.
+
+## Sequencer chosen base rate
+
+- If we do decide to use the L2 base fee for all charges, it's not clear to me why Taiko needs to be opinionated about the amount.
+- Can we just let sequencers pick an arbitrary base fee for their blocks, disconnected from whatever else is happening in the protocol?
+- My rationale is:
+    - as noted, we do not need to ensure they cover "costs to the network"
+    - this is another way of letting users and sequencers negotiate a market price, based on the realtime expected costs
+- Potential counterarguments (and my response):
+    - this could lead to issues where compute-heavy transactions subsidize the data-heavy transactions
+        - I think that's a consequence of charging the same base fee for all transactions, and charging for each computational step. As far as I can tell, it's not worsened by choosing any specific number.
+    - this may allow wide price swings between publications if some sequencer chooses a ridiculously high gas fee amount.
+        - I think that risk already exists, because sequencers can demand high priority fees or refuse to sequence transactions that spend too little gas. Since sequencers have monopoly power, any scheme we come up with is going to be vulnerable to sequencers making ridiculous demands. The solution has to be some version of users setting reasonable maximum fee limits
+        - On the other hand, the ability to allow massive price swings may actually just be sequencers responding to real-world market conditions.
+        - It also lets users and sequencers be more creative about how to arrive at the correct charge given the base-fee constraint. For example, the sequencer could include all data-heavy transactions in a block with a high base fee (to indirectly charge for the L1 blobs), and then go back to regular block charges for regular L2 transactions.
+- Any feedback on if I'm missing something would be appreciated.
