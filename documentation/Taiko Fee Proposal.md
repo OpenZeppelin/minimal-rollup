@@ -128,7 +128,7 @@ There are two challenges that I think will need to be addressed, and may depend 
 - This is a minor preference because the annoyance of having an external mechanism may be worse than poorly specified fees.
 - If we do go down this path, we should create a standard default mechanism (eg. a standard wrapper contract) to minimize inconsistencies.
 
-## Sequencer chosen base rate
+### Sequencer chosen base rate
 
 - If we do decide to use the L2 base fee for all charges, it's not clear to me why Taiko needs to be opinionated about the amount.
 - Can we just let sequencers pick an arbitrary base fee for their blocks, disconnected from whatever else is happening in the protocol?
