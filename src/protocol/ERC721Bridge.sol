@@ -134,8 +134,7 @@ contract ERC721Bridge is IERC721Bridge, ReentrancyGuardTransient, IERC721Receive
         _provenInitializations[id] = true;
 
         // Deploy the bridged token
-        deployedToken =
-            address(new BridgedERC721(tokenInit.name, tokenInit.symbol, address(this), tokenInit.originalToken));
+        deployedToken = address(new BridgedERC721(tokenInit.name, tokenInit.symbol, tokenInit.originalToken));
 
         // Store the mapping
         bytes32 key = keccak256(abi.encode(tokenInit.originalToken));

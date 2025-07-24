@@ -68,7 +68,7 @@ contract ERC1155BridgeTest is Test {
 
         // Check that the deployed token has correct metadata
         BridgedERC1155 bridgedToken = BridgedERC1155(deployedToken);
-        assertEq(bridgedToken.bridge(), address(bridge));
+        assertEq(bridgedToken.owner(), address(bridge));
         assertEq(bridgedToken.originalToken(), address(token));
     }
 
@@ -334,7 +334,7 @@ contract ERC1155BridgeTest is Test {
         assertEq(bridgedNFT.uri(tokenId), "https://example.com/metadata/1.json");
 
         // Verify collection info is also correct
-        assertEq(bridgedNFT.bridge(), address(bridge2));
+        assertEq(bridgedNFT.owner(), address(bridge2));
         assertEq(bridgedNFT.originalToken(), address(token));
     }
 }

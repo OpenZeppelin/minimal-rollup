@@ -75,7 +75,7 @@ contract ERC20BridgeTest is Test {
         assertEq(bridgedToken.name(), "Test Token");
         assertEq(bridgedToken.symbol(), "TEST");
         assertEq(bridgedToken.decimals(), 18);
-        assertEq(bridgedToken.bridge(), address(bridge));
+        assertEq(bridgedToken.owner(), address(bridge));
         assertEq(bridgedToken.originalToken(), address(token));
     }
 
@@ -343,10 +343,10 @@ contract ERC20BridgeTest is Test {
     }
 
     function testMaliciousTokenRejection() public {
-        // Deploy a malicious token that spoofs the bridge() function
+        // Deploy a malicious token that could try to spoof bridge functionality
         MockMaliciousERC20 maliciousToken = new MockMaliciousERC20(address(bridge));
         
-        // Verify the malicious token returns the bridge address (spoofing)
+        // Verify the malicious token still tries to spoof (even though bridge() function no longer exists in real bridged tokens)
         assertEq(maliciousToken.bridge(), address(bridge), "Malicious token should spoof bridge address");
         
         // Transfer some malicious tokens to alice
@@ -362,8 +362,39 @@ contract ERC20BridgeTest is Test {
         
         vm.stopPrank();
         
-        // Verify the malicious token was not recognized as a bridged token
-        // (This internal function call would have returned false in the old vulnerable implementation)
-        // but now it correctly returns false because it's not in our secure mapping
+        // The malicious token is correctly rejected because bridge now uses secure mapping-based validation
+        // rather than calling external functions that could be spoofed
+    }
+
+    function testBridgedTokenBaseFeatures() public {
+        // Initialize and prove token initialization
+        MockERC20 originalToken = new MockERC20("Original Token", "ORIG");
+        bridge.initializeToken(address(originalToken));
+        
+        IERC20Bridge.TokenInitialization memory tokenInit = IERC20Bridge.TokenInitialization({
+            originalToken: address(originalToken),
+            name: "Original Token",
+            symbol: "ORIG",
+            decimals: 18
+        });
+
+        signalService.setVerifyResult(true);
+        address bridgedTokenAddr = bridge.proveTokenInitialization(tokenInit, 1, new bytes(0));
+        BridgedERC20 bridgedToken = BridgedERC20(bridgedTokenAddr);
+
+        // Test originalToken tracking
+        assertEq(bridgedToken.originalToken(), address(originalToken), "originalToken should be tracked");
+        
+        // Test ownership (bridge is the owner)
+        assertEq(bridgedToken.owner(), address(bridge), "Bridge should be the owner");
+        
+        // Test that only owner (bridge) can mint
+        vm.expectRevert(); // Should revert with OwnableUnauthorizedAccount
+        bridgedToken.mint(alice, 100);
+        
+        // Bridge (owner) should be able to mint
+        vm.prank(address(bridge));
+        bridgedToken.mint(alice, 100);
+        assertEq(bridgedToken.balanceOf(alice), 100, "Alice should have 100 tokens");
     }
 }

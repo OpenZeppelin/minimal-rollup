@@ -2,35 +2,23 @@
 pragma solidity ^0.8.28;
 
 import {IMintableERC1155} from "./IMintable.sol";
+import {BridgedTokenBase} from "./BridgedTokenBase.sol";
 import {ERC1155} from "@openzeppelin/contracts/token/ERC1155/ERC1155.sol";
 
 /// @title BridgedERC1155
 /// @notice An ERC1155 token that represents a bridged token from another chain
 /// @dev Only the bridge contract can mint and burn tokens
-contract BridgedERC1155 is ERC1155, IMintableERC1155 {
+contract BridgedERC1155 is ERC1155, BridgedTokenBase, IMintableERC1155 {
     /// @dev Mapping from token ID to custom token URI
     mapping(uint256 => string) private _tokenURIs;
 
-    /// @notice The bridge contract that can mint and burn tokens
-    address public immutable bridge;
-
-    /// @notice The original token address on the source chain
-    address public immutable originalToken;
-
-    error OnlyBridge();
-
-    modifier onlyBridge() {
-        if (msg.sender != bridge) revert OnlyBridge();
-        _;
-    }
-
-    constructor(string memory uri_, address _bridge, address _originalToken) ERC1155(uri_) {
-        bridge = _bridge;
-        originalToken = _originalToken;
-    }
+    constructor(string memory uri_, address _originalToken)
+        ERC1155(uri_)
+        BridgedTokenBase(_originalToken)
+    {}
 
     /// @inheritdoc IMintableERC1155
-    function mint(address to, uint256 id, uint256 amount, bytes memory data) external onlyBridge {
+    function mint(address to, uint256 id, uint256 amount, bytes memory data) external onlyOwner {
         _mint(to, id, amount, data);
     }
 
@@ -42,14 +30,14 @@ contract BridgedERC1155 is ERC1155, IMintableERC1155 {
     /// @param data Additional data
     function mintWithURI(address to, uint256 id, uint256 amount, string memory tokenURI_, bytes memory data)
         external
-        onlyBridge
+        onlyOwner
     {
         _mint(to, id, amount, data);
         _setTokenURI(id, tokenURI_);
     }
 
     /// @inheritdoc IMintableERC1155
-    function burn(address from, uint256 id, uint256 amount) external onlyBridge {
+    function burn(address from, uint256 id, uint256 amount) external onlyOwner {
         _burn(from, id, amount);
         // Clear the token URI when burning all tokens
         if (balanceOf(from, id) == 0 && bytes(_tokenURIs[id]).length != 0) {

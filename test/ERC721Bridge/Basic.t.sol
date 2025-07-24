@@ -68,7 +68,7 @@ contract ERC721BridgeTest is Test {
         BridgedERC721 bridgedToken = BridgedERC721(deployedToken);
         assertEq(bridgedToken.name(), "Test NFT");
         assertEq(bridgedToken.symbol(), "TNFT");
-        assertEq(bridgedToken.bridge(), address(bridge));
+        assertEq(bridgedToken.owner(), address(bridge));
         assertEq(bridgedToken.originalToken(), address(token));
     }
 

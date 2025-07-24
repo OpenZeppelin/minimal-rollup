@@ -140,7 +140,7 @@ contract ERC1155Bridge is IERC1155Bridge, ReentrancyGuardTransient, IERC1155Rece
         _provenInitializations[id] = true;
 
         // Deploy the bridged token
-        deployedToken = address(new BridgedERC1155(tokenInit.uri, address(this), tokenInit.originalToken));
+        deployedToken = address(new BridgedERC1155(tokenInit.uri, tokenInit.originalToken));
 
         // Store the mapping
         bytes32 key = keccak256(abi.encode(tokenInit.originalToken));

@@ -139,9 +139,7 @@ contract ERC20Bridge is IERC20Bridge, ReentrancyGuardTransient {
 
         // Deploy the bridged token
         deployedToken = address(
-            new BridgedERC20(
-                tokenInit.name, tokenInit.symbol, tokenInit.decimals, address(this), tokenInit.originalToken
-            )
+            new BridgedERC20(tokenInit.name, tokenInit.symbol, tokenInit.decimals, tokenInit.originalToken)
         );
 
         // Store the mapping
