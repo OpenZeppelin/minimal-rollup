@@ -21,7 +21,6 @@ contract ERC20Bridge is IERC20Bridge, ReentrancyGuardTransient {
     bytes32 private constant DEPOSIT_SIGNAL_PREFIX = keccak256("ERC20_DEPOSIT");
 
     mapping(bytes32 id => bool processed) private _processed;
-    mapping(bytes32 id => bool provenInitializations) private _provenInitializations;
     mapping(address token => bool initialized) private _initializedTokens;
     mapping(bytes32 key => address deployedToken) private _deployedTokens;
     mapping(address token => bool isBridgedToken) private _isBridgedTokens;
@@ -62,7 +61,7 @@ contract ERC20Bridge is IERC20Bridge, ReentrancyGuardTransient {
 
     /// @inheritdoc IERC20Bridge
     function isInitializationProven(bytes32 id) public view returns (bool) {
-        return _provenInitializations[id];
+        return _processed[id];
     }
 
     /// @inheritdoc IERC20Bridge
@@ -129,13 +128,13 @@ contract ERC20Bridge is IERC20Bridge, ReentrancyGuardTransient {
         returns (address deployedToken)
     {
         bytes32 id = _generateInitializationId(tokenInit);
-        require(!_provenInitializations[id], InitializationAlreadyProven());
+        require(!_processed[id], InitializationAlreadyProven());
 
         // Verify the initialization signal from the source chain
         signalService.verifySignal(height, trustedCommitmentPublisher, counterpart, id, proof);
 
-        // Mark initialization as proven
-        _provenInitializations[id] = true;
+        // Mark initialization as processed
+        _processed[id] = true;
 
         // Deploy the bridged token
         deployedToken =

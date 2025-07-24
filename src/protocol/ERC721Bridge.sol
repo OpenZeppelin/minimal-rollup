@@ -20,7 +20,6 @@ contract ERC721Bridge is IERC721Bridge, ReentrancyGuardTransient, IERC721Receive
     bytes32 private constant DEPOSIT_SIGNAL_PREFIX = keccak256("ERC721_DEPOSIT");
 
     mapping(bytes32 id => bool processed) private _processed;
-    mapping(bytes32 id => bool provenInitializations) private _provenInitializations;
     mapping(address token => bool initialized) private _initializedTokens;
     mapping(bytes32 key => address deployedToken) private _deployedTokens;
     mapping(address token => bool isBridgedToken) private _isBridgedTokens;
@@ -66,7 +65,7 @@ contract ERC721Bridge is IERC721Bridge, ReentrancyGuardTransient, IERC721Receive
 
     /// @inheritdoc IERC721Bridge
     function isInitializationProven(bytes32 id) public view returns (bool) {
-        return _provenInitializations[id];
+        return _processed[id];
     }
 
     /// @inheritdoc IERC721Bridge
@@ -125,13 +124,13 @@ contract ERC721Bridge is IERC721Bridge, ReentrancyGuardTransient, IERC721Receive
         returns (address deployedToken)
     {
         bytes32 id = _generateInitializationId(tokenInit);
-        require(!_provenInitializations[id], InitializationAlreadyProven());
+        require(!_processed[id], InitializationAlreadyProven());
 
         // Verify the initialization signal from the source chain
         signalService.verifySignal(height, trustedCommitmentPublisher, counterpart, id, proof);
 
-        // Mark initialization as proven
-        _provenInitializations[id] = true;
+        // Mark initialization as processed
+        _processed[id] = true;
 
         // Deploy the bridged token
         deployedToken = address(new BridgedERC721(tokenInit.name, tokenInit.symbol, tokenInit.originalToken));

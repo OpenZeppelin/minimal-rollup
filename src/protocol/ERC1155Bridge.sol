@@ -20,7 +20,6 @@ contract ERC1155Bridge is IERC1155Bridge, ReentrancyGuardTransient, IERC1155Rece
     bytes32 private constant DEPOSIT_SIGNAL_PREFIX = keccak256("ERC1155_DEPOSIT");
 
     mapping(bytes32 id => bool processed) private _processed;
-    mapping(bytes32 id => bool provenInitializations) private _provenInitializations;
     mapping(address token => bool initialized) private _initializedTokens;
     mapping(bytes32 key => address deployedToken) private _deployedTokens;
     mapping(address token => bool isBridgedToken) private _isBridgedTokens;
@@ -79,7 +78,7 @@ contract ERC1155Bridge is IERC1155Bridge, ReentrancyGuardTransient, IERC1155Rece
 
     /// @inheritdoc IERC1155Bridge
     function isInitializationProven(bytes32 id) public view returns (bool) {
-        return _provenInitializations[id];
+        return _processed[id];
     }
 
     /// @inheritdoc IERC1155Bridge
@@ -131,13 +130,13 @@ contract ERC1155Bridge is IERC1155Bridge, ReentrancyGuardTransient, IERC1155Rece
         returns (address deployedToken)
     {
         bytes32 id = _generateInitializationId(tokenInit);
-        require(!_provenInitializations[id], InitializationAlreadyProven());
+        require(!_processed[id], InitializationAlreadyProven());
 
         // Verify the initialization signal from the source chain
         signalService.verifySignal(height, trustedCommitmentPublisher, counterpart, id, proof);
 
-        // Mark initialization as proven
-        _provenInitializations[id] = true;
+        // Mark initialization as processed
+        _processed[id] = true;
 
         // Deploy the bridged token
         deployedToken = address(new BridgedERC1155(tokenInit.uri, tokenInit.originalToken));
