@@ -128,7 +128,7 @@ Both tests follow the same measurement pattern:
 A Python script was developed to automate the comparison (found in scripts/compare_gas.py):
 ```python
 # Extract gas values from both reports
-gas_proposing = 609,813    # From test_inbox_measure_gas_used.txt
+gas_proposing = 654,502    # From test_inbox_measure_gas_used.txt
 gas_publication = 44,689   # From minimal_inbox_publish.txt
 
 # Calculate percentage decrease
@@ -137,8 +137,12 @@ percentage_decrease = ((gas_proposing - gas_publication) / gas_proposing) * 100
 
 ## Limitations
 
-- Currently this is only measuring the difference based on imitating the test case. These   conditions are extremely basic and are not indicative of real world scenarios (for example the blob/calldata is given in the test is extremely small compared to that of a real rollup etc..)
-- The comparison is not very accurate as taikos current inbox accepts the list of txs as calldata (which will be measured by the gas snapshot) whereas the minimal rollup implementation relies on this information being given as a blob (which is not captured by the gas snapshot). In reality you would need to consider the implication of submitting a blob transaction in addition to the gas consumption of the publish. 
-- 
+- Currently this is only measuring the difference based on imitating the test case. These conditions are quite basic and are not indicative of real-world scenarios (for example the blob/calldata given in the test is minimal compared to that of a real rollup etc.)
+- The comparison is not very accurate as taikos current inbox accepts the list of txs as calldata (which will be measured by the gas snapshot) whereas the minimal rollup implementation relies on this information being given as a blob (which is not captured by the gas snapshot). In reality you would need to consider the implication of submitting a blob transaction in addition to the gas consumption of the publish.  
+
+## Conclusion
+
+- This preliminary analysis shows a significant 93.17% gas reduction when using the minimal rollup's `publish` function compared to Taiko's `proposeBatch`. However, these results should be interpreted with caution given the simplified test conditions and different data handling approaches (calldata vs blob transactions). More comprehensive testing on realistic scenarios will be conducted once the minimal rollup infrastructure is deployed to a testnet.
+
 ## Future Considerations
 - Once the minimal rollup infra can be deployed to a testnet we can re-run these simulations on more realistic rollup test cases to  analyse the gas differences in depth. 

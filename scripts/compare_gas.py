@@ -46,11 +46,11 @@ def main():
         print(f"Absolute difference: {abs_diff:,}")
         print(f"Percentage decrease: {percent_decrease:.2f}%")
         print()
-        
+
         if percent_decrease > 0:
-            print(f"taiko_inbox_publish uses {percent_decrease:.2f}% LESS gas than inbox_without_provermarket")
+            print(f"minimal_rollup_inbox_publish uses {percent_decrease:.2f}% LESS gas than alethia_inbox_propose")
         elif percent_decrease < 0:
-            print(f"taiko_inbox_publish uses {abs(percent_decrease):.2f}% MORE gas than inbox_without_provermarket")
+            print(f"minimal_rollup_inbox_publish uses {abs(percent_decrease):.2f}% MORE gas than alethia_inbox_propose")
         else:
             print("Both methods use the same amount of gas")
 
