@@ -32,15 +32,16 @@ contract TaikoInboxTest is Test {
     }
 
     function test_gas_TaikoPublishFunction() public ProposeMultiplePublications(9) {
-        uint256[] memory blobIndices = new uint256[](1);
-        blobIndices[0] = 0;
-
+        uint256 numPublications = 10;
         vm.startSnapshotGas("publish");
-        taikoInbox.publish(1, uint64(block.number - 1));
+        _publishMultiplePublications(numPublications);
         uint256 gas = vm.stopSnapshotGas("publish");
+        uint256 gasPerPublication = gas / numPublications;
         string memory str = string(
             abi.encodePacked(
-                "See `test_gas_TaikoPublishFunction` in Inbox.t.sol\n", "\nGas for publication: ", Strings.toString(gas)
+                "See `test_gas_TaikoPublishFunction` in Inbox.t.sol\n",
+                "\nGas for publication: ",
+                Strings.toString(gasPerPublication)
             )
         );
 
@@ -54,7 +55,7 @@ contract TaikoInboxTest is Test {
         _;
     }
 
-    function _publishMultiplePublications(uint256 numPublicationsToPublish) internal {
+    function _publishMultiplePublications(uint256 numPublications) internal {
         vm.roll(maxAnchorBlockIdOffset);
         uint256 nBlobs = 1;
         uint64 baseAnchorBlockId = uint64(block.number - 1);
@@ -64,7 +65,7 @@ contract TaikoInboxTest is Test {
 
         vm.blobhashes(blobHashes);
 
-        for (uint256 i = 0; i < numPublicationsToPublish; i++) {
+        for (uint256 i = 0; i < numPublications; i++) {
             taikoInbox.publish(nBlobs, baseAnchorBlockId);
         }
     }

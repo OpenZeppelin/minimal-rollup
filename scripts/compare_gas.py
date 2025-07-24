@@ -3,7 +3,7 @@
 import re
 import sys
 
-TAIKO_GAS_REPORT = "gas-reports/inbox_without_provermarket.txt"
+TAIKO_GAS_REPORT = "gas-reports/test_inbox_measure_gas_used.txt"
 MINIMAL_GAS_REPORT = "gas-reports/taiko_inbox_publish.txt"
 
 def extract_gas_value(file_path, pattern):
@@ -29,7 +29,7 @@ def calculate_difference(value1, value2):
 
 
 def main():
-    pattern1 = r"Gas per proposing:\s*(\d+)"
+    pattern1 = r"Gas per proposeBatches:\s*(\d+)"
     pattern2 = r"Gas for publication:\s*(\d+)"
     
     try:
@@ -40,8 +40,8 @@ def main():
         
         print("Gas Report Comparison")
         print("=" * 50)
-        print(f"Gas per proposing (inbox_without_provermarket): {gas_proposing:,}")
-        print(f"Gas for publication (taiko_inbox_publish):       {gas_publication:,}")
+        print(f"Gas per proposing (alethia_inbox_proposeV4): {gas_proposing:,}")
+        print(f"Gas for publication (minimal_rollup_inbox_publish):       {gas_publication:,}")
         print("=" * 50)
         print(f"Absolute difference: {abs_diff:,}")
         print(f"Percentage decrease: {percent_decrease:.2f}%")
