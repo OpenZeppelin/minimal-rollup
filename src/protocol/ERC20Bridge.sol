@@ -37,8 +37,7 @@ contract ERC20Bridge is IERC20Bridge, ReentrancyGuardTransient {
     /// WARN: This address has no significance (and may be untrustworthy) on this chain.
     address public immutable counterpart;
 
-    /// @dev The chain identifier for this chain
-    uint256 public immutable chainId;
+
 
     constructor(address _signalService, address _trustedCommitmentPublisher, address _counterpart) {
         require(_signalService != address(0), "Empty signal service");
@@ -48,7 +47,6 @@ contract ERC20Bridge is IERC20Bridge, ReentrancyGuardTransient {
         signalService = ISignalService(_signalService);
         trustedCommitmentPublisher = _trustedCommitmentPublisher;
         counterpart = _counterpart;
-        chainId = block.chainid;
     }
 
     /// @inheritdoc IERC20Bridge
@@ -67,8 +65,8 @@ contract ERC20Bridge is IERC20Bridge, ReentrancyGuardTransient {
     }
 
     /// @inheritdoc IERC20Bridge
-    function getDeployedToken(address originalToken, uint256 sourceChain) public view returns (address) {
-        bytes32 key = keccak256(abi.encode(originalToken, sourceChain));
+    function getDeployedToken(address originalToken) public view returns (address) {
+        bytes32 key = keccak256(abi.encode(originalToken));
         return _deployedTokens[key];
     }
 
@@ -96,8 +94,7 @@ contract ERC20Bridge is IERC20Bridge, ReentrancyGuardTransient {
             originalToken: token,
             name: name,
             symbol: symbol,
-            decimals: decimals,
-            sourceChain: chainId
+            decimals: decimals
         });
         
         id = _generateInitializationId(tokenInit);
@@ -112,10 +109,11 @@ contract ERC20Bridge is IERC20Bridge, ReentrancyGuardTransient {
     }
 
     /// @inheritdoc IERC20Bridge
-    function proveTokenInitialization(TokenInitialization memory tokenInit, uint256 height, bytes memory proof)
-        external
-        returns (address deployedToken)
-    {
+    function proveTokenInitialization(
+        TokenInitialization memory tokenInit,
+        uint256 height,
+        bytes memory proof
+    ) external returns (address deployedToken) {
         bytes32 id = _generateInitializationId(tokenInit);
         require(!_provenInitializations[id], InitializationAlreadyProven());
 
@@ -132,13 +130,12 @@ contract ERC20Bridge is IERC20Bridge, ReentrancyGuardTransient {
                 tokenInit.symbol,
                 tokenInit.decimals,
                 address(this),
-                tokenInit.originalToken,
-                tokenInit.sourceChain
+                tokenInit.originalToken
             )
         );
 
         // Store the mapping
-        bytes32 key = keccak256(abi.encode(tokenInit.originalToken, tokenInit.sourceChain));
+        bytes32 key = keccak256(abi.encode(tokenInit.originalToken));
         _deployedTokens[key] = deployedToken;
 
         emit TokenInitializationProven(id, tokenInit, deployedToken);
@@ -153,12 +150,21 @@ contract ERC20Bridge is IERC20Bridge, ReentrancyGuardTransient {
         // Check if token is initialized (for original tokens) or is a bridged token deployed by this bridge
         require(_initializedTokens[localToken] || _isBridgedToken(localToken), TokenNotInitialized());
 
+        // Determine the original token address
+        address originalToken;
+        if (_isBridgedToken(localToken)) {
+            // If depositing a bridged token, use its original token address
+            originalToken = BridgedERC20(localToken).originalToken();
+        } else {
+            // If depositing an original token, use its address directly
+            originalToken = localToken;
+        }
+
         ERC20Deposit memory erc20Deposit = ERC20Deposit({
             nonce: _globalDepositNonce,
             from: msg.sender,
             to: to,
-            localToken: localToken,
-            sourceChain: chainId,
+            localToken: originalToken,
             amount: amount,
             canceler: canceler
         });
@@ -215,24 +221,18 @@ contract ERC20Bridge is IERC20Bridge, ReentrancyGuardTransient {
     }
 
     /// @dev Function to transfer ERC20 to the receiver.
-    /// @param erc20Deposit The deposit information containing the token and amount
+    /// @param erc20Deposit The deposit information containing the original token address
     /// @param to Address to send the tokens to
     function _sendERC20(ERC20Deposit memory erc20Deposit, address to) internal {
-        if (erc20Deposit.sourceChain != chainId) {
-            // This is a deposit from another chain, check if we have the bridged token deployed
-            bytes32 key = keccak256(abi.encode(erc20Deposit.localToken, erc20Deposit.sourceChain));
-            address deployedToken = _deployedTokens[key];
+        // In a 1-1 bridge, use token mapping presence to determine mint vs transfer
+        bytes32 key = keccak256(abi.encode(erc20Deposit.localToken));
+        address deployedToken = _deployedTokens[key];
 
-            if (deployedToken != address(0)) {
-                // Mint the bridged token
-                BridgedERC20(deployedToken).mint(to, erc20Deposit.amount);
-            } else {
-                // This should not happen if token was properly initialized
-                revert("Bridged token not found");
-            }
+        if (deployedToken != address(0)) {
+            // We have a bridged token for this original token → mint it
+            BridgedERC20(deployedToken).mint(to, erc20Deposit.amount);
         } else {
-            // This is a deposit from the same chain (bridged token going back to origin)
-            // Transfer the original token that we hold
+            // No bridged token found → transfer the original token we're holding
             IERC20(erc20Deposit.localToken).safeTransfer(to, erc20Deposit.amount);
         }
     }

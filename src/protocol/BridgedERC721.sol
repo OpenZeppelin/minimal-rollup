@@ -16,9 +16,6 @@ contract BridgedERC721 is ERC721, IMintableERC721 {
     /// @notice The original token address on the source chain
     address public immutable originalToken;
 
-    /// @notice The source chain identifier (could be chain ID or other identifier)
-    uint256 public immutable sourceChain;
-
     error OnlyBridge();
 
     modifier onlyBridge() {
@@ -26,12 +23,11 @@ contract BridgedERC721 is ERC721, IMintableERC721 {
         _;
     }
 
-    constructor(string memory name, string memory symbol, address _bridge, address _originalToken, uint256 _sourceChain)
+    constructor(string memory name, string memory symbol, address _bridge, address _originalToken)
         ERC721(name, symbol)
     {
         bridge = _bridge;
         originalToken = _originalToken;
-        sourceChain = _sourceChain;
     }
 
     /// @inheritdoc IMintableERC721

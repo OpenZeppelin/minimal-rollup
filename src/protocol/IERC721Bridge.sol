@@ -13,8 +13,6 @@ interface IERC721Bridge {
         string name;
         // The token symbol
         string symbol;
-        // The source chain identifier
-        uint256 sourceChain;
     }
 
     struct ERC721Deposit {
@@ -24,10 +22,8 @@ interface IERC721Bridge {
         address from;
         // The receiver of the deposit
         address to;
-        // The ERC721 token address
+        // The original ERC721 token address (always refers to the original token, not bridged)
         address localToken;
-        // The source chain identifier where this deposit originated
-        uint256 sourceChain;
         // The token ID
         uint256 tokenId;
         // The token URI (metadata) for this specific token
@@ -94,8 +90,7 @@ interface IERC721Bridge {
 
     /// @dev Get the deployed token address for an original token (on destination chain).
     /// @param originalToken The original token address
-    /// @param sourceChain The source chain identifier
-    function getDeployedToken(address originalToken, uint256 sourceChain) external view returns (address);
+    function getDeployedToken(address originalToken) external view returns (address);
 
     /// @dev Token initialization identifier.
     /// @param tokenInit The token initialization struct
@@ -113,9 +108,11 @@ interface IERC721Bridge {
     /// @param tokenInit The token initialization data
     /// @param height The height of the checkpoint on the source chain
     /// @param proof Encoded proof of the initialization signal
-    function proveTokenInitialization(TokenInitialization memory tokenInit, uint256 height, bytes memory proof)
-        external
-        returns (address deployedToken);
+    function proveTokenInitialization(
+        TokenInitialization memory tokenInit,
+        uint256 height,
+        bytes memory proof
+    ) external returns (address deployedToken);
 
     /// @dev Creates an ERC721 deposit
     /// @param to The receiver of the deposit

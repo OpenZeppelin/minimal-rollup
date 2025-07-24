@@ -54,8 +54,7 @@ contract ERC20BridgeTest is Test {
             originalToken: address(token),
             name: "Test Token",
             symbol: "TEST",
-            decimals: 18,
-            sourceChain: 31337
+            decimals: 18
         });
 
         bytes memory proof = "mock_proof";
@@ -66,7 +65,7 @@ contract ERC20BridgeTest is Test {
         address deployedToken = bridge.proveTokenInitialization(tokenInit, height, proof);
 
         assertTrue(bridge.isInitializationProven(id));
-        assertEq(bridge.getDeployedToken(address(token), 31337), deployedToken);
+        assertEq(bridge.getDeployedToken(address(token)), deployedToken);
 
         // Check that the deployed token has correct metadata
         BridgedERC20 bridgedToken = BridgedERC20(deployedToken);
@@ -75,7 +74,6 @@ contract ERC20BridgeTest is Test {
         assertEq(bridgedToken.decimals(), 18);
         assertEq(bridgedToken.bridge(), address(bridge));
         assertEq(bridgedToken.originalToken(), address(token));
-        assertEq(bridgedToken.sourceChain(), 31337);
     }
 
     function testCannotProveInitializationTwice() public {
@@ -87,8 +85,7 @@ contract ERC20BridgeTest is Test {
             originalToken: address(token),
             name: "Test Token",
             symbol: "TEST",
-            decimals: 18,
-            sourceChain: 31337
+            decimals: 18
         });
 
         bytes memory proof = "mock_proof";
@@ -131,7 +128,6 @@ contract ERC20BridgeTest is Test {
             from: alice,
             to: bob,
             localToken: address(token),
-            sourceChain: 31337,
             amount: 100,
             canceler: address(0)
         });
@@ -161,7 +157,6 @@ contract ERC20BridgeTest is Test {
             from: alice,
             to: bob,
             localToken: address(token),
-            sourceChain: 31337,
             amount: 100,
             canceler: canceler
         });
@@ -192,7 +187,6 @@ contract ERC20BridgeTest is Test {
             from: alice,
             to: bob,
             localToken: address(token),
-            sourceChain: 31337,
             amount: 100,
             canceler: canceler
         });
@@ -219,7 +213,6 @@ contract ERC20BridgeTest is Test {
             from: alice,
             to: bob,
             localToken: address(token),
-            sourceChain: 31337,
             amount: 100,
             canceler: address(0)
         });
@@ -247,8 +240,7 @@ contract ERC20BridgeTest is Test {
             originalToken: address(token),
             name: "Test Token",
             symbol: "TEST",
-            decimals: 18,
-            sourceChain: 1 // Simulate this came from chain 1
+            decimals: 18
         });
 
         bytes memory proof = "mock_proof";
@@ -267,7 +259,6 @@ contract ERC20BridgeTest is Test {
             from: alice,
             to: alice,
             localToken: address(token),
-            sourceChain: 1, // Simulate this deposit came from chain 1
             amount: 200,
             canceler: address(0)
         });

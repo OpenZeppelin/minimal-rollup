@@ -53,8 +53,7 @@ contract ERC1155BridgeTest is Test {
         // Prepare initialization data for destination chain
         IERC1155Bridge.TokenInitialization memory tokenInit = IERC1155Bridge.TokenInitialization({
             originalToken: address(token),
-            uri: "https://example.com/metadata/0.json",
-            sourceChain: 31337
+            uri: "https://example.com/metadata/0.json"
         });
 
         bytes memory proof = "mock_proof";
@@ -65,13 +64,12 @@ contract ERC1155BridgeTest is Test {
         address deployedToken = bridge.proveTokenInitialization(tokenInit, height, proof);
 
         assertTrue(bridge.isInitializationProven(id));
-        assertEq(bridge.getDeployedToken(address(token), 31337), deployedToken);
+        assertEq(bridge.getDeployedToken(address(token)), deployedToken);
 
         // Check that the deployed token has correct metadata
         BridgedERC1155 bridgedToken = BridgedERC1155(deployedToken);
         assertEq(bridgedToken.bridge(), address(bridge));
         assertEq(bridgedToken.originalToken(), address(token));
-        assertEq(bridgedToken.sourceChain(), 31337);
     }
 
     function testCannotProveInitializationTwice() public {
@@ -81,8 +79,7 @@ contract ERC1155BridgeTest is Test {
 
         IERC1155Bridge.TokenInitialization memory tokenInit = IERC1155Bridge.TokenInitialization({
             originalToken: address(token),
-            uri: "https://example.com/metadata/0.json",
-            sourceChain: 31337
+            uri: "https://example.com/metadata/0.json"
         });
 
         bytes memory proof = "mock_proof";
@@ -126,7 +123,6 @@ contract ERC1155BridgeTest is Test {
             from: alice,
             to: bob,
             localToken: address(token),
-            sourceChain: 31337,
             tokenId: tokenId,
             amount: 50,
             tokenURI: "https://example.com/metadata/1.json",
@@ -158,7 +154,6 @@ contract ERC1155BridgeTest is Test {
             from: alice,
             to: bob,
             localToken: address(token),
-            sourceChain: 31337,
             tokenId: tokenId,
             amount: 50,
             tokenURI: "https://example.com/metadata/1.json",
@@ -191,7 +186,6 @@ contract ERC1155BridgeTest is Test {
             from: alice,
             to: bob,
             localToken: address(token),
-            sourceChain: 31337,
             tokenId: tokenId,
             amount: 50,
             tokenURI: "https://example.com/metadata/1.json",
@@ -220,7 +214,6 @@ contract ERC1155BridgeTest is Test {
             from: alice,
             to: bob,
             localToken: address(token),
-            sourceChain: 31337,
             tokenId: tokenId,
             amount: 50,
             tokenURI: "https://example.com/metadata/1.json",
@@ -251,7 +244,6 @@ contract ERC1155BridgeTest is Test {
             from: alice,
             to: bob,
             localToken: address(token),
-            sourceChain: 31337,
             tokenId: tokenId,
             amount: 50,
             tokenURI: "https://example.com/metadata/1.json",
@@ -282,7 +274,6 @@ contract ERC1155BridgeTest is Test {
             from: alice,
             to: bob,
             localToken: address(token),
-            sourceChain: 31337,
             tokenId: tokenId,
             amount: 50,
             tokenURI: "https://example.com/metadata/1.json",
@@ -309,8 +300,7 @@ contract ERC1155BridgeTest is Test {
         // Prove initialization on chain 2 (simulating it came from chain 1)
         IERC1155Bridge.TokenInitialization memory tokenInit = IERC1155Bridge.TokenInitialization({
             originalToken: address(token),
-            uri: "https://example.com/metadata/0.json",
-            sourceChain: 1 // Simulate this came from chain 1
+            uri: "https://example.com/metadata/0.json"
         });
 
         bytes memory proof = "mock_proof";
@@ -329,7 +319,6 @@ contract ERC1155BridgeTest is Test {
             from: alice,
             to: alice,
             localToken: address(token),
-            sourceChain: 1, // Simulate this deposit came from chain 1
             tokenId: tokenId,
             amount: 25,
             tokenURI: "https://example.com/metadata/1.json",
@@ -347,6 +336,5 @@ contract ERC1155BridgeTest is Test {
         // Verify collection info is also correct
         assertEq(bridgedNFT.bridge(), address(bridge2));
         assertEq(bridgedNFT.originalToken(), address(token));
-        assertEq(bridgedNFT.sourceChain(), 1);
     }
 }

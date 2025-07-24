@@ -36,8 +36,7 @@ contract ERC721Bridge is IERC721Bridge, ReentrancyGuardTransient, IERC721Receive
     /// WARN: This address has no significance (and may be untrustworthy) on this chain.
     address public immutable counterpart;
 
-    /// @dev The chain identifier for this chain
-    uint256 public immutable chainId;
+
 
     constructor(address _signalService, address _trustedCommitmentPublisher, address _counterpart) {
         require(_signalService != address(0), "Empty signal service");
@@ -47,7 +46,6 @@ contract ERC721Bridge is IERC721Bridge, ReentrancyGuardTransient, IERC721Receive
         signalService = ISignalService(_signalService);
         trustedCommitmentPublisher = _trustedCommitmentPublisher;
         counterpart = _counterpart;
-        chainId = block.chainid;
     }
 
     /// @inheritdoc IERC721Receiver
@@ -71,8 +69,8 @@ contract ERC721Bridge is IERC721Bridge, ReentrancyGuardTransient, IERC721Receive
     }
 
     /// @inheritdoc IERC721Bridge
-    function getDeployedToken(address originalToken, uint256 sourceChain) public view returns (address) {
-        bytes32 key = keccak256(abi.encode(originalToken, sourceChain));
+    function getDeployedToken(address originalToken) public view returns (address) {
+        bytes32 key = keccak256(abi.encode(originalToken));
         return _deployedTokens[key];
     }
 
@@ -98,8 +96,7 @@ contract ERC721Bridge is IERC721Bridge, ReentrancyGuardTransient, IERC721Receive
                 TokenInitialization memory tokenInit = TokenInitialization({
             originalToken: token,
             name: name,
-            symbol: symbol,
-            sourceChain: chainId
+            symbol: symbol
         });
         
         id = _generateInitializationId(tokenInit);
@@ -114,10 +111,11 @@ contract ERC721Bridge is IERC721Bridge, ReentrancyGuardTransient, IERC721Receive
     }
 
     /// @inheritdoc IERC721Bridge
-    function proveTokenInitialization(TokenInitialization memory tokenInit, uint256 height, bytes memory proof)
-        external
-        returns (address deployedToken)
-    {
+    function proveTokenInitialization(
+        TokenInitialization memory tokenInit,
+        uint256 height,
+        bytes memory proof
+    ) external returns (address deployedToken) {
         bytes32 id = _generateInitializationId(tokenInit);
         require(!_provenInitializations[id], InitializationAlreadyProven());
 
@@ -130,12 +128,12 @@ contract ERC721Bridge is IERC721Bridge, ReentrancyGuardTransient, IERC721Receive
         // Deploy the bridged token
         deployedToken = address(
             new BridgedERC721(
-                tokenInit.name, tokenInit.symbol, address(this), tokenInit.originalToken, tokenInit.sourceChain
+                tokenInit.name, tokenInit.symbol, address(this), tokenInit.originalToken
             )
         );
 
         // Store the mapping
-        bytes32 key = keccak256(abi.encode(tokenInit.originalToken, tokenInit.sourceChain));
+        bytes32 key = keccak256(abi.encode(tokenInit.originalToken));
         _deployedTokens[key] = deployedToken;
 
         emit TokenInitializationProven(id, tokenInit, deployedToken);
@@ -159,12 +157,21 @@ contract ERC721Bridge is IERC721Bridge, ReentrancyGuardTransient, IERC721Receive
             tokenURI_ = "";
         }
 
+        // Determine the original token address
+        address originalToken;
+        if (_isBridgedToken(localToken)) {
+            // If depositing a bridged token, use its original token address
+            originalToken = BridgedERC721(localToken).originalToken();
+        } else {
+            // If depositing an original token, use its address directly
+            originalToken = localToken;
+        }
+
         ERC721Deposit memory erc721Deposit = ERC721Deposit({
             nonce: _globalDepositNonce,
             from: msg.sender,
             to: to,
-            localToken: localToken,
-            sourceChain: chainId,
+            localToken: originalToken,
             tokenId: tokenId,
             tokenURI: tokenURI_,
             canceler: canceler
@@ -225,28 +232,22 @@ contract ERC721Bridge is IERC721Bridge, ReentrancyGuardTransient, IERC721Receive
     }
 
     /// @dev Function to transfer ERC721 to the receiver.
-    /// @param erc721Deposit The deposit information containing the token and tokenId
+    /// @param erc721Deposit The deposit information containing the original token address and tokenId
     /// @param to Address to send the token to
     function _sendERC721(ERC721Deposit memory erc721Deposit, address to) internal {
-        if (erc721Deposit.sourceChain != chainId) {
-            // This is a deposit from another chain, check if we have the bridged token deployed
-            bytes32 key = keccak256(abi.encode(erc721Deposit.localToken, erc721Deposit.sourceChain));
-            address deployedToken = _deployedTokens[key];
+        // In a 1-1 bridge, use token mapping presence to determine mint vs transfer
+        bytes32 key = keccak256(abi.encode(erc721Deposit.localToken));
+        address deployedToken = _deployedTokens[key];
 
-            if (deployedToken != address(0)) {
-                // Mint the bridged token with its original metadata
-                if (bytes(erc721Deposit.tokenURI).length > 0) {
-                    BridgedERC721(deployedToken).mintWithURI(to, erc721Deposit.tokenId, erc721Deposit.tokenURI);
-                } else {
-                    BridgedERC721(deployedToken).mint(to, erc721Deposit.tokenId);
-                }
+        if (deployedToken != address(0)) {
+            // We have a bridged token for this original token → mint it with metadata
+            if (bytes(erc721Deposit.tokenURI).length > 0) {
+                BridgedERC721(deployedToken).mintWithURI(to, erc721Deposit.tokenId, erc721Deposit.tokenURI);
             } else {
-                // This should not happen if token was properly initialized
-                revert("Bridged token not found");
+                BridgedERC721(deployedToken).mint(to, erc721Deposit.tokenId);
             }
         } else {
-            // This is a deposit from the same chain (bridged token going back to origin)
-            // Transfer the original token that we hold
+            // No bridged token found → transfer the original token we're holding
             IERC721(erc721Deposit.localToken).safeTransferFrom(address(this), to, erc721Deposit.tokenId);
         }
     }

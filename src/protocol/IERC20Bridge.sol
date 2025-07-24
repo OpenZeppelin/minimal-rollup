@@ -15,8 +15,6 @@ interface IERC20Bridge {
         string symbol;
         // The token decimals
         uint8 decimals;
-        // The source chain identifier
-        uint256 sourceChain;
     }
 
     struct ERC20Deposit {
@@ -26,10 +24,8 @@ interface IERC20Bridge {
         address from;
         // The receiver of the deposit
         address to;
-        // The ERC20 token address in this network
+        // The original ERC20 token address (always refers to the original token, not bridged)
         address localToken;
-        // The source chain identifier where this deposit originated
-        uint256 sourceChain;
         // The amount of the deposit
         uint256 amount;
         // Address that is allowed to cancel the deposit on the destination chain (zero address means deposit is
@@ -94,8 +90,7 @@ interface IERC20Bridge {
 
     /// @dev Get the deployed token address for an original token (on destination chain).
     /// @param originalToken The original token address
-    /// @param sourceChain The source chain identifier
-    function getDeployedToken(address originalToken, uint256 sourceChain) external view returns (address);
+    function getDeployedToken(address originalToken) external view returns (address);
 
     /// @dev Token initialization identifier.
     /// @param tokenInit The token initialization struct
@@ -113,9 +108,11 @@ interface IERC20Bridge {
     /// @param tokenInit The token initialization data
     /// @param height The height of the checkpoint on the source chain
     /// @param proof Encoded proof of the initialization signal
-    function proveTokenInitialization(TokenInitialization memory tokenInit, uint256 height, bytes memory proof)
-        external
-        returns (address deployedToken);
+    function proveTokenInitialization(
+        TokenInitialization memory tokenInit,
+        uint256 height,
+        bytes memory proof
+    ) external returns (address deployedToken);
 
     /// @dev Creates an ERC20 deposit
     /// @param to The receiver of the deposit

@@ -17,9 +17,6 @@ contract BridgedERC1155 is ERC1155, IMintableERC1155 {
     /// @notice The original token address on the source chain
     address public immutable originalToken;
 
-    /// @notice The source chain identifier (could be chain ID or other identifier)
-    uint256 public immutable sourceChain;
-
     error OnlyBridge();
 
     modifier onlyBridge() {
@@ -27,10 +24,9 @@ contract BridgedERC1155 is ERC1155, IMintableERC1155 {
         _;
     }
 
-    constructor(string memory uri_, address _bridge, address _originalToken, uint256 _sourceChain) ERC1155(uri_) {
+    constructor(string memory uri_, address _bridge, address _originalToken) ERC1155(uri_) {
         bridge = _bridge;
         originalToken = _originalToken;
-        sourceChain = _sourceChain;
     }
 
     /// @inheritdoc IMintableERC1155

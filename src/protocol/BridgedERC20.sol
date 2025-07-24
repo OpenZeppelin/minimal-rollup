@@ -14,9 +14,6 @@ contract BridgedERC20 is ERC20, IMintableERC20 {
     /// @notice The original token address on the source chain
     address public immutable originalToken;
 
-    /// @notice The source chain identifier (could be chain ID or other identifier)
-    uint256 public immutable sourceChain;
-
     error OnlyBridge();
 
     modifier onlyBridge() {
@@ -31,12 +28,10 @@ contract BridgedERC20 is ERC20, IMintableERC20 {
         string memory symbol,
         uint8 decimals_,
         address _bridge,
-        address _originalToken,
-        uint256 _sourceChain
+        address _originalToken
     ) ERC20(name, symbol) {
         bridge = _bridge;
         originalToken = _originalToken;
-        sourceChain = _sourceChain;
         _decimals = decimals_;
     }
 
