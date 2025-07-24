@@ -16,6 +16,10 @@ import {ReentrancyGuardTransient} from "@openzeppelin/contracts/utils/Reentrancy
 contract ERC20Bridge is IERC20Bridge, ReentrancyGuardTransient {
     using SafeERC20 for IERC20;
 
+    /// @dev Signal type constants to differentiate signal categories
+    bytes32 private constant INITIALIZATION_SIGNAL_PREFIX = keccak256("ERC20_TOKEN_INITIALIZATION");
+    bytes32 private constant DEPOSIT_SIGNAL_PREFIX = keccak256("ERC20_DEPOSIT");
+
     mapping(bytes32 id => bool processed) private _processed;
     mapping(bytes32 id => bool provenInitializations) private _provenInitializations;
     mapping(address token => bool initialized) private _initializedTokens;
@@ -269,12 +273,12 @@ contract ERC20Bridge is IERC20Bridge, ReentrancyGuardTransient {
     /// @dev Generates a unique ID for a token initialization.
     /// @param tokenInit Token initialization to generate an ID for
     function _generateInitializationId(TokenInitialization memory tokenInit) internal pure returns (bytes32) {
-        return keccak256(abi.encode(tokenInit));
+        return keccak256(abi.encode(INITIALIZATION_SIGNAL_PREFIX, tokenInit));
     }
 
     /// @dev Generates a unique ID for a deposit.
     /// @param erc20Deposit Deposit to generate an ID for
     function _generateDepositId(ERC20Deposit memory erc20Deposit) internal pure returns (bytes32) {
-        return keccak256(abi.encode(erc20Deposit));
+        return keccak256(abi.encode(DEPOSIT_SIGNAL_PREFIX, erc20Deposit));
     }
 }

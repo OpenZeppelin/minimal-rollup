@@ -316,4 +316,27 @@ contract ERC20BridgeTest is Test {
         assertEq(BridgedERC20(deployedToken).symbol(), "UNKNOWN");
         assertEq(BridgedERC20(deployedToken).decimals(), 18);
     }
+
+    function testSignalIDDifferentiation() public {
+        // Deploy and initialize token
+        vm.prank(alice);
+        bytes32 initId = bridge.initializeToken(address(token));
+        
+        // Create a deposit (alice already has tokens and approval from setUp)
+        vm.prank(alice);
+        bytes32 depositId = bridge.deposit(alice, address(token), 100, address(0));
+        
+        // Verify the signal IDs are different
+        assertNotEq(initId, depositId, "Initialization and deposit IDs should be different");
+        
+        // Verify the IDs are deterministic (same inputs = same outputs)
+        IERC20Bridge.TokenInitialization memory tokenInit = IERC20Bridge.TokenInitialization({
+            originalToken: address(token),
+            name: "Test Token",
+            symbol: "TEST", 
+            decimals: 18
+        });
+        bytes32 expectedInitId = bridge.getInitializationId(tokenInit);
+        assertEq(initId, expectedInitId, "Initialization ID should be deterministic");
+    }
 }

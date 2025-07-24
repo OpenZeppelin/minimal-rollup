@@ -15,6 +15,10 @@ import {ReentrancyGuardTransient} from "@openzeppelin/contracts/utils/Reentrancy
 /// @notice A decentralized bridge for ERC1155 tokens that allows anyone to initialize tokens
 /// @dev Uses a permissionless token initialization flow
 contract ERC1155Bridge is IERC1155Bridge, ReentrancyGuardTransient, IERC1155Receiver {
+    /// @dev Signal type constants to differentiate signal categories
+    bytes32 private constant INITIALIZATION_SIGNAL_PREFIX = keccak256("ERC1155_TOKEN_INITIALIZATION");
+    bytes32 private constant DEPOSIT_SIGNAL_PREFIX = keccak256("ERC1155_DEPOSIT");
+
     mapping(bytes32 id => bool processed) private _processed;
     mapping(bytes32 id => bool provenInitializations) private _provenInitializations;
     mapping(address token => bool initialized) private _initializedTokens;
@@ -285,12 +289,12 @@ contract ERC1155Bridge is IERC1155Bridge, ReentrancyGuardTransient, IERC1155Rece
     /// @dev Generates a unique ID for a token initialization.
     /// @param tokenInit Token initialization to generate an ID for
     function _generateInitializationId(TokenInitialization memory tokenInit) internal pure returns (bytes32) {
-        return keccak256(abi.encode(tokenInit));
+        return keccak256(abi.encode(INITIALIZATION_SIGNAL_PREFIX, tokenInit));
     }
 
     /// @dev Generates a unique ID for a deposit.
     /// @param erc1155Deposit Deposit to generate an ID for
     function _generateDepositId(ERC1155Deposit memory erc1155Deposit) internal pure returns (bytes32) {
-        return keccak256(abi.encode(erc1155Deposit));
+        return keccak256(abi.encode(DEPOSIT_SIGNAL_PREFIX, erc1155Deposit));
     }
 }
