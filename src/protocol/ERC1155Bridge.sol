@@ -20,7 +20,6 @@ contract ERC1155Bridge is IERC1155Bridge, ReentrancyGuardTransient, IERC1155Rece
     bytes32 private constant DEPOSIT_SIGNAL_PREFIX = keccak256("ERC1155_DEPOSIT");
 
     mapping(bytes32 id => bool processed) private _processed;
-    mapping(address token => bool initialized) private _initializedTokens;
     mapping(bytes32 key => address deployedToken) private _deployedTokens;
     mapping(address token => bool isBridgedToken) private _isBridgedTokens;
 
@@ -73,7 +72,12 @@ contract ERC1155Bridge is IERC1155Bridge, ReentrancyGuardTransient, IERC1155Rece
 
     /// @inheritdoc IERC1155Bridge
     function isTokenInitialized(address token) public view returns (bool) {
-        return _initializedTokens[token];
+        string memory uri = _fetchTokenMetadata(token);
+
+        TokenInitialization memory tokenInit = TokenInitialization({originalToken: token, uri: uri});
+
+        bytes32 id = _generateInitializationId(tokenInit);
+        return signalService.isSignalStored(id, address(this));
     }
 
     /// @inheritdoc IERC1155Bridge
@@ -100,23 +104,14 @@ contract ERC1155Bridge is IERC1155Bridge, ReentrancyGuardTransient, IERC1155Rece
     /// @inheritdoc IERC1155Bridge
     function initializeToken(address token) external returns (bytes32 id) {
         require(token != address(0), "Invalid token address");
-        require(!_initializedTokens[token], "Token already initialized");
+        require(!isTokenInitialized(token), "Token already initialized");
 
         // Read token URI (base URI for the collection)
-        string memory uri;
-        try IERC1155MetadataURI(token).uri(0) returns (string memory tokenUri) {
-            uri = tokenUri;
-        } catch {
-            // If uri call fails, use empty string
-            uri = "";
-        }
+        string memory uri = _fetchTokenMetadata(token);
 
         TokenInitialization memory tokenInit = TokenInitialization({originalToken: token, uri: uri});
 
         id = _generateInitializationId(tokenInit);
-
-        // Mark token as initialized locally
-        _initializedTokens[token] = true;
 
         // Send signal for cross-chain initialization
         signalService.sendSignal(id);
@@ -158,7 +153,7 @@ contract ERC1155Bridge is IERC1155Bridge, ReentrancyGuardTransient, IERC1155Rece
         returns (bytes32 id)
     {
         // Check if token is initialized (for original tokens) or is a bridged token deployed by this bridge
-        require(_initializedTokens[localToken] || _isBridgedToken(localToken), TokenNotInitialized());
+        require(isTokenInitialized(localToken) || _isBridgedToken(localToken), TokenNotInitialized());
 
         // Fetch the token URI for this specific token
         string memory tokenURI_;
@@ -196,7 +191,7 @@ contract ERC1155Bridge is IERC1155Bridge, ReentrancyGuardTransient, IERC1155Rece
         }
 
         // Handle token transfer based on whether it's a bridged token or original token
-            IERC1155(localToken).safeTransferFrom(msg.sender, address(this), tokenId, amount, "");
+        IERC1155(localToken).safeTransferFrom(msg.sender, address(this), tokenId, amount, "");
         if (_isBridgedToken(localToken)) {
             // This is a bridged token being sent back to its origin, burn it
             BridgedERC1155(localToken).burn(address(this), tokenId, amount);
@@ -283,5 +278,16 @@ contract ERC1155Bridge is IERC1155Bridge, ReentrancyGuardTransient, IERC1155Rece
     /// @param erc1155Deposit Deposit to generate an ID for
     function _generateDepositId(ERC1155Deposit memory erc1155Deposit) internal pure returns (bytes32) {
         return keccak256(abi.encode(DEPOSIT_SIGNAL_PREFIX, erc1155Deposit));
+    }
+
+    /// @dev Fetches token metadata with fallbacks for non-compliant tokens
+    /// @param token The token address to fetch metadata for
+    /// @return uri The token URI (fallback: empty string)
+    function _fetchTokenMetadata(address token) private view returns (string memory uri) {
+        try IERC1155MetadataURI(token).uri(0) returns (string memory _uri) {
+            uri = _uri;
+        } catch {
+            uri = ""; // Fallback to empty string if URI retrieval fails
+        }
     }
 }
