@@ -126,13 +126,8 @@ contract ERC20BridgeTest is Test {
         vm.prank(alice);
         bytes32 id = bridge.deposit(bob, address(token), 100);
 
-        IERC20Bridge.ERC20Deposit memory deposit = IERC20Bridge.ERC20Deposit({
-            nonce: 0,
-            from: alice,
-            to: bob,
-            localToken: address(token),
-            amount: 100
-        });
+        IERC20Bridge.ERC20Deposit memory deposit =
+            IERC20Bridge.ERC20Deposit({nonce: 0, from: alice, to: bob, localToken: address(token), amount: 100});
 
         bytes memory proof = "mock_proof";
         uint256 height = 1;
@@ -145,10 +140,6 @@ contract ERC20BridgeTest is Test {
         assertEq(token.balanceOf(address(bridge)), 0);
     }
 
-
-
-
-
     function testCannotClaimAlreadyClaimed() public {
         // Initialize token
         vm.prank(alice);
@@ -157,13 +148,8 @@ contract ERC20BridgeTest is Test {
         vm.prank(alice);
         bridge.deposit(bob, address(token), 100);
 
-        IERC20Bridge.ERC20Deposit memory deposit = IERC20Bridge.ERC20Deposit({
-            nonce: 0,
-            from: alice,
-            to: bob,
-            localToken: address(token),
-            amount: 100
-        });
+        IERC20Bridge.ERC20Deposit memory deposit =
+            IERC20Bridge.ERC20Deposit({nonce: 0, from: alice, to: bob, localToken: address(token), amount: 100});
 
         bytes memory proof = "mock_proof";
         uint256 height = 1;
@@ -202,13 +188,8 @@ contract ERC20BridgeTest is Test {
         bytes32 depositId = bridge.deposit(alice, address(token), 200);
 
         // For the claim, simulate that this deposit came from chain 1
-        IERC20Bridge.ERC20Deposit memory deposit = IERC20Bridge.ERC20Deposit({
-            nonce: 0,
-            from: alice,
-            to: alice,
-            localToken: address(token),
-            amount: 200
-        });
+        IERC20Bridge.ERC20Deposit memory deposit =
+            IERC20Bridge.ERC20Deposit({nonce: 0, from: alice, to: alice, localToken: address(token), amount: 200});
 
         // Claim on chain 2 (mints bridged tokens)
         bridge2.claimDeposit(deposit, height, proof);

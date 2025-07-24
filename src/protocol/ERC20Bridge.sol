@@ -151,11 +151,7 @@ contract ERC20Bridge is IERC20Bridge, ReentrancyGuardTransient {
     }
 
     /// @inheritdoc IERC20Bridge
-    function deposit(address to, address localToken, uint256 amount)
-        external
-        nonReentrant
-        returns (bytes32 id)
-    {
+    function deposit(address to, address localToken, uint256 amount) external nonReentrant returns (bytes32 id) {
         // Check if token is initialized (for original tokens) or is a bridged token deployed by this bridge
         require(_initializedTokens[localToken] || _isBridgedToken(localToken), TokenNotInitialized());
 
@@ -202,8 +198,6 @@ contract ERC20Bridge is IERC20Bridge, ReentrancyGuardTransient {
         bytes32 id = _claimDeposit(erc20Deposit, erc20Deposit.to, height, proof);
         emit DepositClaimed(id, erc20Deposit);
     }
-
-
 
     function _claimDeposit(ERC20Deposit memory erc20Deposit, address to, uint256 height, bytes memory proof)
         internal
