@@ -89,9 +89,21 @@ contract ERC721Bridge is IERC721Bridge, ReentrancyGuardTransient, IERC721Receive
         require(token != address(0), "Invalid token address");
         require(!_initializedTokens[token], "Token already initialized");
 
-        // Read token metadata
-        string memory name = IERC721Metadata(token).name();
-        string memory symbol = IERC721Metadata(token).symbol();
+        // Read token metadata with fallbacks for non-compliant tokens
+        string memory name;
+        string memory symbol;
+        
+        try IERC721Metadata(token).name() returns (string memory _name) {
+            name = _name;
+        } catch {
+            name = "Unknown NFT Name";
+        }
+        
+        try IERC721Metadata(token).symbol() returns (string memory _symbol) {
+            symbol = _symbol;
+        } catch {
+            symbol = "UNKNOWN";
+        }
 
                 TokenInitialization memory tokenInit = TokenInitialization({
             originalToken: token,

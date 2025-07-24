@@ -7,6 +7,7 @@ import {ERC20Bridge} from "src/protocol/ERC20Bridge.sol";
 import {IERC20Bridge} from "src/protocol/IERC20Bridge.sol";
 import {ISignalService} from "src/protocol/ISignalService.sol";
 import {MockERC20} from "test/mocks/MockERC20.sol";
+import {MockBrokenERC20} from "test/mocks/MockBrokenERC20.sol";
 import {MockSignalService} from "test/mocks/MockSignalService.sol";
 
 contract ERC20BridgeTest is Test {
@@ -279,5 +280,40 @@ contract ERC20BridgeTest is Test {
         // Bridged tokens should be burned (total supply decreases)
         assertEq(BridgedERC20(bridgedToken).balanceOf(alice), 100);
         assertEq(BridgedERC20(bridgedToken).totalSupply(), 100);
+    }
+
+    function testBrokenTokenMetadata() public {
+        // Deploy a broken token that reverts on metadata calls
+        MockBrokenERC20 brokenToken = new MockBrokenERC20();
+        
+        // Initialize should work with fallback values
+        vm.prank(alice);
+        bytes32 id = bridge.initializeToken(address(brokenToken));
+        
+        // Verify the token was initialized
+        assertTrue(bridge.isTokenInitialized(address(brokenToken)));
+        
+        // Get the initialization to check fallback values were used
+        IERC20Bridge.TokenInitialization memory tokenInit = IERC20Bridge.TokenInitialization({
+            originalToken: address(brokenToken),
+            name: "Unknown Token Name",    // Should use fallback
+            symbol: "UNKNOWN",        // Should use fallback  
+            decimals: 18              // Should use fallback
+        });
+        
+        bytes32 expectedId = bridge.getInitializationId(tokenInit);
+        assertEq(id, expectedId);
+        
+        // Should be able to prove initialization with fallback values
+        bytes memory proof = "mock_proof";
+        uint256 height = 1;
+        signalService.setVerifyResult(true);
+        
+        address deployedToken = bridge.proveTokenInitialization(tokenInit, height, proof);
+        
+        // Verify the bridged token was deployed with fallback metadata
+        assertEq(BridgedERC20(deployedToken).name(), "Unknown Token Name");
+        assertEq(BridgedERC20(deployedToken).symbol(), "UNKNOWN");
+        assertEq(BridgedERC20(deployedToken).decimals(), 18);
     }
 }

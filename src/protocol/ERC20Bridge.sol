@@ -85,10 +85,28 @@ contract ERC20Bridge is IERC20Bridge, ReentrancyGuardTransient {
         require(token != address(0), "Invalid token address");
         require(!_initializedTokens[token], "Token already initialized");
 
-        // Read token metadata
-        string memory name = IERC20Metadata(token).name();
-        string memory symbol = IERC20Metadata(token).symbol();
-        uint8 decimals = IERC20Metadata(token).decimals();
+        // Read token metadata with fallbacks for non-compliant tokens
+        string memory name;
+        string memory symbol;
+        uint8 decimals;
+        
+        try IERC20Metadata(token).name() returns (string memory _name) {
+            name = _name;
+        } catch {
+            name = "Unknown Token Name";
+        }
+        
+        try IERC20Metadata(token).symbol() returns (string memory _symbol) {
+            symbol = _symbol;
+        } catch {
+            symbol = "UNKNOWN";
+        }
+        
+        try IERC20Metadata(token).decimals() returns (uint8 _decimals) {
+            decimals = _decimals;
+        } catch {
+            decimals = 18; // Standard default
+        }
 
                 TokenInitialization memory tokenInit = TokenInitialization({
             originalToken: token,
