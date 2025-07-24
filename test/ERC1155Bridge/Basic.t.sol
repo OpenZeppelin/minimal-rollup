@@ -52,7 +52,6 @@ contract ERC1155BridgeTest is Test {
 
         // Prepare initialization data for destination chain
         IERC1155Bridge.TokenInitialization memory tokenInit = IERC1155Bridge.TokenInitialization({
-            nonce: 0,
             originalToken: address(token),
             uri: "https://example.com/metadata/0.json",
             sourceChain: 31337
@@ -81,7 +80,6 @@ contract ERC1155BridgeTest is Test {
         bridge.initializeToken(address(token));
 
         IERC1155Bridge.TokenInitialization memory tokenInit = IERC1155Bridge.TokenInitialization({
-            nonce: 0,
             originalToken: address(token),
             uri: "https://example.com/metadata/0.json",
             sourceChain: 31337
@@ -310,7 +308,6 @@ contract ERC1155BridgeTest is Test {
 
         // Prove initialization on chain 2 (simulating it came from chain 1)
         IERC1155Bridge.TokenInitialization memory tokenInit = IERC1155Bridge.TokenInitialization({
-            nonce: 0,
             originalToken: address(token),
             uri: "https://example.com/metadata/0.json",
             sourceChain: 1 // Simulate this came from chain 1

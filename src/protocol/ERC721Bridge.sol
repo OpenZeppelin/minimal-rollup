@@ -23,8 +23,7 @@ contract ERC721Bridge is IERC721Bridge, ReentrancyGuardTransient, IERC721Receive
     /// Incremental nonce to generate unique deposit IDs.
     uint256 private _globalDepositNonce;
 
-    /// Incremental nonce to generate unique initialization IDs.
-    uint256 private _globalInitializationNonce;
+
 
     ISignalService public immutable signalService;
 
@@ -96,18 +95,14 @@ contract ERC721Bridge is IERC721Bridge, ReentrancyGuardTransient, IERC721Receive
         string memory name = IERC721Metadata(token).name();
         string memory symbol = IERC721Metadata(token).symbol();
 
-        TokenInitialization memory tokenInit = TokenInitialization({
-            nonce: _globalInitializationNonce,
+                TokenInitialization memory tokenInit = TokenInitialization({
             originalToken: token,
             name: name,
             symbol: symbol,
             sourceChain: chainId
         });
-
+        
         id = _generateInitializationId(tokenInit);
-        unchecked {
-            ++_globalInitializationNonce;
-        }
 
         // Mark token as initialized locally
         _initializedTokens[token] = true;

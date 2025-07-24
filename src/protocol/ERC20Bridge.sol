@@ -24,8 +24,7 @@ contract ERC20Bridge is IERC20Bridge, ReentrancyGuardTransient {
     /// Incremental nonce to generate unique deposit IDs.
     uint256 private _globalDepositNonce;
 
-    /// Incremental nonce to generate unique initialization IDs.
-    uint256 private _globalInitializationNonce;
+
 
     ISignalService public immutable signalService;
 
@@ -93,19 +92,15 @@ contract ERC20Bridge is IERC20Bridge, ReentrancyGuardTransient {
         string memory symbol = IERC20Metadata(token).symbol();
         uint8 decimals = IERC20Metadata(token).decimals();
 
-        TokenInitialization memory tokenInit = TokenInitialization({
-            nonce: _globalInitializationNonce,
+                TokenInitialization memory tokenInit = TokenInitialization({
             originalToken: token,
             name: name,
             symbol: symbol,
             decimals: decimals,
             sourceChain: chainId
         });
-
+        
         id = _generateInitializationId(tokenInit);
-        unchecked {
-            ++_globalInitializationNonce;
-        }
 
         // Mark token as initialized locally
         _initializedTokens[token] = true;

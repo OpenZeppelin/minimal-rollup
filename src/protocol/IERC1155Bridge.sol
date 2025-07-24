@@ -7,8 +7,6 @@ pragma solidity ^0.8.28;
 /// claim the deposit on the destination chain by using a storage proof.
 interface IERC1155Bridge {
     struct TokenInitialization {
-        // The nonce of the initialization
-        uint256 nonce;
         // The original token address on the source chain
         address originalToken;
         // The base URI for the token collection

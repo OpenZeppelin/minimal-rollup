@@ -23,8 +23,7 @@ contract ERC1155Bridge is IERC1155Bridge, ReentrancyGuardTransient, IERC1155Rece
     /// Incremental nonce to generate unique deposit IDs.
     uint256 private _globalDepositNonce;
 
-    /// Incremental nonce to generate unique initialization IDs.
-    uint256 private _globalInitializationNonce;
+
 
     ISignalService public immutable signalService;
 
@@ -114,17 +113,13 @@ contract ERC1155Bridge is IERC1155Bridge, ReentrancyGuardTransient, IERC1155Rece
             uri = "";
         }
 
-        TokenInitialization memory tokenInit = TokenInitialization({
-            nonce: _globalInitializationNonce,
+                TokenInitialization memory tokenInit = TokenInitialization({
             originalToken: token,
             uri: uri,
             sourceChain: chainId
         });
-
+        
         id = _generateInitializationId(tokenInit);
-        unchecked {
-            ++_globalInitializationNonce;
-        }
 
         // Mark token as initialized locally
         _initializedTokens[token] = true;

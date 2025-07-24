@@ -52,7 +52,6 @@ contract ERC721BridgeTest is Test {
 
         // Prepare initialization data for destination chain
         IERC721Bridge.TokenInitialization memory tokenInit = IERC721Bridge.TokenInitialization({
-            nonce: 0,
             originalToken: address(token),
             name: "Test NFT",
             symbol: "TNFT",
@@ -84,7 +83,6 @@ contract ERC721BridgeTest is Test {
         bridge.initializeToken(address(token));
 
         IERC721Bridge.TokenInitialization memory tokenInit = IERC721Bridge.TokenInitialization({
-            nonce: 0,
             originalToken: address(token),
             name: "Test NFT",
             symbol: "TNFT",
@@ -304,7 +302,6 @@ contract ERC721BridgeTest is Test {
 
         // Prove initialization on chain 2 (simulating it came from chain 1)
         IERC721Bridge.TokenInitialization memory tokenInit = IERC721Bridge.TokenInitialization({
-            nonce: 0,
             originalToken: address(token),
             name: "Test NFT",
             symbol: "TNFT",
@@ -361,7 +358,6 @@ contract ERC721BridgeTest is Test {
 
         // Prove initialization on chain 2 (simulating it came from chain 1)
         IERC721Bridge.TokenInitialization memory tokenInit = IERC721Bridge.TokenInitialization({
-            nonce: 0,
             originalToken: address(token),
             name: "Test NFT",
             symbol: "TNFT",

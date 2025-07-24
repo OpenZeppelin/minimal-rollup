@@ -51,7 +51,6 @@ contract ERC20BridgeTest is Test {
 
         // Prepare initialization data for destination chain
         IERC20Bridge.TokenInitialization memory tokenInit = IERC20Bridge.TokenInitialization({
-            nonce: 0,
             originalToken: address(token),
             name: "Test Token",
             symbol: "TEST",
@@ -85,7 +84,6 @@ contract ERC20BridgeTest is Test {
         bridge.initializeToken(address(token));
 
         IERC20Bridge.TokenInitialization memory tokenInit = IERC20Bridge.TokenInitialization({
-            nonce: 0,
             originalToken: address(token),
             name: "Test Token",
             symbol: "TEST",
@@ -246,7 +244,6 @@ contract ERC20BridgeTest is Test {
 
         // Prove initialization on chain 2 (simulating it came from chain 1)
         IERC20Bridge.TokenInitialization memory tokenInit = IERC20Bridge.TokenInitialization({
-            nonce: 0,
             originalToken: address(token),
             name: "Test Token",
             symbol: "TEST",
