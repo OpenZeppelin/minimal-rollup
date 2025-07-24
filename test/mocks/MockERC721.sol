@@ -11,8 +11,8 @@ contract MockERC721 is ERC721, IMintableERC721 {
         _mint(to, tokenId);
     }
 
-    function burn(address from, uint256 tokenId) external {
-        require(ownerOf(tokenId) == from, "Not owner");
+    function burn(uint256 tokenId) external {
+        require(ownerOf(tokenId) == msg.sender, "Not owner");
         _burn(tokenId);
     }
 

@@ -11,8 +11,8 @@ contract MockERC1155 is ERC1155, IMintableERC1155 {
         _mint(to, id, amount, data);
     }
 
-    function burn(address from, uint256 id, uint256 amount) external {
-        _burn(from, id, amount);
+    function burn(uint256 id, uint256 amount) external {
+        _burn(msg.sender, id, amount);
     }
 
     function uri(uint256 tokenId) public view virtual override returns (string memory) {

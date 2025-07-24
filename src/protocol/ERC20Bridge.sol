@@ -182,7 +182,7 @@ contract ERC20Bridge is IERC20Bridge, ReentrancyGuardTransient {
         IERC20(localToken).safeTransferFrom(msg.sender, address(this), amount);
         if (_isBridgedToken(localToken)) {
             // This is a bridged token being sent back to its origin, burn it
-            BridgedERC20(localToken).burn(address(this), amount);
+            BridgedERC20(localToken).burn(amount);
         }
 
         // Send signal

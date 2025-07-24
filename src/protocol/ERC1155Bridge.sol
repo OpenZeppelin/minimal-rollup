@@ -199,7 +199,7 @@ contract ERC1155Bridge is IERC1155Bridge, ReentrancyGuardTransient, IERC1155Rece
         IERC1155(localToken).safeTransferFrom(msg.sender, address(this), tokenId, amount, "");
         if (_isBridgedToken(localToken)) {
             // This is a bridged token being sent back to its origin, burn it
-            BridgedERC1155(localToken).burn(address(this), tokenId, amount);
+            BridgedERC1155(localToken).burn(tokenId, amount);
         }
 
         // Send signal

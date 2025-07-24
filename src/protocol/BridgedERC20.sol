@@ -24,8 +24,8 @@ contract BridgedERC20 is ERC20, BridgedTokenBase, IMintableERC20 {
     }
 
     /// @inheritdoc IMintableERC20
-    function burn(address from, uint256 amount) external onlyOwner {
-        _burn(from, amount);
+    function burn(uint256 amount) external onlyOwner {
+        _burn(msg.sender, amount);
     }
 
     function decimals() public view virtual override returns (uint8) {

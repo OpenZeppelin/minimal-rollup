@@ -7,15 +7,15 @@ import {IERC721} from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 
 interface IMintableERC20 is IERC20 {
     function mint(address to, uint256 amount) external;
-    function burn(address from, uint256 amount) external;
+    function burn(uint256 amount) external;
 }
 
 interface IMintableERC721 is IERC721 {
     function mint(address to, uint256 tokenId) external;
-    function burn(address from, uint256 tokenId) external;
+    function burn(uint256 tokenId) external;
 }
 
 interface IMintableERC1155 is IERC1155 {
     function mint(address to, uint256 id, uint256 amount, bytes memory data) external;
-    function burn(address from, uint256 id, uint256 amount) external;
+    function burn(uint256 id, uint256 amount) external;
 }
