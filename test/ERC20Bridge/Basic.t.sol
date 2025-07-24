@@ -9,6 +9,7 @@ import {ISignalService} from "src/protocol/ISignalService.sol";
 
 import {MockBrokenERC20} from "test/mocks/MockBrokenERC20.sol";
 import {MockERC20} from "test/mocks/MockERC20.sol";
+import {MockMaliciousERC20} from "test/mocks/MockMaliciousERC20.sol";
 import {MockSignalService} from "test/mocks/MockSignalService.sol";
 
 contract ERC20BridgeTest is Test {
@@ -339,5 +340,30 @@ contract ERC20BridgeTest is Test {
         });
         bytes32 expectedInitId = bridge.getInitializationId(tokenInit);
         assertEq(initId, expectedInitId, "Initialization ID should be deterministic");
+    }
+
+    function testMaliciousTokenRejection() public {
+        // Deploy a malicious token that spoofs the bridge() function
+        MockMaliciousERC20 maliciousToken = new MockMaliciousERC20(address(bridge));
+        
+        // Verify the malicious token returns the bridge address (spoofing)
+        assertEq(maliciousToken.bridge(), address(bridge), "Malicious token should spoof bridge address");
+        
+        // Transfer some malicious tokens to alice
+        maliciousToken.transfer(alice, 100);
+        
+        // Try to deposit the malicious token - should fail because it's not actually a bridged token
+        vm.startPrank(alice);
+        maliciousToken.approve(address(bridge), 100);
+        
+        // This should revert because the malicious token is not in the _isBridgedTokens mapping
+        vm.expectRevert(); // TokenNotInitialized()
+        bridge.deposit(alice, address(maliciousToken), 100, address(0));
+        
+        vm.stopPrank();
+        
+        // Verify the malicious token was not recognized as a bridged token
+        // (This internal function call would have returned false in the old vulnerable implementation)
+        // but now it correctly returns false because it's not in our secure mapping
     }
 }

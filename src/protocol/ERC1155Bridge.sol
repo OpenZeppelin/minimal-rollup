@@ -23,6 +23,7 @@ contract ERC1155Bridge is IERC1155Bridge, ReentrancyGuardTransient, IERC1155Rece
     mapping(bytes32 id => bool provenInitializations) private _provenInitializations;
     mapping(address token => bool initialized) private _initializedTokens;
     mapping(bytes32 key => address deployedToken) private _deployedTokens;
+    mapping(address token => bool isBridgedToken) private _isBridgedTokens;
 
     /// Incremental nonce to generate unique deposit IDs.
     uint256 private _globalDepositNonce;
@@ -144,6 +145,9 @@ contract ERC1155Bridge is IERC1155Bridge, ReentrancyGuardTransient, IERC1155Rece
         // Store the mapping
         bytes32 key = keccak256(abi.encode(tokenInit.originalToken));
         _deployedTokens[key] = deployedToken;
+        
+        // Mark as a bridged token deployed by this bridge
+        _isBridgedTokens[deployedToken] = true;
 
         emit TokenInitializationProven(id, tokenInit, deployedToken);
     }
@@ -270,11 +274,7 @@ contract ERC1155Bridge is IERC1155Bridge, ReentrancyGuardTransient, IERC1155Rece
     /// @param token The token address to check
     /// @return true if the token is a bridged token deployed by this bridge
     function _isBridgedToken(address token) internal view returns (bool) {
-        try BridgedERC1155(token).bridge() returns (address bridge) {
-            return bridge == address(this);
-        } catch {
-            return false;
-        }
+        return _isBridgedTokens[token];
     }
 
     /// @dev Generates a unique ID for a token initialization.
