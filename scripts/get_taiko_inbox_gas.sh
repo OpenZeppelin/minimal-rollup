@@ -5,7 +5,8 @@ set -e
 REPO_URL="https://github.com/taikoxyz/taiko-mono.git"
 TAG="taiko-alethia-protocol-v2.3.0"
 TEMP_DIR="taiko-mono-temp"
-GAS_REPORT_PATH="packages/protocol/deployments/test_inbox_measure_gas_used.txt"
+GAS_REPORT_FILE="test_inbox_measure_gas_used.txt"
+GAS_REPORT_PATH="packages/protocol/deployments/$GAS_REPORT_FILE"
 OUTPUT_DIR="gas-reports"
 
 echo "Starting gas report extraction..."
@@ -19,7 +20,7 @@ git clone --depth 1 --branch "$TAG" "$REPO_URL" "$TEMP_DIR"
 if [ -f "$TEMP_DIR/$GAS_REPORT_PATH" ]; then
     echo "Found gas report file!"
     cp "$TEMP_DIR/$GAS_REPORT_PATH" "$OUTPUT_DIR/"
-    echo "Gas report copied to: $OUTPUT_DIR/inbox_without_provermarket.txt"
+    echo "Gas report copied to: $OUTPUT_DIR/$GAS_REPORT_FILE"
 else
     echo "Error: Gas report file not found at: $GAS_REPORT_PATH"
     rm -rf "$TEMP_DIR"
@@ -29,4 +30,4 @@ fi
 echo "Cleaning up..."
 rm -rf "$TEMP_DIR"
 
-echo "Done! Gas report is available in: $OUTPUT_DIR/inbox_without_provermarket.txt"
+echo "Done! Gas report is available in: $OUTPUT_DIR/$GAS_REPORT_FILE"
