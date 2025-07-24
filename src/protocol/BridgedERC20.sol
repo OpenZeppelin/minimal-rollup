@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
-import {IMintableERC20} from "./IMintable.sol";
 import {BridgedTokenBase} from "./BridgedTokenBase.sol";
+import {IMintableERC20} from "./IMintable.sol";
 import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
 /// @title BridgedERC20

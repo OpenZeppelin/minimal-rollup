@@ -345,23 +345,24 @@ contract ERC20BridgeTest is Test {
     function testMaliciousTokenRejection() public {
         // Deploy a malicious token that could try to spoof bridge functionality
         MockMaliciousERC20 maliciousToken = new MockMaliciousERC20(address(bridge));
-        
-        // Verify the malicious token still tries to spoof (even though bridge() function no longer exists in real bridged tokens)
+
+        // Verify the malicious token still tries to spoof (even though bridge() function no longer exists in real
+        // bridged tokens)
         assertEq(maliciousToken.bridge(), address(bridge), "Malicious token should spoof bridge address");
-        
+
         // Transfer some malicious tokens to alice
         maliciousToken.transfer(alice, 100);
-        
+
         // Try to deposit the malicious token - should fail because it's not actually a bridged token
         vm.startPrank(alice);
         maliciousToken.approve(address(bridge), 100);
-        
+
         // This should revert because the malicious token is not in the _isBridgedTokens mapping
         vm.expectRevert(); // TokenNotInitialized()
         bridge.deposit(alice, address(maliciousToken), 100, address(0));
-        
+
         vm.stopPrank();
-        
+
         // The malicious token is correctly rejected because bridge now uses secure mapping-based validation
         // rather than calling external functions that could be spoofed
     }
@@ -370,7 +371,7 @@ contract ERC20BridgeTest is Test {
         // Initialize and prove token initialization
         MockERC20 originalToken = new MockERC20("Original Token", "ORIG");
         bridge.initializeToken(address(originalToken));
-        
+
         IERC20Bridge.TokenInitialization memory tokenInit = IERC20Bridge.TokenInitialization({
             originalToken: address(originalToken),
             name: "Original Token",
@@ -384,14 +385,14 @@ contract ERC20BridgeTest is Test {
 
         // Test originalToken tracking
         assertEq(bridgedToken.originalToken(), address(originalToken), "originalToken should be tracked");
-        
+
         // Test ownership (bridge is the owner)
         assertEq(bridgedToken.owner(), address(bridge), "Bridge should be the owner");
-        
+
         // Test that only owner (bridge) can mint
         vm.expectRevert(); // Should revert with OwnableUnauthorizedAccount
         bridgedToken.mint(alice, 100);
-        
+
         // Bridge (owner) should be able to mint
         vm.prank(address(bridge));
         bridgedToken.mint(alice, 100);

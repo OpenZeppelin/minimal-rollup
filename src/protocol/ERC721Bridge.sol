@@ -139,7 +139,7 @@ contract ERC721Bridge is IERC721Bridge, ReentrancyGuardTransient, IERC721Receive
         // Store the mapping
         bytes32 key = keccak256(abi.encode(tokenInit.originalToken));
         _deployedTokens[key] = deployedToken;
-        
+
         // Mark as a bridged token deployed by this bridge
         _isBridgedTokens[deployedToken] = true;
 

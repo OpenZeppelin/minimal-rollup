@@ -15,4 +15,4 @@ abstract contract BridgedTokenBase is Ownable {
     constructor(address _originalToken) Ownable(msg.sender) {
         originalToken = _originalToken;
     }
-} 
+}

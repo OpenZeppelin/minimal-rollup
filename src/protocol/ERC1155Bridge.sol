@@ -145,7 +145,7 @@ contract ERC1155Bridge is IERC1155Bridge, ReentrancyGuardTransient, IERC1155Rece
         // Store the mapping
         bytes32 key = keccak256(abi.encode(tokenInit.originalToken));
         _deployedTokens[key] = deployedToken;
-        
+
         // Mark as a bridged token deployed by this bridge
         _isBridgedTokens[deployedToken] = true;
 

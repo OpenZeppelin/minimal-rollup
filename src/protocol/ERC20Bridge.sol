@@ -138,14 +138,13 @@ contract ERC20Bridge is IERC20Bridge, ReentrancyGuardTransient {
         _provenInitializations[id] = true;
 
         // Deploy the bridged token
-        deployedToken = address(
-            new BridgedERC20(tokenInit.name, tokenInit.symbol, tokenInit.decimals, tokenInit.originalToken)
-        );
+        deployedToken =
+            address(new BridgedERC20(tokenInit.name, tokenInit.symbol, tokenInit.decimals, tokenInit.originalToken));
 
         // Store the mapping
         bytes32 key = keccak256(abi.encode(tokenInit.originalToken));
         _deployedTokens[key] = deployedToken;
-        
+
         // Mark as a bridged token deployed by this bridge
         _isBridgedTokens[deployedToken] = true;
 

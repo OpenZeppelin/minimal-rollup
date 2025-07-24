@@ -11,7 +11,7 @@ contract MockMaliciousERC20 is ERC20 {
 
     constructor(address fakeBridge) ERC20("Malicious Token", "EVIL") {
         _fakeBridge = fakeBridge;
-        _mint(msg.sender, 1000000 * 10**18);
+        _mint(msg.sender, 1000000 * 10 ** 18);
     }
 
     /// @dev Spoofs the bridge() function to return the provided address
@@ -23,4 +23,4 @@ contract MockMaliciousERC20 is ERC20 {
     function originalToken() external pure returns (address) {
         return address(0x1); // Fake original token
     }
-} 
+}

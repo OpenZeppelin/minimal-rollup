@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
-import {IMintableERC1155} from "./IMintable.sol";
 import {BridgedTokenBase} from "./BridgedTokenBase.sol";
+import {IMintableERC1155} from "./IMintable.sol";
 import {ERC1155} from "@openzeppelin/contracts/token/ERC1155/ERC1155.sol";
 
 /// @title BridgedERC1155
@@ -12,10 +12,7 @@ contract BridgedERC1155 is ERC1155, BridgedTokenBase, IMintableERC1155 {
     /// @dev Mapping from token ID to custom token URI
     mapping(uint256 => string) private _tokenURIs;
 
-    constructor(string memory uri_, address _originalToken)
-        ERC1155(uri_)
-        BridgedTokenBase(_originalToken)
-    {}
+    constructor(string memory uri_, address _originalToken) ERC1155(uri_) BridgedTokenBase(_originalToken) {}
 
     /// @inheritdoc IMintableERC1155
     function mint(address to, uint256 id, uint256 amount, bytes memory data) external onlyOwner {
