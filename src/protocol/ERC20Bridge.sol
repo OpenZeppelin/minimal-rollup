@@ -21,7 +21,6 @@ contract ERC20Bridge is IERC20Bridge, ReentrancyGuardTransient {
     bytes32 private constant DEPOSIT_SIGNAL_PREFIX = keccak256("ERC20_DEPOSIT");
 
     mapping(bytes32 id => bool processed) private _processed;
-    mapping(address token => bool initialized) private _initializedTokens;
     mapping(bytes32 key => address deployedToken) private _deployedTokens;
     mapping(address token => bool isBridgedToken) private _isBridgedTokens;
 
@@ -56,7 +55,13 @@ contract ERC20Bridge is IERC20Bridge, ReentrancyGuardTransient {
 
     /// @inheritdoc IERC20Bridge
     function isTokenInitialized(address token) public view returns (bool) {
-        return _initializedTokens[token];
+        (string memory name, string memory symbol, uint8 decimals) = _fetchTokenMetadata(token);
+
+        TokenInitialization memory tokenInit =
+            TokenInitialization({originalToken: token, name: name, symbol: symbol, decimals: decimals});
+
+        bytes32 id = _generateInitializationId(tokenInit);
+        return signalService.isSignalStored(id, address(this));
     }
 
     /// @inheritdoc IERC20Bridge
@@ -83,38 +88,15 @@ contract ERC20Bridge is IERC20Bridge, ReentrancyGuardTransient {
     /// @inheritdoc IERC20Bridge
     function initializeToken(address token) external returns (bytes32 id) {
         require(token != address(0), "Invalid token address");
-        require(!_initializedTokens[token], "Token already initialized");
+        require(!isTokenInitialized(token), "Token already initialized");
 
         // Read token metadata with fallbacks for non-compliant tokens
-        string memory name;
-        string memory symbol;
-        uint8 decimals;
-
-        try IERC20Metadata(token).name() returns (string memory _name) {
-            name = _name;
-        } catch {
-            name = "Unknown Token Name";
-        }
-
-        try IERC20Metadata(token).symbol() returns (string memory _symbol) {
-            symbol = _symbol;
-        } catch {
-            symbol = "UNKNOWN";
-        }
-
-        try IERC20Metadata(token).decimals() returns (uint8 _decimals) {
-            decimals = _decimals;
-        } catch {
-            decimals = 18; // Standard default
-        }
+        (string memory name, string memory symbol, uint8 decimals) = _fetchTokenMetadata(token);
 
         TokenInitialization memory tokenInit =
             TokenInitialization({originalToken: token, name: name, symbol: symbol, decimals: decimals});
 
         id = _generateInitializationId(tokenInit);
-
-        // Mark token as initialized locally
-        _initializedTokens[token] = true;
 
         // Send signal for cross-chain initialization
         signalService.sendSignal(id);
@@ -153,7 +135,7 @@ contract ERC20Bridge is IERC20Bridge, ReentrancyGuardTransient {
     /// @inheritdoc IERC20Bridge
     function deposit(address to, address localToken, uint256 amount) external nonReentrant returns (bytes32 id) {
         // Check if token is initialized (for original tokens) or is a bridged token deployed by this bridge
-        require(_initializedTokens[localToken] || _isBridgedToken(localToken), TokenNotInitialized());
+        require(isTokenInitialized(localToken) || _isBridgedToken(localToken), TokenNotInitialized());
 
         // Determine the original token address
         address originalToken;
@@ -243,5 +225,34 @@ contract ERC20Bridge is IERC20Bridge, ReentrancyGuardTransient {
     /// @param erc20Deposit Deposit to generate an ID for
     function _generateDepositId(ERC20Deposit memory erc20Deposit) internal pure returns (bytes32) {
         return keccak256(abi.encode(DEPOSIT_SIGNAL_PREFIX, erc20Deposit));
+    }
+
+    /// @dev Fetches token metadata with fallbacks for non-compliant tokens
+    /// @param token The token address to fetch metadata for
+    /// @return name The token name (fallback: "Unknown Token Name")
+    /// @return symbol The token symbol (fallback: "UNKNOWN")
+    /// @return decimals The token decimals (fallback: 18)
+    function _fetchTokenMetadata(address token)
+        private
+        view
+        returns (string memory name, string memory symbol, uint8 decimals)
+    {
+        try IERC20Metadata(token).name() returns (string memory _name) {
+            name = _name;
+        } catch {
+            name = "Unknown Token Name";
+        }
+
+        try IERC20Metadata(token).symbol() returns (string memory _symbol) {
+            symbol = _symbol;
+        } catch {
+            symbol = "UNKNOWN";
+        }
+
+        try IERC20Metadata(token).decimals() returns (uint8 _decimals) {
+            decimals = _decimals;
+        } catch {
+            decimals = 18; // Standard default
+        }
     }
 }
