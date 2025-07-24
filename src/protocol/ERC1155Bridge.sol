@@ -196,13 +196,10 @@ contract ERC1155Bridge is IERC1155Bridge, ReentrancyGuardTransient, IERC1155Rece
         }
 
         // Handle token transfer based on whether it's a bridged token or original token
+            IERC1155(localToken).safeTransferFrom(msg.sender, address(this), tokenId, amount, "");
         if (_isBridgedToken(localToken)) {
             // This is a bridged token being sent back to its origin, burn it
-            IERC1155(localToken).safeTransferFrom(msg.sender, address(this), tokenId, amount, "");
             BridgedERC1155(localToken).burn(address(this), tokenId, amount);
-        } else {
-            // This is an original token, hold it
-            IERC1155(localToken).safeTransferFrom(msg.sender, address(this), tokenId, amount, "");
         }
 
         // Send signal

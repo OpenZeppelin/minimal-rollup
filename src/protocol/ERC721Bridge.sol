@@ -189,13 +189,10 @@ contract ERC721Bridge is IERC721Bridge, ReentrancyGuardTransient, IERC721Receive
         }
 
         // Handle token transfer based on whether it's a bridged token or original token
+            IERC721(localToken).safeTransferFrom(msg.sender, address(this), tokenId);
         if (_isBridgedToken(localToken)) {
             // This is a bridged token being sent back to its origin, burn it
-            IERC721(localToken).safeTransferFrom(msg.sender, address(this), tokenId);
             BridgedERC721(localToken).burn(address(this), tokenId);
-        } else {
-            // This is an original token, hold it
-            IERC721(localToken).safeTransferFrom(msg.sender, address(this), tokenId);
         }
 
         // Send signal
