@@ -32,7 +32,7 @@ contract BridgedERC721 is ERC721, BridgedTokenBase, IMintableERC721 {
     }
 
     /// @inheritdoc IMintableERC721
-    function burn(address from, uint256 tokenId) external onlyOwner {
+    function burn(uint256 tokenId) external onlyOwner {
         _burn(tokenId);
         // Clear the token URI when burning
         if (bytes(_tokenURIs[tokenId]).length != 0) {
