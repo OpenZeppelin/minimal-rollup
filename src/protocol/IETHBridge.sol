@@ -80,6 +80,11 @@ interface IETHBridge {
     /// @param data Any calldata to be sent to the claimee in case of a contract
     /// @param height The `height` of the checkpoint on the source chain (i.e. the block number or publicationId)
     /// @param proof Encoded proof of the storage slot where the deposit is stored
-    function cancelDeposit(ETHDeposit memory ethDeposit, address claimee, bytes memory data, uint256 height, bytes memory proof)
-        external;
+    function cancelDeposit(
+        ETHDeposit memory ethDeposit,
+        address claimee,
+        bytes memory data,
+        uint256 height,
+        bytes memory proof
+    ) external;
 }
