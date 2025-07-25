@@ -1,14 +1,24 @@
+use alloy::primitives::utils::parse_units;
+use alloy::sol_types::SolCall;
 use eyre::Result;
 
 mod signal_slot;
 use signal_slot::get_signal_slot;
 
-mod utils;
-use utils::{deploy_eth_bridge, deploy_signal_service, get_proofs, get_provider, SignalProof};
+use minimal_rollup::{
+    deploy_eth_bridge, deploy_signal_service, get_proofs, get_provider, SignalProof,
+};
 
-use alloy::hex::decode;
+use alloy::hex::{self, decode};
 use alloy::primitives::{Address, Bytes, FixedBytes, U256};
 use std::fs;
+
+use alloy::sol;
+
+sol! {
+    function somePayableFunction(uint256 someArg) external payable returns (uint256);
+    function someNonpayableFunction(uint256 someArg) external returns (uint256);
+}
 
 fn expand_vector(vec: Vec<Bytes>, name: &str) -> String {
     let mut expanded = String::new();
@@ -20,7 +30,7 @@ fn expand_vector(vec: Vec<Bytes>, name: &str) -> String {
     return expanded;
 }
 
-fn create_deposit_call(
+pub fn create_deposit_call(
     proof: SignalProof,
     nonce: usize,
     signer: Address,
@@ -66,14 +76,33 @@ fn deposit_specification() -> Vec<DepositSpecification> {
     // This is an address on the destination chain, so it seems natural to use one generated there
     // In this case, the CrossChainDepositExists.sol test case defines _randomAddress("recipient");
     let recipient = "0x99A270Be1AA5E97633177041859aEEB9a0670fAa";
+
     // Use both zero and non-zero amounts (in this case 4 ether)
-    let amounts = vec![0_u128, 4000000000000000000_u128];
+    let amounts: Vec<U256> = vec![U256::ZERO, parse_units("4", "ether").unwrap().into()];
+
     // Use different calldata to try different functions and inputs
+    let valid_payable_function_call = somePayableFunctionCall {
+        someArg: U256::from(1234),
+    }
+    .abi_encode();
+    let invalid_payable_function_call = somePayableFunctionCall {
+        someArg: U256::from(1235),
+    }
+    .abi_encode();
+    let valid_nonpayable_function_call = someNonpayableFunctionCall {
+        someArg: U256::from(1234),
+    }
+    .abi_encode();
+
+    let valid_payable_encoded = hex::encode(valid_payable_function_call);
+    let invalid_payable_encoded = hex::encode(invalid_payable_function_call);
+    let valid_nonpayable_encoded = hex::encode(valid_nonpayable_function_call);
+
     let calldata = vec![
-        "",                                                                         // empty
-        "9b28f6fb00000000000000000000000000000000000000000000000000000000000004d2", // (valid) call to somePayableFunction(1234)
-        "9b28f6fb00000000000000000000000000000000000000000000000000000000000004d3", // (invalid) call to somePayableFunction(1235)
-        "5932a71200000000000000000000000000000000000000000000000000000000000004d2", // (valid) call to `someNonPayableFunction(1234)`
+        "",
+        &valid_payable_encoded,
+        &invalid_payable_encoded,
+        &valid_nonpayable_encoded,
     ];
 
     let zero_canceler = Address::ZERO;
@@ -102,6 +131,7 @@ async fn main() -> Result<()> {
     let deposits = deposit_specification();
     assert!(deposits.len() > 0, "No deposits to prove");
     let mut ids: Vec<FixedBytes<32>> = vec![];
+
     // Perform all deposits
     for (_i, spec) in deposits.iter().enumerate() {
         let tx = eth_bridge
@@ -150,7 +180,7 @@ async fn main() -> Result<()> {
         .as_str();
     }
 
-    let template = fs::read_to_string("offchain/sample_deposit_proof.tmpl")?;
+    let template = fs::read_to_string("offchain/tmpl/sample_deposit_proof.tmpl")?;
     let formatted = template
         .replace(
             "{signal_service_address}",
