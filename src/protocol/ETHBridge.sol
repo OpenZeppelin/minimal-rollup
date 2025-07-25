@@ -69,13 +69,13 @@ contract ETHBridge is IETHBridge, ReentrancyGuardTransient {
     }
 
     /// @inheritdoc IETHBridge
-    function cancelDeposit(ETHDeposit memory ethDeposit, address claimee, uint256 height, bytes memory proof)
+    function cancelDeposit(ETHDeposit memory ethDeposit, address claimee, bytes memory data, uint256 height, bytes memory proof)
         external
         nonReentrant
     {
         require(msg.sender == ethDeposit.canceler, OnlyCanceler());
 
-        bytes32 id = _claimDeposit(ethDeposit, claimee, bytes(""), height, proof);
+        bytes32 id = _claimDeposit(ethDeposit, claimee, data, height, proof);
 
         emit DepositCancelled(id, claimee);
     }
