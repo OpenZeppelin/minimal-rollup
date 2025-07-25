@@ -38,7 +38,7 @@ abstract contract ERC20Currency is InitialState {
     MockERC20 public token;
 
     function setUp() public virtual override {
-        token = new MockERC20();
+        token = new MockERC20("MockERC20", "MCK");
         // do not call super.setUp() because it will be called by the Test contract
     }
 
