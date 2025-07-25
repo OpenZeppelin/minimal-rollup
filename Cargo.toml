@@ -1,16 +1,15 @@
 [package]
-
 name = "minimal-rollup"
 version = "0.1.0"
 edition = "2021"
 
+[lib]
+name = "minimal_rollup"
+path = "offchain/lib.rs"
+
 [[bin]]
 name = "signal_slot"
 path = "offchain/signal_slot.rs"
-
-[[bin]]
-name = "utils"
-path = "offchain/utils.rs"
 
 [[bin]]
 name = "sample_signal_proof"
