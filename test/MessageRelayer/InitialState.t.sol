@@ -30,13 +30,14 @@ abstract contract InitialState is Test {
         MockSignalService signalService = new MockSignalService();
         address trustedCommitmentPublisher = _randomAddress("trustedCommitmentPublisher");
         address counterpart = _randomAddress("counterpart");
-        to = new GenericRecipient();
-        relayerSelectedTipRecipient = new GenericRecipient();
-        userSelectedTipRecipient = new GenericRecipient();
         ETHBridge bridge = new ETHBridge(address(signalService), trustedCommitmentPublisher, counterpart);
         vm.deal(address(bridge), amount);
 
         messageRelayer = new MessageRelayer(address(bridge));
+
+        to = new GenericRecipient(address(messageRelayer));
+        relayerSelectedTipRecipient = new GenericRecipient(address(messageRelayer));
+        userSelectedTipRecipient = new GenericRecipient(address(messageRelayer));
 
         ethDeposit = IETHBridge.ETHDeposit({
             nonce: 0,

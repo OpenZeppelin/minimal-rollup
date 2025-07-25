@@ -1,15 +1,34 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
-contract GenericRecipient {
+import {IMessageRelayer} from "src/protocol/IMessageRelayer.sol";
+
+interface IGenericRecipient {
+    function setSuccess(bool _callWillSucceed) external;
+    function setReentrancyAttack(bool _shouldAttack) external;
+}
+
+contract GenericRecipient is IGenericRecipient {
     bool private callWillSucceed = true;
+    bool private shouldReenterAttack = false;
+    address private relayer;
+    uint256 private reentrancyCounter = 0;
 
     error CallFailed();
 
     event FunctionCalled();
+    event ReentrancyAttempt(uint256 counter);
+
+    constructor(address _relayer) {
+        relayer = _relayer;
+    }
 
     function setSuccess(bool _callWillSucceed) external {
         callWillSucceed = _callWillSucceed;
+    }
+
+    function setReentrancyAttack(bool _shouldAttack) external {
+        shouldReenterAttack = _shouldAttack;
     }
 
     fallback() external payable {
@@ -23,5 +42,12 @@ contract GenericRecipient {
     function _simulateFunctionCall() internal {
         require(callWillSucceed, CallFailed());
         emit FunctionCalled();
+
+        if (shouldReenterAttack) {
+            reentrancyCounter++;
+            emit ReentrancyAttempt(reentrancyCounter);
+
+            IMessageRelayer(relayer).receiveMessage(address(this), 0, address(this), 0, "0x");
+        }
     }
 }

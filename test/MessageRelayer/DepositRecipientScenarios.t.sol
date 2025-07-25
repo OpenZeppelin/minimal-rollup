@@ -3,6 +3,8 @@ pragma solidity ^0.8.28;
 
 import {GenericRecipient} from "./GenericRecipient.t.sol";
 import {InitialState} from "./InitialState.t.sol";
+
+import {IETHBridge} from "src/protocol/IETHBridge.sol";
 import {IMessageRelayer} from "src/protocol/IMessageRelayer.sol";
 
 // This is a concrete class because if we are not using the MessageRelayer,

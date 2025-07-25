@@ -7,7 +7,7 @@ import {GenericRecipient} from "./GenericRecipient.t.sol";
 import {InitialState} from "./InitialState.t.sol";
 import {IETHBridge} from "src/protocol/IETHBridge.sol";
 
-contract VaryingFundAmount is DepositRecipientIsMessageRelayer {
+contract VaryingFundAmounts is DepositRecipientIsMessageRelayer {
     function setUp() public override {
         super.setUp();
     }
