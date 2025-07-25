@@ -37,7 +37,8 @@ interface IETHBridge {
     /// @dev Emitted when a deposit is cancelled.
     /// @param id The deposit id
     /// @param claimee The address that received the cancelled deposit
-    event DepositCancelled(bytes32 indexed id, address claimee);
+    /// @param data The calldata sent to the claimee
+    event DepositCancelled(bytes32 indexed id, address claimee, bytes data);
 
     /// @dev Failed to call the receiver with value.
     error FailedClaim();

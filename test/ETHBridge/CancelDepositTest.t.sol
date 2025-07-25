@@ -128,7 +128,7 @@ contract CancelDepositTest is InitialState {
 
         // Expect the DepositCancelled event
         vm.expectEmit();
-        emit IETHBridge.DepositCancelled(depositId, charlie);
+        emit IETHBridge.DepositCancelled(depositId, charlie, "cancel_data");
 
         // Cancel the deposit
         vm.prank(canceler);

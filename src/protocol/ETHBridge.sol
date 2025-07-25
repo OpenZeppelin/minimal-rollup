@@ -80,7 +80,7 @@ contract ETHBridge is IETHBridge, ReentrancyGuardTransient {
 
         bytes32 id = _claimDeposit(ethDeposit, claimee, data, height, proof);
 
-        emit DepositCancelled(id, claimee);
+        emit DepositCancelled(id, claimee, data);
     }
 
     function _claimDeposit(
