@@ -63,10 +63,8 @@ To provide a comparison point, we implemented tests that mirror typical rollup o
 
 ```solidity
 
-uint256 numPublications = 20;
-
 // Pre-populate publications to simulate active rollup state
-ProposeMultiplePublications109)
+_publishMultiplePublications(10);
 
 // Measure 10 publications
 uint256 numPublications = 20;
@@ -139,7 +137,12 @@ It is worth noting this is somewhat consistent with taikos [gas analysis](https:
 - Taiko data: Real on-chain transactions with actual network conditions
 - Our data: Clinical test environment with idealised conditions using foundry
 
-2. **Limited Sample Size**
+2. Architectural Differences
+- Taiko's inbox uses an upgradeable proxy pattern (DELEGATECALL), adding a gas overhead per call
+- Our minimal inbox is currently a direct implementation without proxy however we will most likely add one later
+- This represents a 'structural' gas cost unrelated to the core logic differences between proposeBatch and publish
+
+3. **Limited Sample Size**
 - Only ~20 most recent transactions analysed
 - Longer-term patterns and edge cases not captured
 
