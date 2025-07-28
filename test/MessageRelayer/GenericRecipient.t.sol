@@ -12,12 +12,10 @@ contract GenericRecipient is IGenericRecipient {
     bool private callWillSucceed = true;
     bool private shouldReenterAttack = false;
     address private relayer;
-    uint256 private reentrancyCounter = 0;
 
     error CallFailed();
 
     event FunctionCalled();
-    event ReentrancyAttempt(uint256 counter);
 
     constructor(address _relayer) {
         relayer = _relayer;
@@ -44,9 +42,6 @@ contract GenericRecipient is IGenericRecipient {
         emit FunctionCalled();
 
         if (shouldReenterAttack) {
-            reentrancyCounter++;
-            emit ReentrancyAttempt(reentrancyCounter);
-
             IMessageRelayer(relayer).receiveMessage(address(this), 0, address(this), 0, "0x");
         }
     }
