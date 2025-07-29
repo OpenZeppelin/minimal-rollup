@@ -27,6 +27,9 @@ abstract contract InitialState is Test {
     uint256 gasLimit = 0;
     bytes data = "0x";
 
+    // keccak256("TIP_RECIPIENT_SLOT")
+    bytes32 constant TIP_RECIPIENT_SLOT = 0x833ce1785f54a5ca49991a09a7b058587309bf3687e5f20b7b66fa12132ef6f0;
+
     function setUp() public virtual {
         MockSignalService signalService = new MockSignalService();
         address trustedCommitmentPublisher = _randomAddress("trustedCommitmentPublisher");
@@ -68,5 +71,17 @@ abstract contract InitialState is Test {
 
     function _domainSeparator() internal pure returns (bytes32) {
         return keccak256("MessageRelayer");
+    }
+}
+
+contract InitialStateTest is InitialState {
+    function test_tipRecipientTransientStorage_isZero() public {
+        bytes32 value = vm.load(address(messageRelayer), TIP_RECIPIENT_SLOT);
+
+        address storedAddress = address(uint160(uint256(value)));
+
+        assertEq(storedAddress, address(0), "Initial transient slot should be empty");
+
+        assertEq(value, bytes32(0), "Initial transient slot bytes32 should be zero");
     }
 }

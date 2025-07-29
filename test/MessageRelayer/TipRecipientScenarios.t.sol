@@ -17,6 +17,7 @@ contract UserSetValidTipRecipient is DepositRecipientIsMessageRelayer {
     function test_UserSetValidTipRecipient_relayMessage_shouldNotTipRelayerSelectedRecipient() public {
         uint256 balanceBefore = address(relayerSelectedTipRecipient).balance;
         _relayMessage();
+
         assertEq(address(relayerSelectedTipRecipient).balance, balanceBefore, "incorrect tip recipient paid");
     }
 
