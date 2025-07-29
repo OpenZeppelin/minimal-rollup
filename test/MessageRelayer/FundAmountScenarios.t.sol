@@ -3,6 +3,7 @@ pragma solidity ^0.8.28;
 
 import {DepositRecipientIsMessageRelayer} from "./DepositRecipientScenarios.t.sol";
 import {GenericRecipient} from "./GenericRecipient.t.sol";
+import {IMessageRelayer} from "src/protocol/IMessageRelayer.sol";
 
 import {InitialState} from "./InitialState.t.sol";
 import {IETHBridge} from "src/protocol/IETHBridge.sol";
@@ -12,14 +13,27 @@ contract VaryingFundAmounts is DepositRecipientIsMessageRelayer {
         super.setUp();
     }
 
-    function test_sentZeroAmount_relayMessage_shouldRevert() public zeroAmount {
+    function test_setZeroAmountWithTip_relayMessage_shouldRevert() public zeroAmount {
         vm.expectRevert(IETHBridge.FailedClaim.selector);
+        _relayMessage();
+    }
+
+    function test_setZeroAmountWithoutTip_relayMessage_shouldSucceed() public zeroTipZeroAmount {
+        vm.expectEmit();
+        emit IMessageRelayer.MessageForwarded(address(to), 0, data, address(userSelectedTipRecipient), 0);
         _relayMessage();
     }
 
     function test_setTipHigherThanAmount_relayMessage_shouldRevert() public amountTooLow {
         vm.expectRevert(IETHBridge.FailedClaim.selector);
         _relayMessage();
+    }
+
+    modifier zeroTipZeroAmount() {
+        tip = 0;
+        ethDeposit.amount = 0;
+        _encodeReceiveCall();
+        _;
     }
 
     modifier zeroAmount() {

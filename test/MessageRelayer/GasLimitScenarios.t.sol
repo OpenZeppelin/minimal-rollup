@@ -6,6 +6,7 @@ import {GenericRecipient} from "./GenericRecipient.t.sol";
 
 import {InitialState} from "./InitialState.t.sol";
 import {IETHBridge} from "src/protocol/IETHBridge.sol";
+import {IMessageRelayer} from "src/protocol/IMessageRelayer.sol";
 
 contract UserSetGasLimit is DepositRecipientIsMessageRelayer {
     function setUp() public override {
@@ -18,6 +19,8 @@ contract UserSetGasLimit is DepositRecipientIsMessageRelayer {
     }
 
     function test_userReasonableGasLimit_relayMessage() public whenGasLimitIsReasonable {
+        vm.expectEmit();
+        emit IMessageRelayer.MessageForwarded(address(to), amount - tip, data, address(userSelectedTipRecipient), tip);
         _relayMessage();
     }
 
