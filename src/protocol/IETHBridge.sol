@@ -48,6 +48,9 @@ interface IETHBridge {
     /// @dev Only canceler can cancel a deposit.
     error OnlyCanceler();
 
+    /// @dev Zero receiver
+    error ZeroReceiver();
+
     /// @dev Whether the deposit identified by `id` has been claimed or cancelled.
     /// @param id The deposit id
     function processed(bytes32 id) external view returns (bool);
