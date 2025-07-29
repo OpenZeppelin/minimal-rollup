@@ -16,14 +16,22 @@ contract CheckpointTracker is ICheckpointTracker {
     IInbox public immutable inbox;
     IVerifier public immutable verifier;
     ICommitmentStore public immutable commitmentStore;
-    address public immutable proverManager;
+
+    address public proverManager;
+
+    bool private _proverManagerInitialized;
+
+    /// @dev Modifier to check if proverManager has been initialized
+    modifier checkProverInitialized() {
+        require(_proverManagerInitialized, "ProverManager not initialized");
+        _;
+    }
 
     /// @param _genesis the checkpoint commitment describing the initial state of the rollup
     /// @param _inbox the inbox contract that contains the publication feed
     /// @param _verifier a contract that can verify the validity of a transition from one checkpoint to another
-    /// @param _proverManager contract responsible for managing the prover auction
     /// @param _commitmentStore contract responsible storing historical commitments
-    constructor(bytes32 _genesis, address _inbox, address _verifier, address _proverManager, address _commitmentStore) {
+    constructor(bytes32 _genesis, address _inbox, address _verifier, address _commitmentStore) {
         // set the genesis checkpoint commitment of the rollup - genesis is trusted to be correct
         require(_genesis != 0, "genesis checkpoint commitment cannot be 0");
         inbox = IInbox(_inbox);
@@ -31,9 +39,17 @@ contract CheckpointTracker is ICheckpointTracker {
 
         verifier = IVerifier(_verifier);
         commitmentStore = ICommitmentStore(_commitmentStore);
-        proverManager = _proverManager;
 
         _saveCommitment(latestPublicationId, _genesis);
+    }
+
+    /// @inheritdoc ICheckpointTracker
+    /// @dev Can only be called once, allowed prover manager to be zero
+    function initializeProverManager(address _proverManager) external {
+        require(!_proverManagerInitialized, "ProverManager already initialized");
+        proverManager = _proverManager;
+        _proverManagerInitialized = true;
+        emit ProverManagerInitialized(_proverManager);
     }
 
     /// @inheritdoc ICheckpointTracker
@@ -42,6 +58,7 @@ contract CheckpointTracker is ICheckpointTracker {
     /// changes in the mean time.
     function proveTransition(Checkpoint calldata start, Checkpoint calldata end, bytes calldata proof)
         external
+        checkProverInitialized
         returns (uint256 numPublications, uint256 numDelayedPublications)
     {
         require(
