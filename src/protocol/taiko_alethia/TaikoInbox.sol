@@ -10,7 +10,9 @@ import {IInbox} from "../IInbox.sol";
 import {ILookahead} from "../ILookahead.sol";
 import {IProposerFees} from "../IProposerFees.sol";
 
-contract TaikoInbox is IInbox, DelayedInclusionStore {
+import {Ownable} from "openzeppelin-contracts/contracts/access/Ownable.sol";
+
+contract TaikoInbox is IInbox, DelayedInclusionStore, Ownable {
     /// @dev Caller is not the current preconfer
     error NotCurrentPreconfer();
     /// @dev Anchor block ID is too old
@@ -25,8 +27,16 @@ contract TaikoInbox is IInbox, DelayedInclusionStore {
     }
 
     ILookahead public immutable lookahead;
-    IProposerFees public immutable proposerFees;
+    IProposerFees public proposerFees;
     uint256 public immutable maxAnchorBlockIdOffset;
+
+    bool private proposerFeesInitialised;
+
+    /// @dev Modifier to check if proposerFees has been initialised
+    modifier checkProposerFeesInitialized() {
+        require(proposerFeesInitialised, "ProposerFees not initialised");
+        _;
+    }
 
     // attributes associated with the publication
     uint256 private constant METADATA = 0;
@@ -39,21 +49,27 @@ contract TaikoInbox is IInbox, DelayedInclusionStore {
         address _lookahead,
         address _blobRefRegistry,
         uint256 _maxAnchorBlockIdOffset,
-        address _proposerFees,
-        uint256 _inclusionDelay
-    ) DelayedInclusionStore(_inclusionDelay, _blobRefRegistry) {
-        require(_proposerFees != address(0), "Invalid proposer fees address");
-
+        uint256 _inclusionDelay,
+        address _owner
+    ) DelayedInclusionStore(_inclusionDelay, _blobRefRegistry) Ownable(_owner) {
         lookahead = ILookahead(_lookahead);
         maxAnchorBlockIdOffset = _maxAnchorBlockIdOffset;
-        proposerFees = IProposerFees(_proposerFees);
 
         // guarantee there is always a previous hash
         _publicationHashes.push(0);
     }
 
     /// @inheritdoc IInbox
-    function publish(uint256 nBlobs, uint64 anchorBlockId) external {
+    function initializeProposerFees(address _proposerFees) external onlyOwner {
+        require(!proposerFeesInitialised, "ProposerFees already initialised");
+        require(_proposerFees != address(0), "ProposerFees cannot be zero");
+        proposerFees = IProposerFees(_proposerFees);
+        proposerFeesInitialised = true;
+        emit ProposerFeesInitialised(_proposerFees);
+    }
+
+    /// @inheritdoc IInbox
+    function publish(uint256 nBlobs, uint64 anchorBlockId) external checkProposerFeesInitialized {
         if (address(lookahead) != address(0)) {
             require(lookahead.isCurrentPreconfer(msg.sender), NotCurrentPreconfer());
         }

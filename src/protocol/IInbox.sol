@@ -17,6 +17,9 @@ interface IInbox {
     /// @param attributes The data contained within the publication
     event Published(bytes32 indexed pubHash, PublicationHeader header, bytes[] attributes);
 
+    /// @dev Event emitted when ProposerFees is initialised
+    event ProposerFeesInitialised(address proposerFees);
+
     /// @notice Publish blobs with anchor block information
     /// @param nBlobs Number of blobs to publish
     /// @param anchorBlockId The anchor block ID
@@ -35,4 +38,8 @@ interface IInbox {
     /// @param header The header to validate
     /// @return _ True if the header is valid, false otherwise
     function validateHeader(PublicationHeader calldata header) external view returns (bool);
+
+    /// @notice Initialize the proposer fees contract address (prover manager contract)
+    /// @param _proposerFees Address of the proposer fees contract
+    function initializeProposerFees(address _proposerFees) external;
 }
