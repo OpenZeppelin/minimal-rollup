@@ -13,6 +13,7 @@ import {MockSignalService} from "test/mocks/MockSignalService.sol";
 
 abstract contract InitialState is Test {
     MessageRelayer messageRelayer;
+    ETHBridge bridge;
 
     // Default message parameters
     IETHBridge.ETHDeposit ethDeposit;
@@ -30,7 +31,7 @@ abstract contract InitialState is Test {
         MockSignalService signalService = new MockSignalService();
         address trustedCommitmentPublisher = _randomAddress("trustedCommitmentPublisher");
         address counterpart = _randomAddress("counterpart");
-        ETHBridge bridge = new ETHBridge(address(signalService), trustedCommitmentPublisher, counterpart);
+        bridge = new ETHBridge(address(signalService), trustedCommitmentPublisher, counterpart);
         vm.deal(address(bridge), amount);
 
         messageRelayer = new MessageRelayer(address(bridge));

@@ -19,6 +19,12 @@ contract UserSetValidTipRecipient is DepositRecipientIsMessageRelayer {
         _relayMessage();
         assertEq(address(relayerSelectedTipRecipient).balance, balanceBefore, "incorrect tip recipient paid");
     }
+
+    function test_UserSetValidTipRecipient_claimDepositDirectly_shouldTipUserSelectedRecipient() public {
+        uint256 balanceBefore = address(userSelectedTipRecipient).balance;
+        bridge.claimDeposit(ethDeposit, height, proof);
+        assertEq(address(userSelectedTipRecipient).balance, balanceBefore + tip, "tip recipient balance mismatch");
+    }
 }
 
 contract UserSetZeroTipRecipient is DepositRecipientIsMessageRelayer {
@@ -32,6 +38,16 @@ contract UserSetZeroTipRecipient is DepositRecipientIsMessageRelayer {
         uint256 balanceBefore = address(relayerSelectedTipRecipient).balance;
         _relayMessage();
         assertEq(address(relayerSelectedTipRecipient).balance, balanceBefore + tip, "tip recipient balance mismatch");
+    }
+
+    function test_UserSetZeroTipRecipient_claimDepositDirectly_shouldNotTipRelayTipRecipient() public {
+        uint256 relayerTipRecipientBalanceBefore = address(relayerSelectedTipRecipient).balance;
+        bridge.claimDeposit(ethDeposit, height, proof);
+        assertEq(
+            address(relayerSelectedTipRecipient).balance,
+            relayerTipRecipientBalanceBefore,
+            "tip recipient balance mismatch"
+        );
     }
 }
 
