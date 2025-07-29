@@ -8,13 +8,16 @@ import {CheckpointTracker} from "src/protocol/CheckpointTracker.sol";
 import {ICheckpointTracker} from "src/protocol/ICheckpointTracker.sol";
 import {SignalService} from "src/protocol/SignalService.sol";
 
+import {Ownable} from "openzeppelin-contracts/contracts/access/Ownable.sol";
+
 contract CheckpointTrackerTest is Test {
     CheckpointTracker tracker;
     MockInbox inbox;
     MockVerifier verifier;
     SignalService signalService;
-    address proverManager = _randomAddress("proverManager");
+    address proverManager = makeAddr("proverManager");
     bytes32 genesis = keccak256(abi.encode("genesis"));
+    address owner = makeAddr("owner");
 
     ICheckpointTracker.Checkpoint start;
     ICheckpointTracker.Checkpoint end;
@@ -24,13 +27,14 @@ contract CheckpointTrackerTest is Test {
         inbox = new MockInbox();
         verifier = new MockVerifier();
         signalService = new SignalService();
-        tracker =
-            new CheckpointTracker(genesis, address(inbox), address(verifier), proverManager, address(signalService));
+        tracker = new CheckpointTracker(genesis, address(inbox), address(verifier), address(signalService), owner);
+        vm.prank(owner);
+        tracker.initializeProverManager(address(proverManager));
     }
 
     function test_constructor_shouldRevertWithZeroGenesis() public {
         vm.expectRevert("genesis checkpoint commitment cannot be 0");
-        new CheckpointTracker(bytes32(0), address(inbox), address(verifier), proverManager, address(signalService));
+        new CheckpointTracker(bytes32(0), address(inbox), address(verifier), address(signalService), owner);
     }
 
     function test_constructor_shouldSetExternalContracts() public view {
@@ -47,6 +51,36 @@ contract CheckpointTrackerTest is Test {
     function test_constructor_shouldSaveGenesisCommitment() public view {
         bytes32 savedCommitment = signalService.commitmentAt(address(tracker), tracker.provenPublicationId());
         assertEq(savedCommitment, genesis, "Did not save genesis");
+    }
+
+    function test_initialiseProverManager_shouldSetProverManager() public {
+        CheckpointTracker uninitialisedTracker =
+            new CheckpointTracker(genesis, address(inbox), address(verifier), address(signalService), owner);
+        vm.prank(owner);
+        uninitialisedTracker.initializeProverManager(proverManager);
+        assertEq(address(uninitialisedTracker.proverManager()), proverManager, "Did not set prover manager");
+    }
+
+    function test_proveTransition_shouldRevertIfProverManagerNotInitialised() public {
+        CheckpointTracker uninitialisedTracker =
+            new CheckpointTracker(genesis, address(inbox), address(verifier), address(signalService), owner);
+        _constructValidTransition();
+        vm.expectRevert("ProverManager not initialised");
+        uninitialisedTracker.proveTransition(start, end, proof);
+    }
+
+    function test_initialiseProverManager_onlyOwner() public {
+        CheckpointTracker uninitialisedTracker =
+            new CheckpointTracker(genesis, address(inbox), address(verifier), address(signalService), owner);
+        vm.prank(makeAddr("notowner"));
+        vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, makeAddr("notowner")));
+        uninitialisedTracker.initializeProverManager(proverManager);
+    }
+
+    function test_initialiseProverManager_shouldRevertIfAlreadyInitialised() public {
+        vm.prank(owner);
+        vm.expectRevert("ProverManager already initialised");
+        tracker.initializeProverManager(address(proverManager));
     }
 
     function test_proveTransition_shouldRevertIfNotCalledByProverManager() public {
@@ -177,13 +211,5 @@ contract CheckpointTrackerTest is Test {
         end.publicationId = start.publicationId + 5;
         end.commitment = keccak256(abi.encode("end"));
         end.totalDelayedPublications = start.totalDelayedPublications + 2;
-    }
-
-    function _randomAddress(string memory name) internal pure returns (address) {
-        return address(uint160(uint256(keccak256(abi.encode(_domainSeparator(), name)))));
-    }
-
-    function _domainSeparator() internal pure returns (bytes32) {
-        return keccak256("CheckpointTracker");
     }
 }

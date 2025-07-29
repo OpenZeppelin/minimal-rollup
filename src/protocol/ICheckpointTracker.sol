@@ -18,9 +18,9 @@ interface ICheckpointTracker {
     /// @param commitment the commitment of the latest proven checkpoint
     event CommitmentSaved(uint256 indexed publicationId, bytes32 commitment);
 
-    /// @notice Emitted when ProverManager is initialized
+    /// @notice Emitted when ProverManager is initialised
     /// @param proverManager The address of the ProverManager contract
-    event ProverManagerInitialized(address indexed proverManager);
+    event ProverManagerInitialised(address indexed proverManager);
 
     /// @return _ The last proven publication ID
     function provenPublicationId() external view returns (uint256);

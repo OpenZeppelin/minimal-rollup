@@ -52,7 +52,7 @@ library LibProvingPeriod {
         period.stake = stake;
     }
 
-    /// @dev Whether the period has been initialized
+    /// @dev Whether the period has been initialised
     function isInitialized(Period storage period) internal view returns (bool) {
         return period.prover != address(0);
     }
@@ -87,7 +87,7 @@ library LibProvingPeriod {
         return block.timestamp > period.deadline && period.deadline != 0;
     }
 
-    /// @dev Whether the period is vacant (i.e. not initialized and open)
+    /// @dev Whether the period is vacant (i.e. not initialised and open)
     function isVacant(Period storage period) internal view returns (bool) {
         return !isInitialized(period) && isOpen(period);
     }

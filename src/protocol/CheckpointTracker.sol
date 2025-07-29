@@ -6,7 +6,9 @@ import {ICommitmentStore} from "./ICommitmentStore.sol";
 import {IInbox} from "./IInbox.sol";
 import {IVerifier} from "./IVerifier.sol";
 
-contract CheckpointTracker is ICheckpointTracker {
+import {Ownable} from "openzeppelin-contracts/contracts/access/Ownable.sol";
+
+contract CheckpointTracker is ICheckpointTracker, Ownable {
     /// @dev The number of delayed publications up to the proven checkpoint
     uint256 private _totalDelayedPublications;
 
@@ -19,11 +21,11 @@ contract CheckpointTracker is ICheckpointTracker {
 
     address public proverManager;
 
-    bool private _proverManagerInitialized;
+    bool private _proverManagerInitialised;
 
-    /// @dev Modifier to check if proverManager has been initialized
+    /// @dev Modifier to check if proverManager has been initialised
     modifier checkProverInitialized() {
-        require(_proverManagerInitialized, "ProverManager not initialized");
+        require(_proverManagerInitialised, "ProverManager not initialised");
         _;
     }
 
@@ -31,7 +33,10 @@ contract CheckpointTracker is ICheckpointTracker {
     /// @param _inbox the inbox contract that contains the publication feed
     /// @param _verifier a contract that can verify the validity of a transition from one checkpoint to another
     /// @param _commitmentStore contract responsible storing historical commitments
-    constructor(bytes32 _genesis, address _inbox, address _verifier, address _commitmentStore) {
+    /// @param _owner Owner that is allowed to set prover manager address
+    constructor(bytes32 _genesis, address _inbox, address _verifier, address _commitmentStore, address _owner)
+        Ownable(_owner)
+    {
         // set the genesis checkpoint commitment of the rollup - genesis is trusted to be correct
         require(_genesis != 0, "genesis checkpoint commitment cannot be 0");
         inbox = IInbox(_inbox);
@@ -45,11 +50,11 @@ contract CheckpointTracker is ICheckpointTracker {
 
     /// @inheritdoc ICheckpointTracker
     /// @dev Can only be called once, allowed prover manager to be zero
-    function initializeProverManager(address _proverManager) external {
-        require(!_proverManagerInitialized, "ProverManager already initialized");
+    function initializeProverManager(address _proverManager) external onlyOwner {
+        require(!_proverManagerInitialised, "ProverManager already initialised");
         proverManager = _proverManager;
-        _proverManagerInitialized = true;
-        emit ProverManagerInitialized(_proverManager);
+        _proverManagerInitialised = true;
+        emit ProverManagerInitialised(_proverManager);
     }
 
     /// @inheritdoc ICheckpointTracker
