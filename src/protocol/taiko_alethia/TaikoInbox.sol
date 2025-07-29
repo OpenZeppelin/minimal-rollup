@@ -30,11 +30,9 @@ contract TaikoInbox is IInbox, DelayedInclusionStore, Ownable {
     IProposerFees public proposerFees;
     uint256 public immutable maxAnchorBlockIdOffset;
 
-    bool private proposerFeesInitialised;
-
     /// @dev Modifier to check if proposerFees has been initialised
     modifier checkProposerFeesInitialized() {
-        require(proposerFeesInitialised, "ProposerFees not initialised");
+        require(address(proposerFees) != address(0), "ProposerFees not initialised");
         _;
     }
 
@@ -61,10 +59,9 @@ contract TaikoInbox is IInbox, DelayedInclusionStore, Ownable {
 
     /// @inheritdoc IInbox
     function initializeProposerFees(address _proposerFees) external onlyOwner {
-        require(!proposerFeesInitialised, "ProposerFees already initialised");
+        require(address(proposerFees) != address(0), "ProposerFees already initialised");
         require(_proposerFees != address(0), "ProposerFees cannot be zero");
         proposerFees = IProposerFees(_proposerFees);
-        proposerFeesInitialised = true;
         emit ProposerFeesInitialised(_proposerFees);
     }
 
