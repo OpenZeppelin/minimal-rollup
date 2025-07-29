@@ -7,25 +7,15 @@ import {GenericRecipient} from "./GenericRecipient.t.sol";
 import {InitialState} from "./InitialState.t.sol";
 import {IETHBridge} from "src/protocol/IETHBridge.sol";
 
-contract RelayRecipientRejectsDeposit is DepositRecipientIsMessageRelayer {
-    function setUp() public override {
-        super.setUp();
-        to.setSuccess(false);
-    }
-
+contract RelayRecipientScenarios is DepositRecipientIsMessageRelayer {
     function test_RelayRecipientRejectsDeposit_relayMessage_shouldRevert() public {
+        to.setSuccess(false);
         vm.expectRevert(IETHBridge.FailedClaim.selector);
         _relayMessage();
     }
-}
-
-contract RelayRecipientIsReentrant is DepositRecipientIsMessageRelayer {
-    function setUp() public override {
-        super.setUp();
-        to.setReentrancyAttack(true);
-    }
 
     function test_RelayRecipientReentersReceiveMessage_relayMessage_shouldRevert() public {
+        to.setReentrancyAttack(true);
         vm.expectRevert(IETHBridge.FailedClaim.selector);
         _relayMessage();
     }
