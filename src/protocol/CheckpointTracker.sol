@@ -21,6 +21,7 @@ contract CheckpointTracker is ICheckpointTracker, Ownable {
 
     address public proverManager;
 
+    /// @dev need to track initialisation separately to address as initialised prover manager may be zero
     bool private _proverManagerInitialised;
 
     /// @dev Modifier to check if proverManager has been initialised
