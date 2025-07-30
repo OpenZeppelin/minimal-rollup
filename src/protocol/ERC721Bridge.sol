@@ -20,7 +20,6 @@ contract ERC721Bridge is IERC721Bridge, ReentrancyGuardTransient, IERC721Receive
     bytes32 private constant DEPOSIT_SIGNAL_PREFIX = keccak256("ERC721_DEPOSIT");
 
     mapping(bytes32 id => bool processed) private _processed;
-    mapping(address token => bool initialized) private _initializedTokens;
     mapping(bytes32 key => address deployedToken) private _deployedTokens;
     mapping(address token => bool isBridgedToken) private _isBridgedTokens;
 
@@ -60,7 +59,9 @@ contract ERC721Bridge is IERC721Bridge, ReentrancyGuardTransient, IERC721Receive
 
     /// @inheritdoc IERC721Bridge
     function isTokenInitialized(address token) public view returns (bool) {
-        return _initializedTokens[token];
+        TokenInitialization memory tokenInit = _generateTokenInit(token);
+        bytes32 id = _generateInitializationId(tokenInit);
+        return signalService.isSignalStored(id, address(this));
     }
 
     /// @inheritdoc IERC721Bridge
@@ -87,30 +88,10 @@ contract ERC721Bridge is IERC721Bridge, ReentrancyGuardTransient, IERC721Receive
     /// @inheritdoc IERC721Bridge
     function initializeToken(address token) external returns (bytes32 id) {
         require(token != address(0), "Invalid token address");
-        require(!_initializedTokens[token], "Token already initialized");
 
-        // Read token metadata with fallbacks for non-compliant tokens
-        string memory name;
-        string memory symbol;
-
-        try IERC721Metadata(token).name() returns (string memory _name) {
-            name = _name;
-        } catch {
-            name = "Unknown NFT Name";
-        }
-
-        try IERC721Metadata(token).symbol() returns (string memory _symbol) {
-            symbol = _symbol;
-        } catch {
-            symbol = "UNKNOWN";
-        }
-
-        TokenInitialization memory tokenInit = TokenInitialization({originalToken: token, name: name, symbol: symbol});
-
+        TokenInitialization memory tokenInit = _generateTokenInit(token);
         id = _generateInitializationId(tokenInit);
-
-        // Mark token as initialized locally
-        _initializedTokens[token] = true;
+        require(!signalService.isSignalStored(id, address(this)), "Token already initialized");
 
         // Send signal for cross-chain initialization
         signalService.sendSignal(id);
@@ -151,9 +132,6 @@ contract ERC721Bridge is IERC721Bridge, ReentrancyGuardTransient, IERC721Receive
         nonReentrant
         returns (bytes32 id)
     {
-        // Check if token is initialized (for original tokens) or is a bridged token deployed by this bridge
-        require(_initializedTokens[localToken] || _isBridgedToken(localToken), TokenNotInitialized());
-
         // Fetch the token URI for this specific token
         string memory tokenURI_;
         try IERC721Metadata(localToken).tokenURI(tokenId) returns (string memory uri) {
@@ -272,5 +250,28 @@ contract ERC721Bridge is IERC721Bridge, ReentrancyGuardTransient, IERC721Receive
     /// @param erc721Deposit Deposit to generate an ID for
     function _generateDepositId(ERC721Deposit memory erc721Deposit) internal pure returns (bytes32) {
         return keccak256(abi.encode(DEPOSIT_SIGNAL_PREFIX, erc721Deposit));
+    }
+
+    /// @dev Fetches token metadata with fallbacks for non-compliant tokens and
+    /// generates the token initialization struct
+    /// @param token The token address to fetch metadata for
+    /// @return _ Token initialization struct
+    function _generateTokenInit(address token) private view returns (TokenInitialization memory) {
+        string memory name;
+        string memory symbol;
+
+        try IERC721Metadata(token).name() returns (string memory _name) {
+            name = _name;
+        } catch {
+            name = "Unknown NFT Name";
+        }
+
+        try IERC721Metadata(token).symbol() returns (string memory _symbol) {
+            symbol = _symbol;
+        } catch {
+            symbol = "UNKNOWN";
+        }
+
+        return TokenInitialization({originalToken: token, name: name, symbol: symbol});
     }
 }

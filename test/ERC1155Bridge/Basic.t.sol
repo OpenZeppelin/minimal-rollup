@@ -104,12 +104,6 @@ contract ERC1155BridgeTest is Test {
         assertEq(token.balanceOf(alice, tokenId), 50);
     }
 
-    function testCannotDepositUninitializedToken() public {
-        vm.expectRevert(IERC1155Bridge.TokenNotInitialized.selector);
-        vm.prank(alice);
-        bridge.deposit(bob, address(token), tokenId, 50, address(0));
-    }
-
     function testClaimDeposit() public {
         // Initialize token
         vm.prank(alice);

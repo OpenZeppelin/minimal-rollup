@@ -100,12 +100,6 @@ contract ERC721BridgeTest is Test {
         assertEq(token.ownerOf(tokenId), address(bridge));
     }
 
-    function testCannotDepositUninitializedToken() public {
-        vm.expectRevert(IERC721Bridge.TokenNotInitialized.selector);
-        vm.prank(alice);
-        bridge.deposit(bob, address(token), tokenId, address(0));
-    }
-
     function testClaimDeposit() public {
         // Initialize token
         vm.prank(alice);
