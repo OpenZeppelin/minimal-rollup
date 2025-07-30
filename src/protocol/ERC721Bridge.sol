@@ -52,6 +52,10 @@ contract ERC721Bridge is IERC721Bridge, ReentrancyGuardTransient, IERC721Receive
         return IERC721Receiver.onERC721Received.selector;
     }
 
+    function supportsInterface(bytes4 interfaceId) public view virtual returns (bool) {
+        return interfaceId == type(IERC721Receiver).interfaceId || interfaceId == type(IERC721Bridge).interfaceId;
+    }
+
     /// @inheritdoc IERC721Bridge
     function processed(bytes32 id) public view returns (bool) {
         return _processed[id];

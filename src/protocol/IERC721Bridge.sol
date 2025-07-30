@@ -98,7 +98,7 @@ interface IERC721Bridge {
 
     /// @dev ERC721 Deposit identifier.
     /// @param erc721Deposit The ERC721 deposit struct
-    function getDepositId(ERC721Deposit memory erc721Deposit) external view returns (bytes32 id);
+    function getDepositId(ERC721Deposit memory erc721Deposit) external pure returns (bytes32 id);
 
     /// @dev Initializes a token for bridging by reading its metadata and sending a signal.
     /// @param token The ERC721 token address to initialize

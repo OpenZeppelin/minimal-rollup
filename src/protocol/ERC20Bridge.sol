@@ -125,14 +125,11 @@ contract ERC20Bridge is IERC20Bridge, ReentrancyGuardTransient {
 
     /// @inheritdoc IERC20Bridge
     function deposit(address to, address localToken, uint256 amount) external nonReentrant returns (bytes32 id) {
-        // Determine the original token address
-        address originalToken;
+        // If depositing an original token, use its address directly
+        address originalToken = localToken;
         if (_isBridgedToken(localToken)) {
             // If depositing a bridged token, use its original token address
             originalToken = BridgedERC20(localToken).originalToken();
-        } else {
-            // If depositing an original token, use its address directly
-            originalToken = localToken;
         }
 
         ERC20Deposit memory erc20Deposit = ERC20Deposit({

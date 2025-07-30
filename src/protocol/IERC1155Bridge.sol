@@ -98,7 +98,7 @@ interface IERC1155Bridge {
 
     /// @dev ERC1155 Deposit identifier.
     /// @param erc1155Deposit The ERC1155 deposit struct
-    function getDepositId(ERC1155Deposit memory erc1155Deposit) external view returns (bytes32 id);
+    function getDepositId(ERC1155Deposit memory erc1155Deposit) external pure returns (bytes32 id);
 
     /// @dev Initializes a token for bridging by reading its metadata and sending a signal.
     /// @param token The ERC1155 token address to initialize
