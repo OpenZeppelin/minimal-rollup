@@ -155,14 +155,11 @@ contract ERC20Bridge is IERC20Bridge, ReentrancyGuardTransient {
         // Check if token is initialized (for original tokens) or is a bridged token deployed by this bridge
         require(_initializedTokens[localToken] || _isBridgedToken(localToken), TokenNotInitialized());
 
-        // Determine the original token address
-        address originalToken;
+        // If depositing an original token, use its address directly
+        address originalToken = localToken ;
         if (_isBridgedToken(localToken)) {
             // If depositing a bridged token, use its original token address
             originalToken = BridgedERC20(localToken).originalToken();
-        } else {
-            // If depositing an original token, use its address directly
-            originalToken = localToken;
         }
 
         ERC20Deposit memory erc20Deposit = ERC20Deposit({
