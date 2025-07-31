@@ -21,12 +21,12 @@ contract CheckpointTracker is ICheckpointTracker, Ownable {
 
     address public proverManager;
 
-    /// @dev need to track initialisation separately to address as initialised prover manager may be zero
-    bool private _proverManagerInitialised;
+    /// @dev need to track initialisation separately to address as initialized prover manager may be zero
+    bool private _proverManagerInitialized;
 
-    /// @dev Modifier to check if proverManager has been initialised
+    /// @dev Modifier to check if proverManager has been initialized
     modifier checkProverInitialized() {
-        require(_proverManagerInitialised, "ProverManager not initialised");
+        require(_proverManagerInitialized, "ProverManager not initialized");
         _;
     }
 
@@ -52,10 +52,10 @@ contract CheckpointTracker is ICheckpointTracker, Ownable {
     /// @inheritdoc ICheckpointTracker
     /// @dev Can only be called once, allowed prover manager to be zero
     function initializeProverManager(address _proverManager) external onlyOwner {
-        require(!_proverManagerInitialised, "ProverManager already initialised");
+        require(!_proverManagerInitialized, "ProverManager already initialized");
         proverManager = _proverManager;
-        _proverManagerInitialised = true;
-        emit ProverManagerInitialised(_proverManager);
+        _proverManagerInitialized = true;
+        emit ProverManagerInitialized(_proverManager);
     }
 
     /// @inheritdoc ICheckpointTracker

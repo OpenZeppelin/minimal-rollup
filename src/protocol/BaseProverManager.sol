@@ -71,7 +71,7 @@ abstract contract BaseProverManager is IProposerFees, IProverManager, BalanceAcc
     /// @dev Proving period is closed
     error ProvingPeriodClosed();
 
-    /// @dev Period is not initialised
+    /// @dev Period is not initialized
     error PeriodNotInitialized();
 
     /// @dev Offered fee is higher than the required fee

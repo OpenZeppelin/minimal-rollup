@@ -17,8 +17,8 @@ interface IInbox {
     /// @param attributes The data contained within the publication
     event Published(bytes32 indexed pubHash, PublicationHeader header, bytes[] attributes);
 
-    /// @dev Event emitted when ProposerFees is initialised
-    event ProposerFeesInitialised(address proposerFees);
+    /// @dev Event emitted when ProposerFees is initialized
+    event ProposerFeesInitialized(address proposerFees);
 
     /// @notice Publish blobs with anchor block information
     /// @param nBlobs Number of blobs to publish

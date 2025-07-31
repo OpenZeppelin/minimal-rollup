@@ -53,33 +53,33 @@ contract CheckpointTrackerTest is Test {
         assertEq(savedCommitment, genesis, "Did not save genesis");
     }
 
-    function test_initialiseProverManager_shouldSetProverManager() public {
-        CheckpointTracker uninitialisedTracker =
+    function test_initializeProverManager_shouldSetProverManager() public {
+        CheckpointTracker uninitializedTracker =
             new CheckpointTracker(genesis, address(inbox), address(verifier), address(signalService), owner);
         vm.prank(owner);
-        uninitialisedTracker.initializeProverManager(proverManager);
-        assertEq(address(uninitialisedTracker.proverManager()), proverManager, "Did not set prover manager");
+        uninitializedTracker.initializeProverManager(proverManager);
+        assertEq(address(uninitializedTracker.proverManager()), proverManager, "Did not set prover manager");
     }
 
-    function test_proveTransition_shouldRevertIfProverManagerNotInitialised() public {
-        CheckpointTracker uninitialisedTracker =
+    function test_proveTransition_shouldRevertIfProverManagerNotInitialized() public {
+        CheckpointTracker uninitializedTracker =
             new CheckpointTracker(genesis, address(inbox), address(verifier), address(signalService), owner);
         _constructValidTransition();
-        vm.expectRevert("ProverManager not initialised");
-        uninitialisedTracker.proveTransition(start, end, proof);
+        vm.expectRevert("ProverManager not initialized");
+        uninitializedTracker.proveTransition(start, end, proof);
     }
 
-    function test_initialiseProverManager_onlyOwner() public {
-        CheckpointTracker uninitialisedTracker =
+    function test_initializeProverManager_onlyOwner() public {
+        CheckpointTracker uninitializedTracker =
             new CheckpointTracker(genesis, address(inbox), address(verifier), address(signalService), owner);
         vm.prank(makeAddr("notowner"));
         vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, makeAddr("notowner")));
-        uninitialisedTracker.initializeProverManager(proverManager);
+        uninitializedTracker.initializeProverManager(proverManager);
     }
 
-    function test_initialiseProverManager_shouldRevertIfAlreadyInitialised() public {
+    function test_initializeProverManager_shouldRevertIfAlreadyInitialized() public {
         vm.prank(owner);
-        vm.expectRevert("ProverManager already initialised");
+        vm.expectRevert("ProverManager already initialized");
         tracker.initializeProverManager(address(proverManager));
     }
 
