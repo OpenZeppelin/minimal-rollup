@@ -59,7 +59,7 @@ contract TaikoInbox is IInbox, DelayedInclusionStore, Ownable {
 
     /// @inheritdoc IInbox
     function initializeProposerFees(address _proposerFees) external onlyOwner {
-        require(address(proposerFees) != address(0), "ProposerFees already initialized");
+        require(address(proposerFees) == address(0), "ProposerFees already initialized");
         require(_proposerFees != address(0), "ProposerFees cannot be zero");
         proposerFees = IProposerFees(_proposerFees);
         emit ProposerFeesInitialized(_proposerFees);
