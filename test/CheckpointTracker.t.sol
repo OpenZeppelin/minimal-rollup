@@ -64,7 +64,7 @@ contract CheckpointTrackerTest is Test {
         CheckpointTracker uninitializedTracker =
             new CheckpointTracker(genesis, address(inbox), address(verifier), address(signalService));
         _constructValidTransition();
-        vm.expectRevert("ProverManager not initialized");
+        vm.expectRevert(ICheckpointTracker.ProverManagerNotInitialized.selector);
         uninitializedTracker.proveTransition(start, end, proof);
     }
 

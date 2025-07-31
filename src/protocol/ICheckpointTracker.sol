@@ -22,6 +22,9 @@ interface ICheckpointTracker {
     /// @param proverManager The address of the ProverManager contract
     event ProverManagerInitialized(address indexed proverManager);
 
+    /// @notice Thrown when no prover manager was set
+    error ProverManagerNotInitialized();
+
     /// @return _ The last proven publication ID
     function provenPublicationId() external view returns (uint256);
 

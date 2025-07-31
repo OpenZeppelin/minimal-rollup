@@ -26,7 +26,14 @@ contract CheckpointTracker is ICheckpointTracker {
 
     /// @dev Modifier to check if proverManager has been initialized
     modifier checkProverInitialized() {
-        require(_proverManagerInitialized, "ProverManager not initialized");
+        bytes4 errorSelector = ProverManagerNotInitialized.selector;
+        assembly {
+            let initialized := sload(_proverManagerInitialized.slot)
+            if iszero(initialized) {
+                mstore(0, errorSelector)
+                revert(0x00, 0x04)
+            }
+        }
         _;
     }
 

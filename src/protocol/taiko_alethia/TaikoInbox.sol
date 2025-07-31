@@ -30,28 +30,21 @@ contract TaikoInbox is IInbox, DelayedInclusionStore {
 
     address private immutable deployer;
 
-    // Custom error (saves ~24 gas vs require with string)
+    /// @notice Thrown when no proposer fee address is set
     error ProposerFeesNotInitialized();
 
     /// @dev Modifier to check if proposerFees has been initialized
     modifier checkProposerFeesInitialized() {
+        bytes4 errorSelector = ProposerFeesNotInitialized.selector;
         assembly {
-            // Load proposerFees address directly from storage
-            // Assuming proposerFees is at storage slot 0 (adjust if needed)
-            if iszero(sload(0)) {
-                // Revert with custom error selector
-                mstore(0x00, 0x7c946ed7) // selector for ProposerFeesNotInitialized()
+            let fees := sload(proposerFees.slot)
+            if iszero(fees) {
+                mstore(0, errorSelector)
                 revert(0x00, 0x04)
             }
         }
         _;
     }
-
-    // /// @dev Modifier to check if proposerFees has been initialized
-    // modifier checkProposerFeesInitialized() {
-    //     require(address(proposerFees) != address(0), "ProposerFees not initialized");
-    //     _;
-    // }
 
     /// @dev Modifier to check if the caller is the deployer
     modifier onlyDeployer() {
