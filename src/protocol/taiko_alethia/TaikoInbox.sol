@@ -10,9 +10,7 @@ import {IInbox} from "../IInbox.sol";
 import {ILookahead} from "../ILookahead.sol";
 import {IProposerFees} from "../IProposerFees.sol";
 
-import {Ownable} from "openzeppelin-contracts/contracts/access/Ownable.sol";
-
-contract TaikoInbox is IInbox, DelayedInclusionStore, Ownable {
+contract TaikoInbox is IInbox, DelayedInclusionStore {
     /// @dev Caller is not the current preconfer
     error NotCurrentPreconfer();
     /// @dev Anchor block ID is too old
@@ -30,9 +28,34 @@ contract TaikoInbox is IInbox, DelayedInclusionStore, Ownable {
     IProposerFees public proposerFees;
     uint256 public immutable maxAnchorBlockIdOffset;
 
+    address private immutable deployer;
+
+    // Custom error (saves ~24 gas vs require with string)
+    error ProposerFeesNotInitialized();
+
     /// @dev Modifier to check if proposerFees has been initialized
     modifier checkProposerFeesInitialized() {
-        require(address(proposerFees) != address(0), "ProposerFees not initialized");
+        assembly {
+            // Load proposerFees address directly from storage
+            // Assuming proposerFees is at storage slot 0 (adjust if needed)
+            if iszero(sload(0)) {
+                // Revert with custom error selector
+                mstore(0x00, 0x7c946ed7) // selector for ProposerFeesNotInitialized()
+                revert(0x00, 0x04)
+            }
+        }
+        _;
+    }
+
+    // /// @dev Modifier to check if proposerFees has been initialized
+    // modifier checkProposerFeesInitialized() {
+    //     require(address(proposerFees) != address(0), "ProposerFees not initialized");
+    //     _;
+    // }
+
+    /// @dev Modifier to check if the caller is the deployer
+    modifier onlyDeployer() {
+        require(msg.sender == deployer, "Only deployer can call this function");
         _;
     }
 
@@ -43,22 +66,19 @@ contract TaikoInbox is IInbox, DelayedInclusionStore, Ownable {
 
     bytes32[] private _publicationHashes;
 
-    constructor(
-        address _lookahead,
-        address _blobRefRegistry,
-        uint256 _maxAnchorBlockIdOffset,
-        uint256 _inclusionDelay,
-        address _owner
-    ) DelayedInclusionStore(_inclusionDelay, _blobRefRegistry) Ownable(_owner) {
+    constructor(address _lookahead, address _blobRefRegistry, uint256 _maxAnchorBlockIdOffset, uint256 _inclusionDelay)
+        DelayedInclusionStore(_inclusionDelay, _blobRefRegistry)
+    {
         lookahead = ILookahead(_lookahead);
         maxAnchorBlockIdOffset = _maxAnchorBlockIdOffset;
+        deployer = msg.sender;
 
         // guarantee there is always a previous hash
         _publicationHashes.push(0);
     }
 
     /// @inheritdoc IInbox
-    function initializeProposerFees(address _proposerFees) external onlyOwner {
+    function initializeProposerFees(address _proposerFees) external onlyDeployer {
         require(address(proposerFees) == address(0), "ProposerFees already initialized");
         require(_proposerFees != address(0), "ProposerFees cannot be zero");
         proposerFees = IProposerFees(_proposerFees);

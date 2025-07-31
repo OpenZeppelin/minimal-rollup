@@ -8,8 +8,6 @@ import {CheckpointTracker} from "src/protocol/CheckpointTracker.sol";
 import {ICheckpointTracker} from "src/protocol/ICheckpointTracker.sol";
 import {SignalService} from "src/protocol/SignalService.sol";
 
-import {Ownable} from "openzeppelin-contracts/contracts/access/Ownable.sol";
-
 contract CheckpointTrackerTest is Test {
     CheckpointTracker tracker;
     MockInbox inbox;
@@ -17,7 +15,7 @@ contract CheckpointTrackerTest is Test {
     SignalService signalService;
     address proverManager = makeAddr("proverManager");
     bytes32 genesis = keccak256(abi.encode("genesis"));
-    address owner = makeAddr("owner");
+    address deployer = makeAddr("deployer");
 
     ICheckpointTracker.Checkpoint start;
     ICheckpointTracker.Checkpoint end;
@@ -27,14 +25,15 @@ contract CheckpointTrackerTest is Test {
         inbox = new MockInbox();
         verifier = new MockVerifier();
         signalService = new SignalService();
-        tracker = new CheckpointTracker(genesis, address(inbox), address(verifier), address(signalService), owner);
-        vm.prank(owner);
+        vm.startPrank(deployer);
+        tracker = new CheckpointTracker(genesis, address(inbox), address(verifier), address(signalService));
         tracker.initializeProverManager(address(proverManager));
+        vm.stopPrank();
     }
 
     function test_constructor_shouldRevertWithZeroGenesis() public {
         vm.expectRevert("genesis checkpoint commitment cannot be 0");
-        new CheckpointTracker(bytes32(0), address(inbox), address(verifier), address(signalService), owner);
+        new CheckpointTracker(bytes32(0), address(inbox), address(verifier), address(signalService));
     }
 
     function test_constructor_shouldSetExternalContracts() public view {
@@ -54,31 +53,32 @@ contract CheckpointTrackerTest is Test {
     }
 
     function test_initializeProverManager_shouldSetProverManager() public {
+        vm.startPrank(deployer);
         CheckpointTracker uninitializedTracker =
-            new CheckpointTracker(genesis, address(inbox), address(verifier), address(signalService), owner);
-        vm.prank(owner);
+            new CheckpointTracker(genesis, address(inbox), address(verifier), address(signalService));
         uninitializedTracker.initializeProverManager(proverManager);
         assertEq(address(uninitializedTracker.proverManager()), proverManager, "Did not set prover manager");
     }
 
     function test_proveTransition_shouldRevertIfProverManagerNotInitialized() public {
         CheckpointTracker uninitializedTracker =
-            new CheckpointTracker(genesis, address(inbox), address(verifier), address(signalService), owner);
+            new CheckpointTracker(genesis, address(inbox), address(verifier), address(signalService));
         _constructValidTransition();
         vm.expectRevert("ProverManager not initialized");
         uninitializedTracker.proveTransition(start, end, proof);
     }
 
-    function test_initializeProverManager_onlyOwner() public {
+    function test_initializeProverManager_onlyDeployer() public {
+        vm.prank(deployer);
         CheckpointTracker uninitializedTracker =
-            new CheckpointTracker(genesis, address(inbox), address(verifier), address(signalService), owner);
-        vm.prank(makeAddr("notowner"));
-        vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, makeAddr("notowner")));
+            new CheckpointTracker(genesis, address(inbox), address(verifier), address(signalService));
+        vm.prank(makeAddr("notdeployer"));
+        vm.expectRevert("Only deployer can call this function");
         uninitializedTracker.initializeProverManager(proverManager);
     }
 
     function test_initializeProverManager_shouldRevertIfAlreadyInitialized() public {
-        vm.prank(owner);
+        vm.prank(deployer);
         vm.expectRevert("ProverManager already initialized");
         tracker.initializeProverManager(address(proverManager));
     }
