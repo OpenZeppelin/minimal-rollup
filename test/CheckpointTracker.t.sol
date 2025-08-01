@@ -29,7 +29,7 @@ contract CheckpointTrackerTest is Test {
     }
 
     function test_constructor_shouldRevertWithZeroGenesis() public {
-        vm.expectRevert("genesis checkpoint commitment cannot be 0");
+        vm.expectRevert(ICheckpointTracker.ZeroGenesisCommitment.selector);
         new CheckpointTracker(bytes32(0), address(inbox), address(verifier), proverManager, address(signalService));
     }
 
@@ -51,14 +51,14 @@ contract CheckpointTrackerTest is Test {
 
     function test_proveTransition_shouldRevertIfNotCalledByProverManager() public {
         _constructValidTransition();
-        vm.expectRevert("Only the prover manager can call this function");
+        vm.expectRevert(ICheckpointTracker.OnlyProverManager.selector);
         tracker.proveTransition(start, end, proof);
     }
 
     function test_proveTransition_shouldRevertIfStartCommitmentIsZero() public {
         _constructValidTransition();
         start.commitment = bytes32(0);
-        vm.expectRevert("Start checkpoint commitment cannot be 0");
+        vm.expectRevert(ICheckpointTracker.ZeroStartCommitment.selector);
         vm.prank(proverManager);
         tracker.proveTransition(start, end, proof);
     }
@@ -66,7 +66,7 @@ contract CheckpointTrackerTest is Test {
     function test_proveTransition_shouldRevertIfEndCommitmentIsZero() public {
         _constructValidTransition();
         end.commitment = bytes32(0);
-        vm.expectRevert("End checkpoint commitment cannot be 0");
+        vm.expectRevert(ICheckpointTracker.ZeroEndCommitment.selector);
         vm.prank(proverManager);
         tracker.proveTransition(start, end, proof);
     }
@@ -74,7 +74,11 @@ contract CheckpointTrackerTest is Test {
     function test_proveTransition_shouldRevertIfStartPublicationIsNotProven() public {
         _constructValidTransition();
         start.publicationId = tracker.provenPublicationId() + 1;
-        vm.expectRevert("Start publication must precede latest proven checkpoint");
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                ICheckpointTracker.InvalidStartPublication.selector, start.publicationId, tracker.provenPublicationId()
+            )
+        );
         vm.prank(proverManager);
         tracker.proveTransition(start, end, proof);
     }
@@ -82,15 +86,22 @@ contract CheckpointTrackerTest is Test {
     function test_proveTransition_shouldNotRevertIfAllPublicationsAreDelayed() public {
         _constructValidTransition();
         end.totalDelayedPublications = start.totalDelayedPublications + (end.publicationId - start.publicationId);
-        vm.expectRevert("Number of delayed publications cannot be greater than the total number of publications", 0);
+        // This test expects NO revert when all publications are delayed
         vm.prank(proverManager);
         tracker.proveTransition(start, end, proof);
     }
 
     function test_proveTransition_shouldRevertIfDelayedPublicationsExceedPublications() public {
         _constructValidTransition();
-        end.totalDelayedPublications = start.totalDelayedPublications + (end.publicationId - start.publicationId) + 1;
-        vm.expectRevert("Number of delayed publications cannot be greater than the total number of publications");
+        uint256 numPublications = end.publicationId - tracker.provenPublicationId();
+        uint256 numDelayed = start.totalDelayedPublications + (end.publicationId - start.publicationId) + 1;
+        end.totalDelayedPublications = numDelayed;
+
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                ICheckpointTracker.ExcessiveDelayedPublications.selector, numDelayed, numPublications
+            )
+        );
         vm.prank(proverManager);
         tracker.proveTransition(start, end, proof);
     }
@@ -98,7 +109,7 @@ contract CheckpointTrackerTest is Test {
     function test_proveTransition_shouldRevertWithUnknownEndPublication() public {
         _constructValidTransition();
         end.publicationId = inbox.getNextPublicationId();
-        vm.expectRevert("End publication does not exist");
+        vm.expectRevert(ICheckpointTracker.EndPublicationNotFound.selector);
         vm.prank(proverManager);
         tracker.proveTransition(start, end, proof);
     }

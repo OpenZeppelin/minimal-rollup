@@ -25,7 +25,7 @@ contract CheckpointTracker is ICheckpointTracker {
     /// @param _commitmentStore contract responsible storing historical commitments
     constructor(bytes32 _genesis, address _inbox, address _verifier, address _proverManager, address _commitmentStore) {
         // set the genesis checkpoint commitment of the rollup - genesis is trusted to be correct
-        require(_genesis != 0, "genesis checkpoint commitment cannot be 0");
+        require(_genesis != 0, ZeroGenesisCommitment());
         inbox = IInbox(_inbox);
         uint256 latestPublicationId = inbox.getNextPublicationId() - 1;
 
@@ -44,25 +44,26 @@ contract CheckpointTracker is ICheckpointTracker {
         external
         returns (uint256 numPublications, uint256 numDelayedPublications)
     {
-        require(
-            proverManager == address(0) || msg.sender == proverManager, "Only the prover manager can call this function"
-        );
+        require(proverManager == address(0) || msg.sender == proverManager, OnlyProverManager());
 
-        require(start.commitment != 0, "Start checkpoint commitment cannot be 0");
-        require(end.commitment != 0, "End checkpoint commitment cannot be 0");
-        require(start.publicationId <= provenPublicationId, "Start publication must precede latest proven checkpoint");
+        require(start.commitment != 0, ZeroStartCommitment());
+        require(end.commitment != 0, ZeroEndCommitment());
+        require(
+            start.publicationId <= provenPublicationId,
+            InvalidStartPublication(start.publicationId, provenPublicationId)
+        );
 
         // Only count publications that have not been proven yet
         numPublications = end.publicationId - provenPublicationId;
         numDelayedPublications = end.totalDelayedPublications - _totalDelayedPublications;
         require(
             numDelayedPublications <= numPublications,
-            "Number of delayed publications cannot be greater than the total number of publications"
+            ExcessiveDelayedPublications(numDelayedPublications, numPublications)
         );
 
         bytes32 startPublicationHash = inbox.getPublicationHash(start.publicationId);
         bytes32 endPublicationHash = inbox.getPublicationHash(end.publicationId);
-        require(endPublicationHash != 0, "End publication does not exist");
+        require(endPublicationHash != 0, EndPublicationNotFound());
 
         verifier.verifyProof(
             startPublicationHash,
