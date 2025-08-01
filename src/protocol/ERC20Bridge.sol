@@ -21,7 +21,7 @@ contract ERC20Bridge is IERC20Bridge, ReentrancyGuardTransient {
     bytes32 private constant DEPOSIT_SIGNAL_PREFIX = keccak256("ERC20_DEPOSIT");
 
     mapping(bytes32 id => bool processed) private _processed;
-    mapping(bytes32 key => address deployedToken) private _deployedTokens;
+    mapping(address originalToken => address counterpartToken) private _counterpartTokens;
     mapping(address token => bool isBridgedToken) private _isBridgedTokens;
 
     /// Incremental nonce to generate unique deposit IDs.
@@ -60,8 +60,7 @@ contract ERC20Bridge is IERC20Bridge, ReentrancyGuardTransient {
 
     /// @inheritdoc IERC20Bridge
     function getDeployedToken(address originalToken) public view returns (address) {
-        bytes32 key = keccak256(abi.encode(originalToken));
-        return _deployedTokens[key];
+        return _counterpartTokens[originalToken];
     }
 
     /// @inheritdoc IERC20Bridge
@@ -131,8 +130,7 @@ contract ERC20Bridge is IERC20Bridge, ReentrancyGuardTransient {
             address(new BridgedERC20(tokenInit.name, tokenInit.symbol, tokenInit.decimals, tokenInit.originalToken));
 
         // Store the mapping
-        bytes32 key = keccak256(abi.encode(tokenInit.originalToken));
-        _deployedTokens[key] = deployedToken;
+        _counterpartTokens[tokenInit.originalToken] = deployedToken;
 
         // Mark as a bridged token deployed by this bridge
         _isBridgedTokens[deployedToken] = true;
@@ -203,8 +201,7 @@ contract ERC20Bridge is IERC20Bridge, ReentrancyGuardTransient {
     /// @param to Address to send the tokens to
     function _sendERC20(ERC20Deposit memory erc20Deposit, address to) internal {
         // In a 1-1 bridge, use token mapping presence to determine mint vs transfer
-        bytes32 key = keccak256(abi.encode(erc20Deposit.originalToken));
-        address deployedToken = _deployedTokens[key];
+        address deployedToken = _counterpartTokens[erc20Deposit.originalToken];
 
         if (deployedToken != address(0)) {
             // We have a bridged token for this original token → mint it

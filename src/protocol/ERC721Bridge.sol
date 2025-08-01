@@ -20,7 +20,7 @@ contract ERC721Bridge is IERC721Bridge, ReentrancyGuardTransient, IERC721Receive
     bytes32 private constant DEPOSIT_SIGNAL_PREFIX = keccak256("ERC721_DEPOSIT");
 
     mapping(bytes32 id => bool processed) private _processed;
-    mapping(bytes32 key => address deployedToken) private _deployedTokens;
+    mapping(address originalToken => address counterpartToken) private _counterpartTokens;
     mapping(address token => bool isBridgedToken) private _isBridgedTokens;
 
     /// Incremental nonce to generate unique deposit IDs.
@@ -68,8 +68,7 @@ contract ERC721Bridge is IERC721Bridge, ReentrancyGuardTransient, IERC721Receive
 
     /// @inheritdoc IERC721Bridge
     function getDeployedToken(address originalToken) public view returns (address) {
-        bytes32 key = keccak256(abi.encode(originalToken));
-        return _deployedTokens[key];
+        return _counterpartTokens[originalToken];
     }
 
     /// @inheritdoc IERC721Bridge
@@ -130,8 +129,7 @@ contract ERC721Bridge is IERC721Bridge, ReentrancyGuardTransient, IERC721Receive
         deployedToken = address(new BridgedERC721(tokenInit.name, tokenInit.symbol, tokenInit.originalToken));
 
         // Store the mapping
-        bytes32 key = keccak256(abi.encode(tokenInit.originalToken));
-        _deployedTokens[key] = deployedToken;
+        _counterpartTokens[tokenInit.originalToken] = deployedToken;
 
         // Mark as a bridged token deployed by this bridge
         _isBridgedTokens[deployedToken] = true;
@@ -235,8 +233,7 @@ contract ERC721Bridge is IERC721Bridge, ReentrancyGuardTransient, IERC721Receive
     /// @param to Address to send the token to
     function _sendERC721(ERC721Deposit memory erc721Deposit, address to) internal {
         // In a 1-1 bridge, use token mapping presence to determine mint vs transfer
-        bytes32 key = keccak256(abi.encode(erc721Deposit.originalToken));
-        address deployedToken = _deployedTokens[key];
+        address deployedToken = _counterpartTokens[erc721Deposit.originalToken];
 
         if (deployedToken != address(0)) {
             // We have a bridged token for this original token → mint it with metadata
