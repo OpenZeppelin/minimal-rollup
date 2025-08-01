@@ -88,6 +88,7 @@ contract MessageRelayer is ReentrancyGuardTransient, IMessageRelayer {
         // If none specified use the one in temporary storage
         if (userSelectedTipRecipient == address(0)) {
             tipRecipient = TIP_RECIPIENT_SLOT.asAddress().tload();
+            require(tipRecipient != address(0), NoTipRecipient());
         }
 
         require(msg.value >= tip, InsufficientValue());

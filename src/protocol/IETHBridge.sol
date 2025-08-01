@@ -37,7 +37,8 @@ interface IETHBridge {
     /// @dev Emitted when a deposit is cancelled.
     /// @param id The deposit id
     /// @param claimee The address that received the cancelled deposit
-    event DepositCancelled(bytes32 indexed id, address claimee);
+    /// @param data The calldata sent to the claimee
+    event DepositCancelled(bytes32 indexed id, address claimee, bytes data);
 
     /// @dev Failed to call the receiver with value.
     error FailedClaim();
@@ -47,6 +48,9 @@ interface IETHBridge {
 
     /// @dev Only canceler can cancel a deposit.
     error OnlyCanceler();
+
+    /// @dev Zero receiver
+    error ZeroReceiver();
 
     /// @dev Whether the deposit identified by `id` has been claimed or cancelled.
     /// @param id The deposit id
@@ -77,8 +81,14 @@ interface IETHBridge {
     /// @dev Initiates a cancel on the deposit, must be called by the canceler on the destination chain.
     /// @param ethDeposit The ETH deposit struct
     /// @param claimee The address that will receive the cancelled deposit
+    /// @param data Any calldata to be sent to the claimee in case of a contract
     /// @param height The `height` of the checkpoint on the source chain (i.e. the block number or publicationId)
     /// @param proof Encoded proof of the storage slot where the deposit is stored
-    function cancelDeposit(ETHDeposit memory ethDeposit, address claimee, uint256 height, bytes memory proof)
-        external;
+    function cancelDeposit(
+        ETHDeposit memory ethDeposit,
+        address claimee,
+        bytes memory data,
+        uint256 height,
+        bytes memory proof
+    ) external;
 }
