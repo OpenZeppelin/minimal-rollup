@@ -13,7 +13,7 @@ contract CheckpointTrackerTest is Test {
     MockInbox inbox;
     MockVerifier verifier;
     SignalService signalService;
-    address proverManager = _randomAddress("proverManager");
+    address proverManager = makeAddr("proverManager");
     bytes32 genesis = keccak256(abi.encode("genesis"));
 
     ICheckpointTracker.Checkpoint start;
@@ -86,7 +86,6 @@ contract CheckpointTrackerTest is Test {
     function test_proveTransition_shouldNotRevertIfAllPublicationsAreDelayed() public {
         _constructValidTransition();
         end.totalDelayedPublications = start.totalDelayedPublications + (end.publicationId - start.publicationId);
-        // This test expects NO revert when all publications are delayed
         vm.prank(proverManager);
         tracker.proveTransition(start, end, proof);
     }
@@ -188,13 +187,5 @@ contract CheckpointTrackerTest is Test {
         end.publicationId = start.publicationId + 5;
         end.commitment = keccak256(abi.encode("end"));
         end.totalDelayedPublications = start.totalDelayedPublications + 2;
-    }
-
-    function _randomAddress(string memory name) internal pure returns (address) {
-        return address(uint160(uint256(keccak256(abi.encode(_domainSeparator(), name)))));
-    }
-
-    function _domainSeparator() internal pure returns (bytes32) {
-        return keccak256("CheckpointTracker");
     }
 }
