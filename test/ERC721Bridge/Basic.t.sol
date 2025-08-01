@@ -102,7 +102,7 @@ contract ERC721BridgeTest is Test {
             nonce: 0,
             from: alice,
             to: bob,
-            localToken: address(token),
+            originalToken: address(token),
             tokenId: tokenId,
             tokenURI: "https://example.com/metadata/1",
             canceler: address(0)
@@ -131,7 +131,7 @@ contract ERC721BridgeTest is Test {
             nonce: 0,
             from: alice,
             to: bob,
-            localToken: address(token),
+            originalToken: address(token),
             tokenId: tokenId,
             tokenURI: "https://example.com/metadata/1",
             canceler: canceler
@@ -161,7 +161,7 @@ contract ERC721BridgeTest is Test {
             nonce: 0,
             from: alice,
             to: bob,
-            localToken: address(token),
+            originalToken: address(token),
             tokenId: tokenId,
             tokenURI: "https://example.com/metadata/1",
             canceler: canceler
@@ -188,7 +188,7 @@ contract ERC721BridgeTest is Test {
             nonce: 0,
             from: alice,
             to: bob,
-            localToken: address(token),
+            originalToken: address(token),
             tokenId: tokenId,
             tokenURI: "https://example.com/metadata/1",
             canceler: address(0)
@@ -217,7 +217,7 @@ contract ERC721BridgeTest is Test {
             nonce: 0,
             from: alice,
             to: bob,
-            localToken: address(token),
+            originalToken: address(token),
             tokenId: tokenId,
             tokenURI: "https://example.com/metadata/1",
             canceler: canceler
@@ -246,7 +246,7 @@ contract ERC721BridgeTest is Test {
             nonce: 0,
             from: alice,
             to: bob,
-            localToken: address(token),
+            originalToken: address(token),
             tokenId: tokenId,
             tokenURI: "https://example.com/metadata/1",
             canceler: address(0)
@@ -288,7 +288,7 @@ contract ERC721BridgeTest is Test {
             nonce: 0,
             from: alice,
             to: alice,
-            localToken: address(token),
+            originalToken: address(token),
             tokenId: tokenId,
             tokenURI: "https://example.com/metadata/1",
             canceler: address(0)
@@ -339,7 +339,7 @@ contract ERC721BridgeTest is Test {
             nonce: 0,
             from: alice,
             to: alice,
-            localToken: address(token),
+            originalToken: address(token),
             tokenId: tokenId,
             tokenURI: "https://example.com/metadata/1",
             canceler: address(0)

@@ -141,21 +141,21 @@ contract ERC20Bridge is IERC20Bridge, ReentrancyGuardTransient {
     }
 
     /// @inheritdoc IERC20Bridge
-    function deposit(address to, address localToken, uint256 amount) external nonReentrant returns (bytes32 id) {
+    function deposit(address to, address originalToken, uint256 amount) external nonReentrant returns (bytes32 id) {
         // Allow deposits of any token - no initialization check required
 
         // If depositing an original token, use its address directly
-        address originalToken = localToken;
-        if (_isBridgedToken(localToken)) {
+        address actualOriginalToken = originalToken;
+        if (_isBridgedToken(originalToken)) {
             // If depositing a bridged token, use its original token address
-            originalToken = BridgedERC20(localToken).originalToken();
+            actualOriginalToken = BridgedERC20(originalToken).originalToken();
         }
 
         ERC20Deposit memory erc20Deposit = ERC20Deposit({
             nonce: _globalDepositNonce,
             from: msg.sender,
             to: to,
-            localToken: originalToken,
+            originalToken: actualOriginalToken,
             amount: amount
         });
 
@@ -165,10 +165,10 @@ contract ERC20Bridge is IERC20Bridge, ReentrancyGuardTransient {
         }
 
         // Handle token transfer based on whether it's a bridged token or original token
-        IERC20(localToken).safeTransferFrom(msg.sender, address(this), amount);
-        if (_isBridgedToken(localToken)) {
+        IERC20(originalToken).safeTransferFrom(msg.sender, address(this), amount);
+        if (_isBridgedToken(originalToken)) {
             // This is a bridged token being sent back to its origin, burn it
-            BridgedERC20(localToken).burn(amount);
+            BridgedERC20(originalToken).burn(amount);
         }
 
         // Send signal
@@ -200,7 +200,7 @@ contract ERC20Bridge is IERC20Bridge, ReentrancyGuardTransient {
     /// @param to Address to send the tokens to
     function _sendERC20(ERC20Deposit memory erc20Deposit, address to) internal {
         // In a 1-1 bridge, use token mapping presence to determine mint vs transfer
-        bytes32 key = keccak256(abi.encode(erc20Deposit.localToken));
+        bytes32 key = keccak256(abi.encode(erc20Deposit.originalToken));
         address deployedToken = _deployedTokens[key];
 
         if (deployedToken != address(0)) {
@@ -208,7 +208,7 @@ contract ERC20Bridge is IERC20Bridge, ReentrancyGuardTransient {
             BridgedERC20(deployedToken).mint(to, erc20Deposit.amount);
         } else {
             // No bridged token found → transfer the original token we're holding
-            IERC20(erc20Deposit.localToken).safeTransfer(to, erc20Deposit.amount);
+            IERC20(erc20Deposit.originalToken).safeTransfer(to, erc20Deposit.amount);
         }
     }
 

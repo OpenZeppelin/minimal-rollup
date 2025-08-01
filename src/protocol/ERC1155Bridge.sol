@@ -142,7 +142,7 @@ contract ERC1155Bridge is IERC1155Bridge, ReentrancyGuardTransient, IERC1155Rece
     }
 
     /// @inheritdoc IERC1155Bridge
-    function deposit(address to, address localToken, uint256 tokenId, uint256 amount, address canceler)
+    function deposit(address to, address originalToken, uint256 tokenId, uint256 amount, address canceler)
         external
         nonReentrant
         returns (bytes32 id)
@@ -151,28 +151,28 @@ contract ERC1155Bridge is IERC1155Bridge, ReentrancyGuardTransient, IERC1155Rece
 
         // Fetch the token URI for this specific token
         string memory tokenURI_;
-        try IERC1155MetadataURI(localToken).uri(tokenId) returns (string memory uri) {
+        try IERC1155MetadataURI(originalToken).uri(tokenId) returns (string memory uri) {
             tokenURI_ = uri;
         } catch {
             // If uri call fails, use empty string
             tokenURI_ = "";
         }
 
-        // Determine the original token address
-        address originalToken;
-        if (_isBridgedToken(localToken)) {
+        // Determine the actual original token address
+        address actualOriginalToken;
+        if (_isBridgedToken(originalToken)) {
             // If depositing a bridged token, use its original token address
-            originalToken = BridgedERC1155(localToken).originalToken();
+            actualOriginalToken = BridgedERC1155(originalToken).originalToken();
         } else {
             // If depositing an original token, use its address directly
-            originalToken = localToken;
+            actualOriginalToken = originalToken;
         }
 
         ERC1155Deposit memory erc1155Deposit = ERC1155Deposit({
             nonce: _globalDepositNonce,
             from: msg.sender,
             to: to,
-            localToken: originalToken,
+            originalToken: actualOriginalToken,
             tokenId: tokenId,
             amount: amount,
             tokenURI: tokenURI_,
@@ -185,10 +185,10 @@ contract ERC1155Bridge is IERC1155Bridge, ReentrancyGuardTransient, IERC1155Rece
         }
 
         // Handle token transfer based on whether it's a bridged token or original token
-        IERC1155(localToken).safeTransferFrom(msg.sender, address(this), tokenId, amount, "");
-        if (_isBridgedToken(localToken)) {
+        IERC1155(originalToken).safeTransferFrom(msg.sender, address(this), tokenId, amount, "");
+        if (_isBridgedToken(originalToken)) {
             // This is a bridged token being sent back to its origin, burn it
-            BridgedERC1155(localToken).burn(tokenId, amount);
+            BridgedERC1155(originalToken).burn(tokenId, amount);
         }
 
         // Send signal
@@ -235,7 +235,7 @@ contract ERC1155Bridge is IERC1155Bridge, ReentrancyGuardTransient, IERC1155Rece
     /// @param to Address to send the tokens to
     function _sendERC1155(ERC1155Deposit memory erc1155Deposit, address to) internal {
         // In a 1-1 bridge, use token mapping presence to determine mint vs transfer
-        bytes32 key = keccak256(abi.encode(erc1155Deposit.localToken));
+        bytes32 key = keccak256(abi.encode(erc1155Deposit.originalToken));
         address deployedToken = _deployedTokens[key];
 
         if (deployedToken != address(0)) {
@@ -249,7 +249,7 @@ contract ERC1155Bridge is IERC1155Bridge, ReentrancyGuardTransient, IERC1155Rece
             }
         } else {
             // No bridged token found → transfer the original token we're holding
-            IERC1155(erc1155Deposit.localToken).safeTransferFrom(
+            IERC1155(erc1155Deposit.originalToken).safeTransferFrom(
                 address(this), to, erc1155Deposit.tokenId, erc1155Deposit.amount, ""
             );
         }

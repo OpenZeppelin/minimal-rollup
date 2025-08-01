@@ -25,7 +25,7 @@ interface IERC20Bridge {
         // The receiver of the deposit
         address to;
         // The original ERC20 token address (always refers to the original token, not bridged)
-        address localToken;
+        address originalToken;
         // The amount of the deposit
         uint256 amount;
     }
@@ -96,9 +96,9 @@ interface IERC20Bridge {
 
     /// @dev Creates an ERC20 deposit
     /// @param to The receiver of the deposit
-    /// @param localToken The ERC20 token address
+    /// @param originalToken The ERC20 token address
     /// @param amount The amount to deposit
-    function deposit(address to, address localToken, uint256 amount) external returns (bytes32 id);
+    function deposit(address to, address originalToken, uint256 amount) external returns (bytes32 id);
 
     /// @dev Claims an ERC20 deposit created by the sender (`from`) with `nonce`. The deposited tokens are
     /// sent to the receiver (`to`) after verifying a storage proof.

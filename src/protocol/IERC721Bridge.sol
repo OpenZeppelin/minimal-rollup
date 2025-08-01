@@ -23,7 +23,7 @@ interface IERC721Bridge {
         // The receiver of the deposit
         address to;
         // The original ERC721 token address (always refers to the original token, not bridged)
-        address localToken;
+        address originalToken;
         // The token ID
         uint256 tokenId;
         // The token URI (metadata) for this specific token
@@ -107,11 +107,13 @@ interface IERC721Bridge {
 
     /// @dev Creates an ERC721 deposit
     /// @param to The receiver of the deposit
-    /// @param localToken The ERC721 token address
+    /// @param originalToken The ERC721 token address
     /// @param tokenId The token ID to deposit
     /// @param canceler Address on the destination chain that is allowed to cancel the deposit (zero address means
     /// deposit is uncancellable)
-    function deposit(address to, address localToken, uint256 tokenId, address canceler) external returns (bytes32 id);
+    function deposit(address to, address originalToken, uint256 tokenId, address canceler)
+        external
+        returns (bytes32 id);
 
     /// @dev Claims an ERC721 deposit created by the sender (`from`) with `nonce`. The deposited token is
     /// sent to the receiver (`to`) after verifying a storage proof.

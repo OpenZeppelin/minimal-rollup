@@ -111,7 +111,7 @@ contract ERC20BridgeTest is Test {
         bytes32 id = bridge.deposit(bob, address(token), 100);
 
         IERC20Bridge.ERC20Deposit memory deposit =
-            IERC20Bridge.ERC20Deposit({nonce: 0, from: alice, to: bob, localToken: address(token), amount: 100});
+            IERC20Bridge.ERC20Deposit({nonce: 0, from: alice, to: bob, originalToken: address(token), amount: 100});
 
         bytes memory proof = "mock_proof";
         uint256 height = 1;
@@ -133,7 +133,7 @@ contract ERC20BridgeTest is Test {
         bridge.deposit(bob, address(token), 100);
 
         IERC20Bridge.ERC20Deposit memory deposit =
-            IERC20Bridge.ERC20Deposit({nonce: 0, from: alice, to: bob, localToken: address(token), amount: 100});
+            IERC20Bridge.ERC20Deposit({nonce: 0, from: alice, to: bob, originalToken: address(token), amount: 100});
 
         bytes memory proof = "mock_proof";
         uint256 height = 1;
@@ -173,7 +173,7 @@ contract ERC20BridgeTest is Test {
 
         // For the claim, simulate that this deposit came from chain 1
         IERC20Bridge.ERC20Deposit memory deposit =
-            IERC20Bridge.ERC20Deposit({nonce: 0, from: alice, to: alice, localToken: address(token), amount: 200});
+            IERC20Bridge.ERC20Deposit({nonce: 0, from: alice, to: alice, originalToken: address(token), amount: 200});
 
         // Claim on chain 2 (mints bridged tokens)
         bridge2.claimDeposit(deposit, height, proof);
