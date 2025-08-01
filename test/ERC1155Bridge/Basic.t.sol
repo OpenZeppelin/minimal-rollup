@@ -41,19 +41,17 @@ contract ERC1155BridgeTest is Test {
         bytes32 id = bridge.initializeToken(address(token));
 
         // Prepare initialization data for destination chain
-        IERC1155Bridge.TokenInitialization memory tokenInit = IERC1155Bridge.TokenInitialization({
-            originalToken: address(token),
-            uri: "https://example.com/metadata/0.json"
-        });
+        IERC1155Bridge.TokenDescription memory tokenDesc =
+            IERC1155Bridge.TokenDescription({originalToken: address(token), uri: "https://example.com/metadata/0.json"});
 
         bytes memory proof = "mock_proof";
         uint256 height = 1;
         signalService.setVerifyResult(true);
 
         // Prove initialization and deploy bridged token
-        address deployedToken = bridge.deployCounterpartToken(tokenInit, height, proof);
+        address deployedToken = bridge.deployCounterpartToken(tokenDesc, height, proof);
 
-        assertTrue(bridge.isInitializationProven(id));
+        assertTrue(bridge.processed(id));
         assertEq(bridge.getDeployedToken(address(token)), deployedToken);
 
         // Check that the deployed token has correct metadata
@@ -67,19 +65,17 @@ contract ERC1155BridgeTest is Test {
         vm.prank(alice);
         bridge.initializeToken(address(token));
 
-        IERC1155Bridge.TokenInitialization memory tokenInit = IERC1155Bridge.TokenInitialization({
-            originalToken: address(token),
-            uri: "https://example.com/metadata/0.json"
-        });
+        IERC1155Bridge.TokenDescription memory tokenDesc =
+            IERC1155Bridge.TokenDescription({originalToken: address(token), uri: "https://example.com/metadata/0.json"});
 
         bytes memory proof = "mock_proof";
         uint256 height = 1;
         signalService.setVerifyResult(true);
 
-        bridge.deployCounterpartToken(tokenInit, height, proof);
+        bridge.deployCounterpartToken(tokenDesc, height, proof);
 
-        vm.expectRevert(IERC1155Bridge.InitializationAlreadyProven.selector);
-        bridge.deployCounterpartToken(tokenInit, height, proof);
+        vm.expectRevert(IERC1155Bridge.CounterpartTokenAlreadyDeployed.selector);
+        bridge.deployCounterpartToken(tokenDesc, height, proof);
     }
 
     function testDeposit() public {
@@ -282,16 +278,14 @@ contract ERC1155BridgeTest is Test {
         bridge.initializeToken(address(token));
 
         // Prove initialization on chain 2 (simulating it came from chain 1)
-        IERC1155Bridge.TokenInitialization memory tokenInit = IERC1155Bridge.TokenInitialization({
-            originalToken: address(token),
-            uri: "https://example.com/metadata/0.json"
-        });
+        IERC1155Bridge.TokenDescription memory tokenDesc =
+            IERC1155Bridge.TokenDescription({originalToken: address(token), uri: "https://example.com/metadata/0.json"});
 
         bytes memory proof = "mock_proof";
         uint256 height = 1;
         signalService.setVerifyResult(true);
 
-        address bridgedToken = bridge2.deployCounterpartToken(tokenInit, height, proof);
+        address bridgedToken = bridge2.deployCounterpartToken(tokenDesc, height, proof);
 
         // Simulate bridging: deposit on chain 1, claim on chain 2
         vm.prank(alice);
@@ -324,28 +318,26 @@ contract ERC1155BridgeTest is Test {
 
     function testCannotDeployDuplicateBridgedToken() public {
         // First, deploy a bridged token successfully
-        IERC1155Bridge.TokenInitialization memory tokenInit1 = IERC1155Bridge.TokenInitialization({
-            originalToken: address(token),
-            uri: "https://example.com/metadata/0.json"
-        });
+        IERC1155Bridge.TokenDescription memory tokenDesc1 =
+            IERC1155Bridge.TokenDescription({originalToken: address(token), uri: "https://example.com/metadata/0.json"});
 
         bytes memory proof = "mock_proof";
         uint256 height = 1;
         signalService.setVerifyResult(true);
 
         // First deployment should succeed
-        address bridgedToken = bridge.deployCounterpartToken(tokenInit1, height, proof);
+        address bridgedToken = bridge.deployCounterpartToken(tokenDesc1, height, proof);
         assertNotEq(bridgedToken, address(0), "First deployment should succeed");
 
         // Try to deploy again with different metadata but same original token
         // This should be caught by our new validation
-        IERC1155Bridge.TokenInitialization memory tokenInit2 = IERC1155Bridge.TokenInitialization({
+        IERC1155Bridge.TokenDescription memory tokenDesc2 = IERC1155Bridge.TokenDescription({
             originalToken: address(token), // Same original token
             uri: "https://different.example.com/metadata/0.json" // Different metadata
         });
 
         signalService.setVerifyResult(true); // Reset for the second call
-        vm.expectRevert("Bridged token already exists for this original token");
-        bridge.deployCounterpartToken(tokenInit2, height, proof);
+        vm.expectRevert("Counterpart token already exists for this original token");
+        bridge.deployCounterpartToken(tokenDesc2, height, proof);
     }
 }

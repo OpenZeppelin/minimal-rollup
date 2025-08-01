@@ -43,7 +43,7 @@ contract ERC20BridgeTest is Test {
         bytes32 id = bridge.initializeToken(address(token));
 
         // Prepare initialization data for destination chain
-        IERC20Bridge.TokenInitialization memory tokenInit = IERC20Bridge.TokenInitialization({
+        IERC20Bridge.TokenDescription memory tokenDesc = IERC20Bridge.TokenDescription({
             originalToken: address(token),
             name: "Test Token",
             symbol: "TEST",
@@ -55,9 +55,9 @@ contract ERC20BridgeTest is Test {
         signalService.setVerifyResult(true);
 
         // Prove initialization and deploy bridged token
-        address deployedToken = bridge.deployCounterpartToken(tokenInit, height, proof);
+        address deployedToken = bridge.deployCounterpartToken(tokenDesc, height, proof);
 
-        assertTrue(bridge.isInitializationProven(id));
+        assertTrue(bridge.processed(id));
         assertEq(bridge.getDeployedToken(address(token)), deployedToken);
 
         // Check that the deployed token has correct metadata
@@ -74,7 +74,7 @@ contract ERC20BridgeTest is Test {
         vm.prank(alice);
         bridge.initializeToken(address(token));
 
-        IERC20Bridge.TokenInitialization memory tokenInit = IERC20Bridge.TokenInitialization({
+        IERC20Bridge.TokenDescription memory tokenDesc = IERC20Bridge.TokenDescription({
             originalToken: address(token),
             name: "Test Token",
             symbol: "TEST",
@@ -85,10 +85,10 @@ contract ERC20BridgeTest is Test {
         uint256 height = 1;
         signalService.setVerifyResult(true);
 
-        bridge.deployCounterpartToken(tokenInit, height, proof);
+        bridge.deployCounterpartToken(tokenDesc, height, proof);
 
-        vm.expectRevert(IERC20Bridge.InitializationAlreadyProven.selector);
-        bridge.deployCounterpartToken(tokenInit, height, proof);
+        vm.expectRevert(IERC20Bridge.CounterpartTokenAlreadyDeployed.selector);
+        bridge.deployCounterpartToken(tokenDesc, height, proof);
     }
 
     function testDeposit() public {
@@ -154,7 +154,7 @@ contract ERC20BridgeTest is Test {
         bridge.initializeToken(address(token));
 
         // Prove initialization on chain 2 (simulating it came from chain 1)
-        IERC20Bridge.TokenInitialization memory tokenInit = IERC20Bridge.TokenInitialization({
+        IERC20Bridge.TokenDescription memory tokenDesc = IERC20Bridge.TokenDescription({
             originalToken: address(token),
             name: "Test Token",
             symbol: "TEST",
@@ -165,7 +165,7 @@ contract ERC20BridgeTest is Test {
         uint256 height = 1;
         signalService.setVerifyResult(true);
 
-        address bridgedToken = bridge2.deployCounterpartToken(tokenInit, height, proof);
+        address bridgedToken = bridge2.deployCounterpartToken(tokenDesc, height, proof);
 
         // Simulate bridging: deposit on chain 1, claim on chain 2
         vm.prank(alice);
@@ -204,14 +204,14 @@ contract ERC20BridgeTest is Test {
         // Token initialization completed
 
         // Get the initialization to check fallback values were used
-        IERC20Bridge.TokenInitialization memory tokenInit = IERC20Bridge.TokenInitialization({
+        IERC20Bridge.TokenDescription memory tokenDesc = IERC20Bridge.TokenDescription({
             originalToken: address(brokenToken),
             name: "Unknown Token Name", // Should use fallback
             symbol: "UNKNOWN", // Should use fallback
             decimals: 18 // Should use fallback
         });
 
-        bytes32 expectedId = bridge.getInitializationId(tokenInit);
+        bytes32 expectedId = bridge.getTokenDescriptionId(tokenDesc);
         assertEq(id, expectedId);
 
         // Should be able to prove initialization with fallback values
@@ -219,7 +219,7 @@ contract ERC20BridgeTest is Test {
         uint256 height = 1;
         signalService.setVerifyResult(true);
 
-        address deployedToken = bridge.deployCounterpartToken(tokenInit, height, proof);
+        address deployedToken = bridge.deployCounterpartToken(tokenDesc, height, proof);
 
         // Verify the bridged token was deployed with fallback metadata
         assertEq(BridgedERC20(deployedToken).name(), "Unknown Token Name");
@@ -240,13 +240,13 @@ contract ERC20BridgeTest is Test {
         assertNotEq(initId, depositId, "Initialization and deposit IDs should be different");
 
         // Verify the IDs are deterministic (same inputs = same outputs)
-        IERC20Bridge.TokenInitialization memory tokenInit = IERC20Bridge.TokenInitialization({
+        IERC20Bridge.TokenDescription memory tokenDesc = IERC20Bridge.TokenDescription({
             originalToken: address(token),
             name: "Test Token",
             symbol: "TEST",
             decimals: 18
         });
-        bytes32 expectedInitId = bridge.getInitializationId(tokenInit);
+        bytes32 expectedInitId = bridge.getTokenDescriptionId(tokenDesc);
         assertEq(initId, expectedInitId, "Initialization ID should be deterministic");
     }
 
@@ -255,7 +255,7 @@ contract ERC20BridgeTest is Test {
         MockERC20 originalToken = new MockERC20("Original Token", "ORIG");
         bridge.initializeToken(address(originalToken));
 
-        IERC20Bridge.TokenInitialization memory tokenInit = IERC20Bridge.TokenInitialization({
+        IERC20Bridge.TokenDescription memory tokenDesc = IERC20Bridge.TokenDescription({
             originalToken: address(originalToken),
             name: "Original Token",
             symbol: "ORIG",
@@ -263,7 +263,7 @@ contract ERC20BridgeTest is Test {
         });
 
         signalService.setVerifyResult(true);
-        address bridgedTokenAddr = bridge.deployCounterpartToken(tokenInit, 1, new bytes(0));
+        address bridgedTokenAddr = bridge.deployCounterpartToken(tokenDesc, 1, new bytes(0));
         BridgedERC20 bridgedToken = BridgedERC20(bridgedTokenAddr);
 
         // Test originalToken tracking
@@ -284,7 +284,7 @@ contract ERC20BridgeTest is Test {
 
     function testCannotDeployDuplicateBridgedToken() public {
         // First, deploy a bridged token successfully
-        IERC20Bridge.TokenInitialization memory tokenInit1 = IERC20Bridge.TokenInitialization({
+        IERC20Bridge.TokenDescription memory tokenDesc1 = IERC20Bridge.TokenDescription({
             originalToken: address(token),
             name: "Test Token",
             symbol: "TEST",
@@ -296,12 +296,12 @@ contract ERC20BridgeTest is Test {
         signalService.setVerifyResult(true);
 
         // First deployment should succeed
-        address bridgedToken = bridge.deployCounterpartToken(tokenInit1, height, proof);
+        address bridgedToken = bridge.deployCounterpartToken(tokenDesc1, height, proof);
         assertNotEq(bridgedToken, address(0), "First deployment should succeed");
 
         // Try to deploy again with different metadata but same original token
         // This should be caught by our new validation
-        IERC20Bridge.TokenInitialization memory tokenInit2 = IERC20Bridge.TokenInitialization({
+        IERC20Bridge.TokenDescription memory tokenDesc2 = IERC20Bridge.TokenDescription({
             originalToken: address(token), // Same original token
             name: "Different Token Name", // Different metadata
             symbol: "DIFF",
@@ -309,7 +309,7 @@ contract ERC20BridgeTest is Test {
         });
 
         signalService.setVerifyResult(true); // Reset for the second call
-        vm.expectRevert("Bridged token already exists for this original token");
-        bridge.deployCounterpartToken(tokenInit2, height, proof);
+        vm.expectRevert("Counterpart token already exists for this original token");
+        bridge.deployCounterpartToken(tokenDesc2, height, proof);
     }
 }

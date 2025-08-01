@@ -6,7 +6,7 @@ pragma solidity ^0.8.28;
 /// These can be created by calling the deposit function. Later, the receiver can
 /// claim the deposit on the destination chain by using a storage proof.
 interface IERC721Bridge {
-    struct TokenInitialization {
+    struct TokenDescription {
         // The original token address on the source chain
         address originalToken;
         // The token name
@@ -33,18 +33,16 @@ interface IERC721Bridge {
         address canceler;
     }
 
-    /// @dev Emitted when a token is initialized on the source chain.
-    /// @param id The initialization id
-    /// @param initialization The token initialization data
-    event TokenInitialized(bytes32 indexed id, TokenInitialization initialization);
+    /// @dev Emitted when a token description is recorded on the source chain.
+    /// @param id The token description id
+    /// @param description The token description data
+    event TokenDescriptionRecorded(bytes32 indexed id, TokenDescription description);
 
-    /// @dev Emitted when a token initialization is proven on the destination chain.
-    /// @param id The initialization id
-    /// @param initialization The token initialization data
-    /// @param deployedToken The address of the deployed bridged token
-    event TokenInitializationProven(
-        bytes32 indexed id, TokenInitialization initialization, address indexed deployedToken
-    );
+    /// @dev Emitted when a counterpart token is deployed on the destination chain.
+    /// @param id The token description id
+    /// @param description The token description data
+    /// @param deployedToken The address of the deployed counterpart token
+    event CounterpartTokenDeployed(bytes32 indexed id, TokenDescription description, address indexed deployedToken);
 
     /// @dev Emitted when a deposit is made.
     /// @param id The deposit id
@@ -67,38 +65,34 @@ interface IERC721Bridge {
     /// @dev Only canceler can cancel a deposit.
     error OnlyCanceler();
 
-    /// @dev Token initialization has already been proven.
-    error InitializationAlreadyProven();
+    /// @dev Counterpart token has already been deployed.
+    error CounterpartTokenAlreadyDeployed();
 
     /// @dev Whether the deposit identified by `id` has been claimed or cancelled.
     /// @param id The deposit id
     function processed(bytes32 id) external view returns (bool);
 
-    /// @dev Whether a token initialization has been proven (on destination chain).
-    /// @param id The initialization id
-    function isInitializationProven(bytes32 id) external view returns (bool);
-
     /// @dev Get the deployed token address for an original token (on destination chain).
     /// @param originalToken The original token address
     function getDeployedToken(address originalToken) external view returns (address);
 
-    /// @dev Token initialization identifier.
-    /// @param tokenInit The token initialization struct
-    function getInitializationId(TokenInitialization memory tokenInit) external pure returns (bytes32 id);
+    /// @dev Token description identifier.
+    /// @param tokenDesc The token description struct
+    function getTokenDescriptionId(TokenDescription memory tokenDesc) external pure returns (bytes32 id);
 
     /// @dev ERC721 Deposit identifier.
     /// @param erc721Deposit The ERC721 deposit struct
     function getDepositId(ERC721Deposit memory erc721Deposit) external pure returns (bytes32 id);
 
-    /// @dev Initializes a token for bridging by reading its metadata and sending a signal.
-    /// @param token The ERC721 token address to initialize
+    /// @dev Records a token description for bridging by reading its metadata and sending a signal.
+    /// @param token The ERC721 token address to record description for
     function initializeToken(address token) external returns (bytes32 id);
 
-    /// @dev Proves a token initialization from the source chain and deploys the bridged token.
-    /// @param tokenInit The token initialization data
+    /// @dev Proves a token description from the source chain and deploys the counterpart token.
+    /// @param tokenDesc The token description data
     /// @param height The height of the checkpoint on the source chain
-    /// @param proof Encoded proof of the initialization signal
-    function deployCounterpartToken(TokenInitialization memory tokenInit, uint256 height, bytes memory proof)
+    /// @param proof Encoded proof of the token description signal
+    function deployCounterpartToken(TokenDescription memory tokenDesc, uint256 height, bytes memory proof)
         external
         returns (address deployedToken);
 

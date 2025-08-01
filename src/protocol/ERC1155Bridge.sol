@@ -16,7 +16,7 @@ import {ReentrancyGuardTransient} from "@openzeppelin/contracts/utils/Reentrancy
 /// @dev Uses a permissionless token initialization flow
 contract ERC1155Bridge is IERC1155Bridge, ReentrancyGuardTransient, IERC1155Receiver {
     /// @dev Signal type constants to differentiate signal categories
-    bytes32 private constant INITIALIZATION_SIGNAL_PREFIX = keccak256("ERC1155_TOKEN_INITIALIZATION");
+    bytes32 private constant TOKEN_DESCRIPTION_SIGNAL_PREFIX = keccak256("ERC1155_TOKEN_DESCRIPTION");
     bytes32 private constant DEPOSIT_SIGNAL_PREFIX = keccak256("ERC1155_DEPOSIT");
 
     mapping(bytes32 id => bool processed) private _processed;
@@ -71,18 +71,13 @@ contract ERC1155Bridge is IERC1155Bridge, ReentrancyGuardTransient, IERC1155Rece
     }
 
     /// @inheritdoc IERC1155Bridge
-    function isInitializationProven(bytes32 id) public view returns (bool) {
-        return _processed[id];
-    }
-
-    /// @inheritdoc IERC1155Bridge
     function getDeployedToken(address originalToken) public view returns (address) {
         return _counterpartTokens[originalToken];
     }
 
     /// @inheritdoc IERC1155Bridge
-    function getInitializationId(TokenInitialization memory tokenInit) public pure returns (bytes32 id) {
-        return _generateInitializationId(tokenInit);
+    function getTokenDescriptionId(TokenDescription memory tokenDesc) public pure returns (bytes32 id) {
+        return _generateTokenDescriptionId(tokenDesc);
     }
 
     /// @inheritdoc IERC1155Bridge
@@ -101,39 +96,39 @@ contract ERC1155Bridge is IERC1155Bridge, ReentrancyGuardTransient, IERC1155Rece
             uri = "";
         }
 
-        TokenInitialization memory tokenInit = TokenInitialization({originalToken: token, uri: uri});
+        TokenDescription memory tokenDesc = TokenDescription({originalToken: token, uri: uri});
 
-        id = _generateInitializationId(tokenInit);
+        id = _generateTokenDescriptionId(tokenDesc);
 
         signalService.sendSignal(id);
 
-        emit TokenInitialized(id, tokenInit);
+        emit TokenDescriptionRecorded(id, tokenDesc);
     }
 
     /// @inheritdoc IERC1155Bridge
-    function deployCounterpartToken(TokenInitialization memory tokenInit, uint256 height, bytes memory proof)
+    function deployCounterpartToken(TokenDescription memory tokenDesc, uint256 height, bytes memory proof)
         external
         returns (address deployedToken)
     {
-        bytes32 id = _generateInitializationId(tokenInit);
-        require(!_processed[id], InitializationAlreadyProven());
+        bytes32 id = _generateTokenDescriptionId(tokenDesc);
+        require(!_processed[id], CounterpartTokenAlreadyDeployed());
 
         signalService.verifySignal(height, trustedCommitmentPublisher, counterpart, id, proof);
 
         _processed[id] = true;
 
         require(
-            _counterpartTokens[tokenInit.originalToken] == address(0),
-            "Bridged token already exists for this original token"
+            _counterpartTokens[tokenDesc.originalToken] == address(0),
+            "Counterpart token already exists for this original token"
         );
 
-        deployedToken = address(new BridgedERC1155(tokenInit.uri, tokenInit.originalToken));
+        deployedToken = address(new BridgedERC1155(tokenDesc.uri, tokenDesc.originalToken));
 
-        _counterpartTokens[tokenInit.originalToken] = deployedToken;
+        _counterpartTokens[tokenDesc.originalToken] = deployedToken;
 
         _isBridgedTokens[deployedToken] = true;
 
-        emit TokenInitializationProven(id, tokenInit, deployedToken);
+        emit CounterpartTokenDeployed(id, tokenDesc, deployedToken);
     }
 
     /// @inheritdoc IERC1155Bridge
@@ -245,10 +240,10 @@ contract ERC1155Bridge is IERC1155Bridge, ReentrancyGuardTransient, IERC1155Rece
         return _isBridgedTokens[token];
     }
 
-    /// @dev Generates a unique ID for a token initialization.
-    /// @param tokenInit Token initialization to generate an ID for
-    function _generateInitializationId(TokenInitialization memory tokenInit) internal pure returns (bytes32) {
-        return keccak256(abi.encode(INITIALIZATION_SIGNAL_PREFIX, tokenInit));
+    /// @dev Generates a unique ID for a token description.
+    /// @param tokenDesc Token description to generate an ID for
+    function _generateTokenDescriptionId(TokenDescription memory tokenDesc) internal pure returns (bytes32) {
+        return keccak256(abi.encode(TOKEN_DESCRIPTION_SIGNAL_PREFIX, tokenDesc));
     }
 
     /// @dev Generates a unique ID for a deposit.
