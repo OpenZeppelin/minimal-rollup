@@ -16,6 +16,12 @@ contract ERC20ProverManager is BaseProverManager, IERC20Depositor {
 
     IERC20 public immutable token;
 
+    /// @param _inbox Address of the inbox contract
+    /// @param _checkpointTracker Address of the checkpoint tracker contract
+    /// @param _initialProver Address of the initial prover who will provide the bond
+    /// @param _initialFee Initial fee amount
+    /// @param _token Address of the ERC20 token used for bonds and fees
+    /// @param _initialDeposit Initial deposit amount that must cover the liveness bond
     constructor(
         address _inbox,
         address _checkpointTracker,
@@ -26,9 +32,7 @@ contract ERC20ProverManager is BaseProverManager, IERC20Depositor {
     ) BaseProverManager(_inbox, _checkpointTracker, _initialProver, _initialFee, _initialDeposit) {
         require(_token != address(0), ZeroTokenAddress());
         require(_initialDeposit >= _livenessBond(), InsufficientInitialDeposit(_initialDeposit, _livenessBond()));
-
         token = IERC20(_token);
-
         // Deposit the amount of funds needed for the liveness bond from the `_initialProver`
         token.safeTransferFrom(_initialProver, address(this), _initialDeposit);
     }

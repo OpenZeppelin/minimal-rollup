@@ -40,6 +40,11 @@ contract TaikoInbox is IInbox, DelayedInclusionStore {
 
     bytes32[] private _publicationHashes;
 
+    /// @param _lookahead Address of the lookahead contract
+    /// @param _blobRefRegistry Address of the blob reference registry contract
+    /// @param _maxAnchorBlockIdOffset Maximum offset allowed for anchor block ID
+    /// @param _proposerFees Address of the proposer fees contract (usually prover manager)
+    /// @param _inclusionDelay How long before delayed inclusion must be processed
     constructor(
         address _lookahead,
         address _blobRefRegistry,
@@ -48,11 +53,9 @@ contract TaikoInbox is IInbox, DelayedInclusionStore {
         uint256 _inclusionDelay
     ) DelayedInclusionStore(_inclusionDelay, _blobRefRegistry) {
         require(_proposerFees != address(0), ZeroProposerFees());
-
         lookahead = ILookahead(_lookahead);
         maxAnchorBlockIdOffset = _maxAnchorBlockIdOffset;
         proposerFees = IProposerFees(_proposerFees);
-
         // guarantee there is always a previous hash
         _publicationHashes.push(0);
     }

@@ -25,11 +25,13 @@ contract ETHBridge is IETHBridge, ReentrancyGuardTransient {
     /// WARN: This address has no significance (and may be untrustworthy) on this chain.
     address public immutable counterpart;
 
+    /// @param _signalService Address of the signal service contract
+    /// @param _trustedCommitmentPublisher Address of the trusted commitment publisher
+    /// @param _counterpart Address of the counterpart signal contract
     constructor(address _signalService, address _trustedCommitmentPublisher, address _counterpart) {
         require(_signalService != address(0), EmptySignalService());
         require(_trustedCommitmentPublisher != address(0), EmptyTrustedPublisher());
         require(_counterpart != address(0), EmptyCounterpart());
-
         signalService = ISignalService(_signalService);
         trustedCommitmentPublisher = _trustedCommitmentPublisher;
         counterpart = _counterpart;

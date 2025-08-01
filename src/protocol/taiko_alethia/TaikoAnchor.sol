@@ -80,7 +80,7 @@ contract TaikoAnchor {
         _;
     }
 
-    // This constructor is only used in test as the contract will be pre-deployed in the L2 genesis
+    /// @dev This constructor is only used in tests as the contract will be pre-deployed in the L2 genesis
     /// @param _fixedBaseFee The fixed base fee for the rollup
     /// @param _permittedSender The address of the sender that can call the anchor function
     /// @param _commitmentStore contract responsible storing historical commitments
