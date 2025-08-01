@@ -7,7 +7,9 @@ import {GenericRecipient} from "./GenericRecipient.t.sol";
 import {InitialState} from "./InitialState.t.sol";
 import {IETHBridge} from "src/protocol/IETHBridge.sol";
 
-contract UserSetValidTipRecipient is DepositRecipientIsMessageRelayer {
+import {console} from "forge-std/console.sol";
+
+contract UserSetTipRecipientScenarios is DepositRecipientIsMessageRelayer {
     function test_UserSetValidTipRecipient_relayMessage_shouldTipUserSelectedRecipient() public {
         uint256 balanceBefore = address(userSelectedTipRecipient).balance;
         _relayMessage();
@@ -26,29 +28,28 @@ contract UserSetValidTipRecipient is DepositRecipientIsMessageRelayer {
         bridge.claimDeposit(ethDeposit, height, proof);
         assertEq(address(userSelectedTipRecipient).balance, balanceBefore + tip, "tip recipient balance mismatch");
     }
-}
 
-contract UserSetZeroTipRecipient is DepositRecipientIsMessageRelayer {
-    function setUp() public override {
-        super.setUp();
-        userSelectedTipRecipient = GenericRecipient(payable(0));
-        _encodeReceiveCall();
-    }
-
-    function test_UserSetZeroTipRecipient_relayMessage_shouldTipRelayerSelectedRecipient() public {
+    function test_UserSetZeroTipRecipient_relayMessage_shouldTipRelayerSelectedRecipient() public zeroTipRecipient {
         uint256 balanceBefore = address(relayerSelectedTipRecipient).balance;
         _relayMessage();
         assertEq(address(relayerSelectedTipRecipient).balance, balanceBefore + tip, "tip recipient balance mismatch");
     }
 
-    function test_UserSetZeroTipRecipient_claimDepositDirectly_shouldNotTipRelayTipRecipient() public {
+    function test_UserSetZeroTipRecipient_claimDepositDirectly_shouldRevert() public zeroTipRecipient {
         uint256 relayerTipRecipientBalanceBefore = address(relayerSelectedTipRecipient).balance;
+        vm.expectRevert(IETHBridge.FailedClaim.selector);
         bridge.claimDeposit(ethDeposit, height, proof);
         assertEq(
             address(relayerSelectedTipRecipient).balance,
             relayerTipRecipientBalanceBefore,
             "tip recipient balance mismatch"
         );
+    }
+
+    modifier zeroTipRecipient() {
+        userSelectedTipRecipient = GenericRecipient(payable(0));
+        _encodeReceiveCall();
+        _;
     }
 }
 

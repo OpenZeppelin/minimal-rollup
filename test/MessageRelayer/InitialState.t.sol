@@ -32,8 +32,8 @@ abstract contract InitialState is Test {
 
     function setUp() public virtual {
         MockSignalService signalService = new MockSignalService();
-        address trustedCommitmentPublisher = _randomAddress("trustedCommitmentPublisher");
-        address counterpart = _randomAddress("counterpart");
+        address trustedCommitmentPublisher = makeAddr("trustedCommitmentPublisher");
+        address counterpart = makeAddr("counterpart");
         bridge = new ETHBridge(address(signalService), trustedCommitmentPublisher, counterpart);
         vm.deal(address(bridge), amount);
 
@@ -45,7 +45,7 @@ abstract contract InitialState is Test {
 
         ethDeposit = IETHBridge.ETHDeposit({
             nonce: 0,
-            from: _randomAddress("from"),
+            from: makeAddr("from"),
             to: address(messageRelayer),
             amount: 2 ether,
             data: "",
@@ -63,14 +63,6 @@ abstract contract InitialState is Test {
 
     function _relayMessage() internal {
         messageRelayer.relayMessage(ethDeposit, height, proof, address(relayerSelectedTipRecipient));
-    }
-
-    function _randomAddress(string memory name) internal pure returns (address) {
-        return address(uint160(uint256(keccak256(abi.encode(_domainSeparator(), name)))));
-    }
-
-    function _domainSeparator() internal pure returns (bytes32) {
-        return keccak256("MessageRelayer");
     }
 }
 
