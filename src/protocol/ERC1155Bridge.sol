@@ -94,12 +94,10 @@ contract ERC1155Bridge is IERC1155Bridge, ReentrancyGuardTransient, IERC1155Rece
     function initializeToken(address token) external returns (bytes32 id) {
         require(token != address(0), "Invalid token address");
 
-        // Read token URI (base URI for the collection)
         string memory uri;
         try IERC1155MetadataURI(token).uri(0) returns (string memory tokenUri) {
             uri = tokenUri;
         } catch {
-            // If uri call fails, use empty string
             uri = "";
         }
 
@@ -107,7 +105,6 @@ contract ERC1155Bridge is IERC1155Bridge, ReentrancyGuardTransient, IERC1155Rece
 
         id = _generateInitializationId(tokenInit);
 
-        // Send signal for cross-chain initialization
         signalService.sendSignal(id);
 
         emit TokenInitialized(id, tokenInit);
@@ -121,25 +118,19 @@ contract ERC1155Bridge is IERC1155Bridge, ReentrancyGuardTransient, IERC1155Rece
         bytes32 id = _generateInitializationId(tokenInit);
         require(!_processed[id], InitializationAlreadyProven());
 
-        // Verify the initialization signal from the source chain
         signalService.verifySignal(height, trustedCommitmentPublisher, counterpart, id, proof);
 
-        // Mark initialization as processed
         _processed[id] = true;
 
-        // Additional validation: ensure no bridged token already exists for this original token
         require(
             _counterpartTokens[tokenInit.originalToken] == address(0),
             "Bridged token already exists for this original token"
         );
 
-        // Deploy the bridged token
         deployedToken = address(new BridgedERC1155(tokenInit.uri, tokenInit.originalToken));
 
-        // Store the mapping
         _counterpartTokens[tokenInit.originalToken] = deployedToken;
 
-        // Mark as a bridged token deployed by this bridge
         _isBridgedTokens[deployedToken] = true;
 
         emit TokenInitializationProven(id, tokenInit, deployedToken);
@@ -151,27 +142,19 @@ contract ERC1155Bridge is IERC1155Bridge, ReentrancyGuardTransient, IERC1155Rece
         nonReentrant
         returns (bytes32 id)
     {
-        // Allow deposits of any token - no initialization check required
-
-        // Check if token is bridged once and store result
         bool isBridged = _isBridgedToken(originalToken);
 
-        // Fetch the token URI for this specific token
         string memory tokenURI_;
         try IERC1155MetadataURI(originalToken).uri(tokenId) returns (string memory uri) {
             tokenURI_ = uri;
         } catch {
-            // If uri call fails, use empty string
             tokenURI_ = "";
         }
 
-        // Determine the actual original token address
         address actualOriginalToken;
         if (isBridged) {
-            // If depositing a bridged token, use its original token address
             actualOriginalToken = BridgedERC1155(originalToken).originalToken();
         } else {
-            // If depositing an original token, use its address directly
             actualOriginalToken = originalToken;
         }
 
@@ -191,14 +174,11 @@ contract ERC1155Bridge is IERC1155Bridge, ReentrancyGuardTransient, IERC1155Rece
             ++_globalDepositNonce;
         }
 
-        // Handle token transfer based on whether it's a bridged token or original token
         IERC1155(originalToken).safeTransferFrom(msg.sender, address(this), tokenId, amount, "");
         if (isBridged) {
-            // This is a bridged token being sent back to its origin, burn it
             BridgedERC1155(originalToken).burn(tokenId, amount);
         }
 
-        // Send signal
         signalService.sendSignal(id);
         emit DepositMade(id, erc1155Deposit, originalToken);
     }
@@ -241,11 +221,9 @@ contract ERC1155Bridge is IERC1155Bridge, ReentrancyGuardTransient, IERC1155Rece
     /// @param erc1155Deposit The deposit information containing the original token address and tokenId
     /// @param to Address to send the tokens to
     function _sendERC1155(ERC1155Deposit memory erc1155Deposit, address to) internal {
-        // In a 1-1 bridge, use token mapping presence to determine mint vs transfer
         address deployedToken = _counterpartTokens[erc1155Deposit.originalToken];
 
         if (deployedToken != address(0)) {
-            // We have a bridged token for this original token → mint it with metadata
             if (bytes(erc1155Deposit.tokenURI).length > 0) {
                 BridgedERC1155(deployedToken).mintWithURI(
                     to, erc1155Deposit.tokenId, erc1155Deposit.amount, erc1155Deposit.tokenURI, ""
@@ -254,7 +232,6 @@ contract ERC1155Bridge is IERC1155Bridge, ReentrancyGuardTransient, IERC1155Rece
                 BridgedERC1155(deployedToken).mint(to, erc1155Deposit.tokenId, erc1155Deposit.amount, "");
             }
         } else {
-            // No bridged token found → transfer the original token we're holding
             IERC1155(erc1155Deposit.originalToken).safeTransferFrom(
                 address(this), to, erc1155Deposit.tokenId, erc1155Deposit.amount, ""
             );

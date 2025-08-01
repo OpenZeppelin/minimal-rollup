@@ -42,12 +42,10 @@ contract BridgedERC1155 is ERC1155, BridgedTokenBase, IMintableERC1155 {
     function uri(uint256 tokenId) public view virtual override returns (string memory) {
         string memory _tokenURI = _tokenURIs[tokenId];
 
-        // If there is a custom URI for this token, return it
         if (bytes(_tokenURI).length > 0) {
             return _tokenURI;
         }
 
-        // Otherwise, fall back to the default behavior
         return super.uri(tokenId);
     }
 

@@ -85,7 +85,6 @@ contract ERC721Bridge is IERC721Bridge, ReentrancyGuardTransient, IERC721Receive
     function initializeToken(address token) external returns (bytes32 id) {
         require(token != address(0), "Invalid token address");
 
-        // Read token metadata with fallbacks for non-compliant tokens
         string memory name;
         string memory symbol;
 
@@ -105,7 +104,6 @@ contract ERC721Bridge is IERC721Bridge, ReentrancyGuardTransient, IERC721Receive
 
         id = _generateInitializationId(tokenInit);
 
-        // Send signal for cross-chain initialization
         signalService.sendSignal(id);
 
         emit TokenInitialized(id, tokenInit);
@@ -119,25 +117,19 @@ contract ERC721Bridge is IERC721Bridge, ReentrancyGuardTransient, IERC721Receive
         bytes32 id = _generateInitializationId(tokenInit);
         require(!_processed[id], InitializationAlreadyProven());
 
-        // Verify the initialization signal from the source chain
         signalService.verifySignal(height, trustedCommitmentPublisher, counterpart, id, proof);
 
-        // Mark initialization as processed
         _processed[id] = true;
 
-        // Additional validation: ensure no bridged token already exists for this original token
         require(
             _counterpartTokens[tokenInit.originalToken] == address(0),
             "Bridged token already exists for this original token"
         );
 
-        // Deploy the bridged token
         deployedToken = address(new BridgedERC721(tokenInit.name, tokenInit.symbol, tokenInit.originalToken));
 
-        // Store the mapping
         _counterpartTokens[tokenInit.originalToken] = deployedToken;
 
-        // Mark as a bridged token deployed by this bridge
         _isBridgedTokens[deployedToken] = true;
 
         emit TokenInitializationProven(id, tokenInit, deployedToken);
@@ -149,27 +141,19 @@ contract ERC721Bridge is IERC721Bridge, ReentrancyGuardTransient, IERC721Receive
         nonReentrant
         returns (bytes32 id)
     {
-        // Allow deposits of any token - no initialization check required
-
-        // Check if token is bridged once and store result
         bool isBridged = _isBridgedToken(originalToken);
 
-        // Fetch the token URI for this specific token
         string memory tokenURI_;
         try IERC721Metadata(originalToken).tokenURI(tokenId) returns (string memory uri) {
             tokenURI_ = uri;
         } catch {
-            // If tokenURI call fails, use empty string
             tokenURI_ = "";
         }
 
-        // Determine the actual original token address
         address actualOriginalToken;
         if (isBridged) {
-            // If depositing a bridged token, use its original token address
             actualOriginalToken = BridgedERC721(originalToken).originalToken();
         } else {
-            // If depositing an original token, use its address directly
             actualOriginalToken = originalToken;
         }
 
@@ -188,14 +172,11 @@ contract ERC721Bridge is IERC721Bridge, ReentrancyGuardTransient, IERC721Receive
             ++_globalDepositNonce;
         }
 
-        // Handle token transfer based on whether it's a bridged token or original token
         IERC721(originalToken).safeTransferFrom(msg.sender, address(this), tokenId);
         if (isBridged) {
-            // This is a bridged token being sent back to its origin, burn it
             BridgedERC721(originalToken).burn(tokenId);
         }
 
-        // Send signal
         signalService.sendSignal(id);
         emit DepositMade(id, erc721Deposit, originalToken);
     }
@@ -238,18 +219,15 @@ contract ERC721Bridge is IERC721Bridge, ReentrancyGuardTransient, IERC721Receive
     /// @param erc721Deposit The deposit information containing the original token address and tokenId
     /// @param to Address to send the token to
     function _sendERC721(ERC721Deposit memory erc721Deposit, address to) internal {
-        // In a 1-1 bridge, use token mapping presence to determine mint vs transfer
         address deployedToken = _counterpartTokens[erc721Deposit.originalToken];
 
         if (deployedToken != address(0)) {
-            // We have a bridged token for this original token → mint it with metadata
             if (bytes(erc721Deposit.tokenURI).length > 0) {
                 BridgedERC721(deployedToken).mintWithURI(to, erc721Deposit.tokenId, erc721Deposit.tokenURI);
             } else {
                 BridgedERC721(deployedToken).mint(to, erc721Deposit.tokenId);
             }
         } else {
-            // No bridged token found → transfer the original token we're holding
             IERC721(erc721Deposit.originalToken).safeTransferFrom(address(this), to, erc721Deposit.tokenId);
         }
     }

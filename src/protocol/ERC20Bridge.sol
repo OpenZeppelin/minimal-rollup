@@ -77,7 +77,6 @@ contract ERC20Bridge is IERC20Bridge, ReentrancyGuardTransient {
     function initializeToken(address token) external returns (bytes32 id) {
         require(token != address(0), "Invalid token address");
 
-        // Read token metadata with fallbacks for non-compliant tokens
         string memory name;
         string memory symbol;
         uint8 decimals;
@@ -105,7 +104,6 @@ contract ERC20Bridge is IERC20Bridge, ReentrancyGuardTransient {
 
         id = _generateInitializationId(tokenInit);
 
-        // Send signal for cross-chain initialization
         signalService.sendSignal(id);
 
         emit TokenInitialized(id, tokenInit);
@@ -119,26 +117,20 @@ contract ERC20Bridge is IERC20Bridge, ReentrancyGuardTransient {
         bytes32 id = _generateInitializationId(tokenInit);
         require(!_processed[id], InitializationAlreadyProven());
 
-        // Verify the initialization signal from the source chain
         signalService.verifySignal(height, trustedCommitmentPublisher, counterpart, id, proof);
 
-        // Mark initialization as processed
         _processed[id] = true;
 
-        // Additional validation: ensure no bridged token already exists for this original token
         require(
             _counterpartTokens[tokenInit.originalToken] == address(0),
             "Bridged token already exists for this original token"
         );
 
-        // Deploy the bridged token
         deployedToken =
             address(new BridgedERC20(tokenInit.name, tokenInit.symbol, tokenInit.decimals, tokenInit.originalToken));
 
-        // Store the mapping
         _counterpartTokens[tokenInit.originalToken] = deployedToken;
 
-        // Mark as a bridged token deployed by this bridge
         _isBridgedTokens[deployedToken] = true;
 
         emit TokenInitializationProven(id, tokenInit, deployedToken);
@@ -146,15 +138,10 @@ contract ERC20Bridge is IERC20Bridge, ReentrancyGuardTransient {
 
     /// @inheritdoc IERC20Bridge
     function deposit(address to, address originalToken, uint256 amount) external nonReentrant returns (bytes32 id) {
-        // Allow deposits of any token - no initialization check required
-
-        // Check if token is bridged once and store result
         bool isBridged = _isBridgedToken(originalToken);
 
-        // If depositing an original token, use its address directly
         address actualOriginalToken = originalToken;
         if (isBridged) {
-            // If depositing a bridged token, use its original token address
             actualOriginalToken = BridgedERC20(originalToken).originalToken();
         }
 
@@ -171,14 +158,11 @@ contract ERC20Bridge is IERC20Bridge, ReentrancyGuardTransient {
             ++_globalDepositNonce;
         }
 
-        // Handle token transfer based on whether it's a bridged token or original token
         IERC20(originalToken).safeTransferFrom(msg.sender, address(this), amount);
         if (isBridged) {
-            // This is a bridged token being sent back to its origin, burn it
             BridgedERC20(originalToken).burn(amount);
         }
 
-        // Send signal
         signalService.sendSignal(id);
         emit DepositMade(id, erc20Deposit, originalToken);
     }
@@ -200,14 +184,11 @@ contract ERC20Bridge is IERC20Bridge, ReentrancyGuardTransient {
     /// @param erc20Deposit The deposit information containing the original token address
     /// @param to Address to send the tokens to
     function _sendERC20(ERC20Deposit memory erc20Deposit, address to) internal {
-        // In a 1-1 bridge, use token mapping presence to determine mint vs transfer
         address deployedToken = _counterpartTokens[erc20Deposit.originalToken];
 
         if (deployedToken != address(0)) {
-            // We have a bridged token for this original token → mint it
             BridgedERC20(deployedToken).mint(to, erc20Deposit.amount);
         } else {
-            // No bridged token found → transfer the original token we're holding
             IERC20(erc20Deposit.originalToken).safeTransfer(to, erc20Deposit.amount);
         }
     }
