@@ -165,7 +165,7 @@ contract CancelDepositTest is InitialState {
 
         // Try to cancel again - should revert
         vm.prank(canceler);
-        vm.expectRevert(IETHBridge.AlreadyClaimed.selector);
+        vm.expectRevert(IETHBridge.AlreadyProcessed.selector);
         bridge.cancelDeposit(ethDeposit, charlie, "cancel_data", HEIGHT, "proof");
     }
 

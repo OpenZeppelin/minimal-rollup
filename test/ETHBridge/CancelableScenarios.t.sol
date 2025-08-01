@@ -10,7 +10,7 @@ abstract contract DepositIsCancelable is CrossChainDepositExists {
         IETHBridge.ETHDeposit memory deposit = sampleDepositProof.getEthDeposit(_depositIdx());
         bytes memory proof = abi.encode(sampleDepositProof.getDepositSignalProof(_depositIdx()));
         vm.prank(cancelerAddress);
-        bridge.cancelDeposit(deposit, cancellationRecipient, HEIGHT, proof);
+        bridge.cancelDeposit(deposit, cancellationRecipient, "", HEIGHT, proof);
     }
 
     function test_cancelDeposit_shouldSetClaimedFlag() public {
@@ -21,7 +21,7 @@ abstract contract DepositIsCancelable is CrossChainDepositExists {
         assertFalse(bridge.processed(id), "deposit already marked as claimed");
 
         vm.prank(cancelerAddress);
-        bridge.cancelDeposit(deposit, cancellationRecipient, HEIGHT, proof);
+        bridge.cancelDeposit(deposit, cancellationRecipient, "", HEIGHT, proof);
         assertTrue(bridge.processed(id), "deposit not marked as claimed");
     }
 
@@ -31,10 +31,10 @@ abstract contract DepositIsCancelable is CrossChainDepositExists {
         (, bytes32 id) = sampleDepositProof.getDepositInternals(_depositIdx());
 
         vm.expectEmit();
-        emit IETHBridge.DepositCancelled(id, cancellationRecipient);
+        emit IETHBridge.DepositCancelled(id, cancellationRecipient, "");
 
         vm.prank(cancelerAddress);
-        bridge.cancelDeposit(deposit, cancellationRecipient, HEIGHT, proof);
+        bridge.cancelDeposit(deposit, cancellationRecipient, "", HEIGHT, proof);
     }
 
     function test_cancelDeposit_shouldSendETH() public {
@@ -46,7 +46,7 @@ abstract contract DepositIsCancelable is CrossChainDepositExists {
         uint256 initialBridgeBalance = address(bridge).balance;
 
         vm.prank(cancelerAddress);
-        bridge.cancelDeposit(deposit, cancellationRecipient, HEIGHT, proof);
+        bridge.cancelDeposit(deposit, cancellationRecipient, "", HEIGHT, proof);
         assertEq(recipient.balance, initialRecipientBalance, "recipient balance mismatch");
         assertEq(
             cancellationRecipient.balance,
@@ -61,7 +61,7 @@ abstract contract DepositIsCancelable is CrossChainDepositExists {
         bytes memory proof = abi.encode(sampleDepositProof.getDepositSignalProof(_depositIdx()));
 
         vm.prank(cancelerAddress);
-        bridge.cancelDeposit(deposit, cancellationRecipient, HEIGHT, proof);
+        bridge.cancelDeposit(deposit, cancellationRecipient, "", HEIGHT, proof);
         vm.expectRevert(IETHBridge.AlreadyProcessed.selector);
         bridge.claimDeposit(deposit, HEIGHT, proof);
     }
@@ -72,7 +72,7 @@ abstract contract DepositIsCancelable is CrossChainDepositExists {
 
         vm.expectRevert(IETHBridge.OnlyCanceler.selector);
         vm.prank(_randomAddress("notCanceller"));
-        bridge.cancelDeposit(deposit, cancellationRecipient, HEIGHT, proof);
+        bridge.cancelDeposit(deposit, cancellationRecipient, "", HEIGHT, proof);
     }
 }
 
@@ -83,6 +83,6 @@ abstract contract DepositIsNotCancelable is CrossChainDepositExists {
 
         vm.expectRevert(IETHBridge.OnlyCanceler.selector);
         vm.prank(cancelerAddress);
-        bridge.cancelDeposit(deposit, cancellationRecipient, HEIGHT, proof);
+        bridge.cancelDeposit(deposit, cancellationRecipient, "", HEIGHT, proof);
     }
 }

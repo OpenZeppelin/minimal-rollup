@@ -5,7 +5,7 @@ import {DepositIsCancelable} from "./CancelableScenarios.t.sol";
 import {BridgeSufficientlyCapitalized} from "./CapitalizationScenarios.t.sol";
 import {DepositIsClaimable, DepositIsNotClaimable} from "./ClaimableScenarios.t.sol";
 import {CrossChainDepositExists} from "./CrossChainDepositExists.t.sol";
-import {RecipientIsAContract} from "./RecipientScenarios.t.sol";
+import {REQUIRED_INPUT, RecipientIsAContract, TransferRecipient} from "./RecipientScenarios.t.sol";
 import {TransferRecipient} from "./RecipientScenarios.t.sol";
 import {IETHBridge} from "src/protocol/IETHBridge.sol";
 
@@ -65,12 +65,23 @@ abstract contract CancelableDepositIsValidContractCall is
         super.setUp();
     }
 
+    function test_cancelDeposit_canInvokeCancelerContract() public {
+        IETHBridge.ETHDeposit memory deposit = sampleDepositProof.getEthDeposit(_depositIdx());
+        bytes memory proof = abi.encode(sampleDepositProof.getDepositSignalProof(_depositIdx()));
+
+        bytes memory cancelCalldata = abi.encodeWithSignature("somePayableFunction(uint256)", (REQUIRED_INPUT));
+        vm.prank(cancelerAddress);
+        vm.expectEmit();
+        emit TransferRecipient.FunctionCalled();
+        bridge.cancelDeposit(deposit, recipient, cancelCalldata, HEIGHT, proof);
+    }
+
     function test_cancelDeposit_shouldNotInvokeRecipientContract() public {
         IETHBridge.ETHDeposit memory deposit = sampleDepositProof.getEthDeposit(_depositIdx());
         bytes memory proof = abi.encode(sampleDepositProof.getDepositSignalProof(_depositIdx()));
 
         vm.prank(cancelerAddress);
         vm.expectRevert(IETHBridge.FailedClaim.selector);
-        bridge.cancelDeposit(deposit, recipient, HEIGHT, proof);
+        bridge.cancelDeposit(deposit, recipient, "", HEIGHT, proof);
     }
 }
