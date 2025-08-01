@@ -11,7 +11,7 @@ interface IDelayedInclusionStore {
     event DelayedInclusionProcessed(Inclusion[] inclusionsList);
 
     /// @notice Thrown when the blob ref registry address is invalid
-    error BlobRefRegistryZeroAddress();
+    error ZeroBlobRefRegistry();
 
     /// @notice Register a delayed publication for later inclusion
     /// @param blobIndices An array of blob indices to be registered where the delayed publications are included
