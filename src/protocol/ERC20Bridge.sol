@@ -144,9 +144,12 @@ contract ERC20Bridge is IERC20Bridge, ReentrancyGuardTransient {
     function deposit(address to, address originalToken, uint256 amount) external nonReentrant returns (bytes32 id) {
         // Allow deposits of any token - no initialization check required
 
+        // Check if token is bridged once and store result
+        bool isBridged = _isBridgedToken(originalToken);
+
         // If depositing an original token, use its address directly
         address actualOriginalToken = originalToken;
-        if (_isBridgedToken(originalToken)) {
+        if (isBridged) {
             // If depositing a bridged token, use its original token address
             actualOriginalToken = BridgedERC20(originalToken).originalToken();
         }
@@ -166,7 +169,7 @@ contract ERC20Bridge is IERC20Bridge, ReentrancyGuardTransient {
 
         // Handle token transfer based on whether it's a bridged token or original token
         IERC20(originalToken).safeTransferFrom(msg.sender, address(this), amount);
-        if (_isBridgedToken(originalToken)) {
+        if (isBridged) {
             // This is a bridged token being sent back to its origin, burn it
             BridgedERC20(originalToken).burn(amount);
         }

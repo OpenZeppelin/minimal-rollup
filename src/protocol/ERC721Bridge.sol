@@ -147,6 +147,9 @@ contract ERC721Bridge is IERC721Bridge, ReentrancyGuardTransient, IERC721Receive
     {
         // Allow deposits of any token - no initialization check required
 
+        // Check if token is bridged once and store result
+        bool isBridged = _isBridgedToken(originalToken);
+
         // Fetch the token URI for this specific token
         string memory tokenURI_;
         try IERC721Metadata(originalToken).tokenURI(tokenId) returns (string memory uri) {
@@ -158,7 +161,7 @@ contract ERC721Bridge is IERC721Bridge, ReentrancyGuardTransient, IERC721Receive
 
         // Determine the actual original token address
         address actualOriginalToken;
-        if (_isBridgedToken(originalToken)) {
+        if (isBridged) {
             // If depositing a bridged token, use its original token address
             actualOriginalToken = BridgedERC721(originalToken).originalToken();
         } else {
@@ -183,7 +186,7 @@ contract ERC721Bridge is IERC721Bridge, ReentrancyGuardTransient, IERC721Receive
 
         // Handle token transfer based on whether it's a bridged token or original token
         IERC721(originalToken).safeTransferFrom(msg.sender, address(this), tokenId);
-        if (_isBridgedToken(originalToken)) {
+        if (isBridged) {
             // This is a bridged token being sent back to its origin, burn it
             BridgedERC721(originalToken).burn(tokenId);
         }

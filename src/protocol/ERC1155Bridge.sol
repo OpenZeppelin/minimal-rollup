@@ -149,6 +149,9 @@ contract ERC1155Bridge is IERC1155Bridge, ReentrancyGuardTransient, IERC1155Rece
     {
         // Allow deposits of any token - no initialization check required
 
+        // Check if token is bridged once and store result
+        bool isBridged = _isBridgedToken(originalToken);
+
         // Fetch the token URI for this specific token
         string memory tokenURI_;
         try IERC1155MetadataURI(originalToken).uri(tokenId) returns (string memory uri) {
@@ -160,7 +163,7 @@ contract ERC1155Bridge is IERC1155Bridge, ReentrancyGuardTransient, IERC1155Rece
 
         // Determine the actual original token address
         address actualOriginalToken;
-        if (_isBridgedToken(originalToken)) {
+        if (isBridged) {
             // If depositing a bridged token, use its original token address
             actualOriginalToken = BridgedERC1155(originalToken).originalToken();
         } else {
@@ -186,7 +189,7 @@ contract ERC1155Bridge is IERC1155Bridge, ReentrancyGuardTransient, IERC1155Rece
 
         // Handle token transfer based on whether it's a bridged token or original token
         IERC1155(originalToken).safeTransferFrom(msg.sender, address(this), tokenId, amount, "");
-        if (_isBridgedToken(originalToken)) {
+        if (isBridged) {
             // This is a bridged token being sent back to its origin, burn it
             BridgedERC1155(originalToken).burn(tokenId, amount);
         }
