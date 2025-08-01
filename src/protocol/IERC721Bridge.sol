@@ -61,9 +61,6 @@ interface IERC721Bridge {
     /// @param claimee The address that received the cancelled deposit
     event DepositCancelled(bytes32 indexed id, address claimee);
 
-    /// @dev Failed to claim the deposit.
-    error FailedClaim();
-
     /// @dev A deposit was already claimed.
     error AlreadyClaimed();
 

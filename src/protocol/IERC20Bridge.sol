@@ -53,9 +53,6 @@ interface IERC20Bridge {
     /// @param deposit The claimed ERC20 deposit
     event DepositClaimed(bytes32 indexed id, ERC20Deposit deposit);
 
-    /// @dev Failed to claim the deposit.
-    error FailedClaim();
-
     /// @dev A deposit was already claimed.
     error AlreadyClaimed();
 
