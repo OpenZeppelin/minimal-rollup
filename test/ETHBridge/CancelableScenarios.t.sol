@@ -1,0 +1,88 @@
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.28;
+
+import {CrossChainDepositExists} from "./CrossChainDepositExists.t.sol";
+import {IETHBridge} from "src/protocol/IETHBridge.sol";
+
+/// This contract describes behaviours that should be valid when the deposit is cancelable.
+abstract contract DepositIsCancelable is CrossChainDepositExists {
+    function test_cancelDeposit_shouldSucceed() public {
+        IETHBridge.ETHDeposit memory deposit = sampleDepositProof.getEthDeposit(_depositIdx());
+        bytes memory proof = abi.encode(sampleDepositProof.getDepositSignalProof(_depositIdx()));
+        vm.prank(cancelerAddress);
+        bridge.cancelDeposit(deposit, cancellationRecipient, "", HEIGHT, proof);
+    }
+
+    function test_cancelDeposit_shouldSetClaimedFlag() public {
+        IETHBridge.ETHDeposit memory deposit = sampleDepositProof.getEthDeposit(_depositIdx());
+        bytes memory proof = abi.encode(sampleDepositProof.getDepositSignalProof(_depositIdx()));
+        (, bytes32 id) = sampleDepositProof.getDepositInternals(_depositIdx());
+
+        assertFalse(bridge.processed(id), "deposit already marked as claimed");
+
+        vm.prank(cancelerAddress);
+        bridge.cancelDeposit(deposit, cancellationRecipient, "", HEIGHT, proof);
+        assertTrue(bridge.processed(id), "deposit not marked as claimed");
+    }
+
+    function test_cancelDeposit_shouldEmitEvent() public {
+        IETHBridge.ETHDeposit memory deposit = sampleDepositProof.getEthDeposit(_depositIdx());
+        bytes memory proof = abi.encode(sampleDepositProof.getDepositSignalProof(_depositIdx()));
+        (, bytes32 id) = sampleDepositProof.getDepositInternals(_depositIdx());
+
+        vm.expectEmit();
+        emit IETHBridge.DepositCancelled(id, cancellationRecipient, "");
+
+        vm.prank(cancelerAddress);
+        bridge.cancelDeposit(deposit, cancellationRecipient, "", HEIGHT, proof);
+    }
+
+    function test_cancelDeposit_shouldSendETH() public {
+        IETHBridge.ETHDeposit memory deposit = sampleDepositProof.getEthDeposit(_depositIdx());
+        bytes memory proof = abi.encode(sampleDepositProof.getDepositSignalProof(_depositIdx()));
+
+        uint256 initialCancellationRecipientBalance = cancellationRecipient.balance;
+        uint256 initialRecipientBalance = recipient.balance;
+        uint256 initialBridgeBalance = address(bridge).balance;
+
+        vm.prank(cancelerAddress);
+        bridge.cancelDeposit(deposit, cancellationRecipient, "", HEIGHT, proof);
+        assertEq(recipient.balance, initialRecipientBalance, "recipient balance mismatch");
+        assertEq(
+            cancellationRecipient.balance,
+            initialCancellationRecipientBalance + deposit.amount,
+            "cancel recipient balance mismatch"
+        );
+        assertEq(address(bridge).balance, initialBridgeBalance - deposit.amount, "bridge balance mismatch");
+    }
+
+    function test_claimDeposit_shouldRevertWhen_DepositIsCancelled() public {
+        IETHBridge.ETHDeposit memory deposit = sampleDepositProof.getEthDeposit(_depositIdx());
+        bytes memory proof = abi.encode(sampleDepositProof.getDepositSignalProof(_depositIdx()));
+
+        vm.prank(cancelerAddress);
+        bridge.cancelDeposit(deposit, cancellationRecipient, "", HEIGHT, proof);
+        vm.expectRevert(IETHBridge.AlreadyProcessed.selector);
+        bridge.claimDeposit(deposit, HEIGHT, proof);
+    }
+
+    function test_cancelDeposit_shouldRevertWhen_CancellerIsNotCaller() public {
+        IETHBridge.ETHDeposit memory deposit = sampleDepositProof.getEthDeposit(_depositIdx());
+        bytes memory proof = abi.encode(sampleDepositProof.getDepositSignalProof(_depositIdx()));
+
+        vm.expectRevert(IETHBridge.OnlyCanceler.selector);
+        vm.prank(makeAddr("notCanceller"));
+        bridge.cancelDeposit(deposit, cancellationRecipient, "", HEIGHT, proof);
+    }
+}
+
+abstract contract DepositIsNotCancelable is CrossChainDepositExists {
+    function test_cancelDeposit_shouldRevertWhen_NoCancelerIsSet() public {
+        IETHBridge.ETHDeposit memory deposit = sampleDepositProof.getEthDeposit(_depositIdx());
+        bytes memory proof = abi.encode(sampleDepositProof.getDepositSignalProof(_depositIdx()));
+
+        vm.expectRevert(IETHBridge.OnlyCanceler.selector);
+        vm.prank(cancelerAddress);
+        bridge.cancelDeposit(deposit, cancellationRecipient, "", HEIGHT, proof);
+    }
+}
