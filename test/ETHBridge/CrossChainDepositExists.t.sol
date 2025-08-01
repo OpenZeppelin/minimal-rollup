@@ -13,7 +13,7 @@ import {IETHBridge} from "src/protocol/IETHBridge.sol";
 /// We use the SampleDepositProof contract to track the deposit details.
 abstract contract CrossChainDepositExists is UniversalTest {
     // the sample deposit is to this address
-    address recipient = _randomAddress("recipient");
+    address recipient = makeAddr("recipient");
 
     uint256 HEIGHT = 1;
 

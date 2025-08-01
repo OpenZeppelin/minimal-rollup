@@ -36,6 +36,35 @@ contract TaikoAnchor {
     /// @param headerHash The header hash
     error HeaderMismatch(bytes32 headerHash);
 
+    /// @dev The sender is not the permitted golden touch address
+    error UnauthorizedSender();
+
+    /// @dev The fixed base fee must be greater than 0
+    error InvalidFixedBaseFee();
+
+    /// @dev The publication ID is too small
+    /// @param providedId The provided publication ID
+    /// @param requiredId The minimum required publication ID
+    error PublicationIdTooSmall(uint256 providedId, uint256 requiredId);
+
+    /// @dev The anchor block ID is too small
+    /// @param providedId The provided anchor block ID
+    /// @param requiredId The minimum required anchor block ID
+    error AnchorBlockIdTooSmall(uint256 providedId, uint256 requiredId);
+
+    /// @dev The anchor block hash is zero
+    error ZeroAnchorBlockHash();
+
+    /// @dev The circular hash does not match the expected value
+    /// @param expected The expected circular hash
+    /// @param actual The actual circular hash
+    error CircularHashMismatch(bytes32 expected, bytes32 actual);
+
+    /// @dev The base fee does not match the fixed base fee
+    /// @param expected The expected fixed base fee
+    /// @param actual The actual base fee
+    error BaseFeeMismatch(uint256 expected, uint256 actual);
+
     uint256 public immutable fixedBaseFee;
     address public immutable permittedSender; // 0x0000777735367b36bC9B61C50022d9D0700dB4Ec
 
@@ -47,16 +76,16 @@ contract TaikoAnchor {
     mapping(uint256 blockId => bytes32 blockHash) public blockHashes;
 
     modifier onlyFromPermittedSender() {
-        require(msg.sender == permittedSender, "sender not golden touch");
+        require(msg.sender == permittedSender, UnauthorizedSender());
         _;
     }
 
-    // This constructor is only used in test as the contract will be pre-deployed in the L2 genesis
+    /// @dev This constructor is only used in tests as the contract will be pre-deployed in the L2 genesis
     /// @param _fixedBaseFee The fixed base fee for the rollup
     /// @param _permittedSender The address of the sender that can call the anchor function
     /// @param _commitmentStore contract responsible storing historical commitments
     constructor(uint256 _fixedBaseFee, address _permittedSender, address _commitmentStore) {
-        require(_fixedBaseFee > 0, "fixedBaseFee must be greater than 0");
+        require(_fixedBaseFee > 0, InvalidFixedBaseFee());
         fixedBaseFee = _fixedBaseFee;
         permittedSender = _permittedSender;
 
@@ -87,12 +116,12 @@ contract TaikoAnchor {
         uint32 _parentGasUsed
     ) external onlyFromPermittedSender {
         // Make sure this function can only succeed once per publication
-        require(_publicationId > lastPublicationId, "publicationId too small");
+        require(_publicationId > lastPublicationId, PublicationIdTooSmall(_publicationId, lastPublicationId + 1));
         lastPublicationId = _publicationId;
 
         // Make sure L1->L2 sync will use newer block hash
-        require(_anchorBlockId >= lastAnchorBlockId, "anchorBlockId too small");
-        require(_anchorBlockHash != 0, "anchorBlockHash is 0");
+        require(_anchorBlockId >= lastAnchorBlockId, AnchorBlockIdTooSmall(_anchorBlockId, lastAnchorBlockId));
+        require(_anchorBlockHash != 0, ZeroAnchorBlockHash());
 
         // Persist anchor block hashes
         if (_anchorBlockId > lastAnchorBlockId) {
@@ -110,7 +139,7 @@ contract TaikoAnchor {
 
         // Calculate the current and new circular hash for the last 255 blocksbased on the parent block ID
         (bytes32 currentHash, bytes32 newHash) = _calcCircularBlocksHash(parentId);
-        require(circularBlocksHash == currentHash, "circular hash mismatch");
+        require(circularBlocksHash == currentHash, CircularHashMismatch(circularBlocksHash, currentHash));
         circularBlocksHash = newHash;
 
         _verifyBaseFee(_parentGasUsed);
@@ -152,6 +181,6 @@ contract TaikoAnchor {
 
     // For now, we simply use a constant base fee
     function _verifyBaseFee(uint32 /*_parentGasUsed*/ ) internal view {
-        require(block.basefee == fixedBaseFee, "basefee mismatch");
+        require(block.basefee == fixedBaseFee, BaseFeeMismatch(fixedBaseFee, block.basefee));
     }
 }

@@ -53,6 +53,7 @@ contract MessageRelayer is ReentrancyGuardTransient, IMessageRelayer {
 
     IETHBridge public immutable ethBridge;
 
+    /// @param _ethBridge Address of the ETH bridge
     constructor(address _ethBridge) {
         ethBridge = IETHBridge(_ethBridge);
     }
