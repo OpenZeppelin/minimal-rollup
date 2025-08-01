@@ -24,6 +24,8 @@ contract MockCheckpointTracker is ICheckpointTracker {
         return (nPublications, nDelayedPublications);
     }
 
+    function initializeProverManager(address _proverManager) external {}
+
     function setValid(bool isValid) external {
         valid = isValid;
     }

@@ -25,8 +25,32 @@ contract TaikoInbox is IInbox, DelayedInclusionStore {
     }
 
     ILookahead public immutable lookahead;
-    IProposerFees public immutable proposerFees;
+    IProposerFees public proposerFees;
     uint256 public immutable maxAnchorBlockIdOffset;
+
+    address private immutable deployer;
+
+    /// @notice Thrown when no proposer fee address is set
+    error ProposerFeesNotInitialized();
+
+    /// @dev Modifier to check if proposerFees has been initialized
+    modifier checkProposerFeesInitialized() {
+        bytes4 errorSelector = ProposerFeesNotInitialized.selector;
+        assembly {
+            let fees := sload(proposerFees.slot)
+            if iszero(fees) {
+                mstore(0, errorSelector)
+                revert(0x00, 0x04)
+            }
+        }
+        _;
+    }
+
+    /// @dev Modifier to check if the caller is the deployer
+    modifier onlyDeployer() {
+        require(msg.sender == deployer, "Only deployer can call this function");
+        _;
+    }
 
     // attributes associated with the publication
     uint256 private constant METADATA = 0;
@@ -35,25 +59,27 @@ contract TaikoInbox is IInbox, DelayedInclusionStore {
 
     bytes32[] private _publicationHashes;
 
-    constructor(
-        address _lookahead,
-        address _blobRefRegistry,
-        uint256 _maxAnchorBlockIdOffset,
-        address _proposerFees,
-        uint256 _inclusionDelay
-    ) DelayedInclusionStore(_inclusionDelay, _blobRefRegistry) {
-        require(_proposerFees != address(0), "Invalid proposer fees address");
-
+    constructor(address _lookahead, address _blobRefRegistry, uint256 _maxAnchorBlockIdOffset, uint256 _inclusionDelay)
+        DelayedInclusionStore(_inclusionDelay, _blobRefRegistry)
+    {
         lookahead = ILookahead(_lookahead);
         maxAnchorBlockIdOffset = _maxAnchorBlockIdOffset;
-        proposerFees = IProposerFees(_proposerFees);
+        deployer = msg.sender;
 
         // guarantee there is always a previous hash
         _publicationHashes.push(0);
     }
 
     /// @inheritdoc IInbox
-    function publish(uint256 nBlobs, uint64 anchorBlockId) external {
+    function initializeProposerFees(address _proposerFees) external onlyDeployer {
+        require(address(proposerFees) == address(0), "ProposerFees already initialized");
+        require(_proposerFees != address(0), "ProposerFees cannot be zero");
+        proposerFees = IProposerFees(_proposerFees);
+        emit ProposerFeesInitialized(_proposerFees);
+    }
+
+    /// @inheritdoc IInbox
+    function publish(uint256 nBlobs, uint64 anchorBlockId) external checkProposerFeesInitialized {
         if (address(lookahead) != address(0)) {
             require(lookahead.isCurrentPreconfer(msg.sender), NotCurrentPreconfer());
         }
