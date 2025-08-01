@@ -281,4 +281,35 @@ contract ERC20BridgeTest is Test {
         bridgedToken.mint(alice, 100);
         assertEq(bridgedToken.balanceOf(alice), 100, "Alice should have 100 tokens");
     }
+
+    function testCannotDeployDuplicateBridgedToken() public {
+        // First, deploy a bridged token successfully
+        IERC20Bridge.TokenInitialization memory tokenInit1 = IERC20Bridge.TokenInitialization({
+            originalToken: address(token),
+            name: "Test Token",
+            symbol: "TEST",
+            decimals: 18
+        });
+
+        bytes memory proof = "mock_proof";
+        uint256 height = 1;
+        signalService.setVerifyResult(true);
+
+        // First deployment should succeed
+        address bridgedToken = bridge.deployCounterpartToken(tokenInit1, height, proof);
+        assertNotEq(bridgedToken, address(0), "First deployment should succeed");
+
+        // Try to deploy again with different metadata but same original token
+        // This should be caught by our new validation
+        IERC20Bridge.TokenInitialization memory tokenInit2 = IERC20Bridge.TokenInitialization({
+            originalToken: address(token), // Same original token
+            name: "Different Token Name", // Different metadata
+            symbol: "DIFF",
+            decimals: 6
+        });
+
+        signalService.setVerifyResult(true); // Reset for the second call
+        vm.expectRevert("Bridged token already exists for this original token");
+        bridge.deployCounterpartToken(tokenInit2, height, proof);
+    }
 }

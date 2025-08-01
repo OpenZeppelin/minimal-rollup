@@ -125,6 +125,12 @@ contract ERC20Bridge is IERC20Bridge, ReentrancyGuardTransient {
         // Mark initialization as processed
         _processed[id] = true;
 
+        // Additional validation: ensure no bridged token already exists for this original token
+        require(
+            _counterpartTokens[tokenInit.originalToken] == address(0),
+            "Bridged token already exists for this original token"
+        );
+
         // Deploy the bridged token
         deployedToken =
             address(new BridgedERC20(tokenInit.name, tokenInit.symbol, tokenInit.decimals, tokenInit.originalToken));

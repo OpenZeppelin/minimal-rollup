@@ -321,4 +321,31 @@ contract ERC1155BridgeTest is Test {
         assertEq(bridgedNFT.owner(), address(bridge2));
         assertEq(bridgedNFT.originalToken(), address(token));
     }
+
+    function testCannotDeployDuplicateBridgedToken() public {
+        // First, deploy a bridged token successfully
+        IERC1155Bridge.TokenInitialization memory tokenInit1 = IERC1155Bridge.TokenInitialization({
+            originalToken: address(token),
+            uri: "https://example.com/metadata/0.json"
+        });
+
+        bytes memory proof = "mock_proof";
+        uint256 height = 1;
+        signalService.setVerifyResult(true);
+
+        // First deployment should succeed
+        address bridgedToken = bridge.deployCounterpartToken(tokenInit1, height, proof);
+        assertNotEq(bridgedToken, address(0), "First deployment should succeed");
+
+        // Try to deploy again with different metadata but same original token
+        // This should be caught by our new validation
+        IERC1155Bridge.TokenInitialization memory tokenInit2 = IERC1155Bridge.TokenInitialization({
+            originalToken: address(token), // Same original token
+            uri: "https://different.example.com/metadata/0.json" // Different metadata
+        });
+
+        signalService.setVerifyResult(true); // Reset for the second call
+        vm.expectRevert("Bridged token already exists for this original token");
+        bridge.deployCounterpartToken(tokenInit2, height, proof);
+    }
 }
