@@ -1,0 +1,79 @@
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.28;
+
+import "forge-std/Test.sol";
+
+import {ETHBridge} from "src/protocol/ETHBridge.sol";
+import {IETHBridge} from "src/protocol/IETHBridge.sol";
+
+import {GenericRecipient} from "./GenericRecipient.t.sol";
+import {IMessageRelayer} from "src/protocol/IMessageRelayer.sol";
+import {MessageRelayer} from "src/protocol/taiko_alethia/MessageRelayer.sol";
+import {MockSignalService} from "test/mocks/MockSignalService.sol";
+
+abstract contract InitialState is Test {
+    MessageRelayer messageRelayer;
+    ETHBridge bridge;
+
+    // Default message parameters
+    IETHBridge.ETHDeposit ethDeposit;
+    uint256 height = 0;
+    bytes proof = "0x";
+    GenericRecipient to;
+    uint256 amount = 2 ether;
+    uint256 tip = 0.1 ether;
+    GenericRecipient relayerSelectedTipRecipient;
+    GenericRecipient userSelectedTipRecipient;
+    uint256 gasLimit = 0;
+    bytes data = "0x";
+
+    // keccak256("TIP_RECIPIENT_SLOT")
+    bytes32 constant TIP_RECIPIENT_SLOT = 0x833ce1785f54a5ca49991a09a7b058587309bf3687e5f20b7b66fa12132ef6f0;
+
+    function setUp() public virtual {
+        MockSignalService signalService = new MockSignalService();
+        address trustedCommitmentPublisher = makeAddr("trustedCommitmentPublisher");
+        address counterpart = makeAddr("counterpart");
+        bridge = new ETHBridge(address(signalService), trustedCommitmentPublisher, counterpart);
+        vm.deal(address(bridge), amount);
+
+        messageRelayer = new MessageRelayer(address(bridge));
+
+        to = new GenericRecipient(address(messageRelayer));
+        relayerSelectedTipRecipient = new GenericRecipient(address(messageRelayer));
+        userSelectedTipRecipient = new GenericRecipient(address(messageRelayer));
+
+        ethDeposit = IETHBridge.ETHDeposit({
+            nonce: 0,
+            from: makeAddr("from"),
+            to: address(messageRelayer),
+            amount: 2 ether,
+            data: "",
+            context: "",
+            canceler: address(0)
+        });
+        _encodeReceiveCall();
+    }
+
+    function _encodeReceiveCall() internal {
+        ethDeposit.data = abi.encodeCall(
+            IMessageRelayer.receiveMessage, (address(to), tip, address(userSelectedTipRecipient), gasLimit, data)
+        );
+    }
+
+    function _relayMessage() internal {
+        messageRelayer.relayMessage(ethDeposit, height, proof, address(relayerSelectedTipRecipient));
+    }
+}
+
+contract InitialStateTest is InitialState {
+    function test_tipRecipientTransientStorage_isZero() public {
+        bytes32 value = vm.load(address(messageRelayer), TIP_RECIPIENT_SLOT);
+
+        address storedAddress = address(uint160(uint256(value)));
+
+        assertEq(storedAddress, address(0), "Initial transient slot should be empty");
+
+        assertEq(value, bytes32(0), "Initial transient slot bytes32 should be zero");
+    }
+}
