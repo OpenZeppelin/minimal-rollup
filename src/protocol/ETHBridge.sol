@@ -51,6 +51,7 @@ contract ETHBridge is IETHBridge, ReentrancyGuardTransient {
         payable
         returns (bytes32 id)
     {
+        require(to != address(0), ZeroReceiver());
         ETHDeposit memory ethDeposit =
             ETHDeposit(_globalDepositNonce, msg.sender, to, msg.value, data, context, canceler);
         id = _generateId(ethDeposit);
