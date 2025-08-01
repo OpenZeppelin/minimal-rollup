@@ -66,8 +66,8 @@ pub struct DepositSpecification {
 
 fn deposit_specification() -> Vec<DepositSpecification> {
     // This is an address on the destination chain, so it seems natural to use one generated there
-    // In this case, the CrossChainDepositExists.sol test case defines _randomAddress("recipient");
-    let recipient = "0x99A270Be1AA5E97633177041859aEEB9a0670fAa";
+    // In this case, the CrossChainDepositExists.sol test case defines makeAddr("recipient");
+    let recipient = "0x006217c47ffA5Eb3F3c92247ffFE22AD998242c5";
     // Use both zero and non-zero amounts (in this case 4 ether)
     let amounts = vec![0_u128, 4000000000000000000_u128];
     // Use different calldata to try different functions and inputs

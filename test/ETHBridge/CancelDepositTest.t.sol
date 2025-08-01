@@ -8,10 +8,10 @@ import {IETHBridge} from "src/protocol/IETHBridge.sol";
 contract CancelDepositTest is InitialState {
     uint256 HEIGHT = 1;
 
-    address alice = _randomAddress("alice");
-    address bob = _randomAddress("bob");
-    address charlie = _randomAddress("charlie");
-    address canceler = _randomAddress("canceler");
+    address alice = makeAddr("alice");
+    address bob = makeAddr("bob");
+    address charlie = makeAddr("charlie");
+    address canceler = makeAddr("canceler");
 
     function setUp() public override {
         super.setUp();

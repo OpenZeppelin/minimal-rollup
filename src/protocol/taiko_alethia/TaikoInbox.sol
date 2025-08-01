@@ -13,10 +13,15 @@ import {IProposerFees} from "../IProposerFees.sol";
 contract TaikoInbox is IInbox, DelayedInclusionStore {
     /// @dev Caller is not the current preconfer
     error NotCurrentPreconfer();
+
     /// @dev Anchor block ID is too old
     error AnchorBlockTooOld();
+
     /// @dev Blockhash is not available for the anchor block
     error BlockhashUnavailable();
+
+    /// @dev Proposer fee set to zero address
+    error ZeroProposerFees();
 
     struct Metadata {
         uint256 anchorBlockId;
@@ -35,6 +40,11 @@ contract TaikoInbox is IInbox, DelayedInclusionStore {
 
     bytes32[] private _publicationHashes;
 
+    /// @param _lookahead Address of the lookahead contract
+    /// @param _blobRefRegistry Address of the blob reference registry contract
+    /// @param _maxAnchorBlockIdOffset Maximum offset allowed for anchor block ID
+    /// @param _proposerFees Address of the proposer fees contract (usually prover manager)
+    /// @param _inclusionDelay How long before delayed inclusion must be processed
     constructor(
         address _lookahead,
         address _blobRefRegistry,
@@ -42,12 +52,10 @@ contract TaikoInbox is IInbox, DelayedInclusionStore {
         address _proposerFees,
         uint256 _inclusionDelay
     ) DelayedInclusionStore(_inclusionDelay, _blobRefRegistry) {
-        require(_proposerFees != address(0), "Invalid proposer fees address");
-
+        require(_proposerFees != address(0), ZeroProposerFees());
         lookahead = ILookahead(_lookahead);
         maxAnchorBlockIdOffset = _maxAnchorBlockIdOffset;
         proposerFees = IProposerFees(_proposerFees);
-
         // guarantee there is always a previous hash
         _publicationHashes.push(0);
     }
