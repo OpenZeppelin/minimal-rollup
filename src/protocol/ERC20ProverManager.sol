@@ -1,3 +1,4 @@
+///SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
 import {BaseProverManager} from "./BaseProverManager.sol";
@@ -23,10 +24,8 @@ contract ERC20ProverManager is BaseProverManager, IERC20Depositor {
         address _token,
         uint256 _initialDeposit
     ) BaseProverManager(_inbox, _checkpointTracker, _initialProver, _initialFee, _initialDeposit) {
-        require(_token != address(0), "Token address cannot be 0");
-        require(
-            _initialDeposit >= _livenessBond(), "Initial deposit must be greater than or equal to the liveness bond"
-        );
+        require(_token != address(0), ZeroTokenAddress());
+        require(_initialDeposit >= _livenessBond(), InsufficientInitialDeposit(_initialDeposit, _livenessBond()));
 
         token = IERC20(_token);
 

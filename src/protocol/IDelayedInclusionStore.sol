@@ -10,7 +10,7 @@ interface IDelayedInclusionStore {
     /// @param inclusionsList list of inclusions
     event DelayedInclusionProcessed(Inclusion[] inclusionsList);
 
-    /// @notice Thrown when the blob ref registry address is invalid
+    /// @dev Blob ref registry address cannot be zero
     error ZeroBlobRefRegistry();
 
     /// @notice Register a delayed publication for later inclusion

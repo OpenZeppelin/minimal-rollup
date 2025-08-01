@@ -40,6 +40,15 @@ interface IETHBridge {
     /// @param data The calldata sent to the claimee
     event DepositCancelled(bytes32 indexed id, address claimee, bytes data);
 
+    /// @dev Signal service address cannot be zero
+    error EmptySignalService();
+
+    /// @dev Trusted publisher address cannot be zero
+    error EmptyTrustedPublisher();
+
+    /// @dev Counterpart address cannot be zero
+    error EmptyCounterpart();
+
     /// @dev Failed to call the receiver with value.
     error FailedClaim();
 

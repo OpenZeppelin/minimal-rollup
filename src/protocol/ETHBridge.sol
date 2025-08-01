@@ -26,9 +26,9 @@ contract ETHBridge is IETHBridge, ReentrancyGuardTransient {
     address public immutable counterpart;
 
     constructor(address _signalService, address _trustedCommitmentPublisher, address _counterpart) {
-        require(_signalService != address(0), "Empty signal service");
-        require(_trustedCommitmentPublisher != address(0), "Empty trusted publisher");
-        require(_counterpart != address(0), "Empty counterpart");
+        require(_signalService != address(0), EmptySignalService());
+        require(_trustedCommitmentPublisher != address(0), EmptyTrustedPublisher());
+        require(_counterpart != address(0), EmptyCounterpart());
 
         signalService = ISignalService(_signalService);
         trustedCommitmentPublisher = _trustedCommitmentPublisher;

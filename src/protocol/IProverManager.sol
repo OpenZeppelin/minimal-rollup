@@ -88,7 +88,15 @@ interface IProverManager {
 }
 
 interface IERC20Depositor {
+    /// @dev Token address cannot be zero
+    error ZeroTokenAddress();
+
+    /// @dev Initial deposit must be greater than or equal to the liveness bond
+    /// @param deposit The provided initial deposit
+    /// @param requiredBond The required liveness bond amount
+    error InsufficientInitialDeposit(uint256 deposit, uint256 requiredBond);
     /// @notice Deposit tokens into the contract.
+
     function deposit(uint256 amount) external;
 }
 
