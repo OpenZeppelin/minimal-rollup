@@ -49,7 +49,7 @@ interface IERC1155Bridge {
     /// @dev Emitted when a deposit is made.
     /// @param id The deposit id
     /// @param deposit The ERC1155 deposit
-    event DepositMade(bytes32 indexed id, ERC1155Deposit deposit);
+    event DepositMade(bytes32 indexed id, ERC1155Deposit deposit, address localToken);
 
     /// @dev Emitted when a deposit is claimed.
     /// @param id The deposit id

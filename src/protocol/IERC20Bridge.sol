@@ -46,7 +46,7 @@ interface IERC20Bridge {
     /// @dev Emitted when a deposit is made.
     /// @param id The deposit id
     /// @param deposit The ERC20 deposit
-    event DepositMade(bytes32 indexed id, ERC20Deposit deposit);
+    event DepositMade(bytes32 indexed id, ERC20Deposit deposit, address localToken);
 
     /// @dev Emitted when a deposit is claimed.
     /// @param id The deposit id

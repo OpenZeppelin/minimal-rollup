@@ -194,7 +194,7 @@ contract ERC1155Bridge is IERC1155Bridge, ReentrancyGuardTransient, IERC1155Rece
 
         // Send signal
         signalService.sendSignal(id);
-        emit DepositMade(id, erc1155Deposit);
+        emit DepositMade(id, erc1155Deposit, originalToken);
     }
 
     /// @inheritdoc IERC1155Bridge

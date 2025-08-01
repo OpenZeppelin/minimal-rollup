@@ -174,7 +174,7 @@ contract ERC20Bridge is IERC20Bridge, ReentrancyGuardTransient {
 
         // Send signal
         signalService.sendSignal(id);
-        emit DepositMade(id, erc20Deposit);
+        emit DepositMade(id, erc20Deposit, originalToken);
     }
 
     /// @inheritdoc IERC20Bridge

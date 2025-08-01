@@ -191,7 +191,7 @@ contract ERC721Bridge is IERC721Bridge, ReentrancyGuardTransient, IERC721Receive
 
         // Send signal
         signalService.sendSignal(id);
-        emit DepositMade(id, erc721Deposit);
+        emit DepositMade(id, erc721Deposit, originalToken);
     }
 
     /// @inheritdoc IERC721Bridge

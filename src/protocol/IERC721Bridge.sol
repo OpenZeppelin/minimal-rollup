@@ -49,7 +49,7 @@ interface IERC721Bridge {
     /// @dev Emitted when a deposit is made.
     /// @param id The deposit id
     /// @param deposit The ERC721 deposit
-    event DepositMade(bytes32 indexed id, ERC721Deposit deposit);
+    event DepositMade(bytes32 indexed id, ERC721Deposit deposit, address localToken);
 
     /// @dev Emitted when a deposit is claimed.
     /// @param id The deposit id
