@@ -12,12 +12,12 @@ abstract contract InitialState is Test {
     MockInbox inbox;
     MockCheckpointTracker checkpointTracker;
 
-    address deployer = _randomAddress("deployer");
-    address initialProver = _randomAddress("initialProver");
-    address proposer = _randomAddress("proposer");
-    address proverA = _randomAddress("proverA");
-    address proverB = _randomAddress("proverB");
-    address evictor = _randomAddress("evictor");
+    address deployer = makeAddr("deployer");
+    address initialProver = makeAddr("initialProver");
+    address proposer = makeAddr("proposer");
+    address proverA = makeAddr("proverA");
+    address proverB = makeAddr("proverB");
+    address evictor = makeAddr("evictor");
 
     // Configuration parameters.
     uint96 initialFee = 0.1 ether;
@@ -53,12 +53,4 @@ abstract contract InitialState is Test {
     }
 
     function _currencyBalance(address account) internal view virtual returns (uint256);
-
-    function _randomAddress(string memory name) internal pure returns (address) {
-        return address(uint160(uint256(keccak256(abi.encode(_domainSeparator(), name)))));
-    }
-
-    function _domainSeparator() internal pure returns (bytes32) {
-        return keccak256("ProverManager");
-    }
 }

@@ -7,9 +7,9 @@ import {IETHBridge} from "src/protocol/IETHBridge.sol";
 /// This contract describes behaviours that should be valid in every state
 /// It can be inherited by any Test contract to run all tests in that state
 abstract contract UniversalTest is InitialState {
-    address alice = _randomAddress("alice");
-    address bob = _randomAddress("bob");
-    address charlie = _randomAddress("charlie");
+    address alice = makeAddr("alice");
+    address bob = makeAddr("bob");
+    address charlie = makeAddr("charlie");
 
     function setUp() public virtual override {
         super.setUp();

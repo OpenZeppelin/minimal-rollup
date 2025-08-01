@@ -36,7 +36,7 @@ abstract contract DelayedInclusionStore is IDelayedInclusionStore {
     /// @param _inclusionDelay The delay before next set of inclusions can be processed.
     /// @param _blobRefRegistry The address of the blob reference registry.
     constructor(uint256 _inclusionDelay, address _blobRefRegistry) {
-        require(_blobRefRegistry != address(0), "Invalid blob ref registry");
+        require(_blobRefRegistry != address(0), ZeroBlobRefRegistry());
         inclusionDelay = _inclusionDelay;
         blobRefRegistry = IBlobRefRegistry(_blobRefRegistry);
     }

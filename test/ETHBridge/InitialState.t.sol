@@ -18,7 +18,7 @@ abstract contract InitialState is Test {
     // zero address means deposit is uncancellable
     address nonCancellableAddress = address(0);
 
-    address trustedCommitmentPublisher = _randomAddress("trustedCommitmentPublisher");
+    address trustedCommitmentPublisher = makeAddr("trustedCommitmentPublisher");
 
     function setUp() public virtual {
         sampleDepositProof = new SampleDepositProof();
@@ -29,14 +29,6 @@ abstract contract InitialState is Test {
 
         counterpart = sampleDepositProof.getBridgeAddress();
         bridge = new ETHBridge(address(signalService), trustedCommitmentPublisher, counterpart);
-    }
-
-    function _randomAddress(string memory name) internal pure returns (address) {
-        return address(uint160(uint256(keccak256(abi.encode(_domainSeparator(), name)))));
-    }
-
-    function _domainSeparator() internal pure returns (bytes32) {
-        return keccak256("ETHBridge");
     }
 
     function getNonce() internal view returns (uint256) {
