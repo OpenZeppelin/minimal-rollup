@@ -12,10 +12,7 @@ contract ETHProverManager is BaseProverManager, IETHDepositor {
         payable
         BaseProverManager(_inbox, _checkpointTracker, _initialProver, _initialFee, msg.value)
     {
-        require(
-            msg.value >= _livenessBond(),
-            "The amount of ETH deposited must be greater than or equal to the livenessBond"
-        );
+        require(msg.value >= _livenessBond(), InsufficientETHDeposit(msg.value, _livenessBond()));
     }
 
     /// @notice Receive ETH transfers and deposit them to the sender's balance
@@ -36,6 +33,6 @@ contract ETHProverManager is BaseProverManager, IETHDepositor {
         assembly ("memory-safe") {
             ok := call(gas(), to, amount, 0, 0, 0, 0)
         }
-        require(ok, "Withdraw failed");
+        require(ok, WithdrawFailed());
     }
 }

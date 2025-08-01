@@ -101,6 +101,14 @@ interface IERC20Depositor {
 }
 
 interface IETHDepositor {
+    /// @dev The deposited ETH must be at least the liveness bond amount
+    /// @param deposited The amount of ETH deposited
+    /// @param required The required liveness bond amount
+    error InsufficientETHDeposit(uint256 deposited, uint256 required);
+
+    /// @dev ETH transfer failed
+    error WithdrawFailed();
+
     /// @notice Deposit ETH into the contract.
     function deposit() external payable;
 }
