@@ -13,12 +13,12 @@ contract UserSetGasLimit is DepositRecipientIsMessageRelayer {
         super.setUp();
     }
 
-    function test_userSetHighGasLimit_relayMessage_shouldRevert() public gasLimitHigherThanValue {
+    function test_UserSetHighGasLimit_relayMessage_shouldRevert() public gasLimitHigherThanValue {
         vm.expectRevert(IETHBridge.FailedClaim.selector);
         _relayMessage();
     }
 
-    function test_userReasonableGasLimit_relayMessage() public whenGasLimitIsReasonable {
+    function test_UserReasonableGasLimit_relayMessage() public whenGasLimitIsReasonable {
         vm.expectEmit();
         emit IMessageRelayer.MessageForwarded(address(to), amount - tip, data, address(userSelectedTipRecipient), tip);
         _relayMessage();

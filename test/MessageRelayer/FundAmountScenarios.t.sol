@@ -13,18 +13,18 @@ contract VaryingFundAmounts is DepositRecipientIsMessageRelayer {
         super.setUp();
     }
 
-    function test_setZeroAmountWithTip_relayMessage_shouldRevert() public zeroAmount {
+    function test_SetZeroAmountWithTip_relayMessage_shouldRevert() public zeroAmount {
         vm.expectRevert(IETHBridge.FailedClaim.selector);
         _relayMessage();
     }
 
-    function test_setZeroAmountWithoutTip_relayMessage_shouldSucceed() public zeroTipZeroAmount {
+    function test_SetZeroAmountWithoutTip_relayMessage_shouldSucceed() public zeroTipZeroAmount {
         vm.expectEmit();
         emit IMessageRelayer.MessageForwarded(address(to), 0, data, address(userSelectedTipRecipient), 0);
         _relayMessage();
     }
 
-    function test_setTipHigherThanAmount_relayMessage_shouldRevert() public amountTooLow {
+    function test_SetTipHigherThanAmount_relayMessage_shouldRevert() public amountTooLow {
         vm.expectRevert(IETHBridge.FailedClaim.selector);
         _relayMessage();
     }
