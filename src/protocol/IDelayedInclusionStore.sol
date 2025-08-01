@@ -10,6 +10,9 @@ interface IDelayedInclusionStore {
     /// @param inclusionsList list of inclusions
     event DelayedInclusionProcessed(Inclusion[] inclusionsList);
 
+    /// @notice Thrown when the blob ref registry address is invalid
+    error BlobRefRegistryZeroAddress();
+
     /// @notice Register a delayed publication for later inclusion
     /// @param blobIndices An array of blob indices to be registered where the delayed publications are included
     function publishDelayed(uint256[] memory blobIndices) external;
