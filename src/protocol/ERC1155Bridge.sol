@@ -70,8 +70,6 @@ contract ERC1155Bridge is IERC1155Bridge, ReentrancyGuardTransient, IERC1155Rece
         return _processed[id];
     }
 
-
-
     /// @inheritdoc IERC1155Bridge
     function isInitializationProven(bytes32 id) public view returns (bool) {
         return _processed[id];

@@ -59,16 +59,12 @@ interface IERC20Bridge {
     /// @dev A deposit was already claimed.
     error AlreadyClaimed();
 
-
-
     /// @dev Token initialization has already been proven.
     error InitializationAlreadyProven();
 
     /// @dev Whether the deposit identified by `id` has been claimed or cancelled.
     /// @param id The deposit id
     function processed(bytes32 id) external view returns (bool);
-
-
 
     /// @dev Whether a token initialization has been proven (on destination chain).
     /// @param id The initialization id

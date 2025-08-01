@@ -37,8 +37,6 @@ contract ERC20BridgeTest is Test {
         assertEq(signalService.lastSignalId(), id);
     }
 
-
-
     function testDeployCounterpartToken() public {
         // First initialize on source chain
         vm.prank(alice);
@@ -103,8 +101,6 @@ contract ERC20BridgeTest is Test {
         assertEq(token.balanceOf(address(bridge)), 100);
         assertEq(token.balanceOf(alice), 900);
     }
-
-
 
     function testClaimDeposit() public {
         // Initialize token
@@ -253,8 +249,6 @@ contract ERC20BridgeTest is Test {
         bytes32 expectedInitId = bridge.getInitializationId(tokenInit);
         assertEq(initId, expectedInitId, "Initialization ID should be deterministic");
     }
-
-
 
     function testBridgedTokenBaseFeatures() public {
         // Initialize and prove token initialization

@@ -35,8 +35,6 @@ contract ERC721BridgeTest is Test {
         assertEq(signalService.lastSignalId(), id);
     }
 
-
-
     function testDeployCounterpartToken() public {
         // First initialize on source chain
         vm.prank(alice);
@@ -91,8 +89,6 @@ contract ERC721BridgeTest is Test {
         bridge.deposit(bob, address(token), tokenId, address(0));
         assertEq(token.ownerOf(tokenId), address(bridge));
     }
-
-
 
     function testClaimDeposit() public {
         // Initialize token

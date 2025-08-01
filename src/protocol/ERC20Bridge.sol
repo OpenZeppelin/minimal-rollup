@@ -53,8 +53,6 @@ contract ERC20Bridge is IERC20Bridge, ReentrancyGuardTransient {
         return _processed[id];
     }
 
-
-
     /// @inheritdoc IERC20Bridge
     function isInitializationProven(bytes32 id) public view returns (bool) {
         return _processed[id];

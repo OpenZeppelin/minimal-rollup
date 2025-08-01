@@ -61,8 +61,6 @@ contract ERC721Bridge is IERC721Bridge, ReentrancyGuardTransient, IERC721Receive
         return _processed[id];
     }
 
-
-
     /// @inheritdoc IERC721Bridge
     function isInitializationProven(bytes32 id) public view returns (bool) {
         return _processed[id];

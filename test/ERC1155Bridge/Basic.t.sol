@@ -35,8 +35,6 @@ contract ERC1155BridgeTest is Test {
         assertEq(signalService.lastSignalId(), id);
     }
 
-
-
     function testDeployCounterpartToken() public {
         // First initialize on source chain
         vm.prank(alice);
@@ -95,8 +93,6 @@ contract ERC1155BridgeTest is Test {
         assertEq(token.balanceOf(address(bridge), tokenId), 50);
         assertEq(token.balanceOf(alice, tokenId), 50);
     }
-
-
 
     function testClaimDeposit() public {
         // Initialize token
