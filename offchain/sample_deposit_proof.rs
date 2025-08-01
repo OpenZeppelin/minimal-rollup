@@ -78,8 +78,8 @@ fn deposit_specification() -> Vec<DepositSpecification> {
         "5932a71200000000000000000000000000000000000000000000000000000000000004d2", // (valid) call to `someNonPayableFunction(1234)`
     ];
 
-    // _randomAddress("canceler");
-    let canceler = address!("0xf9f5C5411F0bEf1880cE3B051BD14196479764D2");
+    // makeAddr("canceler");
+    let canceler = address!("0x738b9be4596e37015bA15F17116c9B2eE971c238");
     let zero_canceler = Address::ZERO;
 
     let mut specifications = vec![];

@@ -16,7 +16,7 @@ abstract contract InitialState is Test {
     bytes anyRelayer = new bytes(0);
 
     // address that can cancel deposits (if specified in the ETHDeposit)
-    address cancelerAddress = _randomAddress("canceler");
+    address cancelerAddress = makeAddr("canceler");
 
     address zeroCanceler = address(0);
 

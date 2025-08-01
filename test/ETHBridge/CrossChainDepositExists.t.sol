@@ -16,7 +16,7 @@ abstract contract CrossChainDepositExists is UniversalTest {
     address recipient = makeAddr("recipient");
 
     // the recipient that receives the cancelled deposit
-    address cancellationRecipient = _randomAddress("cancellationRecipient");
+    address cancellationRecipient = makeAddr("cancellationRecipient");
 
     uint256 HEIGHT = 1;
 

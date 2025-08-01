@@ -71,7 +71,7 @@ abstract contract DepositIsCancelable is CrossChainDepositExists {
         bytes memory proof = abi.encode(sampleDepositProof.getDepositSignalProof(_depositIdx()));
 
         vm.expectRevert(IETHBridge.OnlyCanceler.selector);
-        vm.prank(_randomAddress("notCanceller"));
+        vm.prank(makeAddr("notCanceller"));
         bridge.cancelDeposit(deposit, cancellationRecipient, "", HEIGHT, proof);
     }
 }
