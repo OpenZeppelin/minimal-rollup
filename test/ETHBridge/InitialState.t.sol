@@ -22,7 +22,6 @@ abstract contract InitialState is Test {
 
     function setUp() public virtual {
         sampleDepositProof = new SampleDepositProof();
-        console.log(makeAddr("recipient"));
 
         // The SignalService on this chain should be at the same address as the source chain.
         signalService = SignalService(sampleDepositProof.getSignalServiceAddress());
