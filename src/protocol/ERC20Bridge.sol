@@ -185,21 +185,15 @@ contract ERC20Bridge is IERC20Bridge, ReentrancyGuardTransient {
 
     /// @inheritdoc IERC20Bridge
     function claimDeposit(ERC20Deposit memory erc20Deposit, uint256 height, bytes memory proof) external nonReentrant {
-        bytes32 id = _claimDeposit(erc20Deposit, erc20Deposit.to, height, proof);
-        emit DepositClaimed(id, erc20Deposit);
-    }
-
-    function _claimDeposit(ERC20Deposit memory erc20Deposit, address to, uint256 height, bytes memory proof)
-        internal
-        returns (bytes32 id)
-    {
-        id = _generateDepositId(erc20Deposit);
+        bytes32 id = _generateDepositId(erc20Deposit);
         require(!processed(id), AlreadyClaimed());
 
         signalService.verifySignal(height, trustedCommitmentPublisher, counterpart, id, proof);
 
         _processed[id] = true;
-        _sendERC20(erc20Deposit, to);
+        _sendERC20(erc20Deposit, erc20Deposit.to);
+
+        emit DepositClaimed(id, erc20Deposit);
     }
 
     /// @dev Function to transfer ERC20 to the receiver.
