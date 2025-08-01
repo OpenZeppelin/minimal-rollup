@@ -32,18 +32,10 @@ contract ERC721BridgeTest is Test {
         vm.prank(alice);
         bytes32 id = bridge.initializeToken(address(token));
 
-        assertTrue(bridge.isTokenInitialized(address(token)));
         assertEq(signalService.lastSignalId(), id);
     }
 
-    function testCannotInitializeTokenTwice() public {
-        vm.prank(alice);
-        bridge.initializeToken(address(token));
 
-        vm.expectRevert("Token already initialized");
-        vm.prank(bob);
-        bridge.initializeToken(address(token));
-    }
 
     function testDeployCounterpartToken() public {
         // First initialize on source chain
@@ -100,11 +92,7 @@ contract ERC721BridgeTest is Test {
         assertEq(token.ownerOf(tokenId), address(bridge));
     }
 
-    function testCannotDepositUninitializedToken() public {
-        vm.expectRevert(IERC721Bridge.TokenNotInitialized.selector);
-        vm.prank(alice);
-        bridge.deposit(bob, address(token), tokenId, address(0));
-    }
+
 
     function testClaimDeposit() public {
         // Initialize token

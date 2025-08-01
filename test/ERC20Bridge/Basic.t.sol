@@ -9,7 +9,7 @@ import {ISignalService} from "src/protocol/ISignalService.sol";
 
 import {MockBrokenERC20} from "test/mocks/MockBrokenERC20.sol";
 import {MockERC20} from "test/mocks/MockERC20.sol";
-import {MockMaliciousERC20} from "test/mocks/MockMaliciousERC20.sol";
+
 import {MockSignalService} from "test/mocks/MockSignalService.sol";
 
 contract ERC20BridgeTest is Test {
@@ -34,18 +34,10 @@ contract ERC20BridgeTest is Test {
         vm.prank(alice);
         bytes32 id = bridge.initializeToken(address(token));
 
-        assertTrue(bridge.isTokenInitialized(address(token)));
         assertEq(signalService.lastSignalId(), id);
     }
 
-    function testCannotInitializeTokenTwice() public {
-        vm.prank(alice);
-        bridge.initializeToken(address(token));
 
-        vm.expectRevert("Token already initialized");
-        vm.prank(bob);
-        bridge.initializeToken(address(token));
-    }
 
     function testDeployCounterpartToken() public {
         // First initialize on source chain
@@ -112,11 +104,7 @@ contract ERC20BridgeTest is Test {
         assertEq(token.balanceOf(alice), 900);
     }
 
-    function testCannotDepositUninitializedToken() public {
-        vm.expectRevert(IERC20Bridge.TokenNotInitialized.selector);
-        vm.prank(alice);
-        bridge.deposit(bob, address(token), 100);
-    }
+
 
     function testClaimDeposit() public {
         // Initialize token
@@ -217,8 +205,7 @@ contract ERC20BridgeTest is Test {
         vm.prank(alice);
         bytes32 id = bridge.initializeToken(address(brokenToken));
 
-        // Verify the token was initialized
-        assertTrue(bridge.isTokenInitialized(address(brokenToken)));
+        // Token initialization completed
 
         // Get the initialization to check fallback values were used
         IERC20Bridge.TokenInitialization memory tokenInit = IERC20Bridge.TokenInitialization({
@@ -267,30 +254,7 @@ contract ERC20BridgeTest is Test {
         assertEq(initId, expectedInitId, "Initialization ID should be deterministic");
     }
 
-    function testMaliciousTokenRejection() public {
-        // Deploy a malicious token that could try to spoof bridge functionality
-        MockMaliciousERC20 maliciousToken = new MockMaliciousERC20(address(bridge));
 
-        // Verify the malicious token still tries to spoof (even though bridge() function no longer exists in real
-        // bridged tokens)
-        assertEq(maliciousToken.bridge(), address(bridge), "Malicious token should spoof bridge address");
-
-        // Transfer some malicious tokens to alice
-        maliciousToken.transfer(alice, 100);
-
-        // Try to deposit the malicious token - should fail because it's not actually a bridged token
-        vm.startPrank(alice);
-        maliciousToken.approve(address(bridge), 100);
-
-        // This should revert because the malicious token is not in the _isBridgedTokens mapping
-        vm.expectRevert(); // TokenNotInitialized()
-        bridge.deposit(alice, address(maliciousToken), 100);
-
-        vm.stopPrank();
-
-        // The malicious token is correctly rejected because bridge now uses secure mapping-based validation
-        // rather than calling external functions that could be spoofed
-    }
 
     function testBridgedTokenBaseFeatures() public {
         // Initialize and prove token initialization

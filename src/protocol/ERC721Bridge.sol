@@ -20,7 +20,6 @@ contract ERC721Bridge is IERC721Bridge, ReentrancyGuardTransient, IERC721Receive
     bytes32 private constant DEPOSIT_SIGNAL_PREFIX = keccak256("ERC721_DEPOSIT");
 
     mapping(bytes32 id => bool processed) private _processed;
-    mapping(address token => bool initialized) private _initializedTokens;
     mapping(bytes32 key => address deployedToken) private _deployedTokens;
     mapping(address token => bool isBridgedToken) private _isBridgedTokens;
 
@@ -62,10 +61,7 @@ contract ERC721Bridge is IERC721Bridge, ReentrancyGuardTransient, IERC721Receive
         return _processed[id];
     }
 
-    /// @inheritdoc IERC721Bridge
-    function isTokenInitialized(address token) public view returns (bool) {
-        return _initializedTokens[token];
-    }
+
 
     /// @inheritdoc IERC721Bridge
     function isInitializationProven(bytes32 id) public view returns (bool) {
@@ -91,7 +87,6 @@ contract ERC721Bridge is IERC721Bridge, ReentrancyGuardTransient, IERC721Receive
     /// @inheritdoc IERC721Bridge
     function initializeToken(address token) external returns (bytes32 id) {
         require(token != address(0), "Invalid token address");
-        require(!_initializedTokens[token], "Token already initialized");
 
         // Read token metadata with fallbacks for non-compliant tokens
         string memory name;
@@ -112,9 +107,6 @@ contract ERC721Bridge is IERC721Bridge, ReentrancyGuardTransient, IERC721Receive
         TokenInitialization memory tokenInit = TokenInitialization({originalToken: token, name: name, symbol: symbol});
 
         id = _generateInitializationId(tokenInit);
-
-        // Mark token as initialized locally
-        _initializedTokens[token] = true;
 
         // Send signal for cross-chain initialization
         signalService.sendSignal(id);
@@ -155,8 +147,7 @@ contract ERC721Bridge is IERC721Bridge, ReentrancyGuardTransient, IERC721Receive
         nonReentrant
         returns (bytes32 id)
     {
-        // Check if token is initialized (for original tokens) or is a bridged token deployed by this bridge
-        require(_initializedTokens[localToken] || _isBridgedToken(localToken), TokenNotInitialized());
+        // Allow deposits of any token - no initialization check required
 
         // Fetch the token URI for this specific token
         string memory tokenURI_;

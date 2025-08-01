@@ -70,8 +70,7 @@ interface IERC721Bridge {
     /// @dev Only canceler can cancel a deposit.
     error OnlyCanceler();
 
-    /// @dev Token has not been initialized for bridging.
-    error TokenNotInitialized();
+
 
     /// @dev Token initialization has already been proven.
     error InitializationAlreadyProven();
@@ -80,9 +79,7 @@ interface IERC721Bridge {
     /// @param id The deposit id
     function processed(bytes32 id) external view returns (bool);
 
-    /// @dev Whether a token has been initialized for bridging.
-    /// @param token The token address
-    function isTokenInitialized(address token) external view returns (bool);
+
 
     /// @dev Whether a token initialization has been proven (on destination chain).
     /// @param id The initialization id
