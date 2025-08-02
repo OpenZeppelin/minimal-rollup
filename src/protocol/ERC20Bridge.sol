@@ -69,7 +69,7 @@ contract ERC20Bridge is IERC20Bridge, ReentrancyGuardTransient {
     }
 
     /// @inheritdoc IERC20Bridge
-    function initializeToken(address token) external returns (bytes32 id) {
+    function recordTokenDescription(address token) external returns (bytes32 id) {
         require(token != address(0), "Invalid token address");
 
         string memory name;

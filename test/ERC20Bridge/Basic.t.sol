@@ -40,7 +40,7 @@ contract ERC20BridgeTest is Test {
     function testDeployCounterpartToken() public {
         // First initialize on source chain
         vm.prank(alice);
-        bytes32 id = bridge.initializeToken(address(token));
+        bytes32 id = bridge.recordTokenDescription(address(token));
 
         // Prepare initialization data for destination chain
         IERC20Bridge.TokenDescription memory tokenDesc = IERC20Bridge.TokenDescription({

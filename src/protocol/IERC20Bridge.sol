@@ -75,7 +75,7 @@ interface IERC20Bridge {
 
     /// @dev Records a token description for bridging by reading its metadata and sending a signal.
     /// @param token The ERC20 token address to record description for
-    function initializeToken(address token) external returns (bytes32 id);
+    function recordTokenDescription(address token) external returns (bytes32 id);
 
     /// @dev Proves a token description from the source chain and deploys the counterpart token.
     /// @param tokenDesc The token description data
