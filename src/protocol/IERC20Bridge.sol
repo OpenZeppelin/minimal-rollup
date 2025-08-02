@@ -57,7 +57,7 @@ interface IERC20Bridge {
     /// @dev Counterpart token has already been deployed.
     error CounterpartTokenAlreadyDeployed();
 
-    /// @dev Whether the deposit identified by `id` has been claimed or cancelled.
+    /// @dev Whether the deposit identified by `id` has been claimed.
     /// @param id The deposit id
     function processed(bytes32 id) external view returns (bool);
 
