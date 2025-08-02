@@ -30,9 +30,9 @@ contract ERC20BridgeTest is Test {
         token.approve(address(bridge), type(uint256).max);
     }
 
-    function testInitializeToken() public {
+    function testRecordTokenDescription() public {
         vm.prank(alice);
-        bytes32 id = bridge.initializeToken(address(token));
+        bytes32 id = bridge.recordTokenDescription(address(token));
 
         assertEq(signalService.lastSignalId(), id);
     }
@@ -72,7 +72,7 @@ contract ERC20BridgeTest is Test {
     function testCannotProveInitializationTwice() public {
         // First initialize
         vm.prank(alice);
-        bridge.initializeToken(address(token));
+        bridge.recordTokenDescription(address(token));
 
         IERC20Bridge.TokenDescription memory tokenDesc = IERC20Bridge.TokenDescription({
             originalToken: address(token),
@@ -94,7 +94,7 @@ contract ERC20BridgeTest is Test {
     function testDeposit() public {
         // Initialize token first
         vm.prank(alice);
-        bridge.initializeToken(address(token));
+        bridge.recordTokenDescription(address(token));
 
         vm.prank(alice);
         bridge.deposit(bob, address(token), 100);
@@ -105,7 +105,7 @@ contract ERC20BridgeTest is Test {
     function testClaimDeposit() public {
         // Initialize token
         vm.prank(alice);
-        bridge.initializeToken(address(token));
+        bridge.recordTokenDescription(address(token));
 
         vm.prank(alice);
         bytes32 id = bridge.deposit(bob, address(token), 100);
@@ -127,7 +127,7 @@ contract ERC20BridgeTest is Test {
     function testCannotClaimAlreadyClaimed() public {
         // Initialize token
         vm.prank(alice);
-        bridge.initializeToken(address(token));
+        bridge.recordTokenDescription(address(token));
 
         vm.prank(alice);
         bridge.deposit(bob, address(token), 100);
@@ -151,7 +151,7 @@ contract ERC20BridgeTest is Test {
 
         // Initialize token on chain 1
         vm.prank(alice);
-        bridge.initializeToken(address(token));
+        bridge.recordTokenDescription(address(token));
 
         // Prove initialization on chain 2 (simulating it came from chain 1)
         IERC20Bridge.TokenDescription memory tokenDesc = IERC20Bridge.TokenDescription({
@@ -199,7 +199,7 @@ contract ERC20BridgeTest is Test {
 
         // Initialize should work with fallback values
         vm.prank(alice);
-        bytes32 id = bridge.initializeToken(address(brokenToken));
+        bytes32 id = bridge.recordTokenDescription(address(brokenToken));
 
         // Token initialization completed
 
@@ -230,7 +230,7 @@ contract ERC20BridgeTest is Test {
     function testSignalIDDifferentiation() public {
         // Deploy and initialize token
         vm.prank(alice);
-        bytes32 initId = bridge.initializeToken(address(token));
+        bytes32 initId = bridge.recordTokenDescription(address(token));
 
         // Create a deposit (alice already has tokens and approval from setUp)
         vm.prank(alice);
@@ -253,7 +253,7 @@ contract ERC20BridgeTest is Test {
     function testBridgedTokenBaseFeatures() public {
         // Initialize and prove token initialization
         MockERC20 originalToken = new MockERC20("Original Token", "ORIG");
-        bridge.initializeToken(address(originalToken));
+        bridge.recordTokenDescription(address(originalToken));
 
         IERC20Bridge.TokenDescription memory tokenDesc = IERC20Bridge.TokenDescription({
             originalToken: address(originalToken),
