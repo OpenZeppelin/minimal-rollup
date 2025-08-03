@@ -170,10 +170,10 @@ contract ERC20Bridge is IERC20Bridge, ReentrancyGuardTransient {
     /// @dev Function to transfer ERC20 to the receiver.
     /// @param erc20Deposit The deposit information containing the original token address
     function _sendERC20(ERC20Deposit memory erc20Deposit) internal {
-        address deployedToken = _counterpartTokens[erc20Deposit.originalToken];
+        address counterpartToken = _counterpartTokens[erc20Deposit.originalToken];
 
-        if (deployedToken != address(0)) {
-            BridgedERC20(deployedToken).mint(erc20Deposit.to, erc20Deposit.amount);
+        if (counterpartToken != address(0)) {
+            BridgedERC20(counterpartToken).mint(erc20Deposit.to, erc20Deposit.amount);
         } else {
             IERC20(erc20Deposit.originalToken).safeTransfer(erc20Deposit.to, erc20Deposit.amount);
         }
