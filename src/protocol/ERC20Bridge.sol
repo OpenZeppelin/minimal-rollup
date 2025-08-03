@@ -118,12 +118,11 @@ contract ERC20Bridge is IERC20Bridge, ReentrancyGuardTransient {
 
         signalService.verifySignal(height, trustedCommitmentPublisher, counterpart, id, proof);
 
-        _processed[id] = true;
-
         deployedToken =
             address(new BridgedERC20(tokenDesc.name, tokenDesc.symbol, tokenDesc.decimals, tokenDesc.originalToken));
         _counterpartTokens[tokenDesc.originalToken] = deployedToken;
         _isBridgedTokens[deployedToken] = true;
+        _processed[id] = true;
 
         emit CounterpartTokenDeployed(id, tokenDesc, deployedToken);
     }
