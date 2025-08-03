@@ -162,21 +162,20 @@ contract ERC20Bridge is IERC20Bridge, ReentrancyGuardTransient {
         signalService.verifySignal(height, trustedCommitmentPublisher, counterpart, id, proof);
 
         _processed[id] = true;
-        _sendERC20(erc20Deposit, erc20Deposit.to);
+        _sendERC20(erc20Deposit);
 
         emit DepositClaimed(id, erc20Deposit);
     }
 
     /// @dev Function to transfer ERC20 to the receiver.
     /// @param erc20Deposit The deposit information containing the original token address
-    /// @param to Address to send the tokens to
-    function _sendERC20(ERC20Deposit memory erc20Deposit, address to) internal {
+    function _sendERC20(ERC20Deposit memory erc20Deposit) internal {
         address deployedToken = _counterpartTokens[erc20Deposit.originalToken];
 
         if (deployedToken != address(0)) {
-            BridgedERC20(deployedToken).mint(to, erc20Deposit.amount);
+            BridgedERC20(deployedToken).mint(erc20Deposit.to, erc20Deposit.amount);
         } else {
-            IERC20(erc20Deposit.originalToken).safeTransfer(to, erc20Deposit.amount);
+            IERC20(erc20Deposit.originalToken).safeTransfer(erc20Deposit.to, erc20Deposit.amount);
         }
     }
 
