@@ -111,21 +111,18 @@ contract ERC20Bridge is IERC20Bridge, ReentrancyGuardTransient {
     {
         bytes32 id = _generateTokenDescriptionId(tokenDesc);
         require(!_processed[id], CounterpartTokenAlreadyDeployed());
-
-        signalService.verifySignal(height, trustedCommitmentPublisher, counterpart, id, proof);
-
-        _processed[id] = true;
-
         require(
             _counterpartTokens[tokenDesc.originalToken] == address(0),
             "Counterpart token already exists for this original token"
         );
 
+        signalService.verifySignal(height, trustedCommitmentPublisher, counterpart, id, proof);
+
+        _processed[id] = true;
+
         deployedToken =
             address(new BridgedERC20(tokenDesc.name, tokenDesc.symbol, tokenDesc.decimals, tokenDesc.originalToken));
-
         _counterpartTokens[tokenDesc.originalToken] = deployedToken;
-
         _isBridgedTokens[deployedToken] = true;
 
         emit CounterpartTokenDeployed(id, tokenDesc, deployedToken);
