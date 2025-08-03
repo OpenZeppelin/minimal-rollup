@@ -58,7 +58,7 @@ contract ERC20BridgeTest is Test {
         address deployedToken = bridge.deployCounterpartToken(tokenDesc, height, proof);
 
         assertTrue(bridge.processed(id));
-        assertEq(bridge.getDeployedToken(address(token)), deployedToken);
+        assertEq(bridge.getCounterpartToken(address(token)), deployedToken);
 
         // Check that the deployed token has correct metadata
         BridgedERC20 bridgedToken = BridgedERC20(deployedToken);

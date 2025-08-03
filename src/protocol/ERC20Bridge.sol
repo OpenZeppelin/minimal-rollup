@@ -54,7 +54,7 @@ contract ERC20Bridge is IERC20Bridge, ReentrancyGuardTransient {
     }
 
     /// @inheritdoc IERC20Bridge
-    function getDeployedToken(address originalToken) public view returns (address) {
+    function getCounterpartToken(address originalToken) public view returns (address) {
         return _counterpartTokens[originalToken];
     }
 

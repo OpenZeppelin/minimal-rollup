@@ -62,9 +62,9 @@ interface IERC20Bridge {
     /// @param id The deposit or token description id
     function processed(bytes32 id) external view returns (bool);
 
-    /// @dev Get the deployed token address for an original token (on destination chain).
-    /// @param originalToken The original token address
-    function getDeployedToken(address originalToken) external view returns (address);
+    /// @dev Get the deployed counterpart token address (on the destination chain) for an original token.
+    /// @param originalToken The original token address on the source chain
+    function getCounterpartToken(address originalToken) external view returns (address);
 
     /// @dev Token description identifier.
     /// @param tokenDesc The token description struct
