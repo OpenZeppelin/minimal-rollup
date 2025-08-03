@@ -129,19 +129,19 @@ contract ERC20Bridge is IERC20Bridge, ReentrancyGuardTransient {
     }
 
     /// @inheritdoc IERC20Bridge
-    function deposit(address to, address originalToken, uint256 amount) external nonReentrant returns (bytes32 id) {
-        bool isBridged = _isBridgedToken(originalToken);
+    function deposit(address to, address localToken, uint256 amount) external nonReentrant returns (bytes32 id) {
+        bool isBridged = _isBridgedToken(localToken);
 
-        address actualOriginalToken = originalToken;
+        address originalToken = localToken;
         if (isBridged) {
-            actualOriginalToken = BridgedERC20(originalToken).originalToken();
+            originalToken = BridgedERC20(localToken).originalToken();
         }
 
         ERC20Deposit memory erc20Deposit = ERC20Deposit({
             nonce: _globalDepositNonce,
             from: msg.sender,
             to: to,
-            originalToken: actualOriginalToken,
+            originalToken: originalToken,
             amount: amount
         });
 
@@ -150,13 +150,13 @@ contract ERC20Bridge is IERC20Bridge, ReentrancyGuardTransient {
             ++_globalDepositNonce;
         }
 
-        IERC20(originalToken).safeTransferFrom(msg.sender, address(this), amount);
+        IERC20(localToken).safeTransferFrom(msg.sender, address(this), amount);
         if (isBridged) {
-            BridgedERC20(originalToken).burn(amount);
+            BridgedERC20(localToken).burn(amount);
         }
 
         signalService.sendSignal(id);
-        emit DepositMade(id, erc20Deposit, originalToken);
+        emit DepositMade(id, erc20Deposit, localToken);
     }
 
     /// @inheritdoc IERC20Bridge
