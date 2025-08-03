@@ -11,8 +11,8 @@ import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol
 import {ReentrancyGuardTransient} from "@openzeppelin/contracts/utils/ReentrancyGuardTransient.sol";
 
 /// @title ERC20Bridge
-/// @notice A decentralized bridge for ERC20 tokens that allows anyone to initialize tokens
-/// @dev Uses a permissionless token initialization flow
+/// @notice A decentralized bridge for ERC20 tokens that allows anyone to bridge any ERC20 token
+/// @dev Uses a permissionless flow to initialize the counterpart token on the destination chain.
 contract ERC20Bridge is IERC20Bridge, ReentrancyGuardTransient {
     using SafeERC20 for IERC20;
 
