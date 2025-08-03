@@ -57,8 +57,9 @@ interface IERC20Bridge {
     /// @dev Counterpart token has already been deployed.
     error CounterpartTokenAlreadyDeployed();
 
-    /// @dev Whether the deposit identified by `id` has been claimed.
-    /// @param id The deposit id
+    /// @dev Whether the action identified by `id` has been processed on this chain. If `id` is a deposit, this means
+    /// the deposit was claimed. If `id` is a token description, this means the counterpart token was deployed.
+    /// @param id The deposit or token description id
     function processed(bytes32 id) external view returns (bool);
 
     /// @dev Get the deployed token address for an original token (on destination chain).
