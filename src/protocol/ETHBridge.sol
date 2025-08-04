@@ -25,11 +25,13 @@ contract ETHBridge is IETHBridge, ReentrancyGuardTransient {
     /// WARN: This address has no significance (and may be untrustworthy) on this chain.
     address public immutable counterpart;
 
+    /// @param _signalService Address of the signal service contract
+    /// @param _trustedCommitmentPublisher Address of the trusted commitment publisher
+    /// @param _counterpart Address of the counterpart signal contract
     constructor(address _signalService, address _trustedCommitmentPublisher, address _counterpart) {
-        require(_signalService != address(0), "Empty signal service");
-        require(_trustedCommitmentPublisher != address(0), "Empty trusted publisher");
-        require(_counterpart != address(0), "Empty counterpart");
-
+        require(_signalService != address(0), EmptySignalService());
+        require(_trustedCommitmentPublisher != address(0), EmptyTrustedPublisher());
+        require(_counterpart != address(0), EmptyCounterpart());
         signalService = ISignalService(_signalService);
         trustedCommitmentPublisher = _trustedCommitmentPublisher;
         counterpart = _counterpart;
@@ -51,6 +53,7 @@ contract ETHBridge is IETHBridge, ReentrancyGuardTransient {
         payable
         returns (bytes32 id)
     {
+        require(to != address(0), ZeroReceiver());
         ETHDeposit memory ethDeposit =
             ETHDeposit(_globalDepositNonce, msg.sender, to, msg.value, data, context, canceler);
         id = _generateId(ethDeposit);
@@ -69,15 +72,18 @@ contract ETHBridge is IETHBridge, ReentrancyGuardTransient {
     }
 
     /// @inheritdoc IETHBridge
-    function cancelDeposit(ETHDeposit memory ethDeposit, address claimee, uint256 height, bytes memory proof)
-        external
-        nonReentrant
-    {
+    function cancelDeposit(
+        ETHDeposit memory ethDeposit,
+        address claimee,
+        bytes memory data,
+        uint256 height,
+        bytes memory proof
+    ) external nonReentrant {
         require(msg.sender == ethDeposit.canceler, OnlyCanceler());
 
-        bytes32 id = _claimDeposit(ethDeposit, claimee, bytes(""), height, proof);
+        bytes32 id = _claimDeposit(ethDeposit, claimee, data, height, proof);
 
-        emit DepositCancelled(id, claimee);
+        emit DepositCancelled(id, claimee, data);
     }
 
     function _claimDeposit(

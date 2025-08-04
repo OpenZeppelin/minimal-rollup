@@ -8,14 +8,15 @@ import {IETHDepositor} from "./IProverManager.sol";
 /// @notice Implementation of the `BaseProverManager` contract that uses ETH for bids, stake and paying for publication
 /// fees.
 contract ETHProverManager is BaseProverManager, IETHDepositor {
+    /// @param _inbox Address of the inbox contract
+    /// @param _checkpointTracker Address of the checkpoint tracker contract
+    /// @param _initialProver Address of the initial prover who will provide the bond
+    /// @param _initialFee Initial fee amount
     constructor(address _inbox, address _checkpointTracker, address _initialProver, uint96 _initialFee)
         payable
         BaseProverManager(_inbox, _checkpointTracker, _initialProver, _initialFee, msg.value)
     {
-        require(
-            msg.value >= _livenessBond(),
-            "The amount of ETH deposited must be greater than or equal to the livenessBond"
-        );
+        require(msg.value >= _livenessBond(), InsufficientETHDeposit(msg.value, _livenessBond()));
     }
 
     /// @notice Receive ETH transfers and deposit them to the sender's balance
@@ -36,6 +37,6 @@ contract ETHProverManager is BaseProverManager, IETHDepositor {
         assembly ("memory-safe") {
             ok := call(gas(), to, amount, 0, 0, 0, 0)
         }
-        require(ok, "Withdraw failed");
+        require(ok, WithdrawFailed());
     }
 }

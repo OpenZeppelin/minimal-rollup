@@ -80,6 +80,9 @@ abstract contract BaseProverManager is IProposerFees, IProverManager, BalanceAcc
     /// @dev Current period is not vacant
     error NoProvingVacancy();
 
+    /// @dev The provided address is zero
+    error ZeroAddress();
+
     /// @dev Initializes the contract state and deposits the initial prover's liveness bond.
     /// The constructor also calls `_claimProvingVacancy`. Publications will actually start in period 1.
     /// @param _inbox The address of the inbox contract
@@ -94,9 +97,9 @@ abstract contract BaseProverManager is IProposerFees, IProverManager, BalanceAcc
         uint96 _initialFee,
         uint256 _initialDeposit
     ) {
-        require(_inbox != address(0), "Inbox address cannot be 0");
-        require(_checkpointTracker != address(0), "Checkpoint tracker address cannot be 0");
-        require(_initialProver != address(0), "Initial prover address cannot be 0");
+        require(_inbox != address(0), ZeroAddress());
+        require(_checkpointTracker != address(0), ZeroAddress());
+        require(_initialProver != address(0), ZeroAddress());
 
         inbox = IInbox(_inbox);
         checkpointTracker = ICheckpointTracker(_checkpointTracker);

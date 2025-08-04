@@ -53,6 +53,7 @@ contract MessageRelayer is ReentrancyGuardTransient, IMessageRelayer {
 
     IETHBridge public immutable ethBridge;
 
+    /// @param _ethBridge Address of the ETH bridge
     constructor(address _ethBridge) {
         ethBridge = IETHBridge(_ethBridge);
     }
@@ -88,6 +89,7 @@ contract MessageRelayer is ReentrancyGuardTransient, IMessageRelayer {
         // If none specified use the one in temporary storage
         if (userSelectedTipRecipient == address(0)) {
             tipRecipient = TIP_RECIPIENT_SLOT.asAddress().tload();
+            require(tipRecipient != address(0), NoTipRecipient());
         }
 
         uint256 valueToSend = msg.value - tip;

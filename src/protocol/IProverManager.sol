@@ -88,11 +88,27 @@ interface IProverManager {
 }
 
 interface IERC20Depositor {
+    /// @dev Token address cannot be zero
+    error ZeroTokenAddress();
+
+    /// @dev Initial deposit must be greater than or equal to the liveness bond
+    /// @param deposit The provided initial deposit
+    /// @param requiredBond The required liveness bond amount
+    error InsufficientInitialDeposit(uint256 deposit, uint256 requiredBond);
     /// @notice Deposit tokens into the contract.
+
     function deposit(uint256 amount) external;
 }
 
 interface IETHDepositor {
+    /// @dev The deposited ETH must be at least the liveness bond amount
+    /// @param deposited The amount of ETH deposited
+    /// @param required The required liveness bond amount
+    error InsufficientETHDeposit(uint256 deposited, uint256 required);
+
+    /// @dev ETH transfer failed
+    error WithdrawFailed();
+
     /// @notice Deposit ETH into the contract.
     function deposit() external payable;
 }

@@ -17,12 +17,4 @@ contract InitialState is Test {
         signalService = SignalService(sampleProof.getSignalServiceAddress());
         deployCodeTo("SignalService.sol", address(signalService));
     }
-
-    function _randomAddress(string memory name) internal pure returns (address) {
-        return address(uint160(uint256(keccak256(abi.encode(_domainSeparator(), name)))));
-    }
-
-    function _domainSeparator() internal pure returns (bytes32) {
-        return keccak256("SignalService");
-    }
 }
