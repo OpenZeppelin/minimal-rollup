@@ -14,8 +14,8 @@ import {ERC165} from "@openzeppelin/contracts/utils/introspection/ERC165.sol";
 import {IERC165} from "@openzeppelin/contracts/utils/introspection/IERC165.sol";
 
 /// @title ERC1155Bridge
-/// @notice A decentralized bridge for ERC1155 tokens that allows anyone to initialize tokens
-/// @dev Uses a permissionless token initialization flow
+/// @notice A decentralized bridge for ERC1155 tokens that allows anyone to bridge any ERC1155 token
+/// @dev Uses a permissionless flow to initialize the counterpart token on the destination chain.
 contract ERC1155Bridge is IERC1155Bridge, ReentrancyGuardTransient, IERC1155Receiver, ERC165 {
     /// @dev Signal type constants to differentiate signal categories
     bytes32 private constant TOKEN_DESCRIPTION_SIGNAL_PREFIX = keccak256("ERC1155_TOKEN_DESCRIPTION");

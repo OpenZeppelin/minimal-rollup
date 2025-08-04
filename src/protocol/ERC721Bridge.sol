@@ -13,8 +13,8 @@ import {ReentrancyGuardTransient} from "@openzeppelin/contracts/utils/Reentrancy
 import {ERC165} from "@openzeppelin/contracts/utils/introspection/ERC165.sol";
 
 /// @title ERC721Bridge
-/// @notice A decentralized bridge for ERC721 tokens that allows anyone to initialize tokens
-/// @dev Uses a permissionless token initialization flow
+/// @notice A decentralized bridge for ERC721 tokens that allows anyone to bridge any ERC721 token
+/// @dev Uses a permissionless flow to initialize the counterpart token on the destination chain.
 contract ERC721Bridge is IERC721Bridge, ReentrancyGuardTransient, IERC721Receiver, ERC165 {
     /// @dev Signal type constants to differentiate signal categories
     bytes32 private constant TOKEN_DESCRIPTION_SIGNAL_PREFIX = keccak256("ERC721_TOKEN_DESCRIPTION");
