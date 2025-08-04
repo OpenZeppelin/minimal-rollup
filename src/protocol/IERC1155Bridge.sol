@@ -68,13 +68,15 @@ interface IERC1155Bridge {
     /// @dev Counterpart token has already been deployed.
     error CounterpartTokenAlreadyDeployed();
 
-    /// @dev Whether the deposit identified by `id` has been claimed or cancelled.
-    /// @param id The deposit id
+    /// @dev Whether the action identified by `id` has been processed on this chain. If `id` is a deposit, this means
+    /// the deposit was claimed or cancelled. If `id` is a token description, this means the counterpart token was
+    /// deployed.
+    /// @param id The deposit or token description id
     function processed(bytes32 id) external view returns (bool);
 
-    /// @dev Get the deployed token address for an original token (on destination chain).
-    /// @param originalToken The original token address
-    function getDeployedToken(address originalToken) external view returns (address);
+    /// @dev Get the deployed counterpart token address (on the destination chain) for an original token.
+    /// @param originalToken The original token address on the source chain
+    function getCounterpartToken(address originalToken) external view returns (address);
 
     /// @dev Token description identifier.
     /// @param tokenDesc The token description struct
@@ -86,7 +88,7 @@ interface IERC1155Bridge {
 
     /// @dev Records a token description for bridging by reading its metadata and sending a signal.
     /// @param token The ERC1155 token address to record description for
-    function initializeToken(address token) external returns (bytes32 id);
+    function recordTokenDescription(address token) external returns (bytes32 id);
 
     /// @dev Proves a token description from the source chain and deploys the counterpart token.
     /// @param tokenDesc The token description data
@@ -98,12 +100,12 @@ interface IERC1155Bridge {
 
     /// @dev Creates an ERC1155 deposit
     /// @param to The receiver of the deposit
-    /// @param originalToken The ERC1155 token address
+    /// @param localToken The ERC1155 token address
     /// @param tokenId The token ID
     /// @param amount The amount to deposit
     /// @param canceler Address on the destination chain that is allowed to cancel the deposit (zero address means
     /// deposit is uncancellable)
-    function deposit(address to, address originalToken, uint256 tokenId, uint256 amount, address canceler)
+    function deposit(address to, address localToken, uint256 tokenId, uint256 amount, address canceler)
         external
         returns (bytes32 id);
 

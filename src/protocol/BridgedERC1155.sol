@@ -31,7 +31,7 @@ contract BridgedERC1155 is ERC1155, BridgedTokenBase, IMintableERC1155 {
         onlyOwner
     {
         _mint(to, id, amount, data);
-        _setTokenURI(id, tokenURI_);
+        _tokenURIs[id] = tokenURI_;
     }
 
     /// @inheritdoc IMintableERC1155
@@ -48,12 +48,5 @@ contract BridgedERC1155 is ERC1155, BridgedTokenBase, IMintableERC1155 {
         }
 
         return super.uri(tokenId);
-    }
-
-    /// @dev Sets the token URI for a specific token
-    /// @param tokenId Token ID to set URI for
-    /// @param tokenURI_ URI to set
-    function _setTokenURI(uint256 tokenId, string memory tokenURI_) internal {
-        _tokenURIs[tokenId] = tokenURI_;
     }
 }

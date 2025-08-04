@@ -30,7 +30,7 @@ contract ERC721BridgeTest is Test {
 
     function testInitializeToken() public {
         vm.prank(alice);
-        bytes32 id = bridge.initializeToken(address(token));
+        bytes32 id = bridge.recordTokenDescription(address(token));
 
         assertEq(signalService.lastSignalId(), id);
     }
@@ -38,7 +38,7 @@ contract ERC721BridgeTest is Test {
     function testDeployCounterpartToken() public {
         // First initialize on source chain
         vm.prank(alice);
-        bytes32 id = bridge.initializeToken(address(token));
+        bytes32 id = bridge.recordTokenDescription(address(token));
 
         // Prepare initialization data for destination chain
         IERC721Bridge.TokenDescription memory tokenDesc =
@@ -52,7 +52,7 @@ contract ERC721BridgeTest is Test {
         address deployedToken = bridge.deployCounterpartToken(tokenDesc, height, proof);
 
         assertTrue(bridge.processed(id));
-        assertEq(bridge.getDeployedToken(address(token)), deployedToken);
+        assertEq(bridge.getCounterpartToken(address(token)), deployedToken);
 
         // Check that the deployed token has correct metadata
         BridgedERC721 bridgedToken = BridgedERC721(deployedToken);
@@ -65,7 +65,7 @@ contract ERC721BridgeTest is Test {
     function testCannotProveInitializationTwice() public {
         // First initialize
         vm.prank(alice);
-        bridge.initializeToken(address(token));
+        bridge.recordTokenDescription(address(token));
 
         IERC721Bridge.TokenDescription memory tokenDesc =
             IERC721Bridge.TokenDescription({originalToken: address(token), name: "Test NFT", symbol: "TNFT"});
@@ -83,7 +83,7 @@ contract ERC721BridgeTest is Test {
     function testDeposit() public {
         // Initialize token first
         vm.prank(alice);
-        bridge.initializeToken(address(token));
+        bridge.recordTokenDescription(address(token));
 
         vm.prank(alice);
         bridge.deposit(bob, address(token), tokenId, address(0));
@@ -93,7 +93,7 @@ contract ERC721BridgeTest is Test {
     function testClaimDeposit() public {
         // Initialize token
         vm.prank(alice);
-        bridge.initializeToken(address(token));
+        bridge.recordTokenDescription(address(token));
 
         vm.prank(alice);
         bytes32 id = bridge.deposit(bob, address(token), tokenId, address(0));
@@ -121,7 +121,7 @@ contract ERC721BridgeTest is Test {
     function testCancelDeposit() public {
         // Initialize token
         vm.prank(alice);
-        bridge.initializeToken(address(token));
+        bridge.recordTokenDescription(address(token));
 
         address canceler = makeAddr("canceler");
         vm.prank(alice);
@@ -151,7 +151,7 @@ contract ERC721BridgeTest is Test {
     function testCannotCancelIfNotCanceler() public {
         // Initialize token
         vm.prank(alice);
-        bridge.initializeToken(address(token));
+        bridge.recordTokenDescription(address(token));
 
         address canceler = makeAddr("canceler");
         vm.prank(alice);
@@ -179,7 +179,7 @@ contract ERC721BridgeTest is Test {
     function testCannotClaimAlreadyClaimed() public {
         // Initialize token
         vm.prank(alice);
-        bridge.initializeToken(address(token));
+        bridge.recordTokenDescription(address(token));
 
         vm.prank(alice);
         bridge.deposit(bob, address(token), tokenId, address(0));
@@ -207,7 +207,7 @@ contract ERC721BridgeTest is Test {
     function testCannotCancelAlreadyClaimed() public {
         // Initialize token
         vm.prank(alice);
-        bridge.initializeToken(address(token));
+        bridge.recordTokenDescription(address(token));
 
         address canceler = makeAddr("canceler");
         vm.prank(alice);
@@ -237,7 +237,7 @@ contract ERC721BridgeTest is Test {
     function testCannotCancelIfNoCanceler() public {
         // Initialize token
         vm.prank(alice);
-        bridge.initializeToken(address(token));
+        bridge.recordTokenDescription(address(token));
 
         vm.prank(alice);
         bridge.deposit(bob, address(token), tokenId, address(0));
@@ -267,7 +267,7 @@ contract ERC721BridgeTest is Test {
 
         // Initialize token on chain 1
         vm.prank(alice);
-        bridge.initializeToken(address(token));
+        bridge.recordTokenDescription(address(token));
 
         // Prove initialization on chain 2 (simulating it came from chain 1)
         IERC721Bridge.TokenDescription memory tokenDesc =
@@ -318,7 +318,7 @@ contract ERC721BridgeTest is Test {
 
         // Initialize token on chain 1
         vm.prank(alice);
-        bridge.initializeToken(address(token));
+        bridge.recordTokenDescription(address(token));
 
         // Prove initialization on chain 2 (simulating it came from chain 1)
         IERC721Bridge.TokenDescription memory tokenDesc =

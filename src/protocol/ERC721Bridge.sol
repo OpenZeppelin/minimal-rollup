@@ -62,7 +62,7 @@ contract ERC721Bridge is IERC721Bridge, ReentrancyGuardTransient, IERC721Receive
     }
 
     /// @inheritdoc IERC721Bridge
-    function getDeployedToken(address originalToken) public view returns (address) {
+    function getCounterpartToken(address originalToken) public view returns (address) {
         return _counterpartTokens[originalToken];
     }
 
@@ -77,7 +77,7 @@ contract ERC721Bridge is IERC721Bridge, ReentrancyGuardTransient, IERC721Receive
     }
 
     /// @inheritdoc IERC721Bridge
-    function initializeToken(address token) external returns (bytes32 id) {
+    function recordTokenDescription(address token) external returns (bytes32 id) {
         require(token != address(0), "Invalid token address");
 
         string memory name;
@@ -111,50 +111,40 @@ contract ERC721Bridge is IERC721Bridge, ReentrancyGuardTransient, IERC721Receive
     {
         bytes32 id = _generateTokenDescriptionId(tokenDesc);
         require(!_processed[id], CounterpartTokenAlreadyDeployed());
-
-        signalService.verifySignal(height, trustedCommitmentPublisher, counterpart, id, proof);
-
-        _processed[id] = true;
-
         require(
             _counterpartTokens[tokenDesc.originalToken] == address(0),
             "Counterpart token already exists for this original token"
         );
 
+        signalService.verifySignal(height, trustedCommitmentPublisher, counterpart, id, proof);
+
         deployedToken = address(new BridgedERC721(tokenDesc.name, tokenDesc.symbol, tokenDesc.originalToken));
-
         _counterpartTokens[tokenDesc.originalToken] = deployedToken;
-
         _isBridgedTokens[deployedToken] = true;
+        _processed[id] = true;
 
         emit CounterpartTokenDeployed(id, tokenDesc, deployedToken);
     }
 
     /// @inheritdoc IERC721Bridge
-    function deposit(address to, address originalToken, uint256 tokenId, address canceler)
+    function deposit(address to, address localToken, uint256 tokenId, address canceler)
         external
         nonReentrant
         returns (bytes32 id)
     {
-        bool isBridged = _isBridgedToken(originalToken);
+        bool isBridged = _isBridgedToken(localToken);
+        address originalToken = isBridged ? BridgedERC721(localToken).originalToken() : localToken;
 
         string memory tokenURI;
-        try IERC721Metadata(originalToken).tokenURI(tokenId) returns (string memory uri) {
+        try IERC721Metadata(localToken).tokenURI(tokenId) returns (string memory uri) {
             tokenURI = uri;
         } catch {}
-
-        address actualOriginalToken;
-        if (isBridged) {
-            actualOriginalToken = BridgedERC721(originalToken).originalToken();
-        } else {
-            actualOriginalToken = originalToken;
-        }
 
         ERC721Deposit memory erc721Deposit = ERC721Deposit({
             nonce: _globalDepositNonce,
             from: msg.sender,
             to: to,
-            originalToken: actualOriginalToken,
+            originalToken: originalToken,
             tokenId: tokenId,
             tokenURI: tokenURI,
             canceler: canceler
@@ -165,13 +155,13 @@ contract ERC721Bridge is IERC721Bridge, ReentrancyGuardTransient, IERC721Receive
             ++_globalDepositNonce;
         }
 
-        IERC721(originalToken).safeTransferFrom(msg.sender, address(this), tokenId);
+        IERC721(localToken).safeTransferFrom(msg.sender, address(this), tokenId);
         if (isBridged) {
-            BridgedERC721(originalToken).burn(tokenId);
+            BridgedERC721(localToken).burn(tokenId);
         }
 
         signalService.sendSignal(id);
-        emit DepositMade(id, erc721Deposit, originalToken);
+        emit DepositMade(id, erc721Deposit, localToken);
     }
 
     /// @inheritdoc IERC721Bridge

@@ -71,7 +71,7 @@ contract ERC1155Bridge is IERC1155Bridge, ReentrancyGuardTransient, IERC1155Rece
     }
 
     /// @inheritdoc IERC1155Bridge
-    function getDeployedToken(address originalToken) public view returns (address) {
+    function getCounterpartToken(address originalToken) public view returns (address) {
         return _counterpartTokens[originalToken];
     }
 
@@ -86,15 +86,13 @@ contract ERC1155Bridge is IERC1155Bridge, ReentrancyGuardTransient, IERC1155Rece
     }
 
     /// @inheritdoc IERC1155Bridge
-    function initializeToken(address token) external returns (bytes32 id) {
+    function recordTokenDescription(address token) external returns (bytes32 id) {
         require(token != address(0), "Invalid token address");
 
         string memory uri;
         try IERC1155MetadataURI(token).uri(0) returns (string memory tokenUri) {
             uri = tokenUri;
-        } catch {
-            uri = "";
-        }
+        } catch {}
 
         TokenDescription memory tokenDesc = TokenDescription({originalToken: token, uri: uri});
 
@@ -112,52 +110,40 @@ contract ERC1155Bridge is IERC1155Bridge, ReentrancyGuardTransient, IERC1155Rece
     {
         bytes32 id = _generateTokenDescriptionId(tokenDesc);
         require(!_processed[id], CounterpartTokenAlreadyDeployed());
-
-        signalService.verifySignal(height, trustedCommitmentPublisher, counterpart, id, proof);
-
-        _processed[id] = true;
-
         require(
             _counterpartTokens[tokenDesc.originalToken] == address(0),
             "Counterpart token already exists for this original token"
         );
 
+        signalService.verifySignal(height, trustedCommitmentPublisher, counterpart, id, proof);
+
         deployedToken = address(new BridgedERC1155(tokenDesc.uri, tokenDesc.originalToken));
-
         _counterpartTokens[tokenDesc.originalToken] = deployedToken;
-
         _isBridgedTokens[deployedToken] = true;
+        _processed[id] = true;
 
         emit CounterpartTokenDeployed(id, tokenDesc, deployedToken);
     }
 
     /// @inheritdoc IERC1155Bridge
-    function deposit(address to, address originalToken, uint256 tokenId, uint256 amount, address canceler)
+    function deposit(address to, address localToken, uint256 tokenId, uint256 amount, address canceler)
         external
         nonReentrant
         returns (bytes32 id)
     {
-        bool isBridged = _isBridgedToken(originalToken);
+        bool isBridged = _isBridgedToken(localToken);
+        address originalToken = isBridged ? BridgedERC1155(localToken).originalToken() : localToken;
 
         string memory tokenURI_;
-        try IERC1155MetadataURI(originalToken).uri(tokenId) returns (string memory uri) {
+        try IERC1155MetadataURI(localToken).uri(tokenId) returns (string memory uri) {
             tokenURI_ = uri;
-        } catch {
-            tokenURI_ = "";
-        }
-
-        address actualOriginalToken;
-        if (isBridged) {
-            actualOriginalToken = BridgedERC1155(originalToken).originalToken();
-        } else {
-            actualOriginalToken = originalToken;
-        }
+        } catch {}
 
         ERC1155Deposit memory erc1155Deposit = ERC1155Deposit({
             nonce: _globalDepositNonce,
             from: msg.sender,
             to: to,
-            originalToken: actualOriginalToken,
+            originalToken: originalToken,
             tokenId: tokenId,
             amount: amount,
             tokenURI: tokenURI_,
@@ -169,13 +155,13 @@ contract ERC1155Bridge is IERC1155Bridge, ReentrancyGuardTransient, IERC1155Rece
             ++_globalDepositNonce;
         }
 
-        IERC1155(originalToken).safeTransferFrom(msg.sender, address(this), tokenId, amount, "");
+        IERC1155(localToken).safeTransferFrom(msg.sender, address(this), tokenId, amount, "");
         if (isBridged) {
-            BridgedERC1155(originalToken).burn(tokenId, amount);
+            BridgedERC1155(localToken).burn(tokenId, amount);
         }
 
         signalService.sendSignal(id);
-        emit DepositMade(id, erc1155Deposit, originalToken);
+        emit DepositMade(id, erc1155Deposit, localToken);
     }
 
     /// @inheritdoc IERC1155Bridge
