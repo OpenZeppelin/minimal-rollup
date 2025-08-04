@@ -8,6 +8,7 @@ import {ERC721} from "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 /// @title BridgedERC721
 /// @notice An ERC721 token that represents a bridged token from another chain
 /// @dev Only the bridge contract can mint and burn tokens
+/// @dev Implements the ERC721Metadata interface, whether or not the original token supports it
 contract BridgedERC721 is ERC721, BridgedTokenBase, IMintableERC721 {
     /// @dev Mapping from token ID to custom token URI
     mapping(uint256 => string) private _tokenURIs;
