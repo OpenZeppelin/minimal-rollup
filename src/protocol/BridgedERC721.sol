@@ -19,15 +19,7 @@ contract BridgedERC721 is ERC721, BridgedTokenBase, IMintableERC721 {
     {}
 
     /// @inheritdoc IMintableERC721
-    function mint(address to, uint256 tokenId) external onlyOwner {
-        _safeMint(to, tokenId);
-    }
-
-    /// @dev Mints a token with custom URI
-    /// @param to Address to mint the token to
-    /// @param tokenId Token ID to mint
-    /// @param tokenURI_ Custom URI for this token
-    function mintWithURI(address to, uint256 tokenId, string memory tokenURI_) external onlyOwner {
+    function mint(address to, uint256 tokenId, string memory tokenURI_) external onlyOwner {
         _safeMint(to, tokenId);
         _tokenURIs[tokenId] = tokenURI_;
     }
@@ -35,21 +27,12 @@ contract BridgedERC721 is ERC721, BridgedTokenBase, IMintableERC721 {
     /// @inheritdoc IMintableERC721
     function burn(uint256 tokenId) external onlyOwner {
         _burn(tokenId);
-        if (bytes(_tokenURIs[tokenId]).length != 0) {
-            delete _tokenURIs[tokenId];
-        }
+        delete _tokenURIs[tokenId];
     }
 
     /// @dev See {IERC721Metadata-tokenURI}.
     function tokenURI(uint256 tokenId) public view virtual override returns (string memory) {
         _requireOwned(tokenId);
-
-        string memory _tokenURI = _tokenURIs[tokenId];
-
-        if (bytes(_tokenURI).length > 0) {
-            return _tokenURI;
-        }
-
-        return super.tokenURI(tokenId);
+        return _tokenURIs[tokenId];
     }
 }

@@ -23,7 +23,7 @@ contract ERC721BridgeTest is Test {
         signalService = new MockSignalService();
         bridge = new ERC721Bridge(address(signalService), trustedPublisher, counterpart);
         token = new MockERC721("Test NFT", "TNFT");
-        token.mint(alice, tokenId);
+        token.mint(alice, tokenId, "");
         vm.prank(alice);
         token.approve(address(bridge), tokenId);
     }

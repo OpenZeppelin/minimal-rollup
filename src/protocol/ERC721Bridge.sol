@@ -138,12 +138,10 @@ contract ERC721Bridge is IERC721Bridge, ReentrancyGuardTransient, IERC721Receive
     {
         bool isBridged = _isBridgedToken(originalToken);
 
-        string memory tokenURI_;
+        string memory tokenURI;
         try IERC721Metadata(originalToken).tokenURI(tokenId) returns (string memory uri) {
-            tokenURI_ = uri;
-        } catch {
-            tokenURI_ = "";
-        }
+            tokenURI = uri;
+        } catch {}
 
         address actualOriginalToken;
         if (isBridged) {
@@ -158,7 +156,7 @@ contract ERC721Bridge is IERC721Bridge, ReentrancyGuardTransient, IERC721Receive
             to: to,
             originalToken: actualOriginalToken,
             tokenId: tokenId,
-            tokenURI: tokenURI_,
+            tokenURI: tokenURI,
             canceler: canceler
         });
 
@@ -217,11 +215,7 @@ contract ERC721Bridge is IERC721Bridge, ReentrancyGuardTransient, IERC721Receive
         address deployedToken = _counterpartTokens[erc721Deposit.originalToken];
 
         if (deployedToken != address(0)) {
-            if (bytes(erc721Deposit.tokenURI).length > 0) {
-                BridgedERC721(deployedToken).mintWithURI(to, erc721Deposit.tokenId, erc721Deposit.tokenURI);
-            } else {
-                BridgedERC721(deployedToken).mint(to, erc721Deposit.tokenId);
-            }
+            BridgedERC721(deployedToken).mint(to, erc721Deposit.tokenId, erc721Deposit.tokenURI);
         } else {
             IERC721(erc721Deposit.originalToken).safeTransferFrom(address(this), to, erc721Deposit.tokenId);
         }

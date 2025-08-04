@@ -11,7 +11,7 @@ interface IMintableERC20 is IERC20 {
 }
 
 interface IMintableERC721 is IERC721 {
-    function mint(address to, uint256 tokenId) external;
+    function mint(address to, uint256 tokenId, string memory tokenURI_) external;
     function burn(uint256 tokenId) external;
 }
 
