@@ -10,11 +10,13 @@ import {IERC1155} from "@openzeppelin/contracts/token/ERC1155/IERC1155.sol";
 import {IERC1155Receiver} from "@openzeppelin/contracts/token/ERC1155/IERC1155Receiver.sol";
 import {IERC1155MetadataURI} from "@openzeppelin/contracts/token/ERC1155/extensions/IERC1155MetadataURI.sol";
 import {ReentrancyGuardTransient} from "@openzeppelin/contracts/utils/ReentrancyGuardTransient.sol";
+import {ERC165} from "@openzeppelin/contracts/utils/introspection/ERC165.sol";
+import {IERC165} from "@openzeppelin/contracts/utils/introspection/IERC165.sol";
 
 /// @title ERC1155Bridge
 /// @notice A decentralized bridge for ERC1155 tokens that allows anyone to initialize tokens
 /// @dev Uses a permissionless token initialization flow
-contract ERC1155Bridge is IERC1155Bridge, ReentrancyGuardTransient, IERC1155Receiver {
+contract ERC1155Bridge is IERC1155Bridge, ReentrancyGuardTransient, IERC1155Receiver, ERC165 {
     /// @dev Signal type constants to differentiate signal categories
     bytes32 private constant TOKEN_DESCRIPTION_SIGNAL_PREFIX = keccak256("ERC1155_TOKEN_DESCRIPTION");
     bytes32 private constant DEPOSIT_SIGNAL_PREFIX = keccak256("ERC1155_DEPOSIT");
@@ -61,8 +63,9 @@ contract ERC1155Bridge is IERC1155Bridge, ReentrancyGuardTransient, IERC1155Rece
         return IERC1155Receiver.onERC1155BatchReceived.selector;
     }
 
-    function supportsInterface(bytes4 interfaceId) public view virtual returns (bool) {
-        return interfaceId == type(IERC1155Receiver).interfaceId || interfaceId == type(IERC1155Bridge).interfaceId;
+    function supportsInterface(bytes4 interfaceId) public view virtual override(IERC165, ERC165) returns (bool) {
+        return interfaceId == type(IERC1155Receiver).interfaceId || interfaceId == type(IERC1155Bridge).interfaceId
+            || super.supportsInterface(interfaceId);
     }
 
     /// @inheritdoc IERC1155Bridge

@@ -10,11 +10,12 @@ import {IERC721} from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 import {IERC721Receiver} from "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
 import {IERC721Metadata} from "@openzeppelin/contracts/token/ERC721/extensions/IERC721Metadata.sol";
 import {ReentrancyGuardTransient} from "@openzeppelin/contracts/utils/ReentrancyGuardTransient.sol";
+import {ERC165} from "@openzeppelin/contracts/utils/introspection/ERC165.sol";
 
 /// @title ERC721Bridge
 /// @notice A decentralized bridge for ERC721 tokens that allows anyone to initialize tokens
 /// @dev Uses a permissionless token initialization flow
-contract ERC721Bridge is IERC721Bridge, ReentrancyGuardTransient, IERC721Receiver {
+contract ERC721Bridge is IERC721Bridge, ReentrancyGuardTransient, IERC721Receiver, ERC165 {
     /// @dev Signal type constants to differentiate signal categories
     bytes32 private constant TOKEN_DESCRIPTION_SIGNAL_PREFIX = keccak256("ERC721_TOKEN_DESCRIPTION");
     bytes32 private constant DEPOSIT_SIGNAL_PREFIX = keccak256("ERC721_DEPOSIT");
@@ -52,8 +53,9 @@ contract ERC721Bridge is IERC721Bridge, ReentrancyGuardTransient, IERC721Receive
         return IERC721Receiver.onERC721Received.selector;
     }
 
-    function supportsInterface(bytes4 interfaceId) public view virtual returns (bool) {
-        return interfaceId == type(IERC721Receiver).interfaceId || interfaceId == type(IERC721Bridge).interfaceId;
+    function supportsInterface(bytes4 interfaceId) public view virtual override returns (bool) {
+        return interfaceId == type(IERC721Receiver).interfaceId || interfaceId == type(IERC721Bridge).interfaceId
+            || super.supportsInterface(interfaceId);
     }
 
     /// @inheritdoc IERC721Bridge
