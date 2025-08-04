@@ -19,7 +19,7 @@ contract BridgedERC721 is ERC721, BridgedTokenBase, IMintableERC721 {
 
     /// @inheritdoc IMintableERC721
     function mint(address to, uint256 tokenId) external onlyOwner {
-        _mint(to, tokenId);
+        _safeMint(to, tokenId);
     }
 
     /// @dev Mints a token with custom URI
@@ -27,7 +27,7 @@ contract BridgedERC721 is ERC721, BridgedTokenBase, IMintableERC721 {
     /// @param tokenId Token ID to mint
     /// @param tokenURI_ Custom URI for this token
     function mintWithURI(address to, uint256 tokenId, string memory tokenURI_) external onlyOwner {
-        _mint(to, tokenId);
+        _safeMint(to, tokenId);
         _setTokenURI(tokenId, tokenURI_);
     }
 
