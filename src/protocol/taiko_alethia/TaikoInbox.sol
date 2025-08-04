@@ -67,16 +67,10 @@ contract TaikoInbox is IInbox, DelayedInclusionStore {
     /// @param _lookahead Address of the lookahead contract
     /// @param _blobRefRegistry Address of the blob reference registry contract
     /// @param _maxAnchorBlockIdOffset Maximum offset allowed for anchor block ID
-    /// @param _proposerFees Address of the proposer fees contract (usually prover manager)
     /// @param _inclusionDelay How long before delayed inclusion must be processed
-    constructor(
-        address _lookahead,
-        address _blobRefRegistry,
-        uint256 _maxAnchorBlockIdOffset,
-        address _proposerFees,
-        uint256 _inclusionDelay
-    ) DelayedInclusionStore(_inclusionDelay, _blobRefRegistry) {
-        require(_proposerFees != address(0), ZeroProposerFees());
+    constructor(address _lookahead, address _blobRefRegistry, uint256 _maxAnchorBlockIdOffset, uint256 _inclusionDelay)
+        DelayedInclusionStore(_inclusionDelay, _blobRefRegistry)
+    {
         lookahead = ILookahead(_lookahead);
         maxAnchorBlockIdOffset = _maxAnchorBlockIdOffset;
         deployer = msg.sender;
