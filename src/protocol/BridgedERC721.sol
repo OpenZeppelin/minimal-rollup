@@ -28,7 +28,7 @@ contract BridgedERC721 is ERC721, BridgedTokenBase, IMintableERC721 {
     /// @param tokenURI_ Custom URI for this token
     function mintWithURI(address to, uint256 tokenId, string memory tokenURI_) external onlyOwner {
         _safeMint(to, tokenId);
-        _setTokenURI(tokenId, tokenURI_);
+        _tokenURIs[tokenId] = tokenURI_;
     }
 
     /// @inheritdoc IMintableERC721
@@ -50,12 +50,5 @@ contract BridgedERC721 is ERC721, BridgedTokenBase, IMintableERC721 {
         }
 
         return super.tokenURI(tokenId);
-    }
-
-    /// @dev Sets the token URI for a specific token
-    /// @param tokenId Token ID to set URI for
-    /// @param tokenURI_ URI to set
-    function _setTokenURI(uint256 tokenId, string memory tokenURI_) internal {
-        _tokenURIs[tokenId] = tokenURI_;
     }
 }
