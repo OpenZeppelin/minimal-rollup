@@ -9,59 +9,122 @@ import {IETHBridge} from "src/protocol/IETHBridge.sol";
 
 import {console} from "forge-std/console.sol";
 
-contract UserSetTipRecipientScenarios is DepositRecipientIsMessageRelayer {
-    function test_UserSetValidTipRecipient_relayMessage_shouldTipUserSelectedRecipient() public {
-        uint256 balanceBefore = address(userSelectedTipRecipient).balance;
+abstract contract TipRecipientScenarios is DepositRecipientIsMessageRelayer {
+    function test_TipRecipientScenarios_relayMessage_shouldTipCorrectRecipient() public ifRelaySucceeds {
+        (GenericRecipient correctRecipient,) = _recipients();
+        uint256 balanceBefore = address(correctRecipient).balance;
         _relayMessage();
-        assertEq(address(userSelectedTipRecipient).balance, balanceBefore + tip, "tip recipient balance mismatch");
+        assertEq(address(correctRecipient).balance, balanceBefore + tip, "tip recipient balance mismatch");
     }
 
-    function test_UserSetValidTipRecipient_relayMessage_shouldNotTipRelayerSelectedRecipient() public {
-        uint256 balanceBefore = address(relayerSelectedTipRecipient).balance;
+    function test_TipRecipientScenarios_relayMessage_shouldNotTipIncorrectRecipient() public ifRelaySucceeds {
+        (, GenericRecipient incorrectRecipient) = _recipients();
+        uint256 balanceBefore = address(incorrectRecipient).balance;
         _relayMessage();
-
-        assertEq(address(relayerSelectedTipRecipient).balance, balanceBefore, "incorrect tip recipient paid");
+        assertEq(address(incorrectRecipient).balance, balanceBefore, "incorrect tip recipient paid");
     }
 
-    function test_UserSetValidTipRecipient_claimDepositDirectly_shouldTipUserSelectedRecipient() public {
-        uint256 balanceBefore = address(userSelectedTipRecipient).balance;
-        bridge.claimDeposit(ethDeposit, height, proof);
-        assertEq(address(userSelectedTipRecipient).balance, balanceBefore + tip, "tip recipient balance mismatch");
-    }
-
-    function test_UserSetZeroTipRecipient_relayMessage_shouldTipRelayerSelectedRecipient() public zeroTipRecipient {
-        uint256 balanceBefore = address(relayerSelectedTipRecipient).balance;
-        _relayMessage();
-        assertEq(address(relayerSelectedTipRecipient).balance, balanceBefore + tip, "tip recipient balance mismatch");
-    }
-
-    function test_UserSetZeroTipRecipient_claimDepositDirectly_shouldRevert() public zeroTipRecipient {
-        uint256 relayerTipRecipientBalanceBefore = address(relayerSelectedTipRecipient).balance;
-        vm.expectRevert(IETHBridge.FailedClaim.selector);
-        bridge.claimDeposit(ethDeposit, height, proof);
-        assertEq(
-            address(relayerSelectedTipRecipient).balance,
-            relayerTipRecipientBalanceBefore,
-            "tip recipient balance mismatch"
-        );
-    }
-
-    modifier zeroTipRecipient() {
-        userSelectedTipRecipient = GenericRecipient(payable(0));
-        _encodeReceiveCall();
-        _;
+    /// @param correctRecipient The user-selected recipient if it is set. The relayer-selected recipient otherwise.
+    /// @param incorrectRecipient The other recipient, which should not receive the tip.
+    /// @dev the only tested case where they are the same is when they are both zero (and the transaction reverts)
+    function _recipients()
+        internal
+        view
+        returns (GenericRecipient correctRecipient, GenericRecipient incorrectRecipient)
+    {
+        return userSelectedTipRecipient == GenericRecipient(payable(0))
+            ? (relayerSelectedTipRecipient, userSelectedTipRecipient)
+            : (userSelectedTipRecipient, relayerSelectedTipRecipient);
     }
 }
 
-contract UserSetInvalidTipRecipient is DepositRecipientIsMessageRelayer {
-    function setUp() public override {
+// User-selected tip recipient scenarios
+
+abstract contract UserSetValidTipRecipient is TipRecipientScenarios {
+    function test_UserSetValidTipRecipient_claimDeposit_shouldTipUserSelectedRecipient() public ifClaimSucceeds {
+        uint256 balanceBefore = address(userSelectedTipRecipient).balance;
+        _claimDeposit();
+        assertEq(address(userSelectedTipRecipient).balance, balanceBefore + tip, "tip recipient balance mismatch");
+    }
+}
+
+abstract contract UserSetZeroTipRecipient is TipRecipientScenarios {
+    function setUp() public virtual override {
+        super.setUp();
+        userSelectedTipRecipient = GenericRecipient(payable(0));
+        _encodeReceiveCall();
+        claimShouldSucceed = false;
+    }
+
+    function test_UserSetZeroTipRecipient_claimDeposit_shouldRevert() public {
+        vm.expectRevert(IETHBridge.FailedClaim.selector);
+        _claimDeposit();
+    }
+}
+
+abstract contract UserSetInvalidTipRecipient is TipRecipientScenarios {
+    function setUp() public virtual override {
         super.setUp();
         userSelectedTipRecipient.setSuccess(false);
-        txShouldSucceed = false;
+        relayShouldSucceed = false;
+        claimShouldSucceed = false;
     }
 
     function test_UserSetInvalidTipRecipient_relayMessage_shouldRevert() public {
         vm.expectRevert(IETHBridge.FailedClaim.selector);
         _relayMessage();
+    }
+
+    function test_UserSetInvalidTipRecipient_claimDeposit_shouldRevert() public {
+        vm.expectRevert(IETHBridge.FailedClaim.selector);
+        _claimDeposit();
+    }
+}
+
+// Relayer-selected tip recipient scenarios
+
+abstract contract RelayerSetValidTipRecipient is TipRecipientScenarios {}
+
+abstract contract RelayerSetZeroTipRecipient is TipRecipientScenarios {
+    function setUp() public virtual override {
+        super.setUp();
+        relayerSelectedTipRecipient = GenericRecipient(payable(0));
+    }
+}
+
+abstract contract RelayerSetInvalidTipRecipient is TipRecipientScenarios {
+    function setUp() public virtual override {
+        super.setUp();
+        relayerSelectedTipRecipient.setSuccess(false);
+    }
+}
+
+// Combined scenarios
+
+contract ValidUserTipRecipientOverrulesRelayer is UserSetValidTipRecipient, RelayerSetValidTipRecipient {}
+
+contract InvalidUserTipRecipientOverrulesRelayer is UserSetInvalidTipRecipient, RelayerSetValidTipRecipient {
+    function setUp() public override(InitialState, UserSetInvalidTipRecipient) {
+        super.setUp();
+    }
+}
+
+contract ValidRelayerTipRecipientUsed is UserSetZeroTipRecipient, RelayerSetValidTipRecipient {
+    function setUp() public override(InitialState, UserSetZeroTipRecipient) {
+        super.setUp();
+    }
+}
+
+contract InvalidRelayerTipRecipientUsed is UserSetZeroTipRecipient, RelayerSetInvalidTipRecipient {
+    function setUp() public override(UserSetZeroTipRecipient, RelayerSetInvalidTipRecipient) {
+        super.setUp();
+        relayShouldSucceed = false;
+    }
+}
+
+contract NoTipRecipientSet is UserSetZeroTipRecipient, RelayerSetZeroTipRecipient {
+    function setUp() public override(UserSetZeroTipRecipient, RelayerSetZeroTipRecipient) {
+        super.setUp();
+        relayShouldSucceed = false;
     }
 }
