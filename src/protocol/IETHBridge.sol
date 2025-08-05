@@ -52,14 +52,14 @@ interface IETHBridge {
     /// @dev Failed to call the receiver with value.
     error FailedClaim();
 
-    /// @dev A deposit was already claimed.
-    error AlreadyClaimed();
+    /// @dev To address is set to zero
+    error ZeroReceiver();
+
+    /// @dev A deposit was already claimed or cancelled
+    error AlreadyProcessed();
 
     /// @dev Only canceler can cancel a deposit.
     error OnlyCanceler();
-
-    /// @dev Zero receiver
-    error ZeroReceiver();
 
     /// @dev Whether the deposit identified by `id` has been claimed or cancelled.
     /// @param id The deposit id
