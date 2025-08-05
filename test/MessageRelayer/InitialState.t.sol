@@ -11,6 +11,14 @@ import {IMessageRelayer} from "src/protocol/IMessageRelayer.sol";
 import {MessageRelayer} from "src/protocol/taiko_alethia/MessageRelayer.sol";
 import {MockSignalService} from "test/mocks/MockSignalService.sol";
 
+// An explanation of the test structure:
+// - we want to enumerate over several different configurations (eg. valid/invalid/zero tip recipients,
+// sufficient/insufficient funds, eventual call succeeds/fails)
+// - however, many of the tests are only relevant if the overall transaction succeeds, and this depends on settings
+// defined in other files
+// - ideally, we would only run the tests in the relevant scenario, but this would require less encapsulated logic
+// - instead, the ifTxSucceeds modifier is used to turn irrelevant tests into no-ops
+
 abstract contract InitialState is Test {
     MessageRelayer messageRelayer;
     ETHBridge bridge;
@@ -26,6 +34,8 @@ abstract contract InitialState is Test {
     GenericRecipient userSelectedTipRecipient;
     uint256 gasLimit = 0;
     bytes data = "0x";
+
+    bool txShouldSucceed = true;
 
     // keccak256("TIP_RECIPIENT_SLOT")
     bytes32 constant TIP_RECIPIENT_SLOT = 0x833ce1785f54a5ca49991a09a7b058587309bf3687e5f20b7b66fa12132ef6f0;
@@ -63,6 +73,13 @@ abstract contract InitialState is Test {
 
     function _relayMessage() internal {
         messageRelayer.relayMessage(ethDeposit, height, proof, address(relayerSelectedTipRecipient));
+    }
+
+
+    modifier ifTxSucceeds() {
+        if (txShouldSucceed) {
+            _;
+        }
     }
 }
 
