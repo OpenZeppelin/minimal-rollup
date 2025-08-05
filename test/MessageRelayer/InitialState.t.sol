@@ -75,7 +75,6 @@ abstract contract InitialState is Test {
         messageRelayer.relayMessage(ethDeposit, height, proof, address(relayerSelectedTipRecipient));
     }
 
-
     modifier ifTxSucceeds() {
         if (txShouldSucceed) {
             _;

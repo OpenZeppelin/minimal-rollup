@@ -53,11 +53,11 @@ contract UserSetTipRecipientScenarios is DepositRecipientIsMessageRelayer {
     }
 }
 
-// We bypass the `DepositRecipientIsMessageRelayer` because it seems vm.expectCall requires the call to succeed
-contract UserSetInvalidTipRecipient is InitialState {
+contract UserSetInvalidTipRecipient is DepositRecipientIsMessageRelayer {
     function setUp() public override {
         super.setUp();
         userSelectedTipRecipient.setSuccess(false);
+        txShouldSucceed = false;
     }
 
     function test_UserSetInvalidTipRecipient_relayMessage_shouldRevert() public {

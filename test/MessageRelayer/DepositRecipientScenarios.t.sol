@@ -31,12 +31,12 @@ contract DepositRecipientIsNotMessageRelayer is InitialState {
 }
 
 abstract contract DepositRecipientIsMessageRelayer is InitialState {
-    function test_DepositRecipientIsMessageRelayer_relayMessage_shouldInvokeReceiveMessage() public {
+    function test_DepositRecipientIsMessageRelayer_relayMessage_shouldInvokeReceiveMessage() public ifTxSucceeds {
         vm.expectCall(address(messageRelayer), ethDeposit.data);
         _relayMessage();
     }
 
-    function test_DepositRecipientIsMessageRelayer_claimDeposit_shouldInvokeReceiveMessage() public {
+    function test_DepositRecipientIsMessageRelayer_claimDeposit_shouldInvokeReceiveMessage() public ifTxSucceeds {
         vm.expectCall(address(messageRelayer), ethDeposit.data);
         messageRelayer.ethBridge().claimDeposit(ethDeposit, height, proof);
     }
