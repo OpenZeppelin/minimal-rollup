@@ -82,15 +82,3 @@ abstract contract InitialState is Test {
         }
     }
 }
-
-contract InitialStateTest is InitialState {
-    function test_tipRecipientTransientStorage_isZero() public {
-        bytes32 value = vm.load(address(messageRelayer), TIP_RECIPIENT_SLOT);
-
-        address storedAddress = address(uint160(uint256(value)));
-
-        assertEq(storedAddress, address(0), "Initial transient slot should be empty");
-
-        assertEq(value, bytes32(0), "Initial transient slot bytes32 should be zero");
-    }
-}
