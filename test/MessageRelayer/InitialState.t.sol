@@ -44,6 +44,7 @@ abstract contract InitialState is Test {
 
     function setUp() public virtual {
         MockSignalService signalService = new MockSignalService();
+        signalService.setVerifyResult(true);
         address trustedCommitmentPublisher = makeAddr("trustedCommitmentPublisher");
         address counterpart = makeAddr("counterpart");
         bridge = new ETHBridge(address(signalService), trustedCommitmentPublisher, counterpart);
