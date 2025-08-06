@@ -19,6 +19,9 @@ interface IMessageRelayer {
     /// @dev Message forwarding failed
     error MessageForwardingFailed();
 
+    /// @dev Value sent is lower than tip amount
+    error InsufficientValue();
+
     /// @dev Tip transfer failed
     error TipTransferFailed();
 
