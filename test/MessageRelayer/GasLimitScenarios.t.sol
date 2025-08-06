@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
-import {AmountExceedsTip} from "./FundAmountScenarios.t.sol";
+import {DefaultFundAmountScenario} from "./FundAmountScenarios.t.sol";
 import {GenericRecipient} from "./GenericRecipient.t.sol";
 
 import {InitialState} from "./InitialState.t.sol";
@@ -11,9 +11,7 @@ import {IMessageRelayer} from "src/protocol/IMessageRelayer.sol";
 // Found by experimentation
 uint256 constant OOG_INSIDE_RECIPIENT = 60_000;
 
-// Use AmountExceedsTip as the default scenario.
-// Any valid tip arrangement and funding amount should suffice for these tests.
-abstract contract GasLimitScenarios is AmountExceedsTip {}
+abstract contract GasLimitScenarios is DefaultFundAmountScenario {}
 
 contract NoGasLimit_SufficientGasProvided is GasLimitScenarios {}
 
@@ -56,3 +54,6 @@ contract InsufficientGasLimit_SufficientGasProvided is GasLimitScenarios {
         claimShouldSucceed = false;
     }
 }
+
+// A valid scenario that can be used as a default scenario by unrelated tests.
+abstract contract DefaultGasLimitScenario is NoGasLimit_SufficientGasProvided {}

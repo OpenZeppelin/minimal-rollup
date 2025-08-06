@@ -7,9 +7,21 @@ import {InitialState} from "./InitialState.t.sol";
 import {IETHBridge} from "src/protocol/IETHBridge.sol";
 import {IMessageRelayer} from "src/protocol/IMessageRelayer.sol";
 
-// This is a concrete class because if we are not using the MessageRelayer,
-// we do not need to investigate any other properties of the message
-contract DepositRecipientIsNotMessageRelayer is InitialState {
+abstract contract DepositRecipientScenarios is InitialState {}
+
+contract DepositRecipientIsMessageRelayer is DepositRecipientScenarios {
+    function test_DepositRecipientIsMessageRelayer_relayMessage_shouldInvokeReceiveMessage() public ifRelaySucceeds {
+        vm.expectCall(address(messageRelayer), ethDeposit.data);
+        _relayMessage();
+    }
+
+    function test_DepositRecipientIsMessageRelayer_claimDeposit_shouldInvokeReceiveMessage() public ifClaimSucceeds {
+        vm.expectCall(address(messageRelayer), ethDeposit.data);
+        _claimDeposit();
+    }
+}
+
+contract DepositRecipientIsNotMessageRelayer is DepositRecipientScenarios {
     function setUp() public override {
         super.setUp();
         // bypass the relayer and send the message directly to the recipient
@@ -30,14 +42,5 @@ contract DepositRecipientIsNotMessageRelayer is InitialState {
     }
 }
 
-abstract contract DepositRecipientIsMessageRelayer is InitialState {
-    function test_DepositRecipientIsMessageRelayer_relayMessage_shouldInvokeReceiveMessage() public ifRelaySucceeds {
-        vm.expectCall(address(messageRelayer), ethDeposit.data);
-        _relayMessage();
-    }
-
-    function test_DepositRecipientIsMessageRelayer_claimDeposit_shouldInvokeReceiveMessage() public ifClaimSucceeds {
-        vm.expectCall(address(messageRelayer), ethDeposit.data);
-        _claimDeposit();
-    }
-}
+// A valid scenario that can be used as a default scenario by unrelated tests.
+abstract contract DefaultRecipientScenario is DepositRecipientScenarios {}

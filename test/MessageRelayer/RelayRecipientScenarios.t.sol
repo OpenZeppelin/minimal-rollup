@@ -1,15 +1,13 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
-import {NoGasLimit_SufficientGasProvided} from "./GasLimitScenarios.t.sol";
+import {DefaultGasLimitScenario} from "./GasLimitScenarios.t.sol";
 import {GenericRecipient} from "./GenericRecipient.t.sol";
 
 import {InitialState} from "./InitialState.t.sol";
 import {IETHBridge} from "src/protocol/IETHBridge.sol";
 
-// Use NoGasLimit_SufficientGasProvided as the default scenario.
-// Any valid tip arrangement, funding amount and gas limit should suffice for these tests.
-abstract contract RelayRecipientScenarios is NoGasLimit_SufficientGasProvided {}
+abstract contract RelayRecipientScenarios is DefaultGasLimitScenario {}
 
 contract RelayRecipentAcceptsMessage is RelayRecipientScenarios {}
 
@@ -30,3 +28,6 @@ contract RelayRecipientReentersReceiveMessage is RelayRecipientScenarios {
         claimShouldSucceed = false;
     }
 }
+
+// A valid scenario that can be used as a default scenario by unrelated tests.
+abstract contract DefaultRelayRecipientScenario is RelayRecipentAcceptsMessage {}

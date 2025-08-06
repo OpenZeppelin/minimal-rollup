@@ -1,15 +1,14 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
-import {DepositRecipientIsMessageRelayer} from "./DepositRecipientScenarios.t.sol";
+import {DefaultRecipientScenario} from "./DepositRecipientScenarios.t.sol";
 import {GenericRecipient} from "./GenericRecipient.t.sol";
 
 import {InitialState} from "./InitialState.t.sol";
 import {IETHBridge} from "src/protocol/IETHBridge.sol";
 
-import {console} from "forge-std/console.sol";
 
-abstract contract TipRecipientScenarios is DepositRecipientIsMessageRelayer {
+abstract contract TipRecipientScenarios is DefaultRecipientScenario {
     function test_TipRecipientScenarios_relayMessage_shouldTipCorrectRecipient() public ifRelaySucceeds {
         (GenericRecipient correctRecipient,) = _recipients();
         uint256 balanceBefore = address(correctRecipient).balance;
@@ -113,3 +112,7 @@ contract NoTipRecipientSet is UserSetZeroTipRecipient, RelayerSetZeroTipRecipien
         relayShouldSucceed = false;
     }
 }
+
+
+// A valid scenario that can be used as a default scenario by unrelated tests.
+abstract contract DefaultTipRecipientScenario is ValidUserTipRecipientOverrulesRelayer {}

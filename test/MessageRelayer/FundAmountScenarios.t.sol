@@ -2,15 +2,13 @@
 pragma solidity ^0.8.28;
 
 import {GenericRecipient} from "./GenericRecipient.t.sol";
-import {ValidUserTipRecipientOverrulesRelayer} from "./TipRecipientScenarios.t.sol";
+import {DefaultTipRecipientScenario} from "./TipRecipientScenarios.t.sol";
 import {IMessageRelayer} from "src/protocol/IMessageRelayer.sol";
 
 import {InitialState} from "./InitialState.t.sol";
 import {IETHBridge} from "src/protocol/IETHBridge.sol";
 
-// Use ValidUserTipRecipientOverrulesRelayer as the default scenario.
-// Any valid tip arrangement should suffice for these tests.
-abstract contract FundAmountScenarios is ValidUserTipRecipientOverrulesRelayer {
+abstract contract FundAmountScenarios is DefaultTipRecipientScenario {
     function test_FundAmountScenarios_relayMessage_shouldInvokeRecipient() public ifRelaySucceeds {
         vm.expectEmit();
         emit GenericRecipient.FunctionCalled();
@@ -64,3 +62,6 @@ contract AmountLessThanTip is FundAmountScenarios {
         claimShouldSucceed = false;
     }
 }
+
+// A valid scenario that can be used as a default scenario by unrelated tests.
+abstract contract DefaultFundAmountScenario is AmountExceedsTip {}
