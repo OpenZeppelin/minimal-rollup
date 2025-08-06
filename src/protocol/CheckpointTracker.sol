@@ -6,7 +6,9 @@ import {ICommitmentStore} from "./ICommitmentStore.sol";
 import {IInbox} from "./IInbox.sol";
 import {IVerifier} from "./IVerifier.sol";
 
-contract CheckpointTracker is ICheckpointTracker {
+import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+
+contract CheckpointTracker is ICheckpointTracker, Ownable {
     /// @dev The number of delayed publications up to the proven checkpoint
     uint256 private _totalDelayedPublications;
 
@@ -19,35 +21,11 @@ contract CheckpointTracker is ICheckpointTracker {
 
     address public proverManager;
 
-    /// @dev need to track initialisation separately to address as initialized prover manager may be zero
-    bool private _proverManagerInitialized;
-
-    address private immutable deployer;
-
-    /// @dev Modifier to check if proverManager has been initialized
-    modifier checkProverInitialized() {
-        bytes4 errorSelector = ProverManagerNotInitialized.selector;
-        assembly {
-            let initialized := sload(_proverManagerInitialized.slot)
-            if iszero(initialized) {
-                mstore(0, errorSelector)
-                revert(0x00, 0x04)
-            }
-        }
-        _;
-    }
-
-    /// @dev Modifier to check if the caller is the deployer
-    modifier onlyDeployer() {
-        require(msg.sender == deployer, "Only deployer can call this function");
-        _;
-    }
-
     /// @param _genesis the checkpoint commitment describing the initial state of the rollup
     /// @param _inbox the inbox contract that contains the publication feed
     /// @param _verifier a contract that can verify the validity of a transition from one checkpoint to another
     /// @param _commitmentStore contract responsible storing historical commitments
-    constructor(bytes32 _genesis, address _inbox, address _verifier, address _commitmentStore) {
+    constructor(bytes32 _genesis, address _inbox, address _verifier, address _commitmentStore) Ownable(msg.sender) {
         // set the genesis checkpoint commitment of the rollup - genesis is trusted to be correct
         require(_genesis != 0, ZeroGenesisCommitment());
         inbox = IInbox(_inbox);
@@ -56,18 +34,13 @@ contract CheckpointTracker is ICheckpointTracker {
         verifier = IVerifier(_verifier);
         commitmentStore = ICommitmentStore(_commitmentStore);
 
-        deployer = msg.sender;
-
         _saveCommitment(latestPublicationId, _genesis);
     }
 
     /// @inheritdoc ICheckpointTracker
-    /// @dev Can only be called once, allowed prover manager to be zero
-    function initializeProverManager(address _proverManager) external onlyDeployer {
-        require(!_proverManagerInitialized, "ProverManager already initialized");
+    function updateProverManager(address _proverManager) external onlyOwner {
         proverManager = _proverManager;
-        _proverManagerInitialized = true;
-        emit ProverManagerInitialized(_proverManager);
+        emit ProverManagerUpdated(_proverManager);
     }
 
     /// @inheritdoc ICheckpointTracker
@@ -76,7 +49,6 @@ contract CheckpointTracker is ICheckpointTracker {
     /// changes in the mean time.
     function proveTransition(Checkpoint calldata start, Checkpoint calldata end, bytes calldata proof)
         external
-        checkProverInitialized
         returns (uint256 numPublications, uint256 numDelayedPublications)
     {
         require(proverManager == address(0) || msg.sender == proverManager, OnlyProverManager());

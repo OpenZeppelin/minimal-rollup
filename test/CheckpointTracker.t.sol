@@ -3,6 +3,8 @@ pragma solidity ^0.8.28;
 
 import {MockInbox} from "./mocks/MockInbox.sol";
 import {MockVerifier} from "./mocks/MockVerifier.sol";
+
+import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import "forge-std/Test.sol";
 import {CheckpointTracker} from "src/protocol/CheckpointTracker.sol";
 import {ICheckpointTracker} from "src/protocol/ICheckpointTracker.sol";
@@ -27,7 +29,7 @@ contract CheckpointTrackerTest is Test {
         signalService = new SignalService();
         vm.startPrank(deployer);
         tracker = new CheckpointTracker(genesis, address(inbox), address(verifier), address(signalService));
-        tracker.initializeProverManager(address(proverManager));
+        tracker.updateProverManager(address(proverManager));
         vm.stopPrank();
     }
 
@@ -52,35 +54,36 @@ contract CheckpointTrackerTest is Test {
         assertEq(savedCommitment, genesis, "Did not save genesis");
     }
 
-    function test_initializeProverManager_shouldSetProverManager() public {
+    function test_updateProverManager_shouldSetProverManager() public {
         vm.startPrank(deployer);
         CheckpointTracker uninitializedTracker =
             new CheckpointTracker(genesis, address(inbox), address(verifier), address(signalService));
-        uninitializedTracker.initializeProverManager(proverManager);
+        uninitializedTracker.updateProverManager(proverManager);
         assertEq(address(uninitializedTracker.proverManager()), proverManager, "Did not set prover manager");
     }
 
-    function test_proveTransition_shouldRevertIfProverManagerNotInitialized() public {
+    function test_proveTransition_shouldSucceedWithNoProverManager() public {
         CheckpointTracker uninitializedTracker =
             new CheckpointTracker(genesis, address(inbox), address(verifier), address(signalService));
         _constructValidTransition();
-        vm.expectRevert(ICheckpointTracker.ProverManagerNotInitialized.selector);
         uninitializedTracker.proveTransition(start, end, proof);
     }
 
-    function test_initializeProverManager_onlyDeployer() public {
+    function test_initializeProverManager_onlyOwner() public {
         vm.prank(deployer);
         CheckpointTracker uninitializedTracker =
             new CheckpointTracker(genesis, address(inbox), address(verifier), address(signalService));
-        vm.prank(makeAddr("notdeployer"));
-        vm.expectRevert("Only deployer can call this function");
-        uninitializedTracker.initializeProverManager(proverManager);
+
+        address notDeployer = makeAddr("notdeployer");
+        vm.prank(notDeployer);
+        vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, notDeployer));
+        uninitializedTracker.updateProverManager(proverManager);
     }
 
-    function test_initializeProverManager_shouldRevertIfAlreadyInitialized() public {
+    function test_updateProverManager_shouldUpdateProverManager() public {
         vm.prank(deployer);
-        vm.expectRevert("ProverManager already initialized");
-        tracker.initializeProverManager(address(proverManager));
+        tracker.updateProverManager(makeAddr("newProverManager"));
+        assertEq(address(tracker.proverManager()), makeAddr("newProverManager"), "Did not update prover manager");
     }
 
     function test_proveTransition_shouldRevertIfNotCalledByProverManager() public {
