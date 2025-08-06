@@ -10,7 +10,9 @@ import {IInbox} from "../IInbox.sol";
 import {ILookahead} from "../ILookahead.sol";
 import {IProposerFees} from "../IProposerFees.sol";
 
-contract TaikoInbox is IInbox, DelayedInclusionStore {
+import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+
+contract TaikoInbox is IInbox, DelayedInclusionStore, Ownable {
     /// @dev Caller is not the current preconfer
     error NotCurrentPreconfer();
 
@@ -19,9 +21,6 @@ contract TaikoInbox is IInbox, DelayedInclusionStore {
 
     /// @dev Blockhash is not available for the anchor block
     error BlockhashUnavailable();
-
-    /// @dev Proposer fee set to zero address
-    error ZeroProposerFees();
 
     struct Metadata {
         uint256 anchorBlockId;
@@ -32,30 +31,6 @@ contract TaikoInbox is IInbox, DelayedInclusionStore {
     ILookahead public immutable lookahead;
     IProposerFees public proposerFees;
     uint256 public immutable maxAnchorBlockIdOffset;
-
-    address private immutable deployer;
-
-    /// @notice Thrown when no proposer fee address is set
-    error ProposerFeesNotInitialized();
-
-    /// @dev Modifier to check if proposerFees has been initialized
-    modifier checkProposerFeesInitialized() {
-        bytes4 errorSelector = ProposerFeesNotInitialized.selector;
-        assembly {
-            let fees := sload(proposerFees.slot)
-            if iszero(fees) {
-                mstore(0, errorSelector)
-                revert(0x00, 0x04)
-            }
-        }
-        _;
-    }
-
-    /// @dev Modifier to check if the caller is the deployer
-    modifier onlyDeployer() {
-        require(msg.sender == deployer, "Only deployer can call this function");
-        _;
-    }
 
     // attributes associated with the publication
     uint256 private constant METADATA = 0;
@@ -70,25 +45,23 @@ contract TaikoInbox is IInbox, DelayedInclusionStore {
     /// @param _inclusionDelay How long before delayed inclusion must be processed
     constructor(address _lookahead, address _blobRefRegistry, uint256 _maxAnchorBlockIdOffset, uint256 _inclusionDelay)
         DelayedInclusionStore(_inclusionDelay, _blobRefRegistry)
+        Ownable(msg.sender)
     {
         lookahead = ILookahead(_lookahead);
         maxAnchorBlockIdOffset = _maxAnchorBlockIdOffset;
-        deployer = msg.sender;
 
         // guarantee there is always a previous hash
         _publicationHashes.push(0);
     }
 
     /// @inheritdoc IInbox
-    function initializeProposerFees(address _proposerFees) external onlyDeployer {
-        require(address(proposerFees) == address(0), "ProposerFees already initialized");
-        require(_proposerFees != address(0), "ProposerFees cannot be zero");
+    function updateProposerFees(address _proposerFees) external onlyOwner {
         proposerFees = IProposerFees(_proposerFees);
         emit ProposerFeesInitialized(_proposerFees);
     }
 
     /// @inheritdoc IInbox
-    function publish(uint256 nBlobs, uint64 anchorBlockId) external checkProposerFeesInitialized {
+    function publish(uint256 nBlobs, uint64 anchorBlockId) external {
         if (address(lookahead) != address(0)) {
             require(lookahead.isCurrentPreconfer(msg.sender), NotCurrentPreconfer());
         }
@@ -127,7 +100,9 @@ contract TaikoInbox is IInbox, DelayedInclusionStore {
     /// @param attributes The data to publish
     /// @param isDelayed Whether this is a delayed inclusion publication
     function _publish(bytes[] memory attributes, bool isDelayed) internal {
-        proposerFees.payPublicationFee(msg.sender, isDelayed);
+        if (address(proposerFees) != address(0)) {
+            proposerFees.payPublicationFee(msg.sender, isDelayed);
+        }
 
         uint256 nAttributes = attributes.length;
         bytes32[] memory attributeHashes = new bytes32[](nAttributes);

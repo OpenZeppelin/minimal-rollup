@@ -24,10 +24,8 @@ contract TaikoInboxTest is Test {
     uint256 inclusionDelay = uint256(10000000);
 
     function setUp() public {
-        MockProposerFees mockProposerFees = new MockProposerFees();
         blobRefRegistry = new BlobRefRegistry();
         taikoInbox = new TaikoInbox(lookaheadAddr, address(blobRefRegistry), maxAnchorBlockIdOffset, inclusionDelay);
-        taikoInbox.initializeProposerFees(address(mockProposerFees));
     }
 
     function test_gas_TaikoPublishFunction() public ProposeMultiplePublications(10) {

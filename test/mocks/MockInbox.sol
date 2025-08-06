@@ -16,7 +16,7 @@ contract MockInbox is IInbox {
         revert NotImplemented();
     }
 
-    function initializeProposerFees(address) external pure {
+    function updateProposerFees(address) external pure {
         revert NotImplemented();
     }
 

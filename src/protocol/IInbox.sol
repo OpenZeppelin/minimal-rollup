@@ -39,7 +39,7 @@ interface IInbox {
     /// @return _ True if the header is valid, false otherwise
     function validateHeader(PublicationHeader calldata header) external view returns (bool);
 
-    /// @notice Initialize the proposer fees contract address (prover manager contract)
+    /// @notice Updates the proposer fees contract address (prover manager contract)
     /// @param _proposerFees Address of the proposer fees contract
-    function initializeProposerFees(address _proposerFees) external;
+    function updateProposerFees(address _proposerFees) external;
 }
