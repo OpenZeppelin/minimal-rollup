@@ -40,6 +40,8 @@ abstract contract InitialState is Test {
     bool relayShouldSucceed = true;
     bool claimShouldSucceed = true;
 
+    uint256 gasProvidedWithCall = 150_000; // covers a full relayMessage call with some overhead
+
     function setUp() public virtual {
         MockSignalService signalService = new MockSignalService();
         address trustedCommitmentPublisher = makeAddr("trustedCommitmentPublisher");
@@ -86,11 +88,13 @@ abstract contract InitialState is Test {
     }
 
     function _relayMessage() internal {
-        messageRelayer.relayMessage(ethDeposit, height, proof, address(relayerSelectedTipRecipient));
+        messageRelayer.relayMessage{gas: gasProvidedWithCall}(
+            ethDeposit, height, proof, address(relayerSelectedTipRecipient)
+        );
     }
 
     function _claimDeposit() internal {
-        bridge.claimDeposit(ethDeposit, height, proof);
+        bridge.claimDeposit{gas: gasProvidedWithCall}(ethDeposit, height, proof);
     }
 
     modifier ifRelaySucceeds() {

@@ -9,7 +9,7 @@ import {InitialState} from "./InitialState.t.sol";
 import {IETHBridge} from "src/protocol/IETHBridge.sol";
 
 // Use ValidUserTipRecipientOverrulesRelayer as the default scenario.
-// The particular tip arrangement should not affect these tests.
+// Any valid tip arrangement should suffice for these tests.
 abstract contract FundAmountScenarios is ValidUserTipRecipientOverrulesRelayer {
     function test_FundAmountScenarios_relayMessage_shouldInvokeRecipient() public ifRelaySucceeds {
         vm.expectEmit();

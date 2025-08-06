@@ -13,6 +13,9 @@ contract GenericRecipient is IGenericRecipient {
     bool private shouldReenterAttack = false;
     address private relayer;
 
+    // Consume a minimum amount of gas so we can test gas limits
+    uint256 public constant GAS_REQUIRED = 20_000;
+
     error CallFailed();
 
     event FunctionCalled();
@@ -39,6 +42,8 @@ contract GenericRecipient is IGenericRecipient {
 
     function _simulateFunctionCall() internal {
         require(callWillSucceed, CallFailed());
+        require(gasleft() >= GAS_REQUIRED, "Insufficient gas");
+
         emit FunctionCalled();
 
         if (shouldReenterAttack) {
