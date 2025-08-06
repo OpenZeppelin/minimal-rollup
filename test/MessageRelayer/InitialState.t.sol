@@ -40,9 +40,6 @@ abstract contract InitialState is Test {
     bool relayShouldSucceed = true;
     bool claimShouldSucceed = true;
 
-    // keccak256("TIP_RECIPIENT_SLOT")
-    bytes32 constant TIP_RECIPIENT_SLOT = 0x833ce1785f54a5ca49991a09a7b058587309bf3687e5f20b7b66fa12132ef6f0;
-
     function setUp() public virtual {
         MockSignalService signalService = new MockSignalService();
         address trustedCommitmentPublisher = makeAddr("trustedCommitmentPublisher");
