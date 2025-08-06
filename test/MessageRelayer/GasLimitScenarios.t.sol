@@ -9,7 +9,7 @@ import {IETHBridge} from "src/protocol/IETHBridge.sol";
 import {IMessageRelayer} from "src/protocol/IMessageRelayer.sol";
 
 // Found by experimentation
-uint256 constant OOG_INSIDE_RECIPIENT = 60_000;
+uint256 constant OOG_INSIDE_RECIPIENT = 70_000;
 
 abstract contract GasLimitScenarios is DefaultFundAmountScenario {}
 
