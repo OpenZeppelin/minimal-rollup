@@ -9,7 +9,7 @@ import {IETHBridge} from "src/protocol/IETHBridge.sol";
 
 abstract contract RelayRecipientScenarios is DefaultGasLimitScenario {}
 
-contract RelayRecipentAcceptsMessage is RelayRecipientScenarios {}
+contract RelayRecipientAcceptsMessage is RelayRecipientScenarios {}
 
 contract RelayRecipientRejectsMessage is RelayRecipientScenarios {
     function setUp() public override {
@@ -30,4 +30,4 @@ contract RelayRecipientReentersReceiveMessage is RelayRecipientScenarios {
 }
 
 // A valid scenario that can be used as a default scenario by unrelated tests.
-abstract contract DefaultRelayRecipientScenario is RelayRecipentAcceptsMessage {}
+abstract contract DefaultRelayRecipientScenario is RelayRecipientAcceptsMessage {}
