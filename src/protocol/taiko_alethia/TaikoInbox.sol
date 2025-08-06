@@ -10,7 +10,9 @@ import {IInbox} from "../IInbox.sol";
 import {ILookahead} from "../ILookahead.sol";
 import {IProposerFees} from "../IProposerFees.sol";
 
-contract TaikoInbox is IInbox, DelayedInclusionStore {
+import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+
+contract TaikoInbox is IInbox, DelayedInclusionStore, Ownable {
     /// @dev Caller is not the current preconfer
     error NotCurrentPreconfer();
 
@@ -20,9 +22,6 @@ contract TaikoInbox is IInbox, DelayedInclusionStore {
     /// @dev Blockhash is not available for the anchor block
     error BlockhashUnavailable();
 
-    /// @dev Proposer fee set to zero address
-    error ZeroProposerFees();
-
     struct Metadata {
         uint256 anchorBlockId;
         bytes32 anchorBlockHash;
@@ -30,7 +29,7 @@ contract TaikoInbox is IInbox, DelayedInclusionStore {
     }
 
     ILookahead public immutable lookahead;
-    IProposerFees public immutable proposerFees;
+    IProposerFees public proposerFees;
     uint256 public immutable maxAnchorBlockIdOffset;
 
     // attributes associated with the publication
@@ -43,21 +42,22 @@ contract TaikoInbox is IInbox, DelayedInclusionStore {
     /// @param _lookahead Address of the lookahead contract
     /// @param _blobRefRegistry Address of the blob reference registry contract
     /// @param _maxAnchorBlockIdOffset Maximum offset allowed for anchor block ID
-    /// @param _proposerFees Address of the proposer fees contract (usually prover manager)
     /// @param _inclusionDelay How long before delayed inclusion must be processed
-    constructor(
-        address _lookahead,
-        address _blobRefRegistry,
-        uint256 _maxAnchorBlockIdOffset,
-        address _proposerFees,
-        uint256 _inclusionDelay
-    ) DelayedInclusionStore(_inclusionDelay, _blobRefRegistry) {
-        require(_proposerFees != address(0), ZeroProposerFees());
+    constructor(address _lookahead, address _blobRefRegistry, uint256 _maxAnchorBlockIdOffset, uint256 _inclusionDelay)
+        DelayedInclusionStore(_inclusionDelay, _blobRefRegistry)
+        Ownable(msg.sender)
+    {
         lookahead = ILookahead(_lookahead);
         maxAnchorBlockIdOffset = _maxAnchorBlockIdOffset;
-        proposerFees = IProposerFees(_proposerFees);
+
         // guarantee there is always a previous hash
         _publicationHashes.push(0);
+    }
+
+    /// @inheritdoc IInbox
+    function updateProposerFees(address _proposerFees) external onlyOwner {
+        proposerFees = IProposerFees(_proposerFees);
+        emit ProposerFeesInitialized(_proposerFees);
     }
 
     /// @inheritdoc IInbox
@@ -100,7 +100,9 @@ contract TaikoInbox is IInbox, DelayedInclusionStore {
     /// @param attributes The data to publish
     /// @param isDelayed Whether this is a delayed inclusion publication
     function _publish(bytes[] memory attributes, bool isDelayed) internal {
-        proposerFees.payPublicationFee(msg.sender, isDelayed);
+        if (address(proposerFees) != address(0)) {
+            proposerFees.payPublicationFee(msg.sender, isDelayed);
+        }
 
         uint256 nAttributes = attributes.length;
         bytes32[] memory attributeHashes = new bytes32[](nAttributes);

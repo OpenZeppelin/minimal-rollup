@@ -4,22 +4,26 @@ pragma solidity ^0.8.28;
 import {ISignalService} from "src/protocol/ISignalService.sol";
 
 contract MockSignalService is ISignalService {
-    error NotImplemented();
+    bool verifyResult;
+    bytes32 public lastSignalId;
 
-    function sendSignal(bytes32) external pure returns (bytes32) {
-        revert NotImplemented();
+    function setVerifyResult(bool _result) external {
+        verifyResult = _result;
     }
 
-    function isSignalStored(bytes32, address) external pure returns (bool) {
-        revert NotImplemented();
+    function verifySignal(uint256 _height, address _publisher, address _sender, bytes32 _signal, bytes memory _proof)
+        external
+        view
+    {
+        require(verifyResult, "Mock verify failed");
     }
 
-    // verification always succeeds
-    function verifySignal(
-        uint256, /* height */
-        address, /* commitmentPublisher */
-        address, /* sender */
-        bytes32, /* value */
-        bytes memory /* proof */
-    ) external view {}
+    function sendSignal(bytes32 _signal) external returns (bytes32 slot) {
+        lastSignalId = _signal;
+        slot = keccak256(abi.encodePacked(_signal));
+    }
+
+    function isSignalStored(bytes32 _signal, address _sender) external pure returns (bool) {
+        return true;
+    }
 }

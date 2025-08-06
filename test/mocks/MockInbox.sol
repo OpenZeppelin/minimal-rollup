@@ -16,6 +16,10 @@ contract MockInbox is IInbox {
         revert NotImplemented();
     }
 
+    function updateProposerFees(address) external pure {
+        revert NotImplemented();
+    }
+
     function getPublicationHash(uint256 id) external view returns (bytes32) {
         if (id >= numPublications) return 0;
         return keccak256(abi.encode("MockInbox", id));
