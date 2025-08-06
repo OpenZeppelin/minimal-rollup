@@ -19,11 +19,11 @@ abstract contract RecipientIsAnEOA is CrossChainDepositExists {
 // no need to do anything because the recipient defaults to no code
 }
 
-contract TransferRecipient {
-    // Magic values to make the behaviour identifiable
-    uint256 public constant REQUIRED_INPUT = 1234;
-    uint256 public constant RETURN_VALUE = 5678;
+// Magic values to make the behaviour identifiable
+uint256 constant REQUIRED_INPUT = 1234;
+uint256 constant RETURN_VALUE = 5678;
 
+contract TransferRecipient {
     event FunctionCalled();
 
     // valid calldata: 0x9b28f6fb00000000000000000000000000000000000000000000000000000000000004d2

@@ -1,16 +1,23 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
+import {DepositIsCancelable, DepositIsNotCancelable} from "./CancelableScenarios.t.sol";
 import {BridgeHasNoEther, BridgeSufficientlyCapitalized} from "./CapitalizationScenarios.t.sol";
 import {DepositIsClaimable, DepositIsNotClaimable} from "./ClaimableScenarios.t.sol";
-import {DepositIsInvalidContractCall, DepositIsValidContractCall} from "./ContractCallValidityScenarios.t.sol";
+import {
+    CancelableDepositIsValidContractCall,
+    DepositIsInvalidContractCall,
+    DepositIsValidContractCall
+} from "./ContractCallValidityScenarios.t.sol";
 import {CrossChainDepositExists} from "./CrossChainDepositExists.t.sol";
 import {RecipientIsAContract, RecipientIsAnEOA} from "./RecipientScenarios.t.sol";
 import {
     NonzeroETH_InvalidCallToPayableFn,
     NonzeroETH_NoCalldata,
+    NonzeroETH_NoCalldata_IsCancellable,
     NonzeroETH_ValidCallToNonpayableFn,
     NonzeroETH_ValidCallToPayableFn,
+    NonzeroETH_ValidCallToPayableFn_IsCancelable,
     ZeroETH_InvalidCallToPayableFn,
     ZeroETH_NoCalldata,
     ZeroETH_ValidCallToNonpayableFn,
@@ -49,6 +56,42 @@ contract SimpleDepositToEOA_BridgeUndercollateralized is
     DepositIsNotClaimable
 {}
 
+// A cancelable deposit is made to an EOA with no calldata
+contract CancelDeposit_WithNoCalldata_ToEOACancelRecipient is
+    NonzeroETH_NoCalldata_IsCancellable,
+    RecipientIsAnEOA,
+    BridgeSufficientlyCapitalized,
+    DepositIsCancelable
+{
+    function setUp() public override(CrossChainDepositExists, BridgeSufficientlyCapitalized) {
+        super.setUp();
+    }
+}
+
+// A cancelable deposit is made to an contract with calldata, cancel recipient is an EOA
+contract CancelDeposit_WithCalldata_ToEOACancelRecipient is
+    NonzeroETH_ValidCallToPayableFn_IsCancelable,
+    RecipientIsAnEOA,
+    BridgeSufficientlyCapitalized,
+    DepositIsCancelable
+{
+    function setUp() public override(CrossChainDepositExists, BridgeSufficientlyCapitalized) {
+        super.setUp();
+    }
+}
+
+// Same transfer as above, but no canceler is set. Cancellation attempts should fail.
+contract SimpleDepositToEOA_NoCancelerIsSet is
+    NonzeroETH_NoCalldata,
+    RecipientIsAnEOA,
+    BridgeSufficientlyCapitalized,
+    DepositIsNotCancelable
+{
+    function setUp() public override(CrossChainDepositExists, BridgeSufficientlyCapitalized) {
+        super.setUp();
+    }
+}
+
 // The bridge does a direct call (without the standard function invocation syntax). This means calldata passed to an EOA
 // is ignored
 // (and the call still succeeds)
@@ -66,6 +109,16 @@ contract InvokeFunctionOnEOA is
 // We should be able to send ETH to a payable function on a contract. This is a standard use case.
 contract DepositToPayableFunction is NonzeroETH_ValidCallToPayableFn, DepositIsValidContractCall {
     function setUp() public override(CrossChainDepositExists, DepositIsValidContractCall) {
+        super.setUp();
+    }
+}
+
+// Should not be able to claim a deposit if the recipient of a cancelable deposit is a contract
+contract CancelDeposit_WithCalldata_ToContractCancelRecipient is
+    NonzeroETH_ValidCallToPayableFn_IsCancelable,
+    CancelableDepositIsValidContractCall
+{
+    function setUp() public override(CrossChainDepositExists, CancelableDepositIsValidContractCall) {
         super.setUp();
     }
 }
