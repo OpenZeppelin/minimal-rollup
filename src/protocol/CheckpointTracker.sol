@@ -6,7 +6,9 @@ import {ICommitmentStore} from "./ICommitmentStore.sol";
 import {IInbox} from "./IInbox.sol";
 import {IVerifier} from "./IVerifier.sol";
 
-contract CheckpointTracker is ICheckpointTracker {
+import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+
+contract CheckpointTracker is ICheckpointTracker, Ownable {
     /// @dev The number of delayed publications up to the proven checkpoint
     uint256 private _totalDelayedPublications;
 
@@ -16,14 +18,14 @@ contract CheckpointTracker is ICheckpointTracker {
     IInbox public immutable inbox;
     IVerifier public immutable verifier;
     ICommitmentStore public immutable commitmentStore;
-    address public immutable proverManager;
+
+    address public proverManager;
 
     /// @param _genesis the checkpoint commitment describing the initial state of the rollup
     /// @param _inbox the inbox contract that contains the publication feed
     /// @param _verifier a contract that can verify the validity of a transition from one checkpoint to another
-    /// @param _proverManager contract responsible for managing the prover auction
     /// @param _commitmentStore contract responsible storing historical commitments
-    constructor(bytes32 _genesis, address _inbox, address _verifier, address _proverManager, address _commitmentStore) {
+    constructor(bytes32 _genesis, address _inbox, address _verifier, address _commitmentStore) Ownable(msg.sender) {
         // set the genesis checkpoint commitment of the rollup - genesis is trusted to be correct
         require(_genesis != 0, ZeroGenesisCommitment());
         inbox = IInbox(_inbox);
@@ -31,9 +33,14 @@ contract CheckpointTracker is ICheckpointTracker {
 
         verifier = IVerifier(_verifier);
         commitmentStore = ICommitmentStore(_commitmentStore);
-        proverManager = _proverManager;
 
         _saveCommitment(latestPublicationId, _genesis);
+    }
+
+    /// @inheritdoc ICheckpointTracker
+    function updateProverManager(address _proverManager) external onlyOwner {
+        proverManager = _proverManager;
+        emit ProverManagerUpdated(_proverManager);
     }
 
     /// @inheritdoc ICheckpointTracker
