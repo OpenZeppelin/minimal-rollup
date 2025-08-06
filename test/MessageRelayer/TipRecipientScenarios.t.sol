@@ -7,7 +7,6 @@ import {GenericRecipient} from "./GenericRecipient.t.sol";
 import {InitialState} from "./InitialState.t.sol";
 import {IETHBridge} from "src/protocol/IETHBridge.sol";
 
-
 abstract contract TipRecipientScenarios is DefaultRecipientScenario {
     function test_TipRecipientScenarios_relayMessage_shouldTipCorrectRecipient() public ifRelaySucceeds {
         (GenericRecipient correctRecipient,) = _recipients();
@@ -112,7 +111,6 @@ contract NoTipRecipientSet is UserSetZeroTipRecipient, RelayerSetZeroTipRecipien
         relayShouldSucceed = false;
     }
 }
-
 
 // A valid scenario that can be used as a default scenario by unrelated tests.
 abstract contract DefaultTipRecipientScenario is ValidUserTipRecipientOverrulesRelayer {}
