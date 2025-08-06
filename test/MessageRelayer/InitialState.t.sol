@@ -18,6 +18,7 @@ import {MockSignalService} from "test/mocks/MockSignalService.sol";
 // defined in other files
 // - ideally, we would only run the tests in the relevant scenario, but this would require less encapsulated logic
 // - instead, the ifRelaySucceeds and ifClaimSucceeds modifiers are used to turn irrelevant tests into no-ops
+// - the tests in this file ensure the transaction reverts when it is expected to
 
 abstract contract InitialState is Test {
     MessageRelayer messageRelayer;
@@ -65,6 +66,20 @@ abstract contract InitialState is Test {
             canceler: address(0)
         });
         _encodeReceiveCall();
+    }
+
+    function test_InitialState_relayMessage_shouldRevertWhenExpected() public {
+        if (!relayShouldSucceed) {
+            vm.expectRevert(IETHBridge.FailedClaim.selector);
+            _relayMessage();
+        }
+    }
+
+    function test_InitialState_claimDeposit_shouldRevertWhenExpected() public {
+        if (!claimShouldSucceed) {
+            vm.expectRevert(IETHBridge.FailedClaim.selector);
+            _claimDeposit();
+        }
     }
 
     function _encodeReceiveCall() internal {

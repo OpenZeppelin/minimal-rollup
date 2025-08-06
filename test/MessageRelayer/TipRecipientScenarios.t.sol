@@ -55,11 +55,6 @@ abstract contract UserSetZeroTipRecipient is TipRecipientScenarios {
         _encodeReceiveCall();
         claimShouldSucceed = false;
     }
-
-    function test_UserSetZeroTipRecipient_claimDeposit_shouldRevert() public {
-        vm.expectRevert(IETHBridge.FailedClaim.selector);
-        _claimDeposit();
-    }
 }
 
 abstract contract UserSetInvalidTipRecipient is TipRecipientScenarios {
@@ -68,16 +63,6 @@ abstract contract UserSetInvalidTipRecipient is TipRecipientScenarios {
         userSelectedTipRecipient.setSuccess(false);
         relayShouldSucceed = false;
         claimShouldSucceed = false;
-    }
-
-    function test_UserSetInvalidTipRecipient_relayMessage_shouldRevert() public {
-        vm.expectRevert(IETHBridge.FailedClaim.selector);
-        _relayMessage();
-    }
-
-    function test_UserSetInvalidTipRecipient_claimDeposit_shouldRevert() public {
-        vm.expectRevert(IETHBridge.FailedClaim.selector);
-        _claimDeposit();
     }
 }
 
