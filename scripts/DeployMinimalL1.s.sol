@@ -31,6 +31,7 @@ contract DeployL1Contracts is Script {
         console.log("Lookahead address:", lookaheadAddr);
         console.log("Max Anchor Block Id Offset:", maxAnchorBlockIdOffset);
         console.log("Inclusion Delay:", inclusionDelay);
+        console.log("Genesis:", genesis);
         console.log("------------------------");
 
         // ------deployments--------
