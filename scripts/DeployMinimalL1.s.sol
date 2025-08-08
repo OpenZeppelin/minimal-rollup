@@ -53,7 +53,6 @@ contract DeployL1Contracts is Script {
         vm.stopBroadcast();
 
         console.log("");
-        // Log deployment information
         console.log("------- DEPLOYMENTS ------");
         console.log("TaikoInbox deployed at:", address(taikoInbox));
         console.log("CheckpointTracker deployed at:", address(tracker));
