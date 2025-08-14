@@ -92,6 +92,7 @@ contract MessageRelayer is ReentrancyGuardTransient, IMessageRelayer {
             require(tipRecipient != address(0), NoTipRecipient());
         }
 
+        require(msg.value >= tip, InsufficientValue());
         uint256 valueToSend = msg.value - tip;
         bool forwardMessageSuccess;
 
