@@ -66,8 +66,7 @@ contract TaikoInbox is IInbox, DelayedInclusionStore, Ownable {
             require(lookahead.isCurrentPreconfer(msg.sender), NotCurrentPreconfer());
         }
 
-        // Build the attribute for the anchor transaction inputs
-        require(anchorBlockId >= block.number - maxAnchorBlockIdOffset, AnchorBlockTooOld());
+        require(anchorBlockId + maxAnchorBlockIdOffset >= block.number, AnchorBlockTooOld());
 
         Metadata memory metadata = Metadata({
             anchorBlockId: anchorBlockId,
