@@ -143,3 +143,31 @@ There are two challenges that I think will need to be addressed, and may depend 
         - On the other hand, the ability to allow massive price swings may actually just be sequencers responding to real-world market conditions.
         - It also lets users and sequencers be more creative about how to arrive at the correct charge given the base-fee constraint. For example, the sequencer could include all data-heavy transactions in a block with a high base fee (to indirectly charge for the L1 blobs), and then go back to regular block charges for regular L2 transactions.
 - Any feedback on if I'm missing something would be appreciated.
+
+
+## Resolution
+
+- As I understand it, this recommendation is not possible for Taiko because existing wallets do not have standard RPCs for fetching priority fees.
+- Moreover, we cannot use the "Sequencer chosen base rate" alternative, because (most) wallets compute the base fee from internal node logic, so there is no place for the current sequencer to inject their preference on a per-transaction basis.
+- We cannot manipulate the L2 block-producing mechanism to change the base fee arbitrarily on a per-block basis (which would allow seqeuncers to group data-heavy transactions into the same block) because the preconfirmation mechanism now enforces regular block lengths (of 2 seconds).
+- Overall, this implies that at least for now, any solutions must involve
+   - setting the base fee for all transactions in a particular 2-second window
+   - be computable from a predetermined formula
+   - be charged against L2 computational steps
+- As noted already, this means the fee will not correctly track the cost of the resources it consumes.
+- Ideally, we should push for more flexible fee-choosing mechanisms, particularly for the priority fee. My preference is:
+    - accounts should be able to specify how they would like to select fees.
+        - note that this doesn't change anything about what fees are enforced by the protocol. L1 must still charge gas fees as a proxy for network costs, but L2s could set the base fee to zero.
+    - they should be able to specify a total priority fee as well as the priority fee rate.
+    - wallets will choose the fees they present to the user (before signing) as follows:
+        - if the account has specified an actual formula they want to use, use that.
+        - if the account has specified an RPC to call, use that.
+        - if the account has not specified a fee-choosing mechanism, use whatever mechanism they currently use.
+- Until then, there are two kinds of risks that I see:
+    - the best case scenario is that the base fee correctly tracks the overall cost for average transactions. However, sequencers can only signal desired changes for future publications, which distorts the incentive to get it right, particularly for a diverse set of sequencers.
+    - transactions with higher than average data-to-L2-compute ratios will be underpriced.
+        - such transactions will either be subsidized by the sequencer, or will not be included at all.
+        - moreover, sequencers may have to process these transactions (since the actual gas consumed will be unknown until it is executed locally) before deciding to discard them.
+    - the same problem exists for transactions with higher than average proving-cost-to-L2-compute ratios.
+    - transactions with lower than average data-to-L2-compute or proving-cost-to-L2-compute ratios will be overpriced.
+- Note that this doesn't change the treasury fee analysis. I still believe that Taiko can direct a fraction of the measured L1 costs to the treasury, instead of (or in addition to) the base fee fraction.
