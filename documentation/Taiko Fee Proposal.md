@@ -155,7 +155,7 @@ There are two challenges that I think will need to be addressed, and may depend 
    - be computable from a predetermined formula
    - be charged against L2 computational steps
 - As noted already, this means the fee will not correctly track the cost of the resources it consumes.
-- Ideally, we should push for more flexible fee-choosing mechanisms, particularly for the priority fee. My preference is:
+- Ideally, we should push for more flexible fee-choosing mechanisms, particularly for the priority fee (perhaps by influencing the [wallet beat](https://github.com/walletbeat/walletbeat) criteria). My preference is:
     - accounts should be able to specify how they would like to select fees.
         - note that this doesn't change anything about what fees are enforced by the protocol. L1 must still charge gas fees as a proxy for network costs, but L2s could set the base fee to zero.
     - they should be able to specify a total priority fee as well as the priority fee rate.
