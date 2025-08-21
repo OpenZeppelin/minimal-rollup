@@ -20,10 +20,10 @@ I will first describe my suggested proposal, and then explain the rationale.
 
 
 1. L2 gas should only cover L2 execution. There are two options:
-    - use the existing EIP1559 mechanism, [corrected](https://github.com/taikoxyz/taiko-mono/issues/19160) to account for variable-length blocks.
+    - use the existing EIP-1559 mechanism, [corrected](https://github.com/taikoxyz/taiko-mono/issues/19160) to account for variable-length blocks.
     - charge for publications (not transactions):
         - set the base fee to zero
-        - use an EIP1559-style mechanism to charge the sequencer for the total gas used in their publication and to maintain a per-second gas target.
+        - use an EIP-1559-style mechanism to charge the sequencer for the total gas used in their publication and to maintain a per-second gas target.
         - sequencers can decided for themselves how (or even whether) to charge each user for their gas consumption. In the simplest case they would use the L2 priority fee, but users with no ETH could also pay in other tokens or MEV-rich transactions could be subsidized. The protocol remains completely unopinionated about how sequencers charge users as long as the sequencer pays the protocol.
     - some or all of the protocol fee can be directed to the treasury or burned.
 2. The protocol does not compute or enforce any L1 data fee requirements.
@@ -74,7 +74,7 @@ Note that under this design, the costs for a publication are self-contained, so 
 - As I understand it (although this should be validated), since there is no security reason to encourage users to run L2 nodes, we do not need to charge for "costs to the L2 network". This means the L2 gas fee can be set to zero.
 - The sequencer may still want to charge for the offchain processing costs, but this can be incorporated in the priority fee. When combined with the other recommendations, it also means that users and sequencers just need to negotiate a single priority fee to account for all the resources (L2 gas, publication costs and proving costs) associated with the transaction.
 - However, we probably do want to include an overall gas limit to ensure that other users can keep up with the chain. I suspect it can be large enough that it is never reached in practice (because the publication and proving cost limits will likely be reached first), but it is still necessary to prevent malicious compute-only transactions (like running an infinite loop).
-- Once we've decided to include a limit, I think it also makes sense to have a smaller target, so that unexpected volatility does not create immediate scarcity (and correspondingly very high prices). The EIP1559 mechanism seems like a good way to regulate this.
+- Once we've decided to include a limit, I think it also makes sense to have a smaller target, so that unexpected volatility does not create immediate scarcity (and correspondingly very high prices). The EIP-1559 mechanism seems like a good way to regulate this.
 - However, applying the mechanism to the sequencer (instead of the transactions) has some benefits:
     - it is simpler. We only need to do one update calculation per publication (rather than for every block)
     - We can charge the sequencer at the new rate after accounting for any excess they personally introduced (rather than allowing their publication to increase the costs for the next sequencer)
@@ -83,7 +83,7 @@ Note that under this design, the costs for a publication are self-contained, so 
 ### Publication Costs
 - Since sequencers must pay the publication costs, it seems natural for users to compensate them directly.
 - Moreover, sequencers are incentivised to optimise the publication costs, and can pass on those optimisations to the user (for example, they can offer discounts for transactions that compress well with other transactions in the publication).
-- When discussing this idea, one concern was that if the publication fee was not incorporated into the base fee, it would not be subject to the EIP1559 mechanism to smooth volatility. I suspect that's incorrect, because the fee should be the sequencer's best estimate at what the L1 publication costs will be, which are already governed by the L1 fee-smoothing mechanism.
+- When discussing this idea, one concern was that if the publication fee was not incorporated into the base fee, it would not be subject to the EIP-1559 mechanism to smooth volatility. I suspect that's incorrect, because the fee should be the sequencer's best estimate at what the L1 publication costs will be, which are already governed by the L1 fee-smoothing mechanism.
 - With this mechanism, Taiko does not have to model the L1 changes, but can still direct a fraction of the actual (not estimated) publication costs to the treasury.
     - this doesn't remove the need for sequencers to be able to estimate L1 costs when deciding whether to preconfirm a transaction. However, they can respond to the market conditions in realtime with whatever level of sophistication they have.
     - If standardisation is preferred, Taiko could still create a suggested fee formula that sequencers can use.
@@ -149,7 +149,7 @@ There are two challenges that I think will need to be addressed, and may depend 
 
 - As I understand it, this recommendation is not possible for Taiko because existing wallets do not have standard RPCs for fetching priority fees.
 - Moreover, we cannot use the "Sequencer chosen base rate" alternative, because (most) wallets compute the base fee from internal node logic, so there is no place for the current sequencer to inject their preference on a per-transaction basis.
-- We cannot manipulate the L2 block-producing mechanism to change the base fee arbitrarily on a per-block basis (which would allow seqeuncers to group data-heavy transactions into the same block) because the preconfirmation mechanism now enforces regular block lengths (of 2 seconds).
+- We cannot manipulate the L2 block-producing mechanism to change the base fee arbitrarily on a per-block basis (which would allow sequencers to group data-heavy transactions into the same block) because the preconfirmation mechanism now enforces regular block lengths (of 2 seconds).
 - Overall, this implies that at least for now, any solutions must involve
    - setting the base fee for all transactions in a particular 2-second window
    - be computable from a predetermined formula
