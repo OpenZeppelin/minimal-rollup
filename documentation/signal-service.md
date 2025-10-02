@@ -21,3 +21,15 @@ The `SignalService` contract defines a _commitment_ as `keccak256(abi.encode(sta
 Any address can post commitments, so the validity of the commitment is inferred from the credibility of the publishing address. For example:
 - the `CheckpointTracker` contract is responsible for confirming a rollup's validity proofs on the Ethereum mainnet. It then posts the validated checkpoints to the mainnet `SignalService`. If multiple rollups used the same contract, the relevant chain could be identified by the particular `CheckpointTracker` contract that posted the commitment.
 - the L2 anchor contract accepts a mainnet header (validated by the rollup nodes) and posts the corresponding checkpoint to the L2 `SignalService`.
+
+### Cross-chain signal verification
+
+Each commitment is saved under a `height` identifer (for example, the block number), which ensures they are never overwritten and that signal proofs do not expire, even if they reference an old commitment. This is acceptable because signals are never deleted and the proofs merely indicate that the signal was sent on the source chain at some point in the past.
+
+Anyone can prove the existence of a source chain signal by:
+
+- specifying the signal's `sender` and `value`.
+- specifying the `stateRoot`, `blockHash`, `height` and publisher address that identifies the relevant commitment.
+- providing the Merkle proof to identify the `SignalService` account (and corresponding storage root) underneath the given `stateRoot`.
+    - note that we are locating the source chain `SignalService` contract within the source chain's state root, but we assume it will have the same address as the destination chain `SignalService`.
+- providing the Merkle proof to identify the relevant storage location under the storage root, and confirming it is set to `true`.
