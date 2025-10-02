@@ -24,7 +24,7 @@ Any address can post commitments, so the validity of the commitment is inferred 
 
 ### Cross-chain signal verification
 
-Each commitment is saved under a `height` identifer (for example, the block number), which ensures they are never overwritten and that signal proofs do not expire, even if they reference an old commitment. This is acceptable because signals are never deleted and the proofs merely indicate that the signal was sent on the source chain at some point in the past.
+Each commitment is saved under a `height` identifier (for example, the block number), which ensures they are never overwritten and that signal proofs do not expire, even if they reference an old commitment. This is acceptable because signals are never deleted and the proofs merely indicate that the signal was sent on the source chain at some point in the past.
 
 Anyone can prove the existence of a source chain signal by:
 
