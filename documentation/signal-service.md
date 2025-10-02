@@ -46,6 +46,17 @@ The `ETHBridge` contract can be used to transfer ETH between mainnet and the rol
 
 ETH transfers are implemented as a simple wrapper over the cross-chain mechanism provided by the `SignalService`:
 
-- user funds are deposited on the source chain bridge, which creates a corresponding message describing the deposit details.
+- user funds are deposited on the source chain bridge, which defines a message containing the deposit details.
 - the bridge records the corresponding signal in its local `SignalService`.
 - once the commitment is published on the destination chain, the recipient can prove the existence of the deposit and retrieve the funds.
+
+### Token Bridges
+
+This repository includes contracts to bridge ERC-20, ERC-721 and ERC-1155 tokens. These are application-level contracts with no special privileges and are provided for convenience.
+
+The transfer flow is slightly more complicated:
+
+- for each source token, anyone can deploy a bridged token contract on the other chain. These tokens will have standard functionality (without replicating any bespoke behavior of the source token contract) and can be minted and burned by the destination chain's bridge.
+- in this way, withdrawals and deposits of the bridged token are implemented as mint and burn operations on the destination chain. The source token is still transferred to and from the bridge on the source chain.
+
+Nevertheless, the cross-chain signalling mechanism is the same as for the ETH bridge.
