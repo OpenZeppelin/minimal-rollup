@@ -33,3 +33,19 @@ Anyone can prove the existence of a source chain signal by:
 - providing the Merkle proof to identify the `SignalService` account (and corresponding storage root) underneath the given `stateRoot`.
     - note that we are locating the source chain `SignalService` contract within the source chain's state root, but we assume it will have the same address as the destination chain `SignalService`.
 - providing the Merkle proof to identify the relevant storage location under the storage root, and confirming it is set to `true`.
+
+## Application Examples
+
+### ETH Bridge
+
+The `ETHBridge` contract can be used to transfer ETH between mainnet and the rollup. It is designed to be deployed on both chains, where:
+
+- the mainnet instance is configured to trust commitments posted by the `CheckpointTracker`.
+- the rollup instance is configured to trust commitments posted by the anchor contract.
+- the rollup instance is prefunded with infinite ETH. All circulating ETH on the rollup will originate from this contract.
+
+ETH transfers are implemented as a simple wrapper over the cross-chain mechanism provided by the `SignalService`:
+
+- user funds are deposited on the source chain bridge, which creates a corresponding message describing the deposit details.
+- the bridge records the corresponding signal in its local `SignalService`.
+- once the commitment is published on the destination chain, the recipient can prove the existence of the deposit and retrieve the funds.
