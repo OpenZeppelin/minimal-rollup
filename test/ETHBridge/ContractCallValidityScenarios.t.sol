@@ -50,7 +50,7 @@ abstract contract DepositIsInvalidContractCall is
     }
 }
 
-// This contract describes the secnario where a cancelable deposit is made but the canceler
+// This contract describes the scenario where a cancelable deposit is made but the canceler
 // specifies a contract as the recipient.
 abstract contract CancelableDepositIsValidContractCall is
     RecipientIsAContract,
