@@ -3,8 +3,7 @@ use eyre::Result;
 mod signal_slot;
 use signal_slot::get_signal_slot;
 
-mod utils;
-use utils::{deploy_signal_service, get_proofs, get_provider};
+use minimal_rollup::{deploy_signal_service, get_proofs, get_provider};
 
 use alloy::primitives::Bytes;
 use std::fs;
@@ -32,7 +31,7 @@ async fn main() -> Result<()> {
     let proof   = get_proofs(&provider, slot, &signal_service).await?;
 
     
-    let template = fs::read_to_string("offchain/sample_proof.tmpl")?;
+    let template = fs::read_to_string("offchain/tmpl/sample_proof.tmpl")?;
     let formatted = template
         .replace("{signal_service_address}", signal_service.address().to_string().as_str())
         .replace("{block_hash}", proof.block_hash.to_string().as_str())
@@ -47,4 +46,3 @@ async fn main() -> Result<()> {
     println!("{}", formatted);
     Ok(())
 }
-
